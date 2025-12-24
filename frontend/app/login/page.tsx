@@ -80,7 +80,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex flex-col lg:flex-row bg-background">
             {/* Left Side: The Promise (Aha Moment) */}
-            <div className="hidden lg:flex lg:w-1/2 bg-[#0A0A0A] p-12 flex-col justify-between relative overflow-hidden">
+            <div className="hidden lg:flex lg:w-[38%] bg-[#0A0A0A] p-12 flex-col justify-between relative overflow-hidden">
                 {/* Decorative background element */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -mr-64 -mt-64" />
 

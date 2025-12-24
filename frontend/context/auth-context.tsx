@@ -28,10 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let isMounted = true;
 
         const init = async () => {
-            console.log("DEBUG: AuthProvider [Init] 1. Setting Persistence...");
+            console.log("DEBUG: AuthProvider [Init] Starting setup...");
             try {
                 // Ensure persistence is set BEFORE any other auth calls
-                await setPersistence(auth, browserLocalPersistence);
+                // Using setPersistence once is enough
+                if (!initialized.current) {
+                    await setPersistence(auth, browserLocalPersistence);
+                }
             } catch (e) {
                 console.error("DEBUG: AuthProvider [Init] Persistence error:", e);
             }

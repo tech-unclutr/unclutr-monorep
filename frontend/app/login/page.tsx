@@ -75,7 +75,24 @@ export default function LoginPage() {
     };
 
     const isAnyLoading = googleLoading || emailLoading;
+    const isInitialLoading = authLoading && !isAuthenticated;
 
+    // Loading Gate: If we are still checking firebase session, show a clean, 
+    // consistent loader instead of the login form to prevent 'flicker'.
+    if (isInitialLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="h-12 w-12 rounded-xl bg-black flex items-center justify-center text-white font-bold text-xl animate-pulse">
+                        U
+                    </div>
+                    <p className="text-sm text-neutral-500 font-medium tracking-tight animate-pulse">
+                        Authenticating...
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row bg-background">

@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { motion } from "framer-motion";
+
 export default function DashboardPage() {
     const [loggingOut, setLoggingOut] = useState(false);
     const router = useRouter();
@@ -24,7 +26,12 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8"
+        >
             <div className="max-w-4xl mx-auto space-y-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -77,6 +84,6 @@ export default function DashboardPage() {
                     </Card>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

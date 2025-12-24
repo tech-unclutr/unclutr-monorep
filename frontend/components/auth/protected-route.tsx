@@ -3,7 +3,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { MagicLoader } from "@/components/ui/magic-loader";
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -29,12 +29,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
-                <div className="flex flex-col items-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
-                    <p className="text-sm text-neutral-500 animate-pulse font-medium tracking-tight">
-                        Securing session...
-                    </p>
-                </div>
+                <MagicLoader text="Securing session..." />
             </div>
         );
     }

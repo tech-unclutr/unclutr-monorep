@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { motion, AnimatePresence } from "framer-motion";
+import { MagicLoader } from "@/components/ui/magic-loader";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -82,20 +84,18 @@ export default function LoginPage() {
     if (isInitialLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="flex flex-col items-center space-y-4">
-                    <div className="h-12 w-12 rounded-xl bg-black flex items-center justify-center text-white font-bold text-xl animate-pulse">
-                        U
-                    </div>
-                    <p className="text-sm text-neutral-500 font-medium tracking-tight animate-pulse">
-                        Authenticating...
-                    </p>
-                </div>
+                <MagicLoader text="Verifying session..." />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="min-h-screen flex flex-col lg:flex-row bg-background"
+        >
             {/* Left Side: The Promise (Aha Moment) */}
             <div className="hidden lg:flex lg:w-[38%] bg-[#0A0A0A] p-12 flex-col justify-between relative overflow-hidden">
                 {/* Decorative background element */}
@@ -117,31 +117,45 @@ export default function LoginPage() {
                     </p>
 
                     {/* Insight Cards (Value Stream) */}
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 transition-all hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)]">
-                            <div className="h-2 w-2 rounded-full bg-blue-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                            <div>
-                                <p className="text-white text-sm font-medium">Margin Protection</p>
-                                <p className="text-neutral-500 text-xs mt-1">Meta Ad Spend automatically paused on low-margin SKUs.</p>
-                            </div>
-                        </div>
-
-                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 opacity-80 scale-95 translate-x-12 transition-all hover:translate-x-0 hover:opacity-100 hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] duration-500">
-                            <div className="h-2 w-2 rounded-full bg-emerald-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                            <div>
-                                <p className="text-white text-sm font-medium">Inventory Alert</p>
-                                <p className="text-neutral-500 text-xs mt-1">Forecast Alert: Stock-out risk for 'Summer Tote' in 12 days.</p>
-                            </div>
-                        </div>
-
-                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 opacity-60 scale-90 translate-x-24 transition-all hover:translate-x-0 hover:opacity-100 hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] duration-500">
-                            <div className="h-2 w-2 rounded-full bg-amber-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                            <div>
-                                <p className="text-white text-sm font-medium">Attribution Truth</p>
-                                <p className="text-neutral-500 text-xs mt-1">Channel Corrected: YouTube ROAS is actually 4.2x (not 1.8x).</p>
-                            </div>
-                        </div>
-                    </div>
+                    <motion.div
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            hidden: { opacity: 0 },
+                            visible: {
+                                opacity: 1,
+                                transition: { staggerChildren: 0.15 }
+                            }
+                        }}
+                        className="space-y-4 fill-mode-both"
+                    >
+                        {[
+                            { color: "bg-blue-500", title: "Margin Protection", desc: "Meta Ad Spend automatically paused on low-margin SKUs.", x: 0 },
+                            { color: "bg-emerald-500", title: "Inventory Alert", desc: "Forecast Alert: Stock-out risk for 'Summer Tote' in 12 days.", x: 48 },
+                            { color: "bg-amber-500", title: "Attribution Truth", desc: "Channel Corrected: YouTube ROAS is actually 4.2x (not 1.8x).", x: 96 },
+                        ].map((card, idx) => (
+                            <motion.div
+                                key={idx}
+                                variants={{
+                                    hidden: { opacity: 0, x: -20, y: 20 },
+                                    visible: { opacity: 1, x: card.x, y: 0 }
+                                }}
+                                whileHover={{
+                                    scale: 1.02,
+                                    x: card.x + 8,
+                                    backgroundColor: "#1c1c1c",
+                                    transition: { type: "spring", stiffness: 400, damping: 17 }
+                                }}
+                                className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 transition-colors cursor-default"
+                            >
+                                <div className={`h-2 w-2 rounded-full ${card.color} mt-2 shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
+                                <div>
+                                    <p className="text-white text-sm font-medium">{card.title}</p>
+                                    <p className="text-neutral-500 text-xs mt-1">{card.desc}</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </motion.div>
                 </div>
 
                 <div className="relative z-10 text-neutral-500 text-xs">

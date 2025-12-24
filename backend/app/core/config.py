@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # FOR PRODUCTION: Pass the JSON content as a string env var
     FIREBASE_CREDENTIALS_JSON: Optional[str] = None
     
+    GOOGLE_CLOUD_PROJECT: str = "unclutr-monorep"
+    GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    
     class Config:
         env_file = ".env"
 

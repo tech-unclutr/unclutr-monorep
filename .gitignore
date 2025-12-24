@@ -47,6 +47,7 @@ backend/MANIFEST
 *.swo
 
 # Project specific
+backend/*.db
 backend/db.sqlite3
 backend/instance/
 backend/htmlcov/

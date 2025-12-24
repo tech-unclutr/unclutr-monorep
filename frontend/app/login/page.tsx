@@ -93,7 +93,7 @@ export default function LoginPage() {
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
+            transition={{ duration: 0.5, ease: "linear" }}
             className="min-h-screen flex flex-col lg:flex-row bg-background"
         >
             {/* Left Side: The Promise (Aha Moment) */}
@@ -124,7 +124,7 @@ export default function LoginPage() {
                             hidden: { opacity: 0 },
                             visible: {
                                 opacity: 1,
-                                transition: { staggerChildren: 0.2, delayChildren: 0.3 }
+                                transition: { staggerChildren: 0.05 }
                             }
                         }}
                         className="space-y-4 fill-mode-both"
@@ -141,12 +141,10 @@ export default function LoginPage() {
                                     visible: { opacity: 1, x: card.x, y: 0 }
                                 }}
                                 whileHover={{
-                                    scale: 1.01,
-                                    x: card.x + 4,
-                                    backgroundColor: "#1c1c1c",
-                                    transition: { type: "spring", stiffness: 100, damping: 25 }
+                                    opacity: 0.9,
+                                    transition: { duration: 0.2 }
                                 }}
-                                className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 transition-colors cursor-default"
+                                className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 transition-opacity cursor-default opacity-80"
                             >
                                 <div className={`h-2 w-2 rounded-full ${card.color} mt-2 shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
                                 <div>

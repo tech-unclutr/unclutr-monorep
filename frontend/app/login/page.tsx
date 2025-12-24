@@ -93,7 +93,7 @@ export default function LoginPage() {
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
             className="min-h-screen flex flex-col lg:flex-row bg-background"
         >
             {/* Left Side: The Promise (Aha Moment) */}
@@ -124,7 +124,7 @@ export default function LoginPage() {
                             hidden: { opacity: 0 },
                             visible: {
                                 opacity: 1,
-                                transition: { staggerChildren: 0.15 }
+                                transition: { staggerChildren: 0.2, delayChildren: 0.3 }
                             }
                         }}
                         className="space-y-4 fill-mode-both"
@@ -141,10 +141,10 @@ export default function LoginPage() {
                                     visible: { opacity: 1, x: card.x, y: 0 }
                                 }}
                                 whileHover={{
-                                    scale: 1.02,
-                                    x: card.x + 8,
+                                    scale: 1.01,
+                                    x: card.x + 4,
                                     backgroundColor: "#1c1c1c",
-                                    transition: { type: "spring", stiffness: 400, damping: 17 }
+                                    transition: { type: "spring", stiffness: 100, damping: 25 }
                                 }}
                                 className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 transition-colors cursor-default"
                             >
@@ -313,6 +313,6 @@ export default function LoginPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

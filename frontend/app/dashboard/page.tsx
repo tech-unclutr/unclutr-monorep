@@ -27,9 +27,9 @@ export default function DashboardPage() {
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8"
         >
             <div className="max-w-4xl mx-auto space-y-8">

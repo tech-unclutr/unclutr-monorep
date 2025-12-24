@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str = "unclutr-monorep"
     GOOGLE_CLOUD_LOCATION: str = "us-central1"
     
+    SENTRY_DSN: Optional[str] = None
+    
     class Config:
         env_file = ".env"
 

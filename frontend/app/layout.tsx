@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/context/auth-context";
+import QueryProvider from "@/context/query-client-provider";
 
 export default function RootLayout({
   children,
@@ -24,8 +25,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={clsx(inter.variable, outfit.variable, "min-h-screen bg-background font-sans antialiased")}>
         <AuthProvider>
-          <AnalyticsListener />
-          {children}
+          <QueryProvider>
+            <AnalyticsListener />
+            {children}
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

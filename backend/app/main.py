@@ -32,6 +32,15 @@ app.add_middleware(
 
 # Request Logging Middleware
 from app.core.logging_middleware import RequestLoggingMiddleware
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+sentry_sdk.init(
+    dsn=settings.SENTRY_DSN if hasattr(settings, "SENTRY_DSN") else None,
+    integrations=[FastApiIntegration()],
+    traces_sample_rate=1.0,
+)
+
 app.add_middleware(RequestLoggingMiddleware)
 
 

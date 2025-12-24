@@ -17,6 +17,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from app.api.v1.api import api_router
+from app.core.config import settings
+
 # CORS Configuration
 origins = [
     "http://localhost:3000",  # Frontend
@@ -30,23 +33,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request Logging Middleware
+# Sentry & Logging Middleware
 from app.core.logging_middleware import RequestLoggingMiddleware
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 
 sentry_sdk.init(
-    dsn=settings.SENTRY_DSN if hasattr(settings, "SENTRY_DSN") else None,
+    dsn=settings.SENTRY_DSN,
     integrations=[FastApiIntegration()],
     traces_sample_rate=1.0,
 )
 
 app.add_middleware(RequestLoggingMiddleware)
-
-
-
-from app.api.v1.api import api_router
-from app.core.config import settings
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

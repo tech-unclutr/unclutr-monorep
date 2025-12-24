@@ -109,7 +109,7 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 opacity-80 scale-95 translate-x-4 transition-all hover:translate-x-0 hover:opacity-100 hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] duration-500">
+                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 opacity-80 scale-95 translate-x-12 transition-all hover:translate-x-0 hover:opacity-100 hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] duration-500">
                             <div className="h-2 w-2 rounded-full bg-emerald-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                             <div>
                                 <p className="text-white text-sm font-medium">Inventory Alert</p>
@@ -117,7 +117,7 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 opacity-60 scale-90 translate-x-8 transition-all hover:translate-x-0 hover:opacity-100 hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] duration-500">
+                        <div className="group bg-[#171717] border border-white/5 p-4 rounded-xl flex items-start space-x-4 opacity-60 scale-90 translate-x-24 transition-all hover:translate-x-0 hover:opacity-100 hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] duration-500">
                             <div className="h-2 w-2 rounded-full bg-amber-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
                             <div>
                                 <p className="text-white text-sm font-medium">Attribution Truth</p>

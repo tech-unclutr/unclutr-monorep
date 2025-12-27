@@ -14,6 +14,9 @@ class User(UserBase, table=True):
     id: Optional[str] = Field(default=None, primary_key=True) # Firebase UID
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Transient field for API response
+    onboarding_completed: bool = Field(default=False, sa_column=None)
 
 class UserCreate(UserBase):
     id: str # UID is required from Firebase
@@ -22,3 +25,4 @@ class UserRead(UserBase):
     id: str
     created_at: datetime
     last_login_at: datetime
+    onboarding_completed: bool = False

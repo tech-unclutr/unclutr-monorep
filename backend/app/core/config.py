@@ -16,8 +16,14 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str = "unclutr-monorep"
     GOOGLE_CLOUD_LOCATION: str = "us-central1"
     
-    SENTRY_DSN: Optional[str] = None
+    FIREBASE_API_KEY: Optional[str] = None
     
+    # Swagger / Dev Auth
+    SWAGGER_DEV_PASSWORD: str = "admin"
+    SWAGGER_DEV_TOKEN: str = "dev_token_123"
+    
+    SENTRY_DSN: Optional[str] = None
+
     class Config:
         env_file = ".env"
 

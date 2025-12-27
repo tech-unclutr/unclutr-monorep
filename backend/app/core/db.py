@@ -2,6 +2,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
+import app.models # Ensure all models are registered
+import app.core.stamping # Ensure event listeners are registered
 
 # Using SQLite for guaranteed local execution without external Postgres setup
 DATABASE_URL = "sqlite+aiosqlite:///./unclutr.db"

@@ -7,76 +7,26 @@ if (typeof window !== 'undefined') {
     // Store original fetch
     const originalFetch = window.fetch;
 
+    /*
     // Override fetch with logging
     window.fetch = async (...args) => {
         const [resource, config] = args;
 
-        // Log request
-        console.log('\n' + '='.repeat(80));
-        console.log('🔵 API REQUEST');
-        console.log('='.repeat(80));
-        console.log('URL:', resource);
-        console.log('Method:', config?.method || 'GET');
-        console.log('Headers:', config?.headers || {});
-        if (config?.body) {
-            if (typeof config.body === 'string') {
-                try {
-                    console.log('Body:', JSON.parse(config.body));
-                } catch {
-                    console.log('Body:', config.body);
-                }
-            } else {
-                console.log('Body:', config.body);
-            }
-        }
-        console.log('='.repeat(80) + '\n');
-
-        const startTime = performance.now();
-
+        let url = "";
+        let method = "GET";
+        let headers = {};
+        
+        // ... (Logger Disabled for Stability)
+        
         try {
-            // Make actual request
             const response = await originalFetch(...args);
-            const duration = performance.now() - startTime;
-
-            // Clone response to read body without consuming it
-            const clonedResponse = response.clone();
-            let responseBody;
-
-            try {
-                responseBody = await clonedResponse.json();
-            } catch {
-                responseBody = await clonedResponse.text();
-            }
-
-            // Log response
-            console.log('\n' + '='.repeat(80));
-            console.log('🟢 API RESPONSE');
-            console.log('='.repeat(80));
-            console.log('URL:', resource);
-            console.log('Status:', response.status, response.statusText);
-            console.log('Duration:', `${duration.toFixed(2)}ms`);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
-            console.log('Body:', responseBody);
-            console.log('='.repeat(80) + '\n');
-
             return response;
         } catch (error) {
-            const duration = performance.now() - startTime;
-
-            // Log error
-            console.log('\n' + '='.repeat(80));
-            console.log('🔴 API ERROR');
-            console.log('='.repeat(80));
-            console.log('URL:', resource);
-            console.log('Duration:', `${duration.toFixed(2)}ms`);
-            console.log('Error:', error);
-            console.log('='.repeat(80) + '\n');
-
             throw error;
         }
     };
-
     console.log('✅ API and SDK logging enabled');
+    */
 }
 
 /**

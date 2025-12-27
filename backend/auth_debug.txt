@@ -1,0 +1,26 @@
+Error: Wrong number of segments in token: b'invalidtoken'
+Traceback (most recent call last):
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/firebase_admin/_token_gen.py", line 413, in _decode_unverified
+    header = jwt.decode_header(token)
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/auth/jwt.py", line 185, in decode_header
+    header, _, _, _ = _unverified_decode(token)
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/auth/jwt.py", line 147, in _unverified_decode
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Wrong number of segments in token: b'invalidtoken'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/param/Documents/Unclutr/backend/app/core/security.py", line 67, in get_current_user
+    decoded_token = auth.verify_id_token(token)
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/firebase_admin/auth.py", line 227, in verify_id_token
+    return client.verify_id_token(
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/firebase_admin/_auth_client.py", line 130, in verify_id_token
+    verified_claims = self._token_verifier.verify_id_token(id_token, clock_skew_seconds)
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/firebase_admin/_token_gen.py", line 293, in verify_id_token
+    return self.id_token_verifier.verify(id_token, self.request, clock_skew_seconds)
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/firebase_admin/_token_gen.py", line 336, in verify
+    header, payload = self._decode_unverified(token)
+  File "/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/firebase_admin/_token_gen.py", line 417, in _decode_unverified
+    raise self._invalid_token_error(str(error), cause=error)
+firebase_admin._auth_utils.InvalidIdTokenError: Wrong number of segments in token: b'invalidtoken'

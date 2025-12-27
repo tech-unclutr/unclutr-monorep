@@ -10,16 +10,25 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     isAuthenticated: boolean;
+    onboardingCompleted: boolean | null;
+    isSyncing: boolean;
+    hasSkippedOnboarding: boolean;
     logout: () => Promise<void>;
+    refreshAuth: () => Promise<void>;
+    skipOnboardingSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
     const router = useRouter();
     const initialized = useRef(false);
+    const syncInProgress = useRef<string | null>(null);
 
     useEffect(() => {
         if (initialized.current) return;
@@ -30,18 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const init = async () => {
             console.log("DEBUG: AuthProvider [Init] Starting setup...");
             try {
-                // Ensure persistence is set BEFORE any other auth calls
-                // Using setPersistence once is enough
-                if (!initialized.current) {
-                    await setPersistence(auth, browserLocalPersistence);
-                }
+                await setPersistence(auth, browserLocalPersistence);
             } catch (e) {
                 console.error("DEBUG: AuthProvider [Init] Persistence error:", e);
             }
 
             console.log("DEBUG: AuthProvider [Init] 2. Checking Redirect Result...");
             try {
-                // handleAuthRedirect internally calls getRedirectResult(auth)
                 const result = await handleAuthRedirect();
                 if (result?.user && isMounted) {
                     console.log("DEBUG: AuthProvider [Init] 2a. Redirect SUCCESS:", result.user.email);
@@ -58,13 +62,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 setUser(firebaseUser);
                 if (firebaseUser) {
-                    syncUserWithBackend(firebaseUser).catch(e => {
+                    // Prevent concurrent syncs for the same user/token
+                    if (syncInProgress.current === firebaseUser.uid) {
+                        console.log("DEBUG: AuthProvider [Sync] Sync already in progress for this UID, skipping.");
+                        return;
+                    }
+                    syncInProgress.current = firebaseUser.uid;
+
+                    console.log("DEBUG: AuthProvider [Sync] Starting sync for", firebaseUser.email);
+                    setIsSyncing(true);
+                    try {
+                        const syncData = await syncUserWithBackend(firebaseUser);
+                        console.log("DEBUG: AuthProvider [Sync] Data received:", syncData);
+                        if (isMounted) {
+                            setOnboardingCompleted(syncData.onboarding_completed);
+                        }
+                    } catch (e) {
                         console.error("DEBUG: AuthProvider [Sync] Background Error:", e);
-                    });
+                        if (isMounted) {
+                            // If sync fails but we ARE authenticated, fallback to false to allow redirection
+                            // the Guard or Onboarding page will try again or handle it.
+                            setOnboardingCompleted(onboardingCompleted ?? false);
+                        }
+                    } finally {
+                        syncInProgress.current = null;
+                        setIsSyncing(false);
+                    }
+                } else {
+                    console.log("DEBUG: AuthProvider [Sync] No user, clearing onboarding status");
+                    setOnboardingCompleted(null);
+                    syncInProgress.current = null;
                 }
 
                 // Once the first state change fires, we are "initialized"
-                if (loading) setLoading(false);
+                if (isMounted && loading) {
+                    console.log("DEBUG: AuthProvider [Init] Clearing loading state.");
+                    setLoading(false);
+                }
             });
 
             // Safety: ensure loading is cleared even if observer is slow
@@ -86,10 +120,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
     }, []); // Run once on mount
 
+    const refreshAuth = async () => {
+        if (user) {
+            setIsSyncing(true);
+            try {
+                const syncData = await syncUserWithBackend(user);
+                setOnboardingCompleted(syncData.onboarding_completed);
+            } catch (e) {
+                console.error("DEBUG: AuthProvider [Refresh] Error:", e);
+            } finally {
+                setIsSyncing(false);
+            }
+        }
+    };
+
+    const skipOnboardingSession = () => {
+        setHasSkippedOnboarding(true);
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem('unclutr_skip_onboarding', 'true');
+        }
+    };
+
     const logout = async () => {
         try {
             await firebaseLogout();
             setUser(null);
+            setOnboardingCompleted(null);
             router.push("/login");
         } catch (error) {
             console.error("DEBUG: Logout failed:", error);
@@ -97,7 +153,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            loading,
+            isAuthenticated: !!user,
+            onboardingCompleted,
+            isSyncing,
+            hasSkippedOnboarding,
+            logout,
+            refreshAuth,
+            skipOnboardingSession
+        }}>
             {children}
         </AuthContext.Provider>
     );

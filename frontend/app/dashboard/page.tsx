@@ -1,89 +1,46 @@
 "use client";
 
+import { useAuth } from "@/hooks/use-auth";
 import { LogOut, LayoutDashboard } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { logout } from "@/lib/auth-helpers";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function DashboardPage() {
-    const [loggingOut, setLoggingOut] = useState(false);
-    const router = useRouter();
-
-    const handleLogout = async () => {
-        setLoggingOut(true);
-        try {
-            await logout();
-            router.push("/login");
-        } catch (error) {
-            console.error("Logout failed:", error);
-        } finally {
-            setLoggingOut(false);
-        }
-    };
+    const { logout } = useAuth();
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, ease: "linear" }}
-            className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8"
-        >
-            <div className="max-w-4xl mx-auto space-y-8">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
-                            U
-                        </div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                    </div>
-                    <Button
-                        onClick={handleLogout}
-                        disabled={loggingOut}
-                        variant="destructive"
-                        className="shadow-sm"
-                    >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        {loggingOut ? "Logging out..." : "Logout"}
-                    </Button>
+        <div className="min-h-screen bg-[#050505] text-white p-8 flex flex-col items-center justify-center">
+            <div className="max-w-md w-full space-y-8 text-center">
+                <div>
+                    <h1 className="text-4xl font-light tracking-tight mb-2">
+                        Welcome to <span className="font-medium text-indigo-400">Unclutr</span>
+                    </h1>
+                    <p className="text-white/40 text-sm">
+                        Your central command for financial clarity.
+                    </p>
                 </div>
 
-                <div className="grid gap-6">
-                    <Card className="border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-xl flex items-center gap-2">
-                                <LayoutDashboard className="h-5 w-5 text-primary" />
-                                Welcome to Unclutr
-                            </CardTitle>
-                            <CardDescription>
-                                Your decision layer is currently being assembled.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="p-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center text-center space-y-4">
-                                <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
-                                    <LayoutDashboard className="h-6 w-6" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h3 className="font-semibold text-lg">Project Under Construction</h3>
-                                    <p className="text-sm text-muted-foreground max-w-sm">
-                                        We are building the Command Center for your brand. Check back soon for your live insights.
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => router.push("/dashboard/dev")}
-                                >
-                                    View Developer Diagnostics
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 gap-4 pt-8">
+                    <Link
+                        href="/dashboard/dev"
+                        className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+                    >
+                        <LayoutDashboard className="w-5 h-5 text-indigo-400" />
+                        <span className="font-medium">Developer Dashboard</span>
+                    </Link>
+
+                    <button
+                        onClick={() => logout()}
+                        className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-all group"
+                    >
+                        <LogOut className="w-5 h-5 text-red-400" />
+                        <span className="font-medium text-red-400">Sign Out</span>
+                    </button>
+                </div>
+
+                <div className="text-[10px] uppercase tracking-[0.3em] text-white/10 pt-12">
+                    Financial Control Layer • v0.1.0
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }

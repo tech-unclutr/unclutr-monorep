@@ -1,11 +1,12 @@
 "use client";
 
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 
 /**
  * Dashboard Layout
- * Wraps all dashboard routes in a ProtectedRoute to ensure 
- * that only authenticated users can access the Command Center.
+ * Wraps all dashboard routes in a ProtectedRoute and OnboardingGuard.
+ * Ensures that users are authenticated and have completed onboarding.
  */
 export default function DashboardLayout({
     children,
@@ -14,7 +15,9 @@ export default function DashboardLayout({
 }) {
     return (
         <ProtectedRoute>
-            {children}
+            <OnboardingGuard>
+                {children}
+            </OnboardingGuard>
         </ProtectedRoute>
     );
 }

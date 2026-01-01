@@ -14,17 +14,22 @@ interface ProtectedRouteProps {
  * Enhances security for 'Command Center' routes.
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loading, onboardingCompleted, hasSkippedOnboarding } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
     useEffect(() => {
-        // We only redirect if we are DEFINITELY not loading and DEFINITELY not authenticated
-        if (!loading && !isAuthenticated) {
-            console.log(`DEBUG: ProtectedRoute - Unauthenticated access to ${pathname}, redirecting to /login`);
-            router.push("/login");
+        // We only redirect if we are DEFINITELY not loading
+        if (!loading) {
+            if (!isAuthenticated) {
+                console.log(`DEBUG: ProtectedRoute - Unauthenticated access to ${pathname}, redirecting to /login`);
+                router.push("/login");
+            } else if (onboardingCompleted === false && !hasSkippedOnboarding && !pathname?.startsWith('/onboarding')) {
+                console.log(`DEBUG: ProtectedRoute - Onboarding incomplete, redirecting to /onboarding/basics`);
+                router.push("/onboarding/basics");
+            }
         }
-    }, [isAuthenticated, loading, router, pathname]);
+    }, [isAuthenticated, loading, onboardingCompleted, hasSkippedOnboarding, router, pathname]);
 
     if (loading) {
         return (

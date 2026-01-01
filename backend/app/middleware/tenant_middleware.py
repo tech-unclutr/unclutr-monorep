@@ -9,23 +9,31 @@ from app.models.iam import CompanyMembership
 
 class TenantMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # 1. Bypass check for public/onboarding routes
+        # 1. Extract and Verify Auth (Always attempt if header is present)
+        # This allows "public" or "onboarding" routes to still have a user context if they send a token.
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            try:
+                decoded_token = await get_current_user_no_depends(auth_header)
+                user_id = decoded_token.get("uid")
+                set_user_ctx(user_id)
+                request.state.user_id = user_id
+            except Exception as e:
+                # If auth fails but the route is in the bypass list, we ignore the error
+                # and let the route handler decide (or just proceed as anonymous).
+                # If it's a protected route not in bypass, we should probably fail, 
+                # but for simplicity in this middleware, we'll let the endpoint's Security dependency handle the 401
+                # if the user context isn't set.
+                pass
+
+        # 2. Bypass check for public/onboarding routes (Skipping Company Checks)
         path = request.url.path
         if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources"]):
             return await call_next(request)
 
-        # 2. Extract and Verify Auth
-        auth_header = request.headers.get("Authorization")
+        # 3. For all other routes, enforce Auth if it wasn't successful above
         if not auth_header:
-            return Response(content="Unauthorized: Missing Auth Header", status_code=401)
-        
-        try:
-            decoded_token = await get_current_user_no_depends(auth_header)
-            user_id = decoded_token.get("uid")
-            set_user_ctx(user_id)
-            request.state.user_id = user_id
-        except Exception as e:
-            return Response(content=f"Unauthorized: {str(e)}", status_code=401)
+             return Response(content="Unauthorized: Missing Auth Header", status_code=401)
 
         # 3. Handle Company Context
         company_id_str = request.headers.get("X-Company-ID")

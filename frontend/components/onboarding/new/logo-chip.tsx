@@ -1,8 +1,9 @@
 "use client";
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LogoChipProps {
     id: string;
@@ -13,46 +14,76 @@ interface LogoChipProps {
     disabled?: boolean;
 }
 
-export function LogoChip({
-    id,
-    name,
-    logoUrl,
-    selected,
-    onToggle,
-    disabled
-}: LogoChipProps) {
+export function LogoChip({ id, name, logoUrl, selected, onToggle, disabled = false }: LogoChipProps) {
+    const isNotApplicable = name.toLowerCase().includes("not applicable");
+
     return (
-        <motion.button
-            type="button"
-            whileHover={{ y: -4 }}
-            whileTap={{ scale: 0.95 }}
+        <button
             onClick={() => !disabled && onToggle(id)}
-            className={`group flex flex-col items-center gap-3 p-2 relative outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
+            disabled={disabled}
+            className={cn(
+                "flex flex-col items-center gap-3 p-2 group transition-all duration-150",
+                disabled && "opacity-50 cursor-not-allowed"
+            )}
         >
-            {/* Icon Container */}
-            <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm ${selected
-                ? 'bg-white border border-zinc-800 shadow-sm'
-                : 'bg-white border border-zinc-100 group-hover:border-zinc-300 group-hover:shadow-md'
-                }`}>
-                {logoUrl ? (
+            {/* Logo Container */}
+            <motion.div
+                whileHover={!disabled && !selected ? { scale: 1.02 } : {}}
+                whileTap={!disabled ? { scale: 0.95 } : {}}
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                className={cn(
+                    "w-16 h-16 rounded-2xl flex items-center justify-center relative transition-all duration-150",
+                    "border",
+                    selected
+                        ? "bg-white border-zinc-200 shadow-sm"
+                        : isNotApplicable
+                            ? "bg-white border-dashed border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
+                            : "bg-white border-zinc-100 hover:border-zinc-200 hover:bg-zinc-50"
+                )}
+            >
+                {isNotApplicable ? (
+                    <div className="w-6 h-6 rounded-full border border-zinc-200 flex items-center justify-center">
+                        <Minus size={14} className="text-zinc-400" strokeWidth={1.5} />
+                    </div>
+                ) : logoUrl ? (
                     <img
                         src={logoUrl}
                         alt={name}
-                        className="w-10 h-10 object-contain transition-all duration-300"
+                        className="w-10 h-10 object-contain"
                     />
                 ) : (
-                    <span className={`text-sm font-bold uppercase transition-colors ${selected ? 'text-zinc-900' : 'text-zinc-400'}`}>
-                        {name.substring(0, 2)}
-                    </span>
+                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
+                        <span className="text-sm font-bold text-zinc-400">
+                            {name[0]?.toUpperCase() || '?'}
+                        </span>
+                    </div>
                 )}
-            </div>
+
+                {/* Selection Indicator with Animation */}
+                <AnimatePresence>
+                    {selected && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 rounded-full flex items-center justify-center shadow-sm"
+                        >
+                            <Check size={12} className="text-white" strokeWidth={2.5} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
 
             {/* Label */}
-            <span className={`text-xs font-medium text-center max-w-[80px] leading-tight transition-colors ${selected ? 'text-black' : 'text-zinc-500 group-hover:text-zinc-900'
-                }`}>
+            <span
+                className={cn(
+                    "text-xs font-medium text-center leading-tight transition-colors line-clamp-2",
+                    selected ? "text-zinc-900" : "text-zinc-600 group-hover:text-zinc-900"
+                )}
+            >
                 {name}
             </span>
-        </motion.button>
+        </button>
     );
 }

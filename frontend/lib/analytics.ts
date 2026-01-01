@@ -61,3 +61,164 @@ export const trackEvent = (eventName: string, params?: Record<string, any>) => {
         });
     }
 };
+
+/**
+ * Onboarding-specific event tracking
+ * Success metrics tracking for onboarding flow
+ */
+
+type OnboardingEvent =
+    | 'onboarding_started'
+    | 'onboarding_step_completed'
+    | 'onboarding_completed'
+    | 'onboarding_abandoned'
+    | 'drawer_opened'
+    | 'drawer_search_used'
+    | 'drawer_category_clicked'
+    | 'datasource_selected'
+    | 'datasource_deselected'
+    | 'integration_requested'
+    | 'save_and_exit'
+    | 'field_completed'
+    | 'validation_error';
+
+interface OnboardingEventData {
+    step?: string;
+    stepNumber?: number;
+    category?: string;
+    datasourceId?: string;
+    datasourceName?: string;
+    searchQuery?: string;
+    timeSpent?: number;
+    variant?: 'channels' | 'stack';
+    fieldName?: string;
+    errorMessage?: string;
+}
+
+/**
+ * Track onboarding events for success metrics
+ * Integrates with Firebase Analytics and logs to localStorage for debugging
+ */
+export function trackOnboardingEvent(
+    event: OnboardingEvent,
+    data?: OnboardingEventData
+) {
+    const timestamp = new Date().toISOString();
+    const eventData = {
+        event,
+        timestamp,
+        ...data,
+    };
+
+    // Console log for development
+    if (process.env.NODE_ENV === 'development') {
+        console.log('[Onboarding Analytics]', eventData);
+    }
+
+    // Send to Firebase Analytics
+    trackEvent(event, data);
+
+    // Store in localStorage for debugging
+    try {
+        const events = JSON.parse(localStorage.getItem('onboarding_events') || '[]');
+        events.push(eventData);
+        // Keep only last 100 events
+        if (events.length > 100) events.shift();
+        localStorage.setItem('onboarding_events', JSON.stringify(events));
+    } catch (e) {
+        // Ignore localStorage errors
+    }
+}
+
+/**
+ * Hook to track time spent on a step
+ */
+export function useStepTimer(stepName: string) {
+    const startTime = Date.now();
+
+    return () => {
+        const timeSpent = Date.now() - startTime;
+        trackOnboardingEvent('onboarding_step_completed', {
+            step: stepName,
+            timeSpent,
+        });
+    };
+}
+
+/**
+ * Track authentication events
+ */
+export function trackAuthEvent(event: 'login' | 'logout' | 'signup' | 'login_failed', data?: Record<string, any>) {
+    trackEvent(`auth_${event}`, {
+        ...data,
+        timestamp: new Date().toISOString()
+    });
+}
+
+/**
+ * Track navigation events
+ */
+export function trackNavigation(from: string, to: string) {
+    trackEvent('navigation', {
+        from_page: from,
+        to_page: to,
+        timestamp: new Date().toISOString()
+    });
+}
+
+/**
+ * Track error events
+ */
+export function trackError(error: Error, context?: Record<string, any>) {
+    trackEvent('error_occurred', {
+        error_message: error.message,
+        error_stack: error.stack?.slice(0, 500),
+        ...context,
+        timestamp: new Date().toISOString()
+    });
+}
+
+/**
+ * Track feature usage
+ */
+export function trackFeatureUsage(featureName: string, action: string, data?: Record<string, any>) {
+    trackEvent('feature_used', {
+        feature_name: featureName,
+        action,
+        ...data,
+        timestamp: new Date().toISOString()
+    });
+}
+
+/**
+ * Success metrics to track:
+ * 
+ * 1. Onboarding Completion Rate
+ *    - Track: onboarding_started, onboarding_completed, onboarding_abandoned
+ *    - Target: 85%+
+ * 
+ * 2. Drawer Engagement
+ *    - Track: drawer_opened events
+ *    - Target: 40%+ of users open drawer at least once
+ * 
+ * 3. Search Usage
+ *    - Track: drawer_search_used events
+ *    - Target: 20%+ of drawer sessions use search
+ * 
+ * 4. Request Submissions
+ *    - Track: integration_requested events
+ *    - Target: <5% (means catalog is comprehensive)
+ * 
+ * 5. Time to Complete Step 2
+ *    - Track: timeSpent on channels step
+ *    - Target: <90s median
+ * 
+ * 6. Field Completion Rate
+ *    - Track: field_completed events
+ *    - Target: >95% completion before moving to next step
+ * 
+ * 7. Validation Error Rate
+ *    - Track: validation_error events
+ *    - Target: <10% of field interactions
+ */
+

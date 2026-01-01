@@ -1,21 +1,28 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Column, JSON
 from datetime import datetime
 import uuid
 from enum import Enum
 
-class Company(SQLModel, table=True):
+from app.models.base_mixins import UserTrackedModel
+
+class Company(UserTrackedModel, SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(index=True)
     currency: str = Field(default="INR")
+    timezone: str = Field(default="UTC")
+    industry: Optional[str] = Field(default=None)
+    country: Optional[str] = Field(default=None)
+    stack_summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    channels_summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
     brands: List["Brand"] = Relationship(back_populates="company")
     memberships: List["CompanyMembership"] = Relationship(back_populates="company")
 
-class Brand(SQLModel, table=True):
+class Brand(UserTrackedModel, SQLModel, table=True):
     __table_args__ = (UniqueConstraint("company_id", "name"),)
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -27,7 +34,7 @@ class Brand(SQLModel, table=True):
     company: Company = Relationship(back_populates="brands")
     workspaces: List["Workspace"] = Relationship(back_populates="brand")
 
-class Workspace(SQLModel, table=True):
+class Workspace(UserTrackedModel, SQLModel, table=True):
     __table_args__ = (UniqueConstraint("brand_id", "name"),)
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

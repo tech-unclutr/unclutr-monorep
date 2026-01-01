@@ -1,6 +1,9 @@
 import vertexai
 from vertexai.generative_models import GenerativeModel, Content, Part
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AIService:
     def __init__(self):
@@ -17,7 +20,7 @@ class AIService:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
-            print(f"Gemini API Error: {e}")
+            logger.error(f"Gemini API Error: {e}", exc_info=True)
             return f"Error: {str(e)}"
 
 ai_service = AIService()

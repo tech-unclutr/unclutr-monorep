@@ -75,7 +75,7 @@ export function VerticalStep({
                 <div
                     className={`flex items-start justify-between cursor-pointer transition-opacity duration-300 ${!isActive && !isCompleted ? 'opacity-40 hover:opacity-70' : 'opacity-100'
                         }`}
-                    onClick={isCompleted && onEdit ? onEdit : undefined}
+                    onClick={onEdit}
                 >
                     <div>
                         <div className="flex items-center gap-3">
@@ -103,7 +103,6 @@ export function VerticalStep({
                             )}
                         </AnimatePresence>
                     </div>
-
                     {isCompleted && onEdit && (
                         <button className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 hover:text-black transition-colors py-1 px-2">
                             Edit
@@ -121,7 +120,7 @@ export function VerticalStep({
                             transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
                             className="overflow-hidden"
                         >
-                            <div className="pt-6 pl-1">
+                            <div className="pt-0 pb-6 px-6">
                                 {children}
                             </div>
                         </motion.div>
@@ -132,7 +131,7 @@ export function VerticalStep({
                             key="summary"
                             initial={{ opacity: 0, y: -5 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="pt-2"
+                            className="pt-2 px-6 pb-6"
                         >
                             {summary}
                         </motion.div>
@@ -140,5 +139,5 @@ export function VerticalStep({
                 </AnimatePresence>
             </div>
         </div>
-    );
+    )
 }

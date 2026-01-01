@@ -20,6 +20,7 @@ interface ChipSelectorProps {
     maxItems?: number;
     maxError?: string;
     showSearch?: boolean;
+    drawerVariant?: 'channels' | 'stack'; // New prop
 }
 
 export function ChipSelector({
@@ -36,6 +37,7 @@ export function ChipSelector({
     maxItems,
     maxError,
     showSearch = true,
+    drawerVariant = 'channels',
 }: ChipSelectorProps) {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -66,21 +68,31 @@ export function ChipSelector({
     // Unified source list for display resolution
     const sourcePool = (allSources && allSources.length > 0) ? allSources : commonSources;
 
-    // Derived lists
-    const selectedSources = sourcePool.filter(s => selectedIds.includes(s.id));
-    const unselectedCommon = commonSources.filter(s => !selectedIds.includes(s.id));
+    // Stable List Logic: Prevents grid from jumping when selecting/deselecting
 
-    // Combine for default view: 
-    // If user has selected items, we show ONLY them (cleaner UI).
-    // If nothing selected, we show common suggestions as placeholders.
+    // 1. Identify items currently selected but NOT in the common list (e.g. added via drawer)
+    const extraSelectedItems = (allSources || []).filter(s =>
+        selectedIds.includes(s.id) &&
+        !commonSources.find(c => c.id === s.id)
+    );
+
+    // 2. Combine Common + Extra. 
+    // We do NOT bring selected items to top anymore, preserving the grid layout.
+    const combinedPool = [...commonSources, ...extraSelectedItems];
+
     const chipsToShow = searchTerm
         ? sourcePool.filter(s =>
             (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (s.display_name && s.display_name.toLowerCase().includes(searchTerm.toLowerCase()))
-        ).slice(0, 5)
-        : [...selectedSources, ...unselectedCommon.slice(0, 8)];
+        ).slice(0, 5) // Limit search results
+        : combinedPool;
 
-    const displayChips = chipsToShow;
+    // 3. Ensure "Not Applicable" is always last
+    const displayChips = chipsToShow.sort((a, b) => {
+        if (a.name.includes("Not Applicable")) return 1;
+        if (b.name.includes("Not Applicable")) return -1;
+        return 0;
+    });
 
     // Toggle handler
     const handleToggle = (id: string) => {
@@ -118,7 +130,7 @@ export function ChipSelector({
                         >
                             <LogoChip
                                 id={source.id}
-                                name={source.display_name || source.name}
+                                name={source.name.includes("Not Applicable") ? "Not Applicable" : (source.display_name || source.name)}
                                 logoUrl={source.logo_url}
                                 selected={selectedIds.includes(source.id)}
                                 onToggle={handleToggle}
@@ -166,6 +178,7 @@ export function ChipSelector({
                 datasources={allSources}
                 isLoading={isLoading}
                 priorityCategory={priorityCategory}
+                drawerVariant={drawerVariant}
             />
         </div>
     );

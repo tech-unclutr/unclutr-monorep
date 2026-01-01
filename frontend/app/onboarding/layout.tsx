@@ -3,7 +3,7 @@
 import React from 'react';
 import { OnboardingProvider } from '@/store/onboarding-context';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 
@@ -31,6 +31,11 @@ import { useOnboarding } from '@/store/onboarding-context';
 
 function OnboardingHeader() {
     const { saveAndExit } = useOnboarding();
+
+    const pathname = usePathname();
+    const isFinishPage = pathname?.endsWith('/finish');
+
+    if (isFinishPage) return null;
 
     return (
         <div className="absolute top-8 right-8 z-50 flex items-center gap-4">

@@ -10,17 +10,21 @@ import { useOnboarding } from '@/store/onboarding-context';
 interface OnboardingShellProps {
     children: React.ReactNode;
     title?: string;
-    subtitle?: string;
+    subtitle?: React.ReactNode;
     onNext?: () => void;
     nextDisabled?: boolean;
     showFooter?: boolean;
+    privacyNote?: string;
+    nextLabel?: string;
+    showSkip?: boolean;
+    onSkip?: () => void;
 }
 
 const steps = [
     { id: 'basics', label: 'Basics', path: '/onboarding/basics' },
     { id: 'channels', label: 'Channels', path: '/onboarding/channels' },
     { id: 'stack', label: 'Stack', path: '/onboarding/stack' },
-    { id: 'review', label: 'Finish', path: '/onboarding/review' },
+    { id: 'finish', label: 'Finish', path: '/onboarding/finish' },
 ];
 
 export function OnboardingShell({
@@ -30,10 +34,14 @@ export function OnboardingShell({
     onNext,
     nextDisabled = false,
     showFooter = true,
+    privacyNote,
+    nextLabel = "Continue",
+    showSkip = false,
+    onSkip,
 }: OnboardingShellProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { saveAndExit } = useOnboarding();
+    const { saveAndExit, isSaving } = useOnboarding();
 
     const currentStepIndex = steps.findIndex(step =>
         pathname.startsWith(step.path) ||
@@ -46,9 +54,8 @@ export function OnboardingShell({
         }
     };
 
-    const handleSaveAndExit = () => {
-        saveAndExit();
-        router.push('/dashboard');
+    const handleSaveAndExit = async () => {
+        await saveAndExit();
     };
 
     return (
@@ -89,8 +96,11 @@ export function OnboardingShell({
                             const isCompleted = idx < currentStepIndex;
                             return (
                                 <React.Fragment key={step.id}>
-                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${isActive ? 'bg-zinc-100' : ''
-                                        }`}>
+                                    <button
+                                        onClick={() => router.push(step.path)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 cursor-pointer hover:bg-zinc-50 ${isActive ? 'bg-zinc-100' : ''
+                                            }`}
+                                    >
                                         <div
                                             className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isActive ? 'bg-black scale-100' : isCompleted ? 'bg-zinc-300' : 'bg-zinc-100'
                                                 }`}
@@ -99,7 +109,7 @@ export function OnboardingShell({
                                             }`}>
                                             {step.label}
                                         </span>
-                                    </div>
+                                    </button>
                                 </React.Fragment>
                             );
                         })}
@@ -121,9 +131,17 @@ export function OnboardingShell({
                         variant="ghost"
                         size="sm"
                         onClick={handleSaveAndExit}
-                        className="text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-full px-5 h-9 text-xs font-medium border border-zinc-100 hover:border-zinc-200 transition-all bg-white shadow-sm hover:shadow"
+                        disabled={isSaving}
+                        className="text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-full px-5 h-9 text-xs font-medium border border-zinc-100 hover:border-zinc-200 transition-all bg-white shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-wait"
                     >
-                        Save & exit
+                        {isSaving ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                <span>Saving...</span>
+                            </div>
+                        ) : (
+                            "Save & exit"
+                        )}
                     </Button>
                 </div>
             </nav>
@@ -148,8 +166,13 @@ export function OnboardingShell({
                                         </h1>
                                     )}
                                     {subtitle && (
-                                        <p className="text-xl text-zinc-500 leading-relaxed max-w-xl font-light">
+                                        <div className="text-xl text-zinc-500 leading-relaxed max-w-xl font-light">
                                             {subtitle}
+                                        </div>
+                                    )}
+                                    {privacyNote && (
+                                        <p className="text-xs text-zinc-400 mt-4 font-medium bg-zinc-50 inline-block px-3 py-1.5 rounded-lg border border-zinc-100">
+                                            {privacyNote}
                                         </p>
                                     )}
                                 </div>
@@ -167,16 +190,30 @@ export function OnboardingShell({
                         <span className="bg-zinc-100 border border-zinc-200 rounded px-1.5 py-0.5">Enter ↵</span>
                         to continue
                     </div>
-                    <Button
-                        onClick={onNext}
-                        disabled={nextDisabled}
-                        size="lg"
-                        className="w-full md:w-auto text-lg px-8 h-12 rounded-xl bg-black hover:bg-zinc-800 text-white shadow-xl shadow-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Continue
-                    </Button>
+
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                        {showSkip && onSkip && (
+                            <Button
+                                variant="ghost"
+                                onClick={onSkip}
+                                disabled={isSaving}
+                                className="text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+                            >
+                                {isSaving ? "Saving..." : "Skip for now"}
+                            </Button>
+                        )}
+                        <Button
+                            onClick={onNext}
+                            disabled={nextDisabled}
+                            size="lg"
+                            className="flex-1 md:flex-none text-lg px-8 h-12 rounded-xl bg-black hover:bg-zinc-800 text-white shadow-xl shadow-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {nextLabel}
+                        </Button>
+                    </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

@@ -4,6 +4,9 @@ from fastapi import HTTPException, status, Security, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from app.core.config import settings
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize Firebase App
 # In production, use env vars. For local, we check if app is already init.
@@ -20,8 +23,7 @@ if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     else:
         # Fallback or initialization without creds (e.g. on GCP)
-        # For now, we print a warning
-        print("Warning: Firebase Credentials not found. Auth will fail.")
+        logger.warning("Firebase Credentials not found. Auth will fail.")
 
 security = HTTPBearer(auto_error=False)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
@@ -52,8 +54,9 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Check for Dev Token
-    if token == settings.SWAGGER_DEV_TOKEN:
+    # Check for Dev Token (only if enabled)
+    if settings.ENABLE_DEV_AUTH and token == settings.SWAGGER_DEV_TOKEN:
+        logger.warning("Dev authentication used - this should be disabled in production!")
         return {
             "uid": "dev-user-123",
             "email": "dev@unclutr.ai",
@@ -61,22 +64,19 @@ def get_current_user(
             "picture": "https://ui-avatars.com/api/?name=Dev+User",
             "is_dev": True
         }
+    elif not settings.ENABLE_DEV_AUTH and token == settings.SWAGGER_DEV_TOKEN:
+        # Dev auth disabled - reject dev token
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Dev authentication is disabled in this environment",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     try:
-        # print(f"DEBUG: Verifying token: {token[:10]}...") 
         decoded_token = auth.verify_id_token(token)
         return decoded_token
     except Exception as e:
-        print(f"DEBUG: Auth Verification Failed: {e}")
-        try:
-            with open("auth_debug.txt", "w") as f:
-                f.write(f"Error: {e}\n")
-                import traceback
-                traceback.print_exc(file=f)
-        except:
-            pass
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Auth Verification Failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication credentials: {e}",

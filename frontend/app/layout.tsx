@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description: "The Decision & Control Layer for D2C Brands",
 };
 
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+
 import { AuthProvider } from "@/context/auth-context";
 import QueryProvider from "@/context/query-client-provider";
 
@@ -24,12 +27,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={clsx(inter.variable, outfit.variable, "min-h-screen bg-background font-sans antialiased")}>
-        <AuthProvider>
-          <QueryProvider>
-            <AnalyticsListener />
-            {children}
-          </QueryProvider>
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <QueryProvider>
+              <AnalyticsListener />
+              {children}
+            </QueryProvider>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

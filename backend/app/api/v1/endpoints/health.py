@@ -6,6 +6,9 @@ import firebase_admin
 from firebase_admin import auth
 import vertexai
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -14,7 +17,8 @@ router = APIRouter()
 try:
     vertexai.init(project=settings.GOOGLE_CLOUD_PROJECT, location=settings.GOOGLE_CLOUD_LOCATION)
 except Exception as e:
-    print(f"Vertex AI initialization failed: {e}")
+    logger.error(f"Vertex AI initialization failed: {e}", exc_info=True)
+
 
 @router.get("/full")
 async def health_check_full(session: AsyncSession = Depends(get_session)):

@@ -16,7 +16,7 @@ class User(UserBase, table=True):
     last_login_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Transient field for API response
-    onboarding_completed: bool = Field(default=False, sa_column=None)
+    onboarding_completed: bool = Field(default=False)
 
 class UserCreate(UserBase):
     id: str # UID is required from Firebase
@@ -26,3 +26,4 @@ class UserRead(UserBase):
     created_at: datetime
     last_login_at: datetime
     onboarding_completed: bool = False
+    current_company_id: Optional[uuid.UUID] = None # Added for frontend context

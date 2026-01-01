@@ -32,11 +32,14 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> User:
     # Check if onboarding is completed
     membership_stmt = select(CompanyMembership).where(CompanyMembership.user_id == user.id)
     membership_result = await session.exec(membership_stmt)
-    is_onboarded = membership_result.first() is not None
+    membership = membership_result.first()
+    
+    is_onboarded = membership is not None
     
     await session.commit()
     
     # Attach transient attribute for the response serializer
     user.onboarding_completed = is_onboarded
+    user.current_company_id = membership.company_id if membership else None
     
     return user

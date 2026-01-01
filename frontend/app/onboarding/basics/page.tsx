@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { OnboardingShell } from '@/components/onboarding/new/onboarding-shell';
 import { useOnboarding } from '@/store/onboarding-context';
 import { Button } from '@/components/ui/button';
-import { Globe, Clock, Coins, Edit2, Check, Info, Building2, Sparkles } from 'lucide-react';
+import { Globe, Clock, Coins, Edit2, Check, Info, Building2, Sparkles, Tag, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { regions, allCurrencies, allTimezones } from '@/data/regions';
+import { d2cCategories } from '@/data/categories';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { cn } from '@/lib/utils';
 import {
@@ -21,6 +22,9 @@ export default function BasicsPage() {
     const router = useRouter();
     const { state, updateState } = useOnboarding();
     const [isEditingRegion, setIsEditingRegion] = useState(false);
+    const [categoryInput, setCategoryInput] = useState(state.category || '');
+    const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
+    const [filteredCategories, setFilteredCategories] = useState<string[]>([]);
 
     // Auto-detect Logic Helper
     const runAutoDetect = () => {
@@ -98,7 +102,47 @@ export default function BasicsPage() {
     // Fallback for currency symbol if custom currency selected
     const currencyData = allCurrencies.find(c => c.code === state.region.currency);
 
-    const isNextDisabled = !state.companyName || !state.brandName;
+    // Category handlers
+    const handleCategoryChange = (value: string) => {
+        setCategoryInput(value);
+        if (value.trim()) {
+            const filtered = d2cCategories.filter(cat =>
+                cat.toLowerCase().includes(value.toLowerCase())
+            );
+            setFilteredCategories(filtered);
+            setShowCategorySuggestions(filtered.length > 0);
+        } else {
+            setShowCategorySuggestions(false);
+        }
+    };
+
+    const handleCategoryBlur = () => {
+        setTimeout(() => {
+            // Validate: only accept if it matches a predefined category
+            const isValid = d2cCategories.some(cat =>
+                cat.toLowerCase() === categoryInput.trim().toLowerCase()
+            );
+            if (isValid) {
+                const matchedCategory = d2cCategories.find(cat =>
+                    cat.toLowerCase() === categoryInput.trim().toLowerCase()
+                );
+                updateState({ category: matchedCategory });
+            } else {
+                // Reset to previous valid value or empty
+                setCategoryInput(state.category || '');
+            }
+            setShowCategorySuggestions(false);
+        }, 200);
+    };
+
+    const selectCategory = (category: string) => {
+        setCategoryInput(category);
+        updateState({ category });
+        setShowCategorySuggestions(false);
+    };
+
+    const isNextDisabled = !state.companyName || !state.brandName || !state.category;
+
 
     return (
         <TooltipProvider delayDuration={0}>
@@ -110,7 +154,7 @@ export default function BasicsPage() {
             >
                 <div className="space-y-6 mt-0">
                     {/* Editorial Style Inputs */}
-                    <div className="space-y-5">
+                    <div className="space-y-6">
 
                         {/* Company Name */}
                         <div className="group relative">
@@ -178,6 +222,89 @@ export default function BasicsPage() {
                                     </TooltipTrigger>
                                     <TooltipContent side="left" className="max-w-xs bg-zinc-900 text-zinc-100 border-zinc-800 p-3 shadow-xl">
                                         <p>This is how your brand will appear on <strong>customer interactions</strong> and dashboard labels.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </div>
+
+                        {/* Category */}
+                        <div className="group relative">
+                            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 transition-colors group-focus-within:text-black">
+                                Category
+                            </label>
+                            <div className="relative">
+                                <input
+                                    placeholder="e.g. Fashion & Apparel"
+                                    value={categoryInput}
+                                    onChange={(e) => handleCategoryChange(e.target.value)}
+                                    onFocus={() => {
+                                        if (categoryInput.trim()) {
+                                            const filtered = d2cCategories.filter(cat =>
+                                                cat.toLowerCase().includes(categoryInput.toLowerCase())
+                                            );
+                                            setFilteredCategories(filtered);
+                                            setShowCategorySuggestions(filtered.length > 0);
+                                        }
+                                    }}
+                                    onBlur={handleCategoryBlur}
+                                    className="w-full text-3xl font-light bg-transparent border-b border-zinc-200 py-2 pr-8 focus:outline-none focus:border-black transition-colors placeholder:text-zinc-200 text-zinc-900"
+                                />
+                                {/* Dropdown Icon */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFilteredCategories(d2cCategories);
+                                        setShowCategorySuggestions(!showCategorySuggestions);
+                                    }}
+                                    className="absolute right-0 bottom-2 p-1 text-zinc-400 hover:text-zinc-900 transition-colors"
+                                >
+                                    <ChevronDown size={20} className={cn(
+                                        "transition-transform duration-200",
+                                        showCategorySuggestions && "rotate-180"
+                                    )} />
+                                </button>
+                            </div>
+                            {/* Filtered Suggestions Dropdown */}
+                            <AnimatePresence>
+                                {showCategorySuggestions && filteredCategories.length > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="absolute z-10 w-full mt-2 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-60 overflow-y-auto"
+                                    >
+                                        {filteredCategories.map(cat => (
+                                            <button
+                                                key={cat}
+                                                type="button"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    selectCategory(cat);
+                                                }}
+                                                className="w-full text-left px-4 py-3 hover:bg-zinc-50 transition-colors text-sm text-zinc-900 border-b border-zinc-100 last:border-b-0"
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            {/* Context Chip */}
+                            <div className="absolute top-0 right-0">
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <div className={cn(
+                                            "cursor-help text-[10px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all duration-300 transform",
+                                            state.category ? "bg-emerald-50 text-emerald-600 scale-100 opacity-100" :
+                                                "group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 group-focus-within:scale-100 group-focus-within:opacity-100",
+                                            !state.category && "bg-zinc-50 text-zinc-400 scale-95 opacity-0 group-hover:opacity-100"
+                                        )}>
+                                            {state.category ? <Check size={12} strokeWidth={2.5} /> : <Tag size={12} />}
+                                            Business type
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-xs bg-zinc-900 text-zinc-100 border-zinc-800 p-3 shadow-xl">
+                                        <p>Helps us <strong>personalize recommendations</strong> and industry benchmarks for your business.</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>

@@ -3,12 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DataSource } from '@/data/datasourceCatalog';
 import { api } from '@/lib/api';
+import { client } from '@/lib/api/client';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 
 interface OnboardingState {
     companyName: string;
     brandName: string;
+    category: string;
     region: {
         country: string;
         currency: string;
@@ -29,6 +31,9 @@ interface OnboardingState {
         payments: string[];
         shipping: string[];
         payouts: string[];
+        marketing: string[];
+        analytics: string[];
+        finance: string[];
     };
     integrationRequestsDraft: Array<{
         term: string;
@@ -43,12 +48,14 @@ interface OnboardingContextType {
     updatePrimaryPartners: (updates: Partial<OnboardingState['primaryPartners']>) => void;
     updateStack: (updates: Partial<OnboardingState['stack']>) => void;
     addIntegrationRequest: (term: string, context: string) => void;
-    saveAndExit: () => void;
+    saveAndExit: () => Promise<void>;
+    isSaving: boolean;
 }
 
 const initialState: OnboardingState = {
     companyName: '',
     brandName: '',
+    category: '',
     region: {
         country: '',
         currency: '',
@@ -69,6 +76,9 @@ const initialState: OnboardingState = {
         payments: [],
         shipping: [],
         payouts: [],
+        marketing: [],
+        analytics: [],
+        finance: [],
     },
     integrationRequestsDraft: [],
 };
@@ -77,6 +87,7 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(undef
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
     const [state, setState] = useState<OnboardingState>(initialState);
+    const [isSaving, setIsSaving] = useState(false);
 
     const { user, skipOnboardingSession } = useAuth();
     const router = useRouter();
@@ -98,10 +109,23 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         const fetchBackendState = async () => {
             if (!user) return;
             try {
-                const backendData = await api.get('/onboarding/state');
-                if (backendData && backendData.data) {
-                    console.log("DEBUG: Hydrating from backend:", backendData.data);
-                    setState(prev => ({ ...prev, ...backendData.data }));
+                const response = await api.get('/onboarding/state');
+                if (response && !response.is_completed) {
+                    console.log('DEBUG: Backend Raw Response:', response);
+                    // Merge all page data into state
+                    const mergedState: Partial<OnboardingState> = {
+                        companyName: response.basics_data?.companyName || '',
+                        brandName: response.basics_data?.brandName || '',
+                        category: response.basics_data?.category || '',
+                        region: response.basics_data?.region || initialState.region,
+                        channels: response.channels_data?.channels || response.channels_data || initialState.channels,
+                        primaryPartners: response.channels_data?.primaryPartners || initialState.primaryPartners,
+                        stack: response.stack_data?.stack || response.stack_data || initialState.stack,
+                        integrationRequestsDraft: response.finish_data?.integrationRequestsDraft || []
+                    };
+
+                    setState(prev => ({ ...prev, ...mergedState }));
+                    console.log('Hydrated from backend:', mergedState);
                 }
             } catch (err) {
                 console.warn("No existing onboarding state found or fetch failed", err);
@@ -154,12 +178,75 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     };
 
     const saveAndExit = async () => {
+        setIsSaving(true);
         try {
-            console.log('Saving to backend...', state);
-            // Save to step=1 (Generic draft state for now)
-            await api.post('/onboarding/step', {
-                step: 1,
-                data: state
+            // Determine current page from router
+            const currentPath = window.location.pathname;
+            let currentPage = 'basics';
+            if (currentPath.includes('/channels')) currentPage = 'channels';
+            else if (currentPath.includes('/stack')) currentPage = 'stack';
+            else if (currentPath.includes('/finish')) currentPage = 'finish';
+
+            console.log('Saving to backend...', { page: currentPage, state });
+
+            // Validate page type
+            const validPages = ['basics', 'channels', 'stack', 'finish'] as const;
+            type ValidPage = typeof validPages[number];
+
+            if (!validPages.includes(currentPage as ValidPage)) {
+                console.warn("Attempting to save on invalid page:", currentPage);
+                setIsSaving(false);
+                return;
+            }
+
+            // Construct payload based on page
+            let payloadData: any = {};
+
+            if (currentPage === 'basics') {
+                payloadData = {
+                    companyName: state.companyName,
+                    brandName: state.brandName,
+                    category: state.category,
+                    region: state.region
+                };
+            } else if (currentPage === 'channels') {
+                // Flatten channels object into list of IDs for backend
+                const allChannels = [
+                    ...(state.channels.d2c || []),
+                    ...(state.channels.marketplaces || []),
+                    ...(state.channels.qcom || []),
+                    ...(state.channels.others || [])
+                ];
+                // Send BOTH structured and flattened data
+                payloadData = {
+                    selectedChannels: allChannels,
+                    channels: state.channels,
+                    primaryPartners: state.primaryPartners
+                };
+            } else if (currentPage === 'stack') {
+                // Flatten stack object into list of IDs for backend
+                const allTools = [
+                    ...(state.stack.orders || []),
+                    ...(state.stack.payments || []),
+                    ...(state.stack.shipping || []),
+                    ...(state.stack.payouts || []),
+                    ...(state.stack.marketing || []),
+                    ...(state.stack.analytics || []),
+                    ...(state.stack.finance || [])
+                ];
+                // Send BOTH structured and flattened data
+                payloadData = {
+                    selectedTools: allTools,
+                    stack: state.stack
+                };
+            }
+
+            // Save using generated client
+            await client.onboarding.saveProgressApiV1OnboardingSavePost({
+                requestBody: {
+                    page: currentPage as ValidPage,
+                    data: payloadData
+                }
             });
 
             // CRITICAL: Mark session as skipped so OnboardingGuard lets us into Dashboard
@@ -167,9 +254,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             router.push('/dashboard');
         } catch (error) {
             console.error("Failed to save state:", error);
-            // Even if fail, we redirect? better to alert?
-            // For now, alert
             alert("Failed to save progress. Please check connection.");
+            setIsSaving(false);
         }
     };
 
@@ -183,11 +269,13 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                 updateStack,
                 addIntegrationRequest,
                 saveAndExit,
+                isSaving,
             }}
         >
             {children}
         </OnboardingContext.Provider>
     );
+
 }
 
 export function useOnboarding() {

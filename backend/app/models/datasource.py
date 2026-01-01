@@ -17,6 +17,7 @@ class DataSourceCategory(str, Enum):
     Accounting = "Accounting"
     Analytics = "Analytics"
     Communication = "Communication"
+    Retention = "Retention"
 
 class DataSource(SQLModel, table=True):
     __tablename__ = "datasources"

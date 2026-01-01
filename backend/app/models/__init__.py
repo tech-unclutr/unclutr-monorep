@@ -6,3 +6,12 @@ from .audit import AuditTrail
 from .datasource import DataSource, DataSourceCategory
 from .datasource_request import DataSourceRequest, RequestStatus
 from .integration import Integration, IntegrationStatus
+from .metrics import (
+    UserMetrics,
+    OnboardingMetrics,
+    IntegrationMetrics,
+    BusinessMetrics,
+    SystemMetrics,
+    MetricType
+)
+

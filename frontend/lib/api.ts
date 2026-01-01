@@ -3,7 +3,7 @@
 import { auth } from "./firebase";
 
 // Use direct backend URL for local dev to avoid Next.js proxy stripping headers/slashes
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
 
 export const api = {
     async request(endpoint: string, options: RequestInit = {}) {
@@ -40,7 +40,7 @@ export const api = {
         return this.request(endpoint, { method: "GET", headers });
     },
 
-    post(endpoint: string, body: any, headers?: any) {
+    post(endpoint: string, body: any = {}, headers?: any) {
         return this.request(endpoint, {
             method: "POST",
             body: JSON.stringify(body),

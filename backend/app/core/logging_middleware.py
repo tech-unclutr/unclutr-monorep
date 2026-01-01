@@ -30,17 +30,17 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 logger.error(f"Error reading request body: {e}")
         
-        print("\n" + "="*80)
-        print(f"🔵 INCOMING REQUEST")
-        print("="*80)
-        print(f"Method: {request.method}")
-        print(f"URL: {request.url}")
-        print(f"Path: {request.url.path}")
-        print(f"Query Params: {dict(request.query_params)}")
-        print(f"Headers: {dict(request.headers)}")
+        logger.info("=" * 80)
+        logger.info("🔵 INCOMING REQUEST")
+        logger.info("=" * 80)
+        logger.info(f"Method: {request.method}")
+        logger.info(f"URL: {request.url}")
+        logger.info(f"Path: {request.url.path}")
+        logger.info(f"Query Params: {dict(request.query_params)}")
+        logger.info(f"Headers: {dict(request.headers)}")
         if request_body:
-            print(f"Body: {request_body}")
-        print("="*80 + "\n")
+            logger.info(f"Body: {request_body}")
+        logger.info("=" * 80)
         
         # Process request
         response = await call_next(request)
@@ -49,12 +49,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         duration = time.time() - start_time
         
         # Log response
-        print("\n" + "="*80)
-        print(f"🟢 OUTGOING RESPONSE")
-        print("="*80)
-        print(f"Status Code: {response.status_code}")
-        print(f"Duration: {duration:.3f}s")
-        print(f"Headers: {dict(response.headers)}")
-        print("="*80 + "\n")
+        logger.info("=" * 80)
+        logger.info("🟢 OUTGOING RESPONSE")
+        logger.info("=" * 80)
+        logger.info(f"Status Code: {response.status_code}")
+        logger.info(f"Duration: {duration:.3f}s")
+        logger.info(f"Headers: {dict(response.headers)}")
+        logger.info("=" * 80)
         
         return response
+

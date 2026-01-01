@@ -1,6 +1,8 @@
 import { User, GoogleAuthProvider, signInWithRedirect, getRedirectResult, sendSignInLinkToEmail, signOut, signInWithPopup } from "firebase/auth";
 import { auth } from "./firebase";
 import { logFirebaseOperation, logFirebaseError } from "./api-logger";
+import { trackAuthEvent, trackError } from "./analytics";
+
 
 /**
  * Translates technical Firebase error codes into human-friendly messages 
@@ -81,12 +83,15 @@ export const signInWithGoogle = async () => {
 
             if (result.user) {
                 console.log("DEBUG: Popup Success, forcing immediate redirect to /dashboard");
+                trackAuthEvent('login', { method: 'google', mode: 'popup' });
                 // Using window.location.assign for an absolute, infallible navigation
                 window.location.assign("/dashboard");
             }
             return result;
         } catch (error) {
             logFirebaseError("signInWithGoogle (Popup)", error);
+            trackAuthEvent('login_failed', { method: 'google', mode: 'popup', error: (error as Error).message });
+            trackError(error as Error, { context: 'google_signin_popup' });
             throw error;
         }
     }
@@ -112,6 +117,7 @@ export const handleAuthRedirect = async () => {
                 uid: result.user.uid,
                 email: result.user.email
             });
+            trackAuthEvent('login', { method: 'google', mode: 'redirect' });
             return result;
         } else {
             console.log("DEBUG: handleAuthRedirect - No result found in this load.");
@@ -146,9 +152,11 @@ export const logout = async () => {
     try {
         await signOut(auth);
         window.localStorage.removeItem('emailForSignIn');
+        trackAuthEvent('logout');
         logFirebaseOperation("logout - Success");
     } catch (error) {
         logFirebaseError("logout", error);
+        trackError(error as Error, { context: 'logout' });
         throw error;
     }
 }

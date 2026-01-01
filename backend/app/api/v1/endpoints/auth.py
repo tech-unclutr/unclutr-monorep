@@ -20,9 +20,15 @@ async def login_for_access_token(
     from app.core.config import settings
     import httpx
     
-    # 1. Check Dev Password
-    if form_data.password == settings.SWAGGER_DEV_PASSWORD:
+    # 1. Check Dev Password (only if enabled)
+    if settings.ENABLE_DEV_AUTH and form_data.password == settings.SWAGGER_DEV_PASSWORD:
         return {"access_token": settings.SWAGGER_DEV_TOKEN, "token_type": "bearer"}
+    elif not settings.ENABLE_DEV_AUTH and form_data.password == settings.SWAGGER_DEV_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Dev authentication is disabled in this environment",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     # 2. Attempt Real Firebase Auth
     if not settings.FIREBASE_API_KEY:

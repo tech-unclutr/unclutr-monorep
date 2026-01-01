@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Minus } from 'lucide-react';
 import { OnboardingShell } from '@/components/onboarding/new/onboarding-shell';
 import { VerticalStep } from '@/components/onboarding/new/vertical-step';
 import { ChipSelector } from '@/components/onboarding/new/chip-selector';
 import { useOnboarding } from '@/store/onboarding-context';
 import { useAuth } from '@/context/auth-context';
+import { client } from '@/lib/api/client';
 import { DataSource, datasourceCatalog } from '@/data/datasourceCatalog';
 import { api } from '@/lib/api';
 
@@ -62,6 +64,7 @@ export default function ChannelsPage() {
                 setDatasources(data);
             } catch (err) {
                 console.error("Failed to load datasources", err);
+                alert("Failed to load channel options. Please refresh the page or check your connection.");
             } finally {
                 setDataLoading(false);
             }
@@ -140,13 +143,21 @@ export default function ChannelsPage() {
         // Persist progress
         try {
             if (user) {
-                await api.post('/onboarding/step', {
-                    step: 2,
-                    data: { channels: stateRef.current.channels }
+                await client.onboarding.saveProgressApiV1OnboardingSavePost({
+                    requestBody: {
+                        page: 'channels',
+                        data: {
+                            channels: stateRef.current.channels,
+                            // selectedChannels: flattened list kept for legacy/debug if needed, but backend uses 'channels' key
+                            selectedChannels: stateRef.current.channels?.d2c?.concat(stateRef.current.channels?.marketplaces || []) || []
+                        } // Note: This payload structure might need to match ChannelsData
+                    }
                 });
             }
         } catch (error) {
             console.error("Failed to save progress", error);
+            alert("Failed to save your selections. Please check your connection.");
+            // Continue anyway since data is in localStorage
         }
 
         if (activeSection === 'd2c') {
@@ -197,12 +208,23 @@ export default function ChannelsPage() {
 
         return (
             <div className="flex flex-wrap gap-2 mt-1">
-                {sources.map((s: any) => (
-                    <div key={s.id} className="inline-flex items-center gap-2 bg-white border border-zinc-200 shadow-sm rounded-lg px-2.5 py-1">
-                        {s.logoUrl || s.logo_url ? <img src={s.logoUrl || s.logo_url} alt="" className="w-4 h-4 object-contain" /> : <div className="w-4 h-4 rounded-full bg-zinc-100 flex items-center justify-center text-[8px] font-bold">{(s.name || '?')[0]}</div>}
-                        <span className="text-xs font-medium text-zinc-700">{s.display_name || s.name}</span>
-                    </div>
-                ))}
+                {sources.map((s: any) => {
+                    const isNotApplicable = s.name?.toLowerCase().includes("not applicable");
+                    return (
+                        <div key={s.id} className="inline-flex items-center gap-2 bg-white border border-zinc-200 shadow-sm rounded-lg px-2.5 py-1">
+                            {s.logoUrl || s.logo_url ? (
+                                <img src={s.logoUrl || s.logo_url} alt="" className="w-4 h-4 object-contain" />
+                            ) : isNotApplicable ? (
+                                <div className="w-4 h-4 rounded-full border border-zinc-200 flex items-center justify-center">
+                                    <Minus size={10} className="text-zinc-400" strokeWidth={2} />
+                                </div>
+                            ) : (
+                                <div className="w-4 h-4 rounded-full bg-zinc-100 flex items-center justify-center text-[8px] font-bold">{(s.name || '?')[0]}</div>
+                            )}
+                            <span className="text-xs font-medium text-zinc-700">{s.display_name || s.name}</span>
+                        </div>
+                    );
+                })}
             </div>
         );
     };
@@ -231,7 +253,7 @@ export default function ChannelsPage() {
                     <div className="space-y-6">
                         <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/50 mb-4">
                             <p className="text-sm text-blue-900 leading-relaxed">
-                                <span className="font-semibold">Why ask?</span> So we interpret order IDs, discounts, and taxes contextually.
+                                <span className="font-semibold">Why?</span> Helps us parse order IDs and tax rules correctly.
                             </p>
                         </div>
 
@@ -263,7 +285,7 @@ export default function ChannelsPage() {
                     <div className="space-y-6">
                         <div className="bg-amber-50/50 rounded-xl p-4 border border-amber-100/50 mb-4">
                             <p className="text-sm text-amber-900 leading-relaxed">
-                                <span className="font-semibold">Note:</span> You can select multiple.
+                                <span className="font-semibold">Note:</span> Select all that apply.
                             </p>
                         </div>
 
@@ -296,7 +318,7 @@ export default function ChannelsPage() {
                     <div className="space-y-6">
                         <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100/50 mb-4">
                             <p className="text-sm text-purple-900 leading-relaxed">
-                                <span className="font-semibold">Tip:</span> Only add what’s active.
+                                <span className="font-semibold">Tip:</span> Only active channels.
                             </p>
                         </div>
 

@@ -11,6 +11,7 @@ interface AuthContextType {
     loading: boolean;
     isAuthenticated: boolean;
     onboardingCompleted: boolean | null;
+    companyId: string | null;
     isSyncing: boolean;
     hasSkippedOnboarding: boolean;
     logout: () => Promise<void>;
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+    const [companyId, setCompanyId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
@@ -76,6 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         console.log("DEBUG: AuthProvider [Sync] Data received:", syncData);
                         if (isMounted) {
                             setOnboardingCompleted(syncData.onboarding_completed);
+                            setCompanyId(syncData.current_company_id);
+                            // Also persist to localStorage for client.ts to access synchronously if needed
+                            if (syncData.current_company_id) {
+                                localStorage.setItem('unclutr_company_id', syncData.current_company_id);
+                            }
                         }
                     } catch (e) {
                         console.error("DEBUG: AuthProvider [Sync] Background Error:", e);
@@ -91,6 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     console.log("DEBUG: AuthProvider [Sync] No user, clearing onboarding status");
                     setOnboardingCompleted(null);
+                    setCompanyId(null);
+                    localStorage.removeItem('unclutr_company_id');
                     syncInProgress.current = null;
                 }
 
@@ -144,8 +153,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         try {
             await firebaseLogout();
+            await firebaseLogout();
             setUser(null);
             setOnboardingCompleted(null);
+            setCompanyId(null);
+            localStorage.removeItem('unclutr_company_id');
             router.push("/login");
         } catch (error) {
             console.error("DEBUG: Logout failed:", error);
@@ -158,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             loading,
             isAuthenticated: !!user,
             onboardingCompleted,
+            companyId,
             isSyncing,
             hasSkippedOnboarding,
             logout,

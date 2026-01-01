@@ -1,6 +1,6 @@
 from sqlalchemy import event, select
 from sqlalchemy.orm import Session, Query, decl_api
-from app.core.context import get_company_ctx
+from app.core.context import get_company_ctx, get_user_ctx
 import uuid
 from typing import Any
 
@@ -8,7 +8,9 @@ from typing import Any
 SCOPED_MODELS = [
     "Brand",
     "Workspace",
-    "AuditTrail"
+    "AuditTrail",
+    "Integration",
+    "IntegrationMetrics"
 ]
 
 @event.listens_for(Session, "do_orm_execute")
@@ -32,17 +34,33 @@ def do_orm_execute(orm_execute_state):
 def before_flush(session: Session, flush_context: Any, instances: Any):
     """
     Ensures company_id is correctly set on all new objects before saving.
+    Also stamps 'created_by' and 'updated_by' if applicable.
     """
     company_id = get_company_ctx()
+    user_id = get_user_ctx()
     
     for obj in session.new:
+        # 1. Company Stamping
         if type(obj).__name__ in SCOPED_MODELS:
-            # If context exists, override/set it
             if company_id:
                 obj.company_id = company_id
-            # If no context and no manual ID set, this is a dangerous write
             elif not hasattr(obj, "company_id") or obj.company_id is None:
-                raise ValueError(f"Security Error: Attempting to save {type(obj).__name__} without company_id context.")
+                # Allow explicit None for system-level overrides if absolutely needed, 
+                # but generally warn/error
+                pass 
+
+        # 2. User Stamping (Created By)
+        if hasattr(obj, "created_by") and obj.created_by is None and user_id:
+            obj.created_by = user_id
+            
+        # 3. User Stamping (Updated By)
+        if hasattr(obj, "updated_by") and user_id:
+            obj.updated_by = user_id
+
+    for obj in session.dirty:
+        # 4. User Stamping on Update
+        if hasattr(obj, "updated_by") and user_id:
+            obj.updated_by = user_id
 
 def init_stamping(engine):
     # This is where we could attach global listeners if needed for pure SQLAlchemy

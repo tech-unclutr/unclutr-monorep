@@ -4,6 +4,7 @@ from datetime import datetime
 import uuid
 
 class AuditTrail(SQLModel, table=True):
+    __tablename__ = "audit_trail"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     company_id: uuid.UUID = Field(index=True)
     brand_id: Optional[uuid.UUID] = Field(None, index=True)

@@ -58,7 +58,11 @@ if settings.is_production:
     logger.info(f"CORS whitelist (production): {origins}")
 else:
     # Development: Allow localhost
+    # Development: Allow all localhost variants
     origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # Regex to match http://localhost:PORT or http://127.0.0.1:PORT
+    origin_regex = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
+    logger.info("CORS: Allowing localhost regex (development)")
     logger.info("CORS: Allowing localhost (development)")
 
 
@@ -96,6 +100,7 @@ app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=origin_regex if not settings.is_production else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -49,6 +49,7 @@ interface OnboardingContextType {
     updateStack: (updates: Partial<OnboardingState['stack']>) => void;
     addIntegrationRequest: (term: string, context: string) => void;
     saveAndExit: () => Promise<void>;
+    saveCurrentPage: () => Promise<void>;
     isSaving: boolean;
 }
 
@@ -110,7 +111,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             if (!user) return;
             try {
                 const response = await api.get('/onboarding/state');
-                if (response && !response.is_completed) {
+                if (response) {
+                    // ALWAYS Hydrate: Even if is_completed=true, we might be in "Edit" mode.
                     console.log('DEBUG: Backend Raw Response:', response);
                     // Merge all page data into state
                     const mergedState: Partial<OnboardingState> = {
@@ -177,7 +179,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         });
     };
 
-    const saveAndExit = async () => {
+    const saveCurrentPage = async () => {
         setIsSaving(true);
         try {
             // Determine current page from router
@@ -248,14 +250,23 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                     data: payloadData
                 }
             });
+            setIsSaving(false);
+        } catch (error) {
+            console.error("Failed to save state:", error);
+            // alert("Failed to save progress. Please check connection."); // Suppress alert for step saves
+            setIsSaving(false);
+            throw error;
+        }
+    };
 
+    const saveAndExit = async () => {
+        try {
+            await saveCurrentPage();
             // CRITICAL: Mark session as skipped so OnboardingGuard lets us into Dashboard
             skipOnboardingSession();
             router.push('/dashboard');
-        } catch (error) {
-            console.error("Failed to save state:", error);
+        } catch (e) {
             alert("Failed to save progress. Please check connection.");
-            setIsSaving(false);
         }
     };
 
@@ -268,7 +279,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                 updatePrimaryPartners,
                 updateStack,
                 addIntegrationRequest,
+                addIntegrationRequest,
                 saveAndExit,
+                saveCurrentPage,
                 isSaving,
             }}
         >

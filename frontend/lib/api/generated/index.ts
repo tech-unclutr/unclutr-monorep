@@ -34,3 +34,5 @@ export { DevService } from './services/DevService';
 export { HealthService } from './services/HealthService';
 export { MetricsService } from './services/MetricsService';
 export { OnboardingService } from './services/OnboardingService';
+export { CompaniesService } from './services/CompaniesService';
+export type { Company } from './models/Company';

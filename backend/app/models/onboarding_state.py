@@ -13,6 +13,7 @@ class OnboardingStep(int):
     REVIEW = 4
 
 class OnboardingState(UserTrackedModel, SQLModel, table=True):
+    __tablename__ = "onboarding_state"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(index=True, unique=True)
     

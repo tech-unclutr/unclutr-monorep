@@ -63,3 +63,4 @@ backend/.hypothesis/
 backend/.pytest_cache/
 backend/cover/
 backend/firebase-credentials.json
+frontend/*.log

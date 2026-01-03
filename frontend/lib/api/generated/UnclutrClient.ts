@@ -12,6 +12,7 @@ import { DevService } from './services/DevService';
 import { HealthService } from './services/HealthService';
 import { MetricsService } from './services/MetricsService';
 import { OnboardingService } from './services/OnboardingService';
+import { CompaniesService } from './services/CompaniesService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class UnclutrClient {
     public readonly auth: AuthService;
@@ -21,6 +22,7 @@ export class UnclutrClient {
     public readonly health: HealthService;
     public readonly metrics: MetricsService;
     public readonly onboarding: OnboardingService;
+    public readonly companies: CompaniesService;
     public readonly request: BaseHttpRequest;
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
@@ -41,6 +43,7 @@ export class UnclutrClient {
         this.health = new HealthService(this.request);
         this.metrics = new MetricsService(this.request);
         this.onboarding = new OnboardingService(this.request);
+        this.companies = new CompaniesService(this.request);
     }
 }
 

@@ -8,10 +8,12 @@ import { useRouter, usePathname } from "next/navigation";
 
 interface AuthContextType {
     user: User | null;
+    dbUser: any | null; // UserRead from backend
     loading: boolean;
     isAuthenticated: boolean;
     onboardingCompleted: boolean | null;
     companyId: string | null;
+    role: string | null;
     isSyncing: boolean;
     hasSkippedOnboarding: boolean;
     logout: () => Promise<void>;
@@ -23,8 +25,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [dbUser, setDbUser] = useState<any | null>(null);
     const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
     const [companyId, setCompanyId] = useState<string | null>(null);
+    const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
@@ -79,6 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         if (isMounted) {
                             setOnboardingCompleted(syncData.onboarding_completed);
                             setCompanyId(syncData.current_company_id);
+                            setOnboardingCompleted(syncData.onboarding_completed);
+                            setCompanyId(syncData.current_company_id);
+                            setRole(syncData.role || null);
+                            setDbUser(syncData);
                             // Also persist to localStorage for client.ts to access synchronously if needed
                             if (syncData.current_company_id) {
                                 localStorage.setItem('unclutr_company_id', syncData.current_company_id);
@@ -99,6 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     console.log("DEBUG: AuthProvider [Sync] No user, clearing onboarding status");
                     setOnboardingCompleted(null);
                     setCompanyId(null);
+                    setCompanyId(null);
+                    setRole(null);
+                    setDbUser(null);
                     localStorage.removeItem('unclutr_company_id');
                     syncInProgress.current = null;
                 }
@@ -157,6 +168,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setOnboardingCompleted(null);
             setCompanyId(null);
+            setCompanyId(null);
+            setRole(null);
+            setDbUser(null);
             localStorage.removeItem('unclutr_company_id');
             router.push("/login");
         } catch (error) {
@@ -167,10 +181,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
         <AuthContext.Provider value={{
             user,
+            dbUser,
             loading,
             isAuthenticated: !!user,
             onboardingCompleted,
             companyId,
+            role,
             isSyncing,
             hasSkippedOnboarding,
             logout,

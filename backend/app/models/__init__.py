@@ -4,7 +4,7 @@ from .iam import CompanyMembership, WorkspaceMembership, SystemRole
 from .onboarding_state import OnboardingState, OnboardingStep
 from .audit import AuditTrail
 from .datasource import DataSource, DataSourceCategory
-from .datasource_request import DataSourceRequest, RequestStatus
+from .datasource_request import UserRequest, RequestStatus, RequestType
 from .integration import Integration, IntegrationStatus
 from .metrics import (
     UserMetrics,

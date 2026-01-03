@@ -16,7 +16,7 @@ type ChannelSection = 'd2c' | 'marketplaces' | 'qcom' | 'others';
 
 export default function ChannelsPage() {
     const router = useRouter();
-    const { state, updateChannels } = useOnboarding();
+    const { state, updateChannels, saveCurrentPage } = useOnboarding();
     const { user, loading: authLoading } = useAuth();
 
     // Track active section for progressive disclosure
@@ -58,7 +58,7 @@ export default function ChannelsPage() {
                 const token = await user.getIdToken();
                 console.log('DEBUG: ChannelsPage - ID Token retrieved (len):', token?.length);
 
-                const data = await api.get('/datasources/', {
+                const data = await api.get('/datasources', {
                     Authorization: `Bearer ${token}`
                 });
                 setDatasources(data);
@@ -142,21 +142,9 @@ export default function ChannelsPage() {
     const handleGlobalNext = async () => {
         // Persist progress
         try {
-            if (user) {
-                await client.onboarding.saveProgressApiV1OnboardingSavePost({
-                    requestBody: {
-                        page: 'channels',
-                        data: {
-                            channels: stateRef.current.channels,
-                            // selectedChannels: flattened list kept for legacy/debug if needed, but backend uses 'channels' key
-                            selectedChannels: stateRef.current.channels?.d2c?.concat(stateRef.current.channels?.marketplaces || []) || []
-                        } // Note: This payload structure might need to match ChannelsData
-                    }
-                });
-            }
+            await saveCurrentPage();
         } catch (error) {
             console.error("Failed to save progress", error);
-            alert("Failed to save your selections. Please check your connection.");
             // Continue anyway since data is in localStorage
         }
 

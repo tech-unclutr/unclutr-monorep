@@ -37,6 +37,22 @@ async def get_onboarding_status(
     user_id = current_user.get("uid")
     return await onboarding_service.get_resume_info(session, user_id)
 
+@router.post("/sync")
+async def sync_state(
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Trigger sync from existing Company -> OnboardingState.
+    Used by 'Edit' button in Settings.
+    """
+    user_id = current_user.get("uid")
+    try:
+        await onboarding_service.sync_company_to_state(session, user_id)
+        return {"status": "synced", "message": "Onboarding state updated from current company data."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/save")
 async def save_progress(
     request: SaveProgressRequest,

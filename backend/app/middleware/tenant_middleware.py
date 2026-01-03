@@ -9,6 +9,7 @@ from app.models.iam import CompanyMembership
 
 class TenantMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        print(f"TenantMiddleware: {request.method} {request.url.path} - Headers Auth: {bool(request.headers.get('Authorization'))}")
         # 1. Extract and Verify Auth (Always attempt if header is present)
         # This allows "public" or "onboarding" routes to still have a user context if they send a token.
         auth_header = request.headers.get("Authorization")
@@ -18,6 +19,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 user_id = decoded_token.get("uid")
                 set_user_ctx(user_id)
                 request.state.user_id = user_id
+                request.state.token_payload = decoded_token # Cache payload for get_current_user
             except Exception as e:
                 # If auth fails but the route is in the bypass list, we ignore the error
                 # and let the route handler decide (or just proceed as anonymous).
@@ -28,7 +30,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         # 2. Bypass check for public/onboarding routes (Skipping Company Checks)
         path = request.url.path
-        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources"]):
+        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources", "/company/me", "/users"]):
             return await call_next(request)
 
         # 3. For all other routes, enforce Auth if it wasn't successful above

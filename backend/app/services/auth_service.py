@@ -1,11 +1,11 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from app.models.user import User, UserCreate
+from app.models.user import User, UserCreate, UserRead
 from datetime import datetime
 
 from app.models.iam import CompanyMembership
 
-async def sync_user(session: AsyncSession, user_in: UserCreate) -> User:
+async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
     statement = select(User).where(User.id == user_in.id)
     result = await session.exec(statement)
     user = result.first()
@@ -23,7 +23,8 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> User:
         session.add(user)
     else:
         # Update existing
-        user.full_name = user_in.full_name
+        if not user.full_name:
+            user.full_name = user_in.full_name
         user.picture_url = user_in.picture_url
         user.email = user_in.email
         user.last_login_at = datetime.utcnow()
@@ -38,8 +39,13 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> User:
     
     await session.commit()
     
-    # Attach transient attribute for the response serializer
-    user.onboarding_completed = is_onboarded
-    user.current_company_id = membership.company_id if membership else None
+    await session.commit()
     
-    return user
+    # Attach transient attribute for the response serializer
+    # Use UserRead to avoid modifying User SQLModel instance which is strict
+    user_read = UserRead.from_orm(user)
+    user_read.onboarding_completed = is_onboarded
+    user_read.current_company_id = membership.company_id if membership else None
+    user_read.role = membership.role if membership else None
+    
+    return user_read

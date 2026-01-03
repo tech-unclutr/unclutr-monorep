@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { MagicLoader } from "@/components/ui/magic-loader";
 
@@ -17,6 +18,12 @@ export default function LoginPage() {
     const [message, setMessage] = useState("");
     const router = useRouter();
     const { isAuthenticated, loading: authLoading } = useAuth();
+    const { setTheme } = useTheme();
+
+    // Reset theme to light on login page
+    useEffect(() => {
+        setTheme("light");
+    }, [setTheme]);
 
     // Redirect If already authenticated
     useEffect(() => {

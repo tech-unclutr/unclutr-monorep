@@ -378,7 +378,7 @@ class MetricsService:
             
             customer_list.append({
                 "id": str(company.id),
-                "name": company.name,
+                "name": company.brand_name,
                 "currency": company.currency,
                 "created_at": company.created_at.isoformat(),
                 "member_count": member_count,

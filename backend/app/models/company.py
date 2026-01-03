@@ -8,12 +8,32 @@ from enum import Enum
 from app.models.base_mixins import UserTrackedModel
 
 class Company(UserTrackedModel, SQLModel, table=True):
+    __tablename__ = "company"
+    
+    # Basic ID
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(index=True)
+    brand_name: str = Field(index=True)
+    
+    # Brand Identity
+    legal_name: Optional[str] = Field(default=None)
+    founded_year: Optional[str] = Field(default=None)
+    tagline: Optional[str] = Field(default=None)
+    tags: List[str] = Field(default=[], sa_column=Column(JSON))
+    presence_links: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON)) # {label, url, type, id}
+    
+    # Region & Settings
     currency: str = Field(default="INR")
     timezone: str = Field(default="UTC")
-    industry: Optional[str] = Field(default=None)
+    industry: Optional[str] = Field(default=None) # Primary Category
     country: Optional[str] = Field(default=None)
+    hq_city: Optional[str] = Field(default=None)
+    
+    # Support Contact
+    support_email: Optional[str] = Field(default=None)
+    support_phone: Optional[str] = Field(default=None)
+    support_hours: Optional[str] = Field(default=None)
+
+    # Legacy / Calculated
     stack_summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     channels_summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -23,6 +43,7 @@ class Company(UserTrackedModel, SQLModel, table=True):
     memberships: List["CompanyMembership"] = Relationship(back_populates="company")
 
 class Brand(UserTrackedModel, SQLModel, table=True):
+    __tablename__ = "brand"
     __table_args__ = (UniqueConstraint("company_id", "name"),)
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -35,6 +56,7 @@ class Brand(UserTrackedModel, SQLModel, table=True):
     workspaces: List["Workspace"] = Relationship(back_populates="brand")
 
 class Workspace(UserTrackedModel, SQLModel, table=True):
+    __tablename__ = "workspace"
     __table_args__ = (UniqueConstraint("brand_id", "name"),)
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

@@ -11,15 +11,17 @@ interface Option {
     label: string;
     subLabel?: string;
     icon?: React.ReactNode | string;
+    tag?: string;
 }
 
 interface SearchableSelectProps {
-    label: string;
+    label?: string;
     value: string;
     options: Option[];
     onChange: (value: string) => void;
     onLocate?: () => void; // New prop for "Locate automatically"
     placeholder?: string;
+    className?: string;
 }
 
 export function SearchableSelect({
@@ -28,7 +30,8 @@ export function SearchableSelect({
     options,
     onChange,
     onLocate,
-    placeholder = "Select..."
+    placeholder = "Select...",
+    className
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -112,32 +115,53 @@ export function SearchableSelect({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen]);
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Slight delay to ensure animation/positioning doesn't conflict
+            requestAnimationFrame(() => {
+                inputRef.current?.focus({ preventScroll: true });
+            });
+        }
+    }, [isOpen]);
+
     return (
         <div className="relative group/select">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block pl-1 group-focus-within/select:text-indigo-500 transition-colors">
-                {label}
-            </label>
+            {label && (
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block pl-1 group-focus-within/select:text-indigo-500 transition-colors">
+                    {label}
+                </label>
+            )}
 
             <button
+                type="button" // Prevent form submission
                 ref={containerRef}
                 onClick={() => {
                     setIsOpen(!isOpen);
                     setSearch('');
                 }}
                 className={cn(
-                    "w-full text-left transition-all duration-300 rounded-xl px-4 py-3 flex items-center justify-between shadow-sm text-sm cursor-pointer border",
-                    isOpen
-                        ? "bg-white ring-4 ring-indigo-500/10 border-indigo-500 z-10"
-                        : "bg-zinc-50/50 border-zinc-200 hover:bg-white hover:border-indigo-300 hover:ring-4 hover:ring-indigo-50/50 hover:shadow-md"
+                    "w-full text-left transition-all duration-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm cursor-pointer border",
+                    // Default styles (can be overridden by className if we merge properly, but cn handles tailwind merge)
+                    "bg-zinc-50/50 border-zinc-200 hover:bg-white hover:border-indigo-300",
+                    isOpen && "bg-white ring-2 ring-indigo-500/10 border-indigo-500 z-10",
+                    // Allow overriding classes to be passed directly to the button if intended?
+                    // The 'className' prop usually goes to the container. 
+                    // Let's add a separate 'triggerClassName' or just apply 'className' to the button?
+                    // Usually 'className' on a custom input component applies to the input element (or trigger).
+                    // Let's apply 'className' to the button to allow overriding background/border.
+                    className
                 )}
             >
-                <div className="flex items-center gap-3 overflow-hidden">
+                <div className="flex items-center gap-2 overflow-hidden">
                     {selectedOption?.icon && (
                         <span className="flex-shrink-0 text-lg leading-none transition-all">{selectedOption.icon}</span>
                     )}
                     <span className={cn(
                         "block truncate font-medium transition-colors",
-                        selectedOption ? "text-zinc-900" : "text-zinc-500"
+                        // Ensure text color matches input styles
+                        selectedOption ? "text-zinc-900 dark:text-zinc-100" : "text-gray-500 dark:text-gray-400"
                     )}>
                         {selectedOption ? selectedOption.label : placeholder}
                     </span>
@@ -145,7 +169,7 @@ export function SearchableSelect({
                         <span className="text-zinc-400 text-xs hidden sm:inline-block pl-1">{selectedOption.subLabel}</span>
                     )}
                 </div>
-                <ChevronDown size={14} className={cn(
+                <ChevronDown size={16} className={cn(
                     "text-zinc-400 flex-shrink-0 transition-transform duration-300",
                     isOpen && "rotate-180 text-indigo-500"
                 )} />
@@ -160,20 +184,20 @@ export function SearchableSelect({
                             initial={{ opacity: 0, scale: 0.95, y: dropdownStyle.bottom ? 10 : -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: dropdownStyle.bottom ? 10 : -10 }}
-                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} // smooth apple-like ease
+                            transition={{ duration: 0.15, ease: "easeOut" }}
                             style={dropdownStyle}
-                            className="bg-white/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-indigo-900/10 border border-zinc-100/50 overflow-hidden ring-1 ring-black/5 flex flex-col"
+                            className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden ring-1 ring-black/5 flex flex-col min-w-[200px]"
                         >
                             {/* Search */}
-                            <div className="p-2 border-b border-zinc-50 shrink-0 space-y-2">
+                            <div className="p-2 border-b border-zinc-100 dark:border-zinc-800 shrink-0 space-y-2">
                                 <div className="relative">
                                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                     <input
-                                        autoFocus
+                                        ref={inputRef}
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder="Type to filter..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm bg-zinc-50/50 hover:bg-zinc-50 border border-transparent focus:border-indigo-100 focus:bg-white rounded-lg focus:outline-none transition-all placeholder:text-zinc-400"
+                                        className="w-full pl-9 pr-3 py-1.5 text-sm bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent focus:border-indigo-500/50 focus:bg-white dark:focus:bg-zinc-900 rounded-md focus:outline-none transition-all placeholder:text-zinc-400 dark:text-zinc-100"
                                     />
                                 </div>
 
@@ -221,6 +245,11 @@ export function SearchableSelect({
                                                     </span>
                                                     {opt.subLabel && (
                                                         <span className="ml-2 text-xs opacity-60 font-normal">{opt.subLabel}</span>
+                                                    )}
+                                                    {opt.tag && (
+                                                        <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md shadow-sm">
+                                                            {opt.tag}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

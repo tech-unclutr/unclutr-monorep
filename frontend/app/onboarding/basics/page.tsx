@@ -20,7 +20,7 @@ import {
 
 export default function BasicsPage() {
     const router = useRouter();
-    const { state, updateState } = useOnboarding();
+    const { state, updateState, saveCurrentPage } = useOnboarding();
     const [isEditingRegion, setIsEditingRegion] = useState(false);
     const [categoryInput, setCategoryInput] = useState(state.category || '');
     const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
@@ -80,9 +80,22 @@ export default function BasicsPage() {
         }
     }, []);
 
-    const handleNext = () => {
+    // Fix: Sync local category input when global state hydrates (e.g. from backend)
+    useEffect(() => {
+        if (state.category) {
+            setCategoryInput(state.category);
+        }
+    }, [state.category]);
+
+    const handleNext = async () => {
         if (state.companyName && state.brandName) {
-            router.push('/onboarding/channels');
+            try {
+                await saveCurrentPage();
+                router.push('/onboarding/channels');
+            } catch (error) {
+                console.error("Failed to save basics step:", error);
+                // Optional: Show toast error
+            }
         }
     };
 
@@ -432,7 +445,10 @@ export default function BasicsPage() {
                                                     subLabel: r.value,
                                                     icon: <Clock size={14} className="text-zinc-400" />
                                                 }))}
-                                                onChange={(val) => updateState({ region: { ...state.region, timezone: val } })}
+                                                onChange={(val) => {
+                                                    updateState({ region: { ...state.region, timezone: val } });
+                                                    setIsEditingRegion(false);
+                                                }}
                                             />
                                         </div>
                                     </div>

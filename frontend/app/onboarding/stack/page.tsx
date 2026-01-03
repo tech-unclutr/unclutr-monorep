@@ -29,7 +29,7 @@ type Step3Section = 'shipping' | 'payments' | 'marketing' | 'analytics' | 'finan
 
 export default function StackPage() {
     const router = useRouter();
-    const { state, updateStack, saveAndExit } = useOnboarding();
+    const { state, updateStack, saveAndExit, saveCurrentPage } = useOnboarding();
     const { user, loading: authLoading } = useAuth(); // Use auth context
     const [activeSection, setActiveSection] = useState<Step3Section>('shipping');
     const [datasources, setDatasources] = useState<APIDataSource[]>([]);
@@ -90,34 +90,19 @@ export default function StackPage() {
         }
     };
 
+    const [isFinishing, setIsFinishing] = useState(false);
+
     const handleFinish = async () => {
+        if (isFinishing) return;
+        setIsFinishing(true);
         try {
             if (user) {
-                // Flatten stack data for backend
-                const allTools = [
-                    ...(state.stack.orders || []),
-                    ...(state.stack.payments || []),
-                    ...(state.stack.shipping || []),
-                    ...(state.stack.payouts || []),
-                    ...(state.stack.marketing || []),
-                    ...(state.stack.analytics || []),
-                    ...(state.stack.finance || [])
-                ];
-
-                await client.onboarding.saveProgressApiV1OnboardingSavePost({
-                    requestBody: {
-                        page: 'stack',
-                        data: {
-                            ...state.stack,
-                            selectedTools: allTools
-                        }
-                    }
-                });
+                await saveCurrentPage();
             }
-            router.push('/onboarding/finish');
         } catch (e) {
             console.error('Failed to save stack data:', e);
             // Continue anyway - data is in localStorage
+        } finally {
             router.push('/onboarding/finish');
         }
     };
@@ -219,7 +204,8 @@ export default function StackPage() {
                 </div>
             }
             onNext={handleNext}
-            nextLabel={activeSection === 'finance' ? "Complete Setup" : "Continue"}
+            nextLabel={activeSection === 'finance' ? (isFinishing ? "Saving..." : "Complete Setup") : "Continue"}
+            nextDisabled={isFinishing}
             showSkip
             onSkip={saveAndExit}
         >

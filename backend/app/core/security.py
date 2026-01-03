@@ -38,6 +38,10 @@ def get_current_user(
     """
     token = res.credentials if res else oauth2_token
     
+    # OPTIMIZATION: Check if middleware already verified the token
+    if hasattr(request.state, "token_payload") and request.state.token_payload:
+        return request.state.token_payload
+    
     # DEBUG: Check raw header to see if Proxy passed it
     raw_auth = request.headers.get("Authorization")
     

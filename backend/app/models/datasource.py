@@ -20,7 +20,7 @@ class DataSourceCategory(str, Enum):
     Retention = "Retention"
 
 class DataSource(SQLModel, table=True):
-    __tablename__ = "datasources"
+    __tablename__ = "data_source"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(index=True, unique=True)

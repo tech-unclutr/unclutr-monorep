@@ -14,7 +14,7 @@ class MetricType(str, Enum):
 
 class UserMetrics(SQLModel, table=True):
     """Track user engagement and activity metrics"""
-    __tablename__ = "user_metrics"
+    __tablename__ = "user_metric"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(foreign_key="user.id", index=True)
@@ -37,7 +37,7 @@ class UserMetrics(SQLModel, table=True):
 
 class OnboardingMetrics(SQLModel, table=True):
     """Track onboarding funnel and completion metrics"""
-    __tablename__ = "onboarding_metrics"
+    __tablename__ = "onboarding_metric"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: str = Field(foreign_key="user.id", index=True, unique=True)
@@ -77,11 +77,11 @@ class OnboardingMetrics(SQLModel, table=True):
 
 class IntegrationMetrics(SQLModel, table=True):
     """Track integration health and performance"""
-    __tablename__ = "integration_metrics"
+    __tablename__ = "integration_metric"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     company_id: uuid.UUID = Field(foreign_key="company.id", index=True, default=None) # Added for multi-tenancy
-    integration_id: uuid.UUID = Field(foreign_key="integrations.id", index=True)
+    integration_id: uuid.UUID = Field(foreign_key="integration.id", index=True)
     metric_date: date = Field(index=True)
     
     # Sync metrics
@@ -107,7 +107,7 @@ class IntegrationMetrics(SQLModel, table=True):
 
 class BusinessMetrics(SQLModel, table=True):
     """Track business KPIs and growth metrics"""
-    __tablename__ = "business_metrics"
+    __tablename__ = "business_metric"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     metric_date: date = Field(index=True, unique=True)
@@ -154,7 +154,7 @@ class BusinessMetrics(SQLModel, table=True):
 
 class SystemMetrics(SQLModel, table=True):
     """Track system health and performance"""
-    __tablename__ = "system_metrics"
+    __tablename__ = "system_metric"
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)

@@ -16,14 +16,14 @@ class IntegrationStatus(str, Enum):
     SYNCING = "syncing"
 
 class Integration(SQLModel, table=True):
-    __tablename__ = "integrations"
+    __tablename__ = "integration"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     
     # Relationships
     company_id: uuid.UUID = Field(foreign_key="company.id", index=True, default=None) # Added for multi-tenancy
     workspace_id: uuid.UUID = Field(foreign_key="workspace.id", index=True)
-    datasource_id: uuid.UUID = Field(foreign_key="datasources.id", index=True)
+    datasource_id: uuid.UUID = Field(foreign_key="data_source.id", index=True)
     
     status: IntegrationStatus = Field(default=IntegrationStatus.INACTIVE)
     

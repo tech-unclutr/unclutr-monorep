@@ -32,28 +32,26 @@
     --animate-zoom-out: zoom-out 200ms ease-in;
     --animate-slide-in-from-top: slide-in-from-top 200ms ease-out;
     --animate-slide-in-from-bottom: slide-in-from-bottom 200ms ease-out;
+    --animate-slide-in-from-right: slide-in-from-right 300ms ease-in-out;
+    --animate-slide-out-to-right: slide-out-to-right 300ms ease-in-out;
 
     @keyframes enter {
         from {
             opacity: 0;
-            transform: scale(0.95);
         }
 
         to {
             opacity: 1;
-            transform: scale(1);
         }
     }
 
     @keyframes exit {
         from {
             opacity: 1;
-            transform: scale(1);
         }
 
         to {
             opacity: 0;
-            transform: scale(0.95);
         }
     }
 
@@ -114,6 +112,26 @@
 
         100% {
             transform: translateY(0);
+        }
+    }
+
+    @keyframes slide-in-from-right {
+        from {
+            transform: translateX(100%);
+        }
+
+        to {
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slide-out-to-right {
+        from {
+            transform: translateX(0);
+        }
+
+        to {
+            transform: translateX(100%);
         }
     }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Globe, ShoppingCart, Truck, CreditCard, BarChart3, Megaphone, Pencil } from "lucide-react"
+import { Globe, ShoppingCart, Truck, CreditCard, BarChart3, Megaphone, Pencil, Layers, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { syncOnboardingState } from "@/lib/api/settings"
 import { Button } from "@/components/ui/button"
@@ -142,6 +142,43 @@ export function OnboardingSummary({ data }: OnboardingSummaryProps) {
                         </div>
                     </div>
                 )}
+
+                {/* Empty State - Premium Design */}
+                {!Object.values(data.channels).some(arr => arr && arr.length > 0) &&
+                    !Object.values(data.stack).some(arr => arr && arr.length > 0) && (
+                        <div className="mt-8">
+                            <div
+                                onClick={!isSyncing ? handleEdit : undefined}
+                                className="group relative overflow-hidden rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 hover:bg-gray-50 dark:hover:bg-zinc-900 hover:border-orange-500/30 dark:hover:border-orange-500/30 cursor-pointer"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                                <div className="relative z-10 w-14 h-14 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-zinc-700 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+                                    <Layers className="w-7 h-7 text-gray-400 dark:text-zinc-500 group-hover:text-orange-500 transition-colors duration-300" />
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white border-2 border-white dark:border-zinc-800">
+                                        <Plus className="w-3 h-3 font-bold" />
+                                    </div>
+                                </div>
+
+                                <h4 className="relative z-10 text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1.5 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                                    Complete your configuration
+                                </h4>
+
+                                <p className="relative z-10 text-xs text-gray-500 dark:text-gray-400 max-w-[260px] leading-relaxed mb-5">
+                                    Connect your sales channels and tech stack to unlock the full potential of your dashboard.
+                                </p>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="relative z-10 h-8 text-xs font-medium border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-700 dark:hover:text-orange-300 transition-all border-dashed"
+                                    disabled={isSyncing}
+                                >
+                                    {isSyncing ? "Loading..." : "Setup Stack"}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
             </div>
         </div>
     )

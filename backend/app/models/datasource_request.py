@@ -16,6 +16,7 @@ from sqlalchemy import JSON, Column
 class RequestType(str, Enum):
     DATASOURCE = "DATASOURCE"
     WORKSPACE_DELETION = "WORKSPACE_DELETION"
+    INTEGRATION_DISCONNECT = "INTEGRATION_DISCONNECT"
 
 class UserRequest(SQLModel, table=True):
     __tablename__ = "all_requests"

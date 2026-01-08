@@ -1,0 +1,395 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Search, Check, Plus, X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+
+interface Datasource {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+    category: string;
+    description: string | null;
+    is_implemented: boolean;
+    is_coming_soon: boolean;
+}
+
+interface AddSourceDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onAdd: (slug: string, category: string) => Promise<void>;
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+    'selling_channel_d2c': 'Storefront (D2C)',
+    'selling_channel_marketplace': 'Marketplace',
+    'selling_channel_qcom': 'Quick Commerce',
+    'stack_payments': 'Payments',
+    'stack_shipping': 'Logistics',
+    'stack_marketing': 'Marketing',
+    'stack_analytics': 'Analytics & CRM',
+    'stack_finance': 'Accounting',
+};
+
+export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
+    open,
+    onOpenChange,
+    onAdd,
+}) => {
+    const { companyId } = useAuth();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [datasources, setDatasources] = useState<Record<string, Datasource[]>>({});
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [initialSelectedIds, setInitialSelectedIds] = useState<Set<string>>(new Set());
+    const [showCloseAlert, setShowCloseAlert] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (open && companyId) {
+            fetchDatasources();
+        }
+    }, [open, companyId]);
+
+    const fetchDatasources = async () => {
+        try {
+            setLoading(true);
+
+            // Get auth token
+            const user = (await import('@/lib/firebase')).auth.currentUser;
+            if (!user) {
+                toast.error('Please sign in to continue');
+                return;
+            }
+            const token = await user.getIdToken();
+
+            // Fetch all datasources
+            console.log('[AddSourceDialog] Fetching datasources from /api/v1/datasources/all');
+            const response = await fetch('/api/v1/datasources/all', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Company-ID': companyId!,
+                },
+            });
+
+            console.log('[AddSourceDialog] Datasources response status:', response.status, response.statusText);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[AddSourceDialog] Datasources fetch failed:', errorText);
+                throw new Error('Failed to fetch datasources');
+            }
+            const categorized = await response.json();
+            console.log('[AddSourceDialog] Datasources received:', categorized);
+            setDatasources(categorized);
+
+            // Fetch company to get current stack
+            const companyResponse = await fetch(`/api/v1/company/me`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Company-ID': companyId!,
+                },
+            });
+
+            if (companyResponse.ok) {
+                const company = await companyResponse.json();
+                console.log('[AddSourceDialog] Company data:', company);
+                console.log('[AddSourceDialog] Stack summary:', company.stack_summary);
+                console.log('[AddSourceDialog] Channels summary:', company.channels_summary);
+                const selected = new Set<string>();
+
+                // Extract IDs from stack_summary
+                if (company.stack_summary) {
+                    const stack = company.stack_summary.stack || {};
+                    Object.values(stack).forEach((items: any) => {
+                        if (Array.isArray(items)) {
+                            items.forEach(id => selected.add(String(id).toLowerCase()));
+                        }
+                    });
+
+                    const selectedTools = company.stack_summary.selectedTools || [];
+                    selectedTools.forEach((id: string) => selected.add(String(id).toLowerCase()));
+                }
+
+                // Extract IDs from channels_summary
+                if (company.channels_summary) {
+                    const channels = company.channels_summary.channels || {};
+                    Object.values(channels).forEach((items: any) => {
+                        if (Array.isArray(items)) {
+                            items.forEach(id => selected.add(String(id).toLowerCase()));
+                        }
+                    });
+                }
+
+                console.log('[AddSourceDialog] Final selected IDs:', Array.from(selected));
+                setSelectedIds(selected);
+                setInitialSelectedIds(new Set(selected));
+            }
+        } catch (error) {
+            console.error('Error fetching datasources:', error);
+            toast.error('Failed to load datasources');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleDatasource = (datasource: Datasource) => {
+        const dsId = datasource.id.toLowerCase();
+        const newSelected = new Set(selectedIds);
+
+        if (newSelected.has(dsId)) {
+            newSelected.delete(dsId);
+        } else {
+            newSelected.add(dsId);
+        }
+
+        setSelectedIds(newSelected);
+    };
+
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+
+            // Get auth token
+            const user = (await import('@/lib/firebase')).auth.currentUser;
+            if (!user) {
+                toast.error('Please sign in to continue');
+                return;
+            }
+            const token = await user.getIdToken();
+
+            // Send the list of selected datasource IDs to backend
+            // Backend will handle proper categorization
+            const selectedDatasourceIds = Array.from(selectedIds);
+
+            // Update company stack
+            const response = await fetch('/api/v1/datasources/company/stack', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'X-Company-ID': companyId!,
+                },
+                body: JSON.stringify({
+                    datasource_ids: selectedDatasourceIds,
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update stack');
+
+            toast.success('Your datastack has been updated successfully!');
+            onOpenChange(false);
+
+            // Refresh the integrations page
+            window.location.reload();
+        } catch (error) {
+            console.error('Error updating stack:', error);
+            toast.error('Failed to update datastack');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Filter datasources based on search
+    const filteredDatasources = Object.entries(datasources).reduce((acc, [category, items]) => {
+        const filtered = items.filter(ds =>
+            ds.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ds.slug.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        if (filtered.length > 0) {
+            acc[category] = filtered;
+        }
+        return acc;
+    }, {} as Record<string, Datasource[]>);
+
+    const handleClose = () => {
+        // Check for unsaved changes
+        const hasChanges =
+            selectedIds.size !== initialSelectedIds.size ||
+            Array.from(selectedIds).some(id => !initialSelectedIds.has(id));
+
+        if (hasChanges) {
+            setShowCloseAlert(true);
+        } else {
+            onOpenChange(false);
+        }
+    };
+
+    const confirmClose = () => {
+        setShowCloseAlert(false);
+        onOpenChange(false);
+    };
+
+    return (
+        <>
+            <Dialog open={open} onOpenChange={(open) => {
+                if (!open) handleClose();
+            }}>
+                <DialogContent className="sm:max-w-[700px] max-h-[85vh] border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-0 overflow-hidden flex flex-col">
+                    <DialogHeader className="p-6 pb-4 border-b border-gray-100 dark:border-zinc-800">
+                        <DialogTitle className="text-2xl font-bold">Manage Your Datastack</DialogTitle>
+                        <DialogDescription className="text-zinc-500 dark:text-zinc-400">
+                            Select the tools and platforms that power your business operations.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-zinc-800">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input
+                                placeholder="Search Shopify, Amazon, Razorpay..."
+                                className="pl-10 h-11 bg-gray-50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-[#FF8A4C]/20 focus:border-[#FF8A4C]"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-6 py-4">
+                        {loading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="w-6 h-6 animate-spin text-[#FF8A4C]" />
+                            </div>
+                        ) : Object.keys(filteredDatasources).length > 0 ? (
+                            <div className="space-y-8">
+                                {Object.entries(filteredDatasources).map(([category, items]) => (
+                                    <div key={category} className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-xs font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
+                                                {CATEGORY_LABELS[category] || category}
+                                            </h3>
+                                            <div className="h-px flex-1 bg-gray-100 dark:bg-zinc-800" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {items.map(datasource => {
+                                                const isSelected = selectedIds.has(datasource.id.toLowerCase());
+                                                return (
+                                                    <button
+                                                        key={datasource.id}
+                                                        onClick={() => toggleDatasource(datasource)}
+                                                        className={cn(
+                                                            "flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left",
+                                                            isSelected
+                                                                ? "border-[#FF8A4C] bg-[#FF8A4C]/5"
+                                                                : "border-gray-100 dark:border-zinc-800 hover:border-gray-200 dark:hover:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-900"
+                                                        )}
+                                                    >
+                                                        <div className="w-10 h-10 rounded-lg bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 flex items-center justify-center p-1.5 overflow-hidden shadow-sm flex-shrink-0">
+                                                            {datasource.logo_url &&
+                                                                !datasource.logo_url.includes('default.png') &&
+                                                                !datasource.logo_url.startsWith('logos/') &&
+                                                                (datasource.logo_url.startsWith('http://') || datasource.logo_url.startsWith('https://')) ? (
+                                                                <img
+                                                                    src={datasource.logo_url}
+                                                                    alt={datasource.name}
+                                                                    className="w-full h-full object-contain"
+                                                                    onError={(e) => {
+                                                                        e.currentTarget.style.display = 'none';
+                                                                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                        if (fallback) fallback.style.display = 'flex';
+                                                                    }}
+                                                                />
+                                                            ) : null}
+                                                            <div className="text-xs font-bold text-[#FF8A4C] w-full h-full flex items-center justify-center" style={{ display: (datasource.logo_url && !datasource.logo_url.includes('default.png') && !datasource.logo_url.startsWith('logos/') && (datasource.logo_url.startsWith('http://') || datasource.logo_url.startsWith('https://'))) ? 'none' : 'flex' }}>
+                                                                {datasource.name[0]}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-sm font-bold dark:text-zinc-100 truncate">{datasource.name}</div>
+                                                            {datasource.is_coming_soon && (
+                                                                <div className="text-[10px] text-gray-400 dark:text-zinc-500 font-semibold">Coming Soon</div>
+                                                            )}
+                                                        </div>
+                                                        <div className={cn(
+                                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                                                            isSelected
+                                                                ? "border-[#FF8A4C] bg-[#FF8A4C]"
+                                                                : "border-gray-300 dark:border-zinc-700"
+                                                        )}>
+                                                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center space-y-3">
+                                <div className="text-4xl">🔍</div>
+                                <div className="text-sm font-medium text-gray-400 dark:text-zinc-500">
+                                    No datasources found for "{searchQuery}"
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-6 bg-gray-50 dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+                        <div className="text-sm text-gray-500 dark:text-zinc-400">
+                            <span className="font-bold text-[#FF8A4C]">{selectedIds.size}</span> datasources selected
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => onOpenChange(false)}
+                                className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="px-6 py-2 bg-[#FF8A4C] hover:bg-[#FF8A4C]/90 text-white font-bold text-sm rounded-xl shadow-lg shadow-orange-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {saving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Changes'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            <AlertDialog open={showCloseAlert} onOpenChange={setShowCloseAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have unsaved changes in your stack selection. Are you sure you want to close without saving? Your changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmClose} className="bg-orange-500 hover:bg-orange-600 text-white">
+                            Discard Changes
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
+};

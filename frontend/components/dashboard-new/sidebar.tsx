@@ -8,7 +8,6 @@ import {
     PanelLeftClose,
     Eye,
     Compass,
-    BookOpen,
     GitCompare,
     Plug,
     RotateCw,
@@ -86,19 +85,19 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
     return (
         <aside
             className={cn(
-                "h-screen bg-white dark:bg-[#18181B] border-r border-gray-100 dark:border-[#27272A] flex flex-col fixed left-0 top-0 overflow-hidden z-50 transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)",
-                isCollapsed ? "w-[80px]" : "w-[280px]"
+                "h-screen bg-white/80 dark:bg-[#18181B]/80 backdrop-blur-xl border-r border-gray-100 dark:border-[#27272A] flex flex-col fixed left-0 top-0 overflow-hidden z-50 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
+                isCollapsed ? "w-[80px]" : "w-[240px]"
             )}
         >
             {/* Header */}
             <div className={cn("flex px-6 items-center", isCollapsed ? "justify-center pt-8 pb-4" : "justify-between pt-6 pb-2")}>
-                <div className={cn("flex items-center gap-3", isCollapsed ? "mb-4" : "mb-8")}>
-                    <div className="w-10 h-10 bg-[#FF8A4C] rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/20">
-                        <Leaf className="w-6 h-6 fill-white" />
+                <div className={cn("flex items-center gap-2", isCollapsed ? "mb-4" : "mb-6")}>
+                    <div className="w-8 h-8 md:w-9 md:h-9 bg-[#FF8A4C] rounded-lg flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/20">
+                        <Leaf className="w-5 h-5 fill-white" />
                     </div>
                     <div className={cn("flex flex-col transition-opacity duration-200", isCollapsed ? "hidden opacity-0 w-0" : "flex opacity-100")}>
-                        <span className="font-semibold text-gray-900 dark:text-[#E4E4E7] text-lg leading-tight whitespace-nowrap">GrowEase</span>
-                        <span className="text-gray-400 dark:text-[#A1A1AA] text-xs whitespace-nowrap">Analytics Platform</span>
+                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">GrowEase</span>
+                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Analytics Platform</span>
                     </div>
                 </div>
             </div>
@@ -107,10 +106,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                 <div className="px-6">
                     <button
                         onClick={toggleCollapse}
-                        className="flex items-center gap-3 text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] transition-colors py-2 mb-6 w-full"
+                        className="flex items-center gap-2.5 text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] transition-colors py-1.5 mb-4 w-full"
                     >
-                        <PanelLeftClose className="w-5 h-5" />
-                        <span className="text-[15px] font-medium whitespace-nowrap">Collapse</span>
+                        <PanelLeftClose className="w-4 h-4" />
+                        <span className="text-xs font-medium whitespace-nowrap">Collapse</span>
                     </button>
                 </div>
             )}
@@ -139,43 +138,33 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         <Link
                             href="/dashboard-new/birds-eye"
                             className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group relative",
+                                "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
                                 isActive("/dashboard-new/birds-eye")
-                                    ? "bg-[#FF8A4C] text-white shadow-lg shadow-orange-500/20"
-                                    : "text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A]",
+                                    ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
+                                    : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
                                 isCollapsed ? "justify-center" : ""
                             )}
                             title={isCollapsed ? "Bird's Eye View" : ""}
                         >
-                            <Eye className="w-5 h-5 shrink-0" />
-                            {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">Bird's Eye View</span>}
+                            <Eye className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Bird's Eye View</span>}
                         </Link>
 
                         <Link
                             href="/dashboard-new"
                             className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group relative",
+                                "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
                                 isActive("/dashboard-new") && pathname === "/dashboard-new"
-                                    ? "bg-[#FF8A4C] text-white shadow-lg shadow-orange-500/20"
-                                    : "text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A]",
+                                    ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
+                                    : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
                                 isCollapsed ? "justify-center" : ""
                             )}
                             title={isCollapsed ? "Cash Compass" : ""}
                         >
-                            <Compass className="w-5 h-5 shrink-0" />
-                            {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">Cash Compass</span>}
+                            <Compass className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Cash Compass</span>}
                         </Link>
 
-                        <button
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A] w-full transition-colors relative",
-                                isCollapsed ? "justify-center" : ""
-                            )}
-                            title={isCollapsed ? "How it works" : ""}
-                        >
-                            <BookOpen className="w-5 h-5 shrink-0" />
-                            {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">How it works</span>}
-                        </button>
                     </div>
                 </div>
 
@@ -209,18 +198,18 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         className={cn(
                             "flex items-center px-3 py-2.5 rounded-lg transition-colors group relative",
                             isActive("/dashboard-new/integrations")
-                                ? "bg-[#FF8A4C] text-white shadow-lg shadow-orange-500/20"
-                                : "text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A]",
+                                ? "bg-[#FF8A4C] text-white shadow-[0_0_20px_rgba(255,138,76,0.3)]"
+                                : "text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
                             isCollapsed ? "justify-center" : "justify-between"
                         )}
                         title={isCollapsed ? "Integrations" : ""}
                     >
-                        <div className="flex items-center gap-3">
-                            <Plug className="w-5 h-5 shrink-0" />
-                            {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">Integrations</span>}
+                        <div className="flex items-center gap-2.5">
+                            <Plug className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Integrations</span>}
                         </div>
-                        {!isCollapsed && <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>}
-                        {isCollapsed && <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>}
+                        {!isCollapsed && <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>}
+                        {isCollapsed && <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>}
                     </Link>
                 </div>
 
@@ -232,13 +221,13 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         </h3>
                     )}
                     <div className={cn(
-                        "flex items-center gap-3 px-3 py-2 text-gray-500 dark:text-[#A1A1AA] relative",
+                        "flex items-center gap-2.5 px-3 py-1.5 text-gray-400 dark:text-[#71717A] relative",
                         isCollapsed ? "justify-center" : ""
                     )}
                         title={isCollapsed ? "Not connected" : ""}
                     >
-                        <RotateCw className="w-5 h-5 shrink-0" />
-                        {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">Not connected</span>}
+                        <RotateCw className="w-4 h-4 shrink-0" />
+                        {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Not connected</span>}
                     </div>
                 </div>
             </div>
@@ -248,26 +237,26 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                 <Link
                     href="#"
                     className={cn(
-                        "flex items-center gap-3 px-2 py-3 text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] transition-colors mb-2",
+                        "flex items-center gap-2.5 px-2 py-2 text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] transition-colors mb-1",
                         isCollapsed ? "justify-center" : ""
                     )}
                     title={isCollapsed ? "Help & Support" : ""}
                 >
-                    <HelpCircle className="w-5 h-5 shrink-0" />
-                    {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">Help & Support</span>}
+                    <HelpCircle className="w-4 h-4 shrink-0" />
+                    {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Help & Support</span>}
                 </Link>
 
                 {mounted && (
                     <button
                         onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                         className={cn(
-                            "flex items-center gap-3 px-2 py-3 text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] transition-colors mb-4 w-full",
+                            "flex items-center gap-2.5 px-2 py-2 text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] transition-colors mb-3 w-full",
                             isCollapsed ? "justify-center" : ""
                         )}
                         title={isCollapsed ? (resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode') : ""}
                     >
-                        {resolvedTheme === 'dark' ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
-                        {!isCollapsed && <span className="font-medium text-[15px] whitespace-nowrap transition-opacity duration-200">
+                        {resolvedTheme === 'dark' ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
+                        {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">
                             {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                         </span>}
                     </button>
@@ -279,10 +268,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             <button className={cn(
                                 "flex items-center hover:bg-gray-50 dark:hover:bg-[#27272A] transition-colors outline-none group",
                                 isCollapsed
-                                    ? "justify-center rounded-full w-10 h-10 p-0"
-                                    : "gap-3 px-2 py-2 w-full text-left rounded-lg"
+                                    ? "justify-center rounded-full w-8 h-8 p-0"
+                                    : "gap-2 px-2 py-1.5 w-full text-left rounded-lg"
                             )}>
-                                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
+                                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
                                     <img
                                         src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(companyName)}&backgroundColor=ffdfbf,c0aede,d1d4f9,b6e3f4&backgroundType=solid,gradientLinear`}
                                         alt="Avatar"
@@ -291,8 +280,8 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                                 </div>
                                 {!isCollapsed && (
                                     <div className="flex flex-col overflow-hidden transition-opacity duration-200">
-                                        <span className="font-semibold text-gray-900 dark:text-[#E4E4E7] text-sm truncate">{companyName}</span>
-                                        <span className="text-gray-400 dark:text-[#A1A1AA] text-xs truncate">{user?.email}</span>
+                                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-[13px] truncate font-display">{companyName}</span>
+                                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] truncate">{user?.email}</span>
                                     </div>
                                 )}
                             </button>
@@ -303,16 +292,16 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             side="right"
                             sideOffset={isCollapsed ? 12 : -12}
                         >
-                            <div className="px-4 py-3 bg-white dark:bg-[#18181B]">
-                                <p className="font-semibold text-sm text-gray-900 dark:text-[#E4E4E7]">{companyName}</p>
-                                <p className="text-xs text-gray-500 dark:text-[#A1A1AA] truncate">{user?.email}</p>
+                            <div className="px-3 py-2 bg-white dark:bg-[#18181B]">
+                                <p className="font-bold text-xs text-gray-900 dark:text-[#E4E4E7] font-display">{companyName}</p>
+                                <p className="text-[10px] text-gray-400 dark:text-[#71717A] truncate">{user?.email}</p>
                             </div>
                             <div className="h-px bg-gray-100 dark:bg-[#27272A]"></div>
                             <div className="p-1">
 
                                 <DropdownMenuItem asChild>
-                                    <Link href="/dashboard-new/my-account/settings" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A] cursor-pointer rounded-md outline-none">
-                                        <Settings className="w-4 h-4" />
+                                    <Link href="/dashboard-new/my-account/settings" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-700 dark:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A] cursor-pointer rounded-md outline-none">
+                                        <Settings className="w-3.5 h-3.5" />
                                         Settings
                                     </Link>
                                 </DropdownMenuItem>
@@ -321,9 +310,9 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             <div className="p-1">
                                 <DropdownMenuItem
                                     onClick={logout}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer rounded-md"
+                                    className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer rounded-md"
                                 >
-                                    <LogOut className="w-4 h-4" />
+                                    <LogOut className="w-3.5 h-3.5" />
                                     Logout
                                 </DropdownMenuItem>
                             </div>

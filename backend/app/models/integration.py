@@ -14,6 +14,7 @@ class IntegrationStatus(str, Enum):
     INACTIVE = "inactive"
     ERROR = "error"
     SYNCING = "syncing"
+    DISCONNECT_REQUESTED = "disconnect_requested"
 
 class Integration(SQLModel, table=True):
     __tablename__ = "integration"

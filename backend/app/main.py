@@ -73,17 +73,17 @@ from app.core.logging_middleware import RequestLoggingMiddleware
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 
-if settings.SENTRY_DSN:
+if settings.SENTRY_DSN and settings.is_production:
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
         environment=settings.ENVIRONMENT,
         integrations=[FastApiIntegration()],
-        traces_sample_rate=0.1 if settings.is_production else 1.0,
+        traces_sample_rate=0.1,
         send_default_pii=False,  # Don't send PII
     )
     logger.info(f"Sentry initialized for environment: {settings.ENVIRONMENT}")
 else:
-    logger.warning("Sentry DSN not configured - error monitoring disabled")
+    logger.warning("Sentry disabled (not production) or DSN not configured")
 
 
 from app.middleware.tenant_middleware import TenantMiddleware

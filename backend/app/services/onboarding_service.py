@@ -164,6 +164,11 @@ async def get_resume_info(session: AsyncSession, user_id: str) -> dict:
         # User likely has no company yet, which is normal for fresh signups
         pass
     
+    # --- CRITICAL: Normalize Categories ---
+    # Fixes issue where Stack tools (Razorpay) appear in Channels (Other Tools) 
+    # instead of their correct stack bucket, causing them to be unselected in Step 3.
+    state = await _normalize_onboarding_state(session, state)
+
     return {
         "should_resume": not state.is_completed,
         "current_page": state.current_page,
@@ -215,8 +220,22 @@ async def _create_integrations_from_onboarding(
         logger.info("No datasources selected during onboarding")
         return
     
-    # Fetch datasources
-    stmt = select(DataSource).where(DataSource.id.in_(datasource_ids))
+    # Separate IDs (UUIDs) and Slugs
+    ds_ids = set()
+    ds_slugs = set()
+    
+    for item in datasource_ids:
+        try:
+            # Try parsing as UUID
+            ds_ids.add(uuid.UUID(str(item)))
+        except (ValueError, TypeError):
+            # Otherwise treat as slug
+            ds_slugs.add(str(item))
+    
+    # Fetch datasources by SLUG or ID
+    stmt = select(DataSource).where(
+        (DataSource.slug.in_(ds_slugs)) | (DataSource.id.in_(ds_ids))
+    )
     result = await session.exec(stmt)
     datasources = result.all()
     
@@ -428,6 +447,8 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
 
         await session.commit()
         await session.refresh(company)
+        await session.refresh(brand)
+        await session.refresh(workspace)
     
         logger.info(f"SUCCESS: Onboarding completed for user {user_id}. Created Company {company.id}, Brand {brand.id}, Workspace {workspace.id}")
         return company
@@ -436,21 +457,159 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
         logger.error(f"ERROR: complete_onboarding failed for user {user_id}: {str(e)}", exc_info=True)
         raise e
 
-# DEPRECATED: Keep for backward compatibility
-async def save_onboarding_step(session: AsyncSession, user_id: str, step: int, data: dict) -> OnboardingState:
-    """
-    DEPRECATED: Use save_onboarding_progress instead.
-    Kept for backward compatibility.
-    """
-    # Map step numbers to pages
-    step_to_page = {
-        1: 'basics',
-        2: 'channels',
-        3: 'stack',
-        4: 'finish'
-    }
-    
     page = step_to_page.get(step, 'basics')
     logger.warning(f"Using deprecated save_onboarding_step, mapped step {step} to page '{page}'")
     
     return await save_onboarding_progress(session, user_id, page, data)
+
+
+async def _normalize_onboarding_state(session: AsyncSession, state: OnboardingState) -> OnboardingState:
+    """
+    Inspects all selected tool IDs in state (channels + stack), queries their actual category
+    from DataSource table, and moves them to the correct bucket in state.
+    
+    This fixes "drift" where tools selected in "Connect Channels" (which puts them in channels.others)
+    should actually be in "Stack -> Payment" etc.
+    """
+    from app.models.datasource import DataSource
+    
+    # 1. Collect all currently selected IDs
+    all_ids = set()
+    
+    # Helper to extract IDs from potentially nested dicts
+    def extract_ids(data_dict):
+        ids = set()
+        if not data_dict: return ids
+        for key, val in data_dict.items():
+            if isinstance(val, list):
+                ids.update(val)
+            elif isinstance(val, str) and val:
+                ids.add(val)
+        return ids
+
+    channels = state.channels_data.get("channels", {}) if state.channels_data else {}
+    stack = state.stack_data.get("stack", {}) if state.stack_data else {}
+    
+    all_ids.update(extract_ids(channels))
+    all_ids.update(extract_ids(stack))
+    
+    # Remove empty strings
+    all_ids = {id for id in all_ids if id}
+    
+    if not all_ids:
+        return state
+
+    # 2. Fetch DataSources to get authoritative categories
+    # Handle UUID vs Slug
+    ds_ids = set()
+    ds_slugs = set()
+    for item in all_ids:
+        try:
+            ds_ids.add(uuid.UUID(str(item)))
+        except (ValueError, TypeError):
+            ds_slugs.add(str(item))
+            
+    stmt = select(DataSource).where(
+        (DataSource.id.in_(ds_ids)) | (DataSource.slug.in_(ds_slugs))
+    )
+    result = await session.exec(stmt)
+    datasources = result.all()
+    
+    # 3. Re-bucket
+    # New buckets
+    new_channels = {
+        "d2c": [], "marketplaces": [], "qcom": [], "others": []
+    }
+    new_stack = {
+        "orders": [], "payments": [], "shipping": [], "payouts": [], "marketing": [], "analytics": [], "finance": []
+    }
+    
+    # Mappings
+    # "Storefront", "Marketplace", "QuickCommerce" -> Channels
+    # "Logistics", "Payment", "Payouts", "Marketing", "Analytics", "Accounting" -> Stack
+    # Others -> channels.others or stack.others? Usually channels.
+    
+    dirty = False
+    
+    for ds in datasources:
+        ds_id = str(ds.id)
+        cat = ds.category
+        
+        # Determine target bucket
+        target_bin = None
+        target_dict = None # new_channels or new_stack
+        
+        if cat == "Storefront":
+            target_dict = new_channels
+            target_bin = "d2c"
+        elif cat == "Marketplace":
+            target_dict = new_channels
+            target_bin = "marketplaces"
+        elif cat == "QuickCommerce":
+            target_dict = new_channels
+            target_bin = "qcom"
+        elif cat == "Logistics":
+            target_dict = new_stack
+            target_bin = "shipping"
+        elif cat == "Payment":
+            target_dict = new_stack
+            target_bin = "payments"
+        elif cat == "Payouts":
+            target_dict = new_stack
+            target_bin = "payouts"
+        elif cat == "Marketing":
+            target_dict = new_stack
+            target_bin = "marketing"
+        elif cat == "Analytics" or cat == "Retention" or cat == "Communication":
+            target_dict = new_stack
+            target_bin = "analytics"
+        elif cat == "Accounting":
+            target_dict = new_stack
+            target_bin = "finance"
+        else:
+            # Fallback for "Network", "SocialCommerce", etc.
+            target_dict = new_channels
+            target_bin = "others"
+            
+        # Add to target
+        if target_dict is not None and target_bin is not None:
+            if ds_id not in target_dict[target_bin]:
+                target_dict[target_bin].append(ds_id)
+                
+    # 4. Compare with old state to see if we need to save
+    # We reconstruct the 'data' wrappers
+    
+    # Preserve primaryPartners as they are distinct
+    primary_partners = state.channels_data.get("primaryPartners", {}) if state.channels_data else {}
+    
+    new_channels_data = {
+        "channels": new_channels,
+        "primaryPartners": primary_partners
+    }
+    new_stack_data = {
+        "stack": new_stack
+    }
+    
+    # Detect changes (simple stringify comparison or just deep compare)
+    import json
+    # Use sort_keys to ensure consistent ordering for comparison
+    def stable_json(obj): return json.dumps(obj, sort_keys=True)
+    
+    old_c = state.channels_data or {}
+    old_s = state.stack_data or {}
+    
+    # We only care if the "channels" dictionary inside channels_data changed, 
+    # or "stack" inside stack_data changed.
+    # But since we reconstructed the WHOLE structure (except primaryPartners which we kept),
+    # we can compare the constructed parts.
+    
+    # Actually, simplistic comparison:
+    if stable_json(new_channels_data) != stable_json(old_c) or stable_json(new_stack_data) != stable_json(old_s):
+        logger.info("Normalization detected improperly categorized tools. Fixing state...")
+        state.channels_data = new_channels_data
+        state.stack_data = new_stack_data
+        session.add(state)
+        await session.commit()
+        await session.refresh(state)
+        
+    return state

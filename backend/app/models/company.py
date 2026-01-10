@@ -34,8 +34,8 @@ class Company(UserTrackedModel, SQLModel, table=True):
     support_hours: Optional[str] = Field(default=None)
 
     # Legacy / Calculated
-    stack_summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
-    channels_summary: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    stack_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    channels_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships

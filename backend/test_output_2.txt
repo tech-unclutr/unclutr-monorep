@@ -1,0 +1,116 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/param/Documents/Unclutr/backend
+plugins: asyncio-1.2.0, anyio-4.12.0
+asyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+____________ ERROR collecting tests/services/test_shopify_oauth.py _____________
+ImportError while importing test module '/Users/param/Documents/Unclutr/backend/tests/services/test_shopify_oauth.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/services/test_shopify_oauth.py:6: in <module>
+    from app.services.shopify.oauth_service import ShopifyOAuthService, shopify_oauth_service
+app/services/shopify/oauth_service.py:17: in <module>
+    from app.core import settings
+E   ImportError: cannot import name 'settings' from 'app.core' (/Users/param/Documents/Unclutr/backend/app/core/__init__.py)
+------------------------------- Captured stdout --------------------------------
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+An error occurred: module 'importlib.metadata' has no attribute 'packages_distributions'
+------------------------------- Captured stderr --------------------------------
+Sentry disabled (not production) or DSN not configured
+=============================== warnings summary ===============================
+app/core/config.py:5
+  /Users/param/Documents/Unclutr/backend/app/core/config.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+venv/lib/python3.9/site-packages/sqlmodel/main.py:542
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/sqlmodel/main.py:542: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    new_cls = super().__new__(cls, name, bases, dict_used, **config_kwargs)
+
+venv/lib/python3.9/site-packages/urllib3/__init__.py:35
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+    warnings.warn(
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.api_core supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.api_core.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform_v1beta1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform_v1beta1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform_v1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform_v1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1.schema.predict.instance_v1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1.schema.predict.instance_v1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1.schema.predict.params_v1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1.schema.predict.params_v1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1.schema.predict.prediction_v1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1.schema.predict.prediction_v1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1.schema.trainingjob.definition_v1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1.schema.trainingjob.definition_v1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1beta1.schema.predict.instance_v1beta1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1beta1.schema.predict.instance_v1beta1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1beta1.schema.predict.params_v1beta1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1beta1.schema.predict.params_v1beta1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1beta1.schema.predict.prediction_v1beta1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1beta1.schema.predict.prediction_v1beta1.
+    warnings.warn(message, FutureWarning)
+
+venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/api_core/_python_version_support.py:237: FutureWarning: You are using a non-supported Python version (3.9.6). Google will not post any further updates to google.cloud.aiplatform.v1beta1.schema.trainingjob.definition_v1beta1 supporting this Python version. Please upgrade to the latest Python version, or at least Python 3.10, and then update google.cloud.aiplatform.v1beta1.schema.trainingjob.definition_v1beta1.
+    warnings.warn(message, FutureWarning)
+
+app/schemas/onboarding_validation.py:15
+  /Users/param/Documents/Unclutr/backend/app/schemas/onboarding_validation.py:15: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class BasicsData(BaseModel):
+
+app/schemas/onboarding_validation.py:29
+  /Users/param/Documents/Unclutr/backend/app/schemas/onboarding_validation.py:29: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    @validator('selectedChannels')
+
+app/schemas/onboarding_validation.py:46
+  /Users/param/Documents/Unclutr/backend/app/schemas/onboarding_validation.py:46: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    @validator('data')
+
+app/schemas/company.py:43
+  /Users/param/Documents/Unclutr/backend/app/schemas/company.py:43: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CompanyRead(CompanyBase):
+
+venv/lib/python3.9/site-packages/pydantic/_internal/_config.py:383
+  /Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/pydantic/_internal/_config.py:383: UserWarning: Valid config keys have changed in V2:
+  * 'orm_mode' has been renamed to 'from_attributes'
+    warnings.warn(message, UserWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/services/test_shopify_oauth.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+======================== 19 warnings, 1 error in 0.42s =========================

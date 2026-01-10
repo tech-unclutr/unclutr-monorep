@@ -27,6 +27,8 @@ export interface Company {
 
     currency: string;
     timezone: string;
+    stack_data?: any;
+    channels_data?: any;
 }
 
 export interface CompanyUpdate {

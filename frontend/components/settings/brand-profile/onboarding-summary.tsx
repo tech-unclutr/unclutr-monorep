@@ -44,11 +44,15 @@ export function OnboardingSummary({ data }: OnboardingSummaryProps) {
         setIsSyncing(true)
         try {
             await syncOnboardingState()
-            toast.success("Ready to edit. Redirecting...")
+            toast.success("Ready for edits", {
+                description: "Opening the configuration suite. One moment!"
+            })
             router.push("/onboarding/basics")
         } catch (error) {
             console.error(error)
-            toast.error("Failed to prepare onboarding for editing.")
+            toast.error("Couldn't open editor", {
+                description: "We hit a snag preparing the suite. Try again?"
+            })
         } finally {
             setIsSyncing(false)
         }

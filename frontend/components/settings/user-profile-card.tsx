@@ -36,18 +36,15 @@ export function UserProfileCard() {
             // 2. Update Backend Database
             await api.patch("/users/me", { full_name: fullName });
 
-            toast.success("Profile updated successfully");
+            toast.success("Profile Updated", {
+                description: "Looking good! Your changes are saved."
+            });
             setIsEditing(false);
-
-            // Force a reload or wait for swr/context update?
-            // Since we updated Firebase, the useAuth listener might pick it up?
-            // But dbUser comes from backend sync. 
-            // We might need to manually trigger a re-fetch or let SWR handle it if we used it.
-            // For now, toast is good. 'dbUser' in useAuth might be stale until page reload or re-sync.
-            // Ideally useAuth should expose a mutate/refresh function.
         } catch (error: any) {
             console.error("Failed to update profile", error);
-            toast.error(error.message || "Failed to update profile");
+            toast.error("Changes didn't stick", {
+                description: error.message || "We couldn't save your profile updates. Try again?"
+            });
         }
     };
 

@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     # Monitoring
     SENTRY_DSN: Optional[str] = None
 
+    # Shopify Integration
+    SHOPIFY_API_KEY: Optional[str] = None
+    SHOPIFY_API_SECRET: Optional[str] = None
+    SHOPIFY_ENCRYPTION_KEY: Optional[str] = None
+    BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:3000"
+
     class Config:
         env_file = ".env"
         

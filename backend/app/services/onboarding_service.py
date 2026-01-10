@@ -64,8 +64,8 @@ async def sync_company_to_state(session: AsyncSession, user_id: str) -> Onboardi
     }
     
     # Channels & Stack (Direct copy as we store them as JSON)
-    channels_data = company.channels_summary or {}
-    stack_data = company.stack_summary or {}
+    channels_data = company.channels_data or {}
+    stack_data = company.stack_data or {}
     
     # 4. Update State
     state.basics_data = basics_data
@@ -208,8 +208,9 @@ async def _create_integrations_from_onboarding(
             datasource_ids.add(ids)
     
     # From stack
+    stack = stack_data.get("stack", {})
     for category in ['orders', 'payments', 'shipping', 'payouts', 'marketing', 'analytics', 'finance']:
-        ids = stack_data.get(category, [])
+        ids = stack.get(category, [])
         if isinstance(ids, list):
             datasource_ids.update(ids)
     
@@ -324,8 +325,8 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
                 company.timezone = region.get("timezone", company.timezone)
                 company.industry = basics.get("category", company.industry)
                 company.country = region.get("country", company.country)
-                company.stack_summary = stack
-                company.channels_summary = channels
+                company.stack_data = stack
+                company.channels_data = channels
                 session.add(company)
             
                 # Update Brand (assume primary brand)
@@ -356,8 +357,8 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
                 timezone=region.get("timezone", "UTC"),
                 industry=basics.get("category"),
                 country=region.get("country"),
-                stack_summary=stack,
-                channels_summary=channels,
+                stack_data=stack,
+                channels_data=channels,
                 created_by=user_id, # Req 6: Link User to Company
                 updated_by=user_id
             )

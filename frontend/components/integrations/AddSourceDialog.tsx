@@ -79,7 +79,9 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
             // Get auth token
             const user = (await import('@/lib/firebase')).auth.currentUser;
             if (!user) {
-                toast.error('Please sign in to continue');
+                toast.error('Sign-in Required', {
+                    description: 'Please log in to continue configuring your business stack.'
+                });
                 return;
             }
             const token = await user.getIdToken();
@@ -114,26 +116,52 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
             if (companyResponse.ok) {
                 const company = await companyResponse.json();
                 console.log('[AddSourceDialog] Company data:', company);
-                console.log('[AddSourceDialog] Stack summary:', company.stack_summary);
-                console.log('[AddSourceDialog] Channels summary:', company.channels_summary);
+
+                let stackData = company.stack_data;
+                let channelsData = company.channels_data;
+
+                // FALLBACK: If company stack is empty, try pulling from onboarding state
+                const isStackEmpty = !stackData || (Object.keys(stackData.stack || {}).length === 0 && (stackData.selectedTools || []).length === 0);
+                const isChannelsEmpty = !channelsData || (Object.keys(channelsData.channels || {}).length === 0);
+
+                if (isStackEmpty && isChannelsEmpty) {
+                    console.log('[AddSourceDialog] Production stack is empty, checking onboarding state...');
+                    try {
+                        const onboardingRes = await fetch(`/api/v1/onboarding/state`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (onboardingRes.ok) {
+                            const onboarding = await onboardingRes.json();
+                            console.log('[AddSourceDialog] Onboarding data found:', onboarding);
+                            stackData = onboarding.stack_data;
+                            channelsData = onboarding.channels_data;
+                        }
+                    } catch (e) {
+                        console.error('[AddSourceDialog] Failed to fetch onboarding fallback:', e);
+                    }
+                }
+
+                console.log('[AddSourceDialog] Using Stack data:', stackData);
+                console.log('[AddSourceDialog] Using Channels data:', channelsData);
+
                 const selected = new Set<string>();
 
-                // Extract IDs from stack_summary
-                if (company.stack_summary) {
-                    const stack = company.stack_summary.stack || {};
+                // Extract IDs from stackData
+                if (stackData) {
+                    const stack = stackData.stack || {};
                     Object.values(stack).forEach((items: any) => {
                         if (Array.isArray(items)) {
                             items.forEach(id => selected.add(String(id).toLowerCase()));
                         }
                     });
 
-                    const selectedTools = company.stack_summary.selectedTools || [];
+                    const selectedTools = stackData.selectedTools || [];
                     selectedTools.forEach((id: string) => selected.add(String(id).toLowerCase()));
                 }
 
-                // Extract IDs from channels_summary
-                if (company.channels_summary) {
-                    const channels = company.channels_summary.channels || {};
+                // Extract IDs from channelsData
+                if (channelsData) {
+                    const channels = channelsData.channels || {};
                     Object.values(channels).forEach((items: any) => {
                         if (Array.isArray(items)) {
                             items.forEach(id => selected.add(String(id).toLowerCase()));
@@ -147,7 +175,9 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
             }
         } catch (error) {
             console.error('Error fetching datasources:', error);
-            toast.error('Failed to load datasources');
+            toast.error('The catalog is playing hide and seek', {
+                description: 'We couldn’t fetch the available tools. Try reloading the page?'
+            });
         } finally {
             setLoading(false);
         }
@@ -173,7 +203,9 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
             // Get auth token
             const user = (await import('@/lib/firebase')).auth.currentUser;
             if (!user) {
-                toast.error('Please sign in to continue');
+                toast.error('Sign-in Required', {
+                    description: 'Please log in to save your business stack selections.'
+                });
                 return;
             }
             const token = await user.getIdToken();
@@ -197,14 +229,18 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
 
             if (!response.ok) throw new Error('Failed to update stack');
 
-            toast.success('Your datastack has been updated successfully!');
+            toast.success('Stack Unified', {
+                description: 'Your business tools are now synchronized with your datastack.'
+            });
             onOpenChange(false);
 
             // Refresh the integrations page
             window.location.reload();
         } catch (error) {
             console.error('Error updating stack:', error);
-            toast.error('Failed to update datastack');
+            toast.error('Sync hit a snag', {
+                description: 'We couldn’t save your selections. Let’s try once more?'
+            });
         } finally {
             setSaving(false);
         }

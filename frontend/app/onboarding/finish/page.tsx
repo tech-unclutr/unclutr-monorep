@@ -38,7 +38,9 @@ export default function FinishPage() {
                 setDatasources(data);
             } catch (err) {
                 console.error("Failed to load datasources", err);
-                toast.error("Failed to load your selections. Please refresh the page or check your connection.");
+                toast.error("Catalogue connection issues", {
+                    description: "We couldn't load your selections. Try refreshing the page?"
+                });
             } finally {
                 setLoading(false);
             }
@@ -113,7 +115,9 @@ export default function FinishPage() {
                 // Clear local draft
                 localStorage.removeItem('unclutr_onboarding_draft');
 
-                toast.success("Welcome aboard! Unleashing your dashboard...");
+                toast.success("Welcome aboard!", {
+                    description: "Unleashing your dashboard pulse now..."
+                });
 
                 // Delay slightly for toast visibility
                 setTimeout(() => {
@@ -122,7 +126,9 @@ export default function FinishPage() {
             }
         } catch (error) {
             console.error("Failed to complete onboarding", error);
-            toast.error("Failed to finish setup. Please try again.");
+            toast.error("Onboarding hit a snag", {
+                description: "We couldn't finalize your setup. Let's try once more?"
+            });
             setSaving(false);
             return;
         }

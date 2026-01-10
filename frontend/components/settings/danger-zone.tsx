@@ -55,16 +55,16 @@ export function DangerZone() {
                 }
             })
 
-            toast.success("Request received", {
-                description: "Our team has been notified and will process your deletion request shortly."
+            toast.success("Request Received", {
+                description: "We've started the protocol. We'll be in touch."
             })
             setIsOpen(false)
             setIsSubmitted(true)
             setRequestId(req.id)
         } catch (error) {
             console.error(error)
-            toast.error("Something went wrong", {
-                description: "Failed to submit deletion request. Please try again."
+            toast.error("Request Failed", {
+                description: "Something went wrong. Please try again or contact support."
             })
         } finally {
             setIsLoading(false)
@@ -76,15 +76,15 @@ export function DangerZone() {
         setIsLoading(true);
         try {
             await cancelUserRequest(requestId);
-            toast.success("Request withdrawn", {
-                description: "Your workspace deletion request has been cancelled."
+            toast.success("Request Cancelled", {
+                description: "Your data is safe. We've withdrawn the request."
             });
             setIsSubmitted(false);
             setRequestId(null);
         } catch (error) {
             console.error(error);
-            toast.error("Withdrawal failed", {
-                description: "Failed to withdraw request. Please try again later."
+            toast.error("Cancellation Failed", {
+                description: "We couldn't withdraw the request. Try again?"
             });
         } finally {
             setIsLoading(false);

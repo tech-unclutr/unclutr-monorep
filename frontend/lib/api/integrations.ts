@@ -5,6 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export interface Integration {
     id: string;
     status: string;
+    in_stack: boolean;
     last_sync_at: string | null;
     error_message: string | null;
     datasource: {
@@ -14,6 +15,7 @@ export interface Integration {
         logo_url: string;
         category: string;
         description: string;
+        is_implemented: boolean;
     };
     stats: {
         records_count: number;

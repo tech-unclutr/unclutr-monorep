@@ -1,317 +1,200 @@
-"""
-Shopify OAuth Service
-Handles OAuth 2.0 flow for Shopify integration
-"""
-from typing import Optional, Dict
+import hmac
+import hashlib
+import base64
 import uuid
-import secrets
-import httpx
 import json
-from datetime import datetime, timedelta
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+import time
+from typing import Dict, Optional, Tuple
+from urllib.parse import urlencode, urlparse, parse_qs
+from datetime import datetime
+
+import httpx
+from cryptography.fernet import Fernet
+from fastapi import HTTPException, status
+from loguru import logger
+from sqlmodel.ext.asyncio.session import AsyncSession 
 
 from app.core.config import settings
 from app.models.integration import Integration, IntegrationStatus
-from app.models.company import Workspace
-from cryptography.fernet import Fernet
-import base64
-import logging
-
-logger = logging.getLogger(__name__)
-
-# OAuth scopes required for Shopify integration
-SHOPIFY_SCOPES = [
-    'read_orders',
-    'read_products',
-    'read_customers',
-    'read_inventory',
-    'read_analytics',
-    'read_price_rules',
-    'read_shipping',
-    'read_locations',
-]
-
+from app.models.company import Company
 
 class ShopifyOAuthService:
-    """Service for handling Shopify OAuth flow"""
+    """
+    Handles the Shopify OAuth handshake flow, token encryption, and validation.
+    Implements 'authenticated symmetric encryption' (Fernet) for credential storage.
+    """
     
+    API_VERSION = "2024-01"  # Or your specific pinned version
+    # Updated Scopes for Analytics Read-Only v1
+    SCOPES = [
+        "read_products", 
+        "read_orders", 
+        "read_customers", 
+        "read_inventory", 
+        "read_marketing_events", 
+        "read_checkouts"
+    ]
+
     def __init__(self):
-        # Initialize encryption cipher
+        self.api_key = settings.SHOPIFY_API_KEY
+        self.api_secret = settings.SHOPIFY_API_SECRET
+        self.backend_url = settings.BACKEND_URL
+        
+        # Initialize Fernet Cipher for Token Encryption
         if settings.SHOPIFY_ENCRYPTION_KEY:
-            key = settings.SHOPIFY_ENCRYPTION_KEY.encode()
-            self.cipher = Fernet(key)
+            try:
+                # Ensure key is bytes
+                key_bytes = settings.SHOPIFY_ENCRYPTION_KEY.encode() if isinstance(settings.SHOPIFY_ENCRYPTION_KEY, str) else settings.SHOPIFY_ENCRYPTION_KEY
+                self.cipher = Fernet(key_bytes)
+            except Exception as e:
+                logger.critical(f"Failed to initialize Shopify encryption key: {e}")
+                raise RuntimeError("SHOPIFY_ENCRYPTION_KEY is invalid.")
         else:
-            logger.warning("SHOPIFY_ENCRYPTION_KEY not set - token encryption disabled")
-            self.cipher = None
-    
-    async def generate_authorization_url(
-        self,
-        company_id: uuid.UUID,
-        shop_domain: str,
-        session: AsyncSession
-    ) -> Dict[str, str]:
+            logger.critical("SHOPIFY_ENCRYPTION_KEY is missing!")
+            raise RuntimeError("SHOPIFY_ENCRYPTION_KEY must be set.")
+
+    # --- Encryption Helpers ---
+
+    def encrypt_token(self, token: str) -> str:
+        """Encrypts a plaintext Access Token to a Fernet string."""
+        return self.cipher.encrypt(token.encode()).decode()
+
+    def decrypt_token(self, encrypted_token: str) -> str:
+        """Decrypts a Fernet string back to plaintext Access Token."""
+        return self.cipher.decrypt(encrypted_token.encode()).decode()
+
+    # --- OAuth Flow ---
+
+    async def generate_authorization_url(self, shop_domain: str, company_id: uuid.UUID) -> str:
         """
-        Generate Shopify OAuth authorization URL
-        
-        Args:
-            company_id: Company ID requesting authorization
-            shop_domain: Shopify shop domain (e.g., mystore.myshopify.com)
-            session: Database session
-            
-        Returns:
-            Dict with auth_url, state, and shop
+        Generates the Shopify OAuth redirection URL.
+        Encodes company_id in state to persist context through the callback.
         """
-        # Normalize shop domain
-        shop = shop_domain.strip().lower().replace('.myshopify.com', '')
-        full_shop = f"{shop}.myshopify.com"
-        
-        # Generate secure state token for CSRF protection
-        state = secrets.token_urlsafe(32)
-        
-        # Store state temporarily (in-memory for now, should use Redis in production)
-        # TODO: Implement Redis-based state storage with expiration
-        await self._store_oauth_state(state, {
+        # 1. Clean domain
+        clean_shop = self._sanitize_shop_domain(shop_domain)
+        if not clean_shop:
+             raise HTTPException(status_code=400, detail="Invalid shop domain")
+
+        # 2. Generate State (Signed Context)
+        # Format: "company_id:random_nonce" -> Signed/Encrypted?
+        # For V1 simplicity with Fernet available, let's just encrypt the JSON context!
+        state_payload = json.dumps({
             "company_id": str(company_id),
-            "shop": full_shop,
-            "created_at": datetime.utcnow().isoformat()
+            "nonce": str(uuid.uuid4())
         })
+        state = self.encrypt_token(state_payload) # Using our Fernet instance
         
-        # Build OAuth URL
-        redirect_uri = f"{settings.BACKEND_URL}/api/v1/integrations/shopify/callback"
-        scopes_str = ','.join(SHOPIFY_SCOPES)
-        
-        auth_url = (
-            f"https://{full_shop}/admin/oauth/authorize?"
-            f"client_id={settings.SHOPIFY_API_KEY}&"
-            f"scope={scopes_str}&"
-            f"redirect_uri={redirect_uri}&"
-            f"state={state}"
-        )
-        
-        logger.info(
-            "Generated Shopify OAuth URL",
-            extra={
-                "company_id": str(company_id),
-                "shop": full_shop,
-                "state": state[:8] + "..."  # Log only first 8 chars
-            }
-        )
-        
-        return {
-            "auth_url": auth_url,
-            "state": state,
-            "shop": full_shop
+        # 3. Build Redirect URI
+        redirect_uri = f"{self.backend_url}/api/v1/integrations/shopify/callback"
+
+        params = {
+            "client_id": self.api_key,
+            "scope": ",".join(self.SCOPES),
+            "redirect_uri": redirect_uri,
+            "state": state, 
         }
-    
-    async def handle_callback(
-        self,
-        code: str,
-        shop: str,
-        state: str,
-        hmac_param: str,
-        session: AsyncSession
-    ) -> Integration:
-        """
-        Handle OAuth callback and exchange code for access token
         
-        Args:
-            code: Authorization code from Shopify
-            shop: Shop domain
-            state: State token for CSRF verification
-            hmac_param: HMAC signature from Shopify
-            session: Database session
+        auth_url = f"https://{clean_shop}/admin/oauth/authorize?{urlencode(params)}"
+        return auth_url
+
+    def validate_state_and_get_company(self, state: str) -> str:
+        """Decrypts state and returns company_id."""
+        try:
+            decrypted = self.decrypt_token(state)
+            data = json.loads(decrypted)
+            return data.get("company_id")
+        except Exception:
+            # If decryption fails, state was tampered or invalid
+            return None
+
+    async def validate_shop_domain(self, shop_domain: str) -> bool:
+        """Validates if a connection can be established to the shop."""
+        clean_shop = self._sanitize_shop_domain(shop_domain)
+        if not clean_shop:
+            logger.warning(f"Validation failed: Invalid format for {shop_domain}")
+            return False
             
-        Returns:
-            Created/updated Integration record
-        """
-        # 1. Verify state token
-        state_data = await self._get_oauth_state(state)
-        if not state_data:
-            raise ValueError("Invalid or expired state token")
-        
-        company_id = uuid.UUID(state_data["company_id"])
-        expected_shop = state_data["shop"]
-        
-        if shop != expected_shop:
-            raise ValueError(f"Shop mismatch: expected {expected_shop}, got {shop}")
-        
-        # 2. Verify HMAC (TODO: Implement HMAC validation)
-        # self._verify_hmac(params, hmac_param)
-        
-        # 3. Exchange code for access token
-        access_token = await self._exchange_code_for_token(shop, code)
-        
-        # 4. Get shop information
-        shop_info = await self._get_shop_info(shop, access_token)
-        
-        # 5. Get or create workspace
-        workspace = await self._get_or_create_workspace(company_id, session)
-        
-        # 6. Get datasource ID for Shopify
-        from app.models.datasource import DataSource
-        datasource = await session.exec(
-            select(DataSource).where(DataSource.slug == "shopify")
-        )
-        datasource = datasource.first()
-        
-        if not datasource:
-            raise ValueError("Shopify datasource not found in database")
-        
-        # 7. Create or update integration
-        existing = await session.exec(
-            select(Integration).where(
-                Integration.company_id == company_id,
-                Integration.datasource_id == datasource.id
-            )
-        )
-        integration = existing.first()
-        
-        if not integration:
-            integration = Integration(
-                company_id=company_id,
-                workspace_id=workspace.id,
-                datasource_id=datasource.id,
-                status=IntegrationStatus.ACTIVE
-            )
-        else:
-            integration.status = IntegrationStatus.ACTIVE
-        
-        # 8. Store encrypted access token
-        await self._store_access_token(integration, access_token)
-        
-        # 9. Store shop configuration
-        integration.config = {
-            "shop_domain": shop,
-            "shop_name": shop_info.get("name", shop),
-            "shop_plan": shop_info.get("plan_name", "unknown"),
-            "sync_mode": "realtime",
-            "historical_range_months": 12,  # Default
-            "initial_sync_completed": False
-        }
-        
-        integration.metadata_info = {
-            "shop_id": shop_info.get("id"),
-            "shop_email": shop_info.get("email"),
-            "shop_currency": shop_info.get("currency"),
-            "shop_timezone": shop_info.get("iana_timezone")
-        }
-        
-        integration.last_sync_at = datetime.utcnow()
-        
-        session.add(integration)
-        await session.commit()
-        await session.refresh(integration)
-        
-        logger.info(
-            "Shopify OAuth completed",
-            extra={
-                "company_id": str(company_id),
-                "integration_id": str(integration.id),
-                "shop": shop
-            }
-        )
-        
-        # Delete state (one-time use)
-        await self._delete_oauth_state(state)
-        
-        return integration
-    
-    async def _exchange_code_for_token(self, shop: str, code: str) -> str:
-        """Exchange authorization code for access token"""
+        # Light check: Head request to shop admin login
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"https://{shop}/admin/oauth/access_token",
-                json={
-                    'client_id': settings.SHOPIFY_API_KEY,
-                    'client_secret': settings.SHOPIFY_API_SECRET,
-                    'code': code
-                },
-                timeout=30.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data['access_token']
-    
-    async def _get_shop_info(self, shop: str, access_token: str) -> Dict:
-        """Fetch shop information from Shopify API"""
+            try:
+                url = f"https://{clean_shop}/admin"
+                logger.info(f"Validating Shop Reachability: {url}")
+                resp = await client.head(url, timeout=5.0)
+                logger.info(f"Shop Validation Response: {resp.status_code}")
+                # 303 (See Other) is often used by Shopify for admin redirects
+                return resp.status_code == 200 or resp.status_code == 302 or resp.status_code == 301 or resp.status_code == 303
+            except httpx.RequestError as e:
+                logger.error(f"Shop Validation Connection Error: {e}")
+                return False
+
+    async def exchange_code_for_token(self, shop_domain: str, code: str) -> str:
+        """
+        Exchanges the temporary Auth Code for a permanent Access Token.
+        """
+        clean_shop = self._sanitize_shop_domain(shop_domain)
+        url = f"https://{clean_shop}/admin/oauth/access_token"
+        
+        payload = {
+            "client_id": self.api_key,
+            "client_secret": self.api_secret,
+            "code": code
+        }
+        
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"https://{shop}/admin/api/2026-01/shop.json",
-                headers={"X-Shopify-Access-Token": access_token},
-                timeout=30.0
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get('shop', {})
-    
-    async def _store_access_token(self, integration: Integration, access_token: str):
-        """Store encrypted access token in integration.credentials"""
-        if self.cipher:
-            # Encrypt token
-            encrypted = self.cipher.encrypt(access_token.encode())
-            encrypted_b64 = base64.b64encode(encrypted).decode()
+            resp = await client.post(url, json=payload)
+            if resp.status_code != 200:
+                logger.error(f"Shopify Token Exchange Failed: {resp.text}")
+                raise HTTPException(status_code=400, detail="Failed to exchange token with Shopify")
             
-            integration.credentials = {
-                "access_token": encrypted_b64,
-                "encrypted": True
-            }
-        else:
-            # Fallback: store unencrypted (NOT RECOMMENDED FOR PRODUCTION)
-            logger.warning("Storing access token unencrypted - set SHOPIFY_ENCRYPTION_KEY")
-            integration.credentials = {
-                "access_token": access_token,
-                "encrypted": False
-            }
-    
-    async def get_access_token(
-        self,
-        integration: Integration
-    ) -> str:
-        """Retrieve and decrypt access token from integration"""
-        if not integration.credentials:
-            raise ValueError("No credentials stored for integration")
-        
-        if integration.credentials.get("encrypted"):
-            if not self.cipher:
-                raise ValueError("Encryption key not configured")
+            data = resp.json()
+            return data.get("access_token")
+
+    def verify_callback_hmac(self, params: Dict[str, str]) -> bool:
+        """
+        Verifies the HMAC signature of the callback request from Shopify.
+        Critical security step.
+        """
+        if "hmac" not in params:
+            return False
             
-            # Decrypt token
-            encrypted_b64 = integration.credentials["access_token"]
-            encrypted = base64.b64decode(encrypted_b64)
-            decrypted = self.cipher.decrypt(encrypted)
-            return decrypted.decode()
-        else:
-            # Unencrypted fallback
-            return integration.credentials["access_token"]
-    
-    async def _get_or_create_workspace(
-        self,
-        company_id: uuid.UUID,
-        session: AsyncSession
-    ) -> Workspace:
-        """Get or create primary workspace for company"""
-        workspace = await session.exec(
-            select(Workspace).where(Workspace.company_id == company_id).limit(1)
-        )
-        workspace = workspace.first()
+        received_hmac = params["hmac"]
         
-        if not workspace:
-            raise ValueError(f"No workspace found for company {company_id}")
+        # Sort params lexicographically, excluding hmac
+        sorted_params = sorted([(k, v) for k, v in params.items() if k != "hmac"])
+        status_string = "&".join([f"{k}={v}" for k, v in sorted_params])
         
-        return workspace
-    
-    # Temporary in-memory state storage (replace with Redis in production)
-    _oauth_states: Dict[str, Dict] = {}
-    
-    async def _store_oauth_state(self, state: str, data: Dict):
-        """Store OAuth state temporarily"""
-        self._oauth_states[state] = data
-    
-    async def _get_oauth_state(self, state: str) -> Optional[Dict]:
-        """Retrieve OAuth state"""
-        return self._oauth_states.get(state)
-    
-    async def _delete_oauth_state(self, state: str):
-        """Delete OAuth state after use"""
-        self._oauth_states.pop(state, None)
+        # Compute HMAC-SHA256
+        digest = hmac.new(
+            self.api_secret.encode("utf-8"),
+            status_string.encode("utf-8"),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(digest, received_hmac)
+
+    # --- Utilities ---
+
+    def _sanitize_shop_domain(self, domain: str) -> Optional[str]:
+        """Ensures domain is 'foo.myshopify.com' format."""
+        domain = domain.strip().lower()
+        
+        # Remove protocol
+        if "://" in domain:
+            domain = domain.split("://")[-1]
+        
+        # Remove paths
+        if "/" in domain:
+            domain = domain.split("/")[0]
+            
+        # Add suffix if missing (user might just type 'unclutr-dev')
+        if not domain.endswith(".myshopify.com"):
+            domain += ".myshopify.com"
+            
+        # Basic character check
+        allowed_chars = "abcdefghijklmnopqrstuvwxyz0123456789-."
+        if not all(c in allowed_chars for c in domain):
+            return None
+            
+        return domain
+
+shopify_oauth_service = ShopifyOAuthService()

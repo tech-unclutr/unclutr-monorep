@@ -12,6 +12,7 @@ import {
 import { IntegrationCard } from '@/components/integrations/IntegrationCard';
 import { IntegrationDetailDrawer } from '@/components/integrations/IntegrationDetailDrawer';
 import { AddSourceDialog } from '@/components/integrations/AddSourceDialog';
+import { ShopifySuccessModal } from '@/components/integrations/ShopifySuccessModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -36,16 +37,22 @@ export default function IntegrationsPage() {
         setIsSyncing(true);
         try {
             await syncOnboardingState();
-            toast.success("Ready to edit. Redirecting...");
+            toast.success("Ready for edits", {
+                description: "Opening the stack configuration suite."
+            });
             router.push("/onboarding/basics");
         } catch (error) {
             console.error(error);
-            toast.error("Failed to prepare onboarding for editing.");
+            toast.error("Couldn't open editor", {
+                description: "We hit a snag preparing the onboarding suite. Try again?"
+            });
         } finally {
             setIsSyncing(false);
         }
     };
     const [addDialogOpen, setAddDialogOpen] = useState(false);
+    const [shopifySuccessOpen, setShopifySuccessOpen] = useState(false);
+    const [shopifyStoreName, setShopifyStoreName] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchIntegrations = async () => {
@@ -56,7 +63,9 @@ export default function IntegrationsPage() {
             setIntegrations(data);
         } catch (error) {
             console.error("Error fetching integrations:", error);
-            toast.error("Failed to load integrations");
+            toast.error("Integration Hub Unavailable", {
+                description: "We couldn't reach the command center. Try refreshing?"
+            });
         } finally {
             setLoading(false);
         }
@@ -68,33 +77,102 @@ export default function IntegrationsPage() {
         }
     }, [user, authLoading]);
 
+    // Handle OAuth Callback Feedback
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const success = params.get('success');
+        const shop = params.get('shop');
+        const error = params.get('error');
+
+        if (success === 'true') {
+            setShopifyStoreName(shop || undefined);
+            setShopifySuccessOpen(true);
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname);
+            // Refresh integrations to show the newly connected store
+            fetchIntegrations();
+        } else if (error) {
+            // Handle specific error cases from backend
+            let errorTitle = "Connection Failed";
+            let errorDescription = "There was an issue linking your Shopify store. Let's try once more?";
+
+            switch (error) {
+                case 'hmac_invalid':
+                    errorTitle = "Security Verification Failed";
+                    errorDescription = "The connection request couldn't be verified. This might be a security issue. Please try again.";
+                    break;
+                case 'state_invalid':
+                    errorTitle = "Session Expired";
+                    errorDescription = "Your connection session expired. Please start the connection process again.";
+                    break;
+                case 'handshake_failed':
+                    errorTitle = "Handshake Failed";
+                    errorDescription = "We couldn't complete the connection with Shopify. Please check your store settings and try again.";
+                    break;
+                default:
+                    errorTitle = "Connection Slipped";
+                    errorDescription = "There was an issue linking your Shopify store. Let's try once more?";
+            }
+
+            toast.error(errorTitle, {
+                description: errorDescription,
+                duration: 6000,
+            });
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, []);
+
     const handleConnect = async (slug: string) => {
+        if (slug.toLowerCase() === 'shopify') {
+            router.push('/integrations/shopify/connect');
+            return;
+        }
         // Placeholder for future onboarding flow
-        toast.info("Integration flow coming soon");
+        toast.info("Flow coming soon", {
+            description: "We're currently perfecting this automated connection flow. Stay tuned!"
+        });
     };
 
     const handleSync = async (id: string) => {
         if (!companyId) return;
         try {
-            toast.loading("Syncing data...", { id: 'sync' });
+            toast.loading("Refreshing Pulse", {
+                description: "Recalibrating your data metrics...",
+                id: 'sync'
+            });
             await syncIntegration(companyId, id);
-            toast.success("Sync triggered successfully", { id: 'sync' });
+            toast.success("Sync in Motion", {
+                description: "Your dashboard will update with the latest figures shortly.",
+                id: 'sync'
+            });
             fetchIntegrations();
         } catch (error) {
-            toast.error("Sync failed", { id: 'sync' });
+            toast.error("Sync hit a snag", {
+                description: "We couldn't refresh the data. Try again in a minute?",
+                id: 'sync'
+            });
         }
     };
 
     const handleDisconnect = async (id: string) => {
         if (!companyId) return;
         try {
-            toast.loading("Sending disconnect request...", { id: 'disconnect' });
+            toast.loading("Severing Connection", {
+                description: "Disconnecting source from your pulse...",
+                id: 'disconnect'
+            });
             await disconnectIntegration(companyId, id);
-            toast.success("Disconnect requested", { id: 'disconnect' });
+            toast.success("Connection Severed", {
+                description: "This source is no longer syncing with Unclutr.",
+                id: 'disconnect'
+            });
             setDrawerOpen(false);
             fetchIntegrations();
         } catch (error) {
-            toast.error("Request failed", { id: 'disconnect' });
+            toast.error("Disconnect Failed", {
+                description: "We couldn't break the link. Try one more time?",
+                id: 'disconnect'
+            });
         }
     };
 
@@ -102,11 +180,15 @@ export default function IntegrationsPage() {
         if (!companyId) return;
         try {
             await addManualSource(companyId, slug, category);
-            toast.success("Source added to your stack");
+            toast.success("Stack Updated", {
+                description: `${slug} is now part of your operational stack.`
+            });
             setAddDialogOpen(false);
             fetchIntegrations();
         } catch (error) {
-            toast.error("Failed to add source");
+            toast.error("Couldn't add source", {
+                description: "Try adding this tool to your stack again."
+            });
         }
     };
 
@@ -344,6 +426,8 @@ export default function IntegrationsPage() {
                                                         integration={integration}
                                                         onConnect={handleConnect}
                                                         onViewDetails={handleViewDetails}
+                                                        onAdd={handleAddSource}
+                                                        onRemove={handleDisconnect}
                                                     />
                                                 ))}
                                             </div>
@@ -419,10 +503,12 @@ export default function IntegrationsPage() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                                 {items.map((integration) => (
                                                     <IntegrationCard
-                                                        key={integration.datasource.id}
+                                                        key={integration.id || integration.datasource.id}
                                                         integration={integration}
                                                         onConnect={handleConnect}
                                                         onViewDetails={handleViewDetails}
+                                                        onAdd={handleAddSource}
+                                                        onRemove={handleDisconnect}
                                                     />
                                                 ))}
                                             </div>
@@ -471,6 +557,15 @@ export default function IntegrationsPage() {
                 open={addDialogOpen}
                 onOpenChange={setAddDialogOpen}
                 onAdd={handleAddSource}
+            />
+
+            <ShopifySuccessModal
+                isOpen={shopifySuccessOpen}
+                onClose={() => {
+                    setShopifySuccessOpen(false);
+                    fetchIntegrations(); // Refresh integrations after success
+                }}
+                shopName={shopifyStoreName}
             />
         </div >
     );

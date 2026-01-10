@@ -45,8 +45,8 @@ class CompanyRead(CompanyBase):
     created_at: datetime
     tags: Optional[List[str]] = None
     presence_links: Optional[List[Dict[str, Any]]] = None
-    stack_summary: Optional[Dict[str, Any]] = None
-    channels_summary: Optional[Dict[str, Any]] = None
+    stack_data: Optional[Dict[str, Any]] = None
+    channels_data: Optional[Dict[str, Any]] = None
 
     class Config:
         orm_mode = True

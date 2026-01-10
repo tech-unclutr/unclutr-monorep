@@ -34,7 +34,7 @@ def _remove_targets_recursively(data: Any, targets: List[str]) -> Any:
 
 async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID) -> None:
     """
-    Compares the company's stack_summary/channels_summary with existing Integration records
+    Compares the company's stack_data/channels_data with existing Integration records
     and creates INACTIVE integration placeholders for missing ones.
     """
     company = await session.get(Company, company_id)
@@ -52,24 +52,26 @@ async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID
     identifiers = set()
     
     # Channels
-    if company.channels_summary:
-        channels = company.channels_summary.get("channels", {})
+    if company.channels_data:
+        channels = company.channels_data.get("channels", {})
         for cat in ['d2c', 'marketplaces', 'qcom', 'others']:
             items = channels.get(cat, [])
             if isinstance(items, list):
                 identifiers.update([str(i) for i in items if i])
 
     # Stack
-    if company.stack_summary:
-        stack = company.stack_summary.get("stack", {})
+    if company.stack_data:
+        stack = company.stack_data.get("stack", {})
         for cat, items in stack.items():
             if isinstance(items, list):
                 identifiers.update([str(i) for i in items if i])
         
         # Legacy/Flat list support
-        selected_tools = company.stack_summary.get("selectedTools", [])
+        selected_tools = company.stack_data.get("selectedTools", [])
         if isinstance(selected_tools, list):
             identifiers.update([str(i) for i in selected_tools if i])
+    
+    print(f"[SYNC DEBUG] Extracted Identifiers: {identifiers}")
 
     if not identifiers:
         return
@@ -90,12 +92,13 @@ async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID
     result = await session.exec(stmt)
     datasources = result.all()
 
-    # Get existing integration datasource IDs
-    stmt = select(Integration.datasource_id).where(Integration.company_id == company_id)
+    # Get existing integration datasource IDs and their statuses
+    stmt = select(Integration).where(Integration.company_id == company_id)
     result = await session.exec(stmt)
-    existing_ds_ids = set(result.all())
-
-    # Create missing ones
+    existing_integrations = result.all()
+    existing_ds_ids = {i.datasource_id for i in existing_integrations}
+    
+    # 1. Create missing ones
     for ds in datasources:
         if ds.id not in existing_ds_ids:
             new_integration = Integration(
@@ -106,6 +109,14 @@ async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID
             )
             session.add(new_integration)
             logger.info(f"Auto-healed integration entry for {ds.name} (Company: {company_id})")
+    
+    # 2. Delete INACTIVE ones that are no longer in the stack
+    intended_ds_ids = {ds.id for ds in datasources}
+    for integration in existing_integrations:
+        if (integration.status == IntegrationStatus.INACTIVE and 
+            integration.datasource_id not in intended_ds_ids):
+            await session.delete(integration)
+            logger.info(f"Cleanup integration entry for {integration.datasource_id} (Not in stack, Company: {company_id})")
     
     await session.flush()
     await session.commit()
@@ -124,22 +135,22 @@ async def get_integrations_for_company(session: AsyncSession, company_id: uuid.U
     
     if company:
         # Channels
-        if company.channels_summary:
-            channels = company.channels_summary.get("channels", {})
+        if company.channels_data:
+            channels = company.channels_data.get("channels", {})
             for cat in ['d2c', 'marketplaces', 'qcom', 'others']:
                 items = channels.get(cat, [])
                 if isinstance(items, list):
                     stack_identifiers.update([str(i).lower() for i in items if i])
 
         # Stack
-        if company.stack_summary:
-            stack = company.stack_summary.get("stack", {})
+        if company.stack_data:
+            stack = company.stack_data.get("stack", {})
             for cat, items in stack.items():
                 if isinstance(items, list):
                     stack_identifiers.update([str(i).lower() for i in items if i])
             
             # Legacy/Flat list support
-            selected_tools = company.stack_summary.get("selectedTools", [])
+            selected_tools = company.stack_data.get("selectedTools", [])
             if isinstance(selected_tools, list):
                 stack_identifiers.update([str(i).lower() for i in selected_tools if i])
 
@@ -165,11 +176,15 @@ async def get_integrations_for_company(session: AsyncSession, company_id: uuid.U
     
     # Add datasources with integration records
     for integration, datasource in integrations_with_ds:
-        # Check if this datasource is in the company's stack/channels
-        is_in_stack = (
-            str(datasource.id).lower() in stack_identifiers or
-            datasource.slug.lower() in stack_identifiers
-        )
+        # If an integration record exists, check if it's actually in the stack summaries
+        # This is for UI categorization purposes. Active ones are always in stack.
+        if integration.status != IntegrationStatus.INACTIVE:
+            is_in_stack = True
+        else:
+            is_in_stack = (
+                str(datasource.id).lower() in stack_identifiers or
+                datasource.slug.lower() in stack_identifiers
+            )
         
         formatted.append({
             "id": str(integration.id),
@@ -285,11 +300,15 @@ async def disconnect_integration(session: AsyncSession, company_id: uuid.UUID, i
         raise ValueError("Integration not found or unauthorized.")
         
     if integration.status == IntegrationStatus.ACTIVE:
-        # If it's active, we request disconnection (don't delete data yet)
-        integration.status = IntegrationStatus.DISCONNECT_REQUESTED
+        # Reset to INACTIVE and clear credentials (State 0)
+        integration.status = IntegrationStatus.INACTIVE
+        integration.credentials = {} 
+        integration.error_message = None
+        integration.last_sync_at = None
         session.add(integration)
         await session.commit()
         await session.refresh(integration)
+        logger.info(f"Disconnected and reset integration {integration_id} to INACTIVE (State 0)")
         return integration
     else:
         # If it was never connected (INACTIVE) or already in error/requested state, we can remove it from the stack
@@ -298,15 +317,15 @@ async def disconnect_integration(session: AsyncSession, company_id: uuid.UUID, i
         if datasource:
             targets = [datasource.slug, str(datasource.id)]
             
-            # 2. Cleanup Company Summaries (stack_summary, channels_summary)
+            # 2. Cleanup Company Summaries (stack_data, channels_data)
             company = await session.get(Company, company_id)
             if company:
-                if company.stack_summary:
-                    company.stack_summary = _remove_targets_recursively(company.stack_summary, targets)
-                    flag_modified(company, "stack_summary")
-                if company.channels_summary:
-                    company.channels_summary = _remove_targets_recursively(company.channels_summary, targets)
-                    flag_modified(company, "channels_summary")
+                if company.stack_data:
+                    company.stack_data = _remove_targets_recursively(company.stack_data, targets)
+                    flag_modified(company, "stack_data")
+                if company.channels_data:
+                    company.channels_data = _remove_targets_recursively(company.channels_data, targets)
+                    flag_modified(company, "channels_data")
                 session.add(company)
 
             # 3. Cleanup OnboardingState for all company members
@@ -334,6 +353,8 @@ async def disconnect_integration(session: AsyncSession, company_id: uuid.UUID, i
         await session.commit()
         return None
 
+
+
 async def add_manual_datasource(session: AsyncSession, company_id: uuid.UUID, slug: str, category: str) -> Dict[str, Any]:
     """
     Adds a datasource to the company's stack_summary if not already present,
@@ -344,14 +365,22 @@ async def add_manual_datasource(session: AsyncSession, company_id: uuid.UUID, sl
     if not company:
         raise ValueError("Company not found.")
         
-    # 2. Update stack_summary if needed
-    stack = company.stack_summary or {}
+    # 2. Update stack_data if needed
+    if not company.stack_data:
+        company.stack_data = {"stack": {}}
+    
+    # Ensure nested "stack" key exists
+    if "stack" not in company.stack_data:
+        company.stack_data["stack"] = {}
+        
+    stack = company.stack_data["stack"]
     if category not in stack:
         stack[category] = []
     
     if slug not in stack[category]:
         stack[category].append(slug)
-        company.stack_summary = stack
+        company.stack_data["stack"] = stack
+        flag_modified(company, "stack_data")
         session.add(company)
         
     # 3. Ensure Integration record exists

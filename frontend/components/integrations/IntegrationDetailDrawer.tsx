@@ -20,10 +20,16 @@ import {
     Database,
     ArrowRight,
     Trash2,
+    Sparkles,
     Activity,
-    Info,
-    Sparkles
+    Info
 } from 'lucide-react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Integration } from '@/lib/api/integrations';
 
@@ -45,6 +51,9 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
     if (!integration) return null;
 
     const isConnected = integration.status === 'active';
+    const isSyncing = integration.status === 'syncing';
+    const isError = integration.status === 'error';
+    const isActiveState = isConnected || isSyncing || isError;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -64,13 +73,23 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                             <SheetTitle className="text-xl font-bold dark:text-zinc-100">{integration.datasource.name}</SheetTitle>
                             <div className="flex items-center gap-2 mt-1">
                                 <Badge variant="outline" className={cn(
-                                    "text-[10px] py-0 px-2 flex items-center gap-1",
+                                    "text-[10px] py-0 px-2 flex items-center gap-1 relative overflow-hidden",
                                     isConnected
                                         ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-500"
                                         : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500"
                                 )}>
-                                    <Activity className="w-2.5 h-2.5" />
-                                    {isConnected ? "Healthy" : "Not Connected"}
+                                    {isActiveState && (
+                                        <>
+                                            <div className={cn(
+                                                "w-1.5 h-1.5 rounded-full mr-0.5",
+                                                isConnected ? "bg-emerald-500 animate-pulse" :
+                                                    isSyncing ? "bg-blue-500 animate-spin" : "bg-red-500"
+                                            )} />
+                                            {isConnected && <div className="absolute top-1/2 left-2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping opacity-75" />}
+                                        </>
+                                    )}
+                                    {!isActiveState && <Activity className="w-2.5 h-2.5" />}
+                                    {isConnected ? "Healthy" : isSyncing ? "Syncing..." : isError ? "Connection Error" : "Not Connected"}
                                 </Badge>
                                 <span className="text-[10px] text-gray-400 dark:text-zinc-500">•</span>
                                 <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium">Read-only</span>
@@ -113,8 +132,8 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                         </div>
                     )}
 
-                    {/* Health Stats (Only if Connected) */}
-                    {isConnected && (
+                    {/* Health Stats (Only if Connected/Active) */}
+                    {isActiveState && (
                         <div className="space-y-4">
                             <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
                                 <Activity className="w-3.5 h-3.5" />
@@ -126,20 +145,30 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                                     <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 uppercase tracking-tight font-semibold">Records Synced</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800/50 group relative">
-                                    <div className="text-2xl font-bold text-emerald-500">99.8%</div>
-                                    <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 uppercase tracking-tight font-semibold flex items-center gap-1">
-                                        Data Confidence
-                                        <Info className="w-3 h-3 cursor-help" />
-                                    </div>
-                                    <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl shadow-xl z-50 invisible group-hover:visible w-64 text-[10px] text-zinc-500 leading-relaxed">
-                                        Calculated based on:
-                                        <ul className="mt-1 list-disc list-inside space-y-0.5">
-                                            <li>Schema match accuracy</li>
-                                            <li>Data completeness (no missing fields)</li>
-                                            <li>Historical sync success rate</li>
-                                            <li>Anomaly detection pass rate</li>
-                                        </ul>
-                                    </div>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div className="cursor-help">
+                                                    <div className="text-2xl font-bold text-emerald-500">99.8%</div>
+                                                    <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 uppercase tracking-tight font-semibold flex items-center gap-1">
+                                                        Data Confidence
+                                                        <Info className="w-3 h-3" />
+                                                    </div>
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="w-64 p-3 bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 shadow-xl">
+                                                <div className="text-[10px] text-zinc-500 leading-relaxed font-normal">
+                                                    Calculated based on:
+                                                    <ul className="mt-1 list-disc list-inside space-y-0.5">
+                                                        <li>Schema match accuracy</li>
+                                                        <li>Data completeness (no missing fields)</li>
+                                                        <li>Historical sync success rate</li>
+                                                        <li>Anomaly detection pass rate</li>
+                                                    </ul>
+                                                </div>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800/50">
@@ -202,7 +231,7 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                     <div className="text-[11px] text-gray-400 dark:text-zinc-500 italic text-center w-full mb-2">
                         Connected through secure API connector. Unclutr is SOC 2 compliant.
                     </div>
-                    {isConnected ? (
+                    {isActiveState ? (
                         <Button
                             variant="outline"
                             className="w-full h-11 transition-all text-xs font-bold flex items-center justify-center gap-2 border-red-500/20 text-red-500 hover:bg-red-500/5"

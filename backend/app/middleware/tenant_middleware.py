@@ -1,5 +1,6 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request, Response, HTTPException
+from fastapi.responses import JSONResponse
 import uuid
 from app.core.security import get_current_user_no_depends
 from app.core.context import set_company_ctx, set_workspace_ctx, set_user_ctx
@@ -9,40 +10,37 @@ from app.models.iam import CompanyMembership
 
 class TenantMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        print(f"TenantMiddleware: {request.method} {request.url.path} - Headers Auth: {bool(request.headers.get('Authorization'))}")
-        # 1. Extract and Verify Auth (Always attempt if header is present)
-        # This allows "public" or "onboarding" routes to still have a user context if they send a token.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # 1. Extract and Verify Auth
         auth_header = request.headers.get("Authorization")
+        user_id = None
+        
         if auth_header:
             try:
                 decoded_token = await get_current_user_no_depends(auth_header)
                 user_id = decoded_token.get("uid")
                 set_user_ctx(user_id)
                 request.state.user_id = user_id
-                request.state.token_payload = decoded_token # Cache payload for get_current_user
+                request.state.token_payload = decoded_token
             except Exception as e:
-                # If auth fails but the route is in the bypass list, we ignore the error
-                # and let the route handler decide (or just proceed as anonymous).
-                # If it's a protected route not in bypass, we should probably fail, 
-                # but for simplicity in this middleware, we'll let the endpoint's Security dependency handle the 401
-                # if the user context isn't set.
                 pass
 
-        # 2. Bypass check for public/onboarding routes (Skipping Company Checks)
+        # 2. Bypass check
         path = request.url.path
-        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources", "/company/me", "/users"]):
+        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources", "/company/me", "/users", "/integrations/shopify/callback"]):
             return await call_next(request)
 
-        # 3. For all other routes, enforce Auth if it wasn't successful above
+        # 3. Validation
         if not auth_header:
-             return Response(content="Unauthorized: Missing Auth Header", status_code=401)
+             return JSONResponse(content={"detail": "Unauthorized: Missing Auth Header"}, status_code=401)
 
-        # 3. Handle Company Context
         company_id_str = request.headers.get("X-Company-ID")
         workspace_id_str = request.headers.get("X-Workspace-ID")
 
         if not company_id_str:
-            return Response(content="Forbidden: Missing X-Company-ID", status_code=403)
+            return JSONResponse(content={"detail": "Forbidden: Missing X-Company-ID"}, status_code=403)
 
         try:
             company_id = uuid.UUID(company_id_str)
@@ -57,13 +55,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 request.state.workspace_id = None
                 
         except ValueError:
-            return Response(content="Bad Request: Invalid UUID format in headers", status_code=400)
+            return JSONResponse(content={"detail": f"Bad Request: Invalid UUID format in headers ({company_id_str})"}, status_code=400)
 
-        # 4. Mandatory Membership Check (The "No-Guessing" Guardrail)
-        # Verify that the user is actually a member of the requested company.
-        # This prevents a user from providing a valid UUID of a company they don't belong to.
-        
-        # Note: In production, this should be cached (Redis) to avoid a DB hit per request.
+        # 4. Membership Check
+        if not user_id:
+             return JSONResponse(content={"detail": "Unauthorized: Invalid Token (No User ID)"}, status_code=401)
+
         session_gen = get_session()
         session = await session_gen.__anext__()
         try:
@@ -74,7 +71,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             membership = (await session.exec(stmt)).first()
             
             if not membership:
-                return Response(content="Forbidden: You are not a member of this company", status_code=403)
+                return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
             
             request.state.role = membership.role
         finally:

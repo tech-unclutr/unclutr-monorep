@@ -115,16 +115,15 @@ export function useCompany() {
             const updatedData = await res.json();
             setCompany(updatedData);
 
-            toast("Settings updated", {
+            toast.success("Settings Updated", {
                 description: "Your changes have been saved successfully.",
             });
             return updatedData;
         } catch (err: any) {
             // Revert
             setCompany(previousCompany);
-            toast("Update failed", {
-                description: err.message || "Could not save changes.",
-                // variant: "destructive" is not a direct prop in toast() for sonner usually, but we can try toast.error or just leave it simple
+            toast.error("Update failed", {
+                description: err.message || "We couldn't save your settings. Try again?",
             });
             throw err;
         }

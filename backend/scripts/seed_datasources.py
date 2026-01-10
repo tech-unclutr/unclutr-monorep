@@ -240,6 +240,7 @@ def download_and_get_local_path(slug: str, url: str, website_url: str = None) ->
  
 
 async def seed_datasources():
+    await init_db()
     datasources = [
         # --- 1. LOGISTICS & RETURNS ---
         {

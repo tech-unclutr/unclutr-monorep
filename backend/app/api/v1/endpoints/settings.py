@@ -59,8 +59,8 @@ async def get_onboarding_settings(
         raise HTTPException(status_code=404, detail="Company Not Found")
 
     # 3. Transform Data & Resolve Names
-    channels_data = company.channels_summary or {}
-    stack_data = company.stack_summary or {}
+    channels_data = company.channels_data or {}
+    stack_data = company.stack_data or {}
 
     # Normalize data if nested (fix for wrapped payload from onboarding)
     if "channels" in channels_data and isinstance(channels_data["channels"], dict):
@@ -68,6 +68,21 @@ async def get_onboarding_settings(
     
     if "stack" in stack_data and isinstance(stack_data["stack"], dict):
         stack_data = stack_data["stack"]
+    
+    # FALLBACK: If production data is empty, try pulling from OnboardingState
+    is_stack_empty = not stack_data or (not stack_data.get("stack") and not stack_data.get("selectedTools"))
+    is_channels_empty = not channels_data or not channels_data.get("channels")
+
+    if is_stack_empty and is_channels_empty:
+        from app.services import onboarding_service
+        try:
+            onboarding_state = await onboarding_service.get_resume_info(session, user_id)
+            if onboarding_state:
+                stack_data = onboarding_state.get("stack_data", {}).get("stack", {}) or stack_data
+                channels_data = onboarding_state.get("channels_data", {}).get("channels", {}) or channels_data
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Settings fallback to onboarding failed: {e}")
     
     # Collect all likely UUIDs
     all_raw_ids: Set[str] = set()

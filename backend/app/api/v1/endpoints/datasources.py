@@ -75,7 +75,7 @@ async def update_company_stack(
     company_id: uuid.UUID = Depends(get_current_company_id)
 ):
     """
-    Update company's stack_summary and channels_summary.
+    Update company's stack_data and channels_data.
     Accepts a list of datasource IDs and categorizes them properly based on their category.
     """
     # Get the list of selected datasource IDs
@@ -101,8 +101,8 @@ async def update_company_stack(
         datasources = []
     
     # Categorize datasources based on their category field
-    stack_summary = {"stack": {}, "selectedTools": []}
-    channels_summary = {"channels": {"d2c": [], "marketplaces": [], "qcom": [], "others": []}}
+    stack_data_obj = {"stack": {}, "selectedTools": []}
+    channels_data_obj = {"channels": {"d2c": [], "marketplaces": [], "qcom": [], "others": []}}
     
     # Define which categories go into channels vs stack
     channel_categories = {
@@ -119,28 +119,28 @@ async def update_company_stack(
         # Check if this is a channel category
         if ds.category in channel_categories:
             channel_type = channel_categories[ds.category]
-            channels_summary["channels"][channel_type].append(ds_id)
+            channels_data_obj["channels"][channel_type].append(ds_id)
         else:
             # Everything else goes into stack
             category_key = ds.category.lower() if ds.category else "other"
-            if category_key not in stack_summary["stack"]:
-                stack_summary["stack"][category_key] = []
-            stack_summary["stack"][category_key].append(ds_id)
-            stack_summary["selectedTools"].append(ds_id)
+            if category_key not in stack_data_obj["stack"]:
+                stack_data_obj["stack"][category_key] = []
+            stack_data_obj["stack"][category_key].append(ds_id)
+            stack_data_obj["selectedTools"].append(ds_id)
     
     # Update the company
     company = await session.get(Company, company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
-    company.stack_summary = stack_summary
-    company.channels_summary = channels_summary
+    company.stack_data = stack_data_obj
+    company.channels_data = channels_data_obj
     
     session.add(company)
     await session.commit()
     await session.refresh(company)
     
-    return {"status": "success", "stack_summary": stack_summary, "channels_summary": channels_summary}
+    return {"status": "success", "stack_data": stack_data_obj, "channels_data": channels_data_obj}
 
 
 # --- Request Management Endpoints ---

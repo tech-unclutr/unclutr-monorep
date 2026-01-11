@@ -32,6 +32,12 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Integration } from '@/lib/api/integrations';
+import { SyncProgress } from '@/components/integrations/SyncProgress';
+import { ActivityFeed } from '@/components/integrations/ActivityFeed';
+import { SyncStatusCard } from '@/components/integrations/SyncStatusCard';
+import useSWR from 'swr';
+import { useAuth } from '@/hooks/use-auth';
+import { getIntegration } from '@/lib/api/integrations';
 
 interface IntegrationDetailDrawerProps {
     integration: Integration | null;
@@ -39,6 +45,8 @@ interface IntegrationDetailDrawerProps {
     onOpenChange: (open: boolean) => void;
     onSync: (id: string) => void;
     onDisconnect: (id: string) => void;
+    onConnect: (slug: string) => void;
+    onRefresh?: () => void;
 }
 
 export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = ({
@@ -46,12 +54,28 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
     open,
     onOpenChange,
     onSync,
-    onDisconnect
+    onDisconnect,
+    onConnect,
+    onRefresh
 }) => {
+    const { companyId } = useAuth();
     if (!integration) return null;
 
-    const isConnected = integration.status === 'active';
-    const isSyncing = integration.status === 'syncing';
+    // Real-time Pulse: Poll for latest integration status/stats when drawer is open
+    const { data: latestIntegration } = useSWR(
+        open && integration?.id ? [`/api/v1/integrations/${integration.id}`, companyId] : null,
+        () => getIntegration(companyId!, integration!.id),
+        {
+            refreshInterval: 3000, // Poll every 3s for live pulse
+            dedupingInterval: 2000
+        }
+    );
+
+    // Use latest data if available, fallback to initial prop
+    const activeIntegration = latestIntegration || integration;
+
+    const isConnected = activeIntegration.status === 'active';
+    const isSyncing = activeIntegration.status === 'syncing' || activeIntegration.status === 'SYNCING';
     const isError = integration.status === 'error';
     const isActiveState = isConnected || isSyncing || isError;
 
@@ -133,98 +157,122 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                     )}
 
                     {/* Health Stats (Only if Connected/Active) */}
+                    {/* Health & Sync (Consolidated) */}
                     {isActiveState && (
-                        <div className="space-y-4">
-                            <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
-                                <Activity className="w-3.5 h-3.5" />
-                                Health & Synchronization
-                            </h4>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800/50">
-                                    <div className="text-2xl font-bold dark:text-zinc-100">{integration.stats.records_count.toLocaleString()}</div>
-                                    <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 uppercase tracking-tight font-semibold">Records Synced</div>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800/50 group relative">
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <div className="cursor-help">
-                                                    <div className="text-2xl font-bold text-emerald-500">99.8%</div>
-                                                    <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 uppercase tracking-tight font-semibold flex items-center gap-1">
-                                                        Data Confidence
-                                                        <Info className="w-3 h-3" />
-                                                    </div>
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            {/* Control & Statistics */}
+                            <SyncStatusCard
+                                status={activeIntegration.status}
+                                lastSynced={activeIntegration.last_sync_at}
+                                syncStats={activeIntegration.metadata_info?.sync_stats}
+                                onSync={() => onSync(activeIntegration.id)}
+                            />
+
+                            {/* Technical Sync Statistics Grid */}
+                            {activeIntegration.metadata_info?.sync_stats && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { label: 'Orders', key: 'orders_count', tooltip: 'Includes all orders (open, archived, cancelled) from all sales channels.' },
+                                        { label: 'Products', key: 'products_count', tooltip: 'Total count of products (Active + Draft/Archived).' },
+                                        { label: 'Discounts', key: 'discounts_count', tooltip: 'Total number of price rules and automatic discounts configured.' }
+                                    ].map((stat) => (
+                                        <div key={stat.key} className="p-3 rounded-xl bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800 transition-all hover:bg-gray-50 dark:hover:bg-zinc-900 group">
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <div className="text-[9px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest truncate">
+                                                    {stat.label}
                                                 </div>
-                                            </TooltipTrigger>
-                                            <TooltipContent className="w-64 p-3 bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 shadow-xl">
-                                                <div className="text-[10px] text-zinc-500 leading-relaxed font-normal">
-                                                    Calculated based on:
-                                                    <ul className="mt-1 list-disc list-inside space-y-0.5">
-                                                        <li>Schema match accuracy</li>
-                                                        <li>Data completeness (no missing fields)</li>
-                                                        <li>Historical sync success rate</li>
-                                                        <li>Anomaly detection pass rate</li>
-                                                    </ul>
-                                                </div>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
+                                                {stat.tooltip && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Info className="w-2.5 h-2.5 text-gray-300 dark:text-zinc-600 hover:text-gray-500 dark:hover:text-zinc-400 cursor-help transition-colors" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="max-w-[200px] p-3 leading-relaxed bg-zinc-900 border-zinc-800 shadow-xl" sideOffset={5}>
+                                                                <div className="font-semibold text-[10px] text-zinc-400 uppercase tracking-wider mb-1">Calculation</div>
+                                                                <div className="text-xs text-zinc-100">{stat.tooltip}</div>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                )}
+                                            </div>
+                                            <div className="text-sm font-bold text-gray-900 dark:text-zinc-100 tabular-nums">
+                                                {new Intl.NumberFormat('en-US', {
+                                                    notation: activeIntegration.metadata_info?.sync_stats?.[stat.key] > 9999 ? 'compact' : 'standard',
+                                                    maximumFractionDigits: 1
+                                                }).format(activeIntegration.metadata_info?.sync_stats?.[stat.key] || 0)}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
-                            <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800/50">
-                                <div className="flex items-center gap-2">
-                                    <RefreshCw className="w-4 h-4 text-[#FF8A4C]" />
-                                    <div className="text-xs font-medium dark:text-zinc-300">Last Synched: 22m ago</div>
-                                </div>
-                                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-[#FF8A4C] hover:bg-[#FF8A4C]/10" onClick={() => onSync(integration.id)}>
-                                    Sync Now
-                                </Button>
+                            )}
+
+                            {/* Live Activity Monitor */}
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5" />
+                                    Live Pulse
+                                </h4>
+                                <ActivityFeed
+                                    integrationId={integration.id}
+                                    open={open}
+                                    companyId={companyId}
+                                    onSyncTriggered={() => {
+                                        // Clear activity feed when sync is triggered
+                                        if (typeof window !== 'undefined' && (window as any).__clearActivityFeed) {
+                                            (window as any).__clearActivityFeed()
+                                        }
+                                    }}
+                                />
                             </div>
                         </div>
                     )}
 
-                    {/* Security Info */}
-                    <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
-                            <Shield className="w-3.5 h-3.5" />
-                            Data Safety & Privacy
-                        </h4>
-                        <div className="space-y-3">
-                            <div className="flex gap-4 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                                <Eye className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                                <div>
-                                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-tight">Read-Only Access</div>
-                                    <div className="text-[11px] text-emerald-600/70 dark:text-emerald-500/60 mt-0.5 leading-normal">
-                                        We never modify your data. We only read what's necessary to compute unit economics.
+                    {!isActiveState && (
+                        <div className="space-y-8">
+                            {/* Security Info */}
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
+                                    <Shield className="w-3.5 h-3.5" />
+                                    Data Safety & Privacy
+                                </h4>
+                                <div className="space-y-3">
+                                    <div className="flex gap-4 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                                        <Eye className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-tight">Read-Only Access</div>
+                                            <div className="text-[11px] text-emerald-600/70 dark:text-emerald-500/60 mt-0.5 leading-normal">
+                                                We never modify your data. We only read what's necessary to compute unit economics.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
+                                        <Database className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <div className="text-xs font-bold text-orange-600 dark:text-orange-500 uppercase tracking-tight">Encrypted at Rest</div>
+                                            <div className="text-[11px] text-orange-600/70 dark:text-orange-500/60 mt-0.5 leading-normal">
+                                                All connection credentials are encrypted using industry-standard AES-256.
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex gap-4 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                                <Database className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-                                <div>
-                                    <div className="text-xs font-bold text-orange-600 dark:text-orange-500 uppercase tracking-tight">Encrypted at Rest</div>
-                                    <div className="text-[11px] text-orange-600/70 dark:text-orange-500/60 mt-0.5 leading-normal">
-                                        All connection credentials are encrypted using industry-standard AES-256.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Data Points */}
-                    <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
-                            <Info className="w-3.5 h-3.5" />
-                            Data we access
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                            {['Orders', 'Payments', 'Taxes', 'Discounts', 'Inventory', 'Customers'].map(tag => (
-                                <Badge key={tag} variant="outline" className="bg-gray-50/50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 text-[10px] py-1 px-3">
-                                    {tag}
-                                </Badge>
-                            ))}
+                            {/* Data Points */}
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-bold text-gray-400 dark:text-zinc-500 tracking-wider uppercase flex items-center gap-2">
+                                    <Info className="w-3.5 h-3.5" />
+                                    Data we access
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Orders', 'Payments', 'Taxes', 'Discounts', 'Inventory', 'Customers'].map(tag => (
+                                        <Badge key={tag} variant="outline" className="bg-gray-50/50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 text-[10px] py-1 px-3">
+                                            {tag}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <SheetFooter className="p-6 border-t border-gray-100 dark:border-zinc-900 space-y-3 sm:flex-col">
@@ -232,21 +280,36 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                         Connected through secure API connector. Unclutr is SOC 2 compliant.
                     </div>
                     {isActiveState ? (
-                        <Button
-                            variant="outline"
-                            className="w-full h-11 transition-all text-xs font-bold flex items-center justify-center gap-2 border-red-500/20 text-red-500 hover:bg-red-500/5"
-                            onClick={() => onDisconnect(integration.id)}
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Request Disconnection
-                        </Button>
+                        <div className="space-y-3">
+                            <Button
+                                variant="outline"
+                                className="w-full h-11 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 font-bold text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-900 transition-all flex items-center justify-center gap-2"
+                                onClick={() => {
+                                    // Clear activity feed before syncing
+                                    if (typeof window !== 'undefined' && (window as any).__clearActivityFeed) {
+                                        (window as any).__clearActivityFeed()
+                                    }
+                                    onSync(integration.id)
+                                }}
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                Sync Data Now
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-full h-11 transition-all text-xs font-bold flex items-center justify-center gap-2 border-red-500/10 text-red-500 hover:bg-red-500/5 hover:border-red-500/20"
+                                onClick={() => onDisconnect(integration.id)}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Request Disconnection
+                            </Button>
+                        </div>
                     ) : (
                         <div className="space-y-3">
                             <Button
                                 className="w-full h-11 bg-[#FF8A4C] hover:bg-[#FF8A4C]/90 text-white font-bold text-sm rounded-xl shadow-lg shadow-orange-500/20"
                                 onClick={() => {
-                                    // Placeholder for future flow
-                                    console.log("Connect flow initiated from drawer");
+                                    onConnect(integration.datasource.slug);
                                 }}
                             >
                                 Connect {integration.datasource.name}
@@ -263,6 +326,6 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                     )}
                 </SheetFooter>
             </SheetContent>
-        </Sheet>
+        </Sheet >
     );
 };

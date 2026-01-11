@@ -1,6 +1,8 @@
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship, JSON, Column
-from datetime import datetime
+from sqlalchemy.dialects.postgresql import JSONB, JSON as PG_JSON
+from datetime import datetime, timezone
+from pydantic import validator
 import uuid
 from enum import Enum
 from .datasource import DataSource
@@ -15,6 +17,8 @@ class IntegrationStatus(str, Enum):
     ERROR = "error"
     SYNCING = "syncing"
     DISCONNECT_REQUESTED = "disconnect_requested"
+
+from sqlalchemy import DateTime
 
 class Integration(SQLModel, table=True):
     __tablename__ = "integration"
@@ -32,15 +36,26 @@ class Integration(SQLModel, table=True):
     # Note: In production, 'credentials' should be encrypted at rest or stored in a secrets manager
     credentials: Dict = Field(default={}, sa_column=Column(JSON)) 
     config: Dict = Field(default={}, sa_column=Column(JSON))
-    metadata_info: Dict = Field(default={}, sa_column=Column(JSON)) # 'metadata' is reserved in SQLAlchemy
+    metadata_info: Dict = Field(default={}, sa_column=Column(JSONB)) # Use JSONB for PG optimization
     
     error_message: Optional[str] = None
-    last_sync_at: Optional[datetime] = None
+    last_sync_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column(DateTime(timezone=True)))
 
     # Relationships (Standard SQLModel)
     company: "Company" = Relationship()
     workspace: Workspace = Relationship() 
     datasource: DataSource = Relationship()
+
+    @validator("last_sync_at", "created_at", "updated_at", pre=False)
+    def ensure_utc(cls, v):
+        if v and isinstance(v, datetime) and not v.tzinfo:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.replace(tzinfo=timezone.utc).isoformat() if not v.tzinfo else v.isoformat()
+        }

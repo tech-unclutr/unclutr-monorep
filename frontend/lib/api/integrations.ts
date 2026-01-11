@@ -8,6 +8,19 @@ export interface Integration {
     in_stack: boolean;
     last_sync_at: string | null;
     error_message: string | null;
+    metadata_info?: {
+        sync_stats?: {
+            current_step?: string;
+            message?: string;
+            progress?: number;
+            orders_count?: number;
+            total_count?: number;
+            processed_count?: number;
+            eta_seconds?: number;
+            [key: string]: any;
+        };
+        [key: string]: any;
+    };
     datasource: {
         id: string;
         name: string;
@@ -16,11 +29,11 @@ export interface Integration {
         category: string;
         description: string;
         is_implemented: boolean;
-    };
-    stats: {
-        records_count: number;
-        sync_success_rate: number;
-        health: 'healthy' | 'warning' | 'error';
+        stats: {
+            records_count: number;
+            sync_success_rate: number;
+            health: 'healthy' | 'warning' | 'error';
+        };
     };
 }
 
@@ -44,6 +57,18 @@ export const listIntegrations = async (companyId: string): Promise<Integration[]
     return response.json();
 };
 
+export const getIntegration = async (companyId: string, id: string): Promise<Integration> => {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/api/v1/integrations/${id}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "X-Company-ID": companyId
+        }
+    });
+    if (!response.ok) throw new Error("Failed to fetch integration");
+    return response.json();
+};
+
 export const connectIntegration = async (companyId: string, slug: string): Promise<{ status: string; integration_id: string }> => {
     const token = await getAuthToken();
     const response = await fetch(`${API_URL}/api/v1/integrations/connect/${slug}`, {
@@ -57,9 +82,12 @@ export const connectIntegration = async (companyId: string, slug: string): Promi
     return response.json();
 };
 
-export const syncIntegration = async (companyId: string, id: string): Promise<{ status: string }> => {
+export const syncIntegration = async (companyId: string, id: string, delta: boolean = false): Promise<{ status: string }> => {
     const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api/v1/integrations/sync/${id}`, {
+    const url = new URL(`${API_URL}/api/v1/integrations/sync/${id}`);
+    if (delta) url.searchParams.append('delta', 'true');
+
+    const response = await fetch(url.toString(), {
         method: "POST",
         headers: {
             "Authorization": `Bearer ${token}`,

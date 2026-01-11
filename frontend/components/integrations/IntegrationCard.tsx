@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Integration } from '@/lib/api/integrations';
+import { SyncProgress } from '@/components/integrations/SyncProgress';
 
 interface IntegrationCardProps {
     integration: Integration;
@@ -20,6 +21,7 @@ interface IntegrationCardProps {
     onViewDetails: (integration: Integration) => void;
     onAdd?: (slug: string, category: string) => void;
     onRemove?: (id: string) => void;
+    onRefresh?: () => void;
 }
 
 export const IntegrationCard: React.FC<IntegrationCardProps> = ({
@@ -27,7 +29,8 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
     onConnect,
     onViewDetails,
     onAdd,
-    onRemove
+    onRemove,
+    onRefresh
 }) => {
     const isConnected = integration.status === 'active';
     const isSyncing = integration.status === 'syncing';
@@ -77,6 +80,12 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" />
                                     <div className="absolute top-1/2 left-2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
                                     Active
+                                </Badge>
+                            )}
+                            {isSyncing && (
+                                <Badge variant="outline" className="bg-gradient-to-r from-blue-500/10 to-blue-400/10 dark:from-blue-500/20 dark:to-blue-400/20 border-blue-500/30 dark:border-blue-500/40 text-blue-600 dark:text-blue-400 text-[10px] py-0 px-2 flex items-center gap-1 shrink-0 relative overflow-hidden shadow-sm shadow-blue-500/20">
+                                    <RefreshCw className="w-3 h-3 animate-spin mr-1" />
+                                    Syncing
                                 </Badge>
                             )}
                         </div>
@@ -161,6 +170,17 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
                 </div>
             </div>
 
+            {isSyncing && (
+                <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <SyncProgress
+                        integrationId={integration.id || ''}
+                        status={integration.status}
+                        metadata={integration.metadata_info}
+                        onRefresh={() => onRefresh?.()}
+                    />
+                </div>
+            )}
+
             {/* Privacy & Safety Stickers - Enhanced Footer */}
             <TooltipProvider>
                 <div className="relative z-10 flex items-center gap-4 pt-5 border-t border-gray-200/70 dark:border-zinc-800/40 bg-gray-50/30 dark:bg-zinc-900/30 -mx-6 px-6 -mb-6 pb-6 rounded-b-xl">
@@ -191,7 +211,29 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
                     {isConnected && (
                         <div className="ml-auto flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-zinc-400">
                             <RefreshCw className={cn("w-3 h-3 text-emerald-400 dark:text-emerald-500", isSyncing && "animate-spin")} />
-                            <span>Synced {integration.last_sync_at ? '2m ago' : 'never'}</span>
+                            <span>
+                                {isSyncing ? 'Syncing now...' : (
+                                    integration.last_sync_at ? (
+                                        (() => {
+                                            try {
+                                                const ds = integration.last_sync_at;
+                                                // Ensure the string is treated as UTC if it doesn't have a timezone suffix
+                                                const isoString = (ds.endsWith('Z') || ds.includes('+')) ? ds : ds + 'Z';
+                                                const date = new Date(isoString);
+                                                const now = new Date();
+                                                const diff = (now.getTime() - date.getTime()) / 1000;
+
+                                                if (diff < 60) return 'Just now';
+                                                if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                                                if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                                                return `${Math.floor(diff / 86400)}d ago`;
+                                            } catch (e) {
+                                                return 'Unknown';
+                                            }
+                                        })()
+                                    ) : 'Never'
+                                )}
+                            </span>
                         </div>
                     )}
                 </div>

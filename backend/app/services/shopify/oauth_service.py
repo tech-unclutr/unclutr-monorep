@@ -32,7 +32,8 @@ class ShopifyOAuthService:
         "read_customers", 
         "read_inventory", 
         "read_marketing_events", 
-        "read_checkouts"
+        "read_checkouts",
+        "read_all_orders"
     ]
 
     def __init__(self):
@@ -62,6 +63,20 @@ class ShopifyOAuthService:
     def decrypt_token(self, encrypted_token: str) -> str:
         """Decrypts a Fernet string back to plaintext Access Token."""
         return self.cipher.decrypt(encrypted_token.encode()).decode()
+
+    async def get_access_token(self, integration_id: uuid.UUID, session: AsyncSession) -> str:
+        """Retrieves and decrypts the access token for an integration."""
+        integration = await session.get(Integration, integration_id)
+        if not integration or not integration.credentials:
+            raise ValueError("Integration not found or missing credentials")
+        
+        credentials = integration.credentials
+        encrypted_token = credentials.get("access_token")
+        
+        if not encrypted_token:
+            raise ValueError("No access token found in credentials")
+            
+        return self.decrypt_token(encrypted_token)
 
     # --- OAuth Flow ---
 
@@ -171,6 +186,75 @@ class ShopifyOAuthService:
         ).hexdigest()
         
         return hmac.compare_digest(digest, received_hmac)
+
+    def verify_webhook_hmac(self, body_bytes: bytes, hmac_header: str) -> bool:
+        """
+        Verifies the HMAC signature of a Webhook request.
+        Uses the raw body bytes and the SHA256 header.
+        """
+        if not hmac_header:
+            return False
+            
+        digest = hmac.new(
+            self.api_secret.encode("utf-8"),
+            body_bytes,
+            hashlib.sha256
+        ).digest()
+        
+        computed_hmac = base64.b64encode(digest).decode()
+        
+        return hmac.compare_digest(computed_hmac, hmac_header)
+
+    async def register_webhooks(self, shop_domain: str, access_token: str):
+        """
+        Subscribes to important Shopify Webhook topics.
+        """
+        topics = [
+            "orders/create",
+            "orders/updated",
+            "orders/delete",
+            "products/create",
+            "products/update",
+            "products/delete",
+            "customers/create",
+            "customers/update",
+            "customers/delete",
+            "price_rules/create",
+            "price_rules/update",
+            "price_rules/delete"
+        ]
+        
+        async with httpx.AsyncClient() as client:
+            for topic in topics:
+                # Use hyphens for URL if preferred, but our path param now handles slashes
+                # Let's keep it simple: matches the topic name
+                address = f"{self.backend_url}/api/v1/integrations/shopify/webhooks/{topic}"
+                
+                url = f"https://{shop_domain}/admin/api/{self.API_VERSION}/webhooks.json"
+                headers = {
+                    "X-Shopify-Access-Token": access_token,
+                    "Content-Type": "application/json"
+                }
+                
+                payload = {
+                    "webhook": {
+                        "topic": topic,
+                        "address": address,
+                        "format": "json"
+                    }
+                }
+                
+                try:
+                    resp = await client.post(url, headers=headers, json=payload)
+                    if resp.status_code == 201:
+                        logger.info(f"Registered webhook {topic} for {shop_domain}")
+                    elif resp.status_code == 422:
+                        # Likely already exists
+                        logger.debug(f"Webhook {topic} already exists for {shop_domain}")
+                    else:
+                        logger.error(f"Failed to register webhook {topic}: {resp.text}")
+                except Exception as e:
+                    logger.error(f"Error registering webhook {topic}: {e}")
 
     # --- Utilities ---
 

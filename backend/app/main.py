@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,8 +8,59 @@ from app.core.db import init_db
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
+    
+    # Start Background Reconciliation (Layer 2)
+    reconciliation_task = asyncio.create_task(run_reconciliation_worker())
+    
     yield
     # Shutdown
+    reconciliation_task.cancel()
+    try:
+        await reconciliation_task
+    except asyncio.CancelledError:
+        pass
+
+async def run_reconciliation_worker():
+    """
+    Background worker that runs every 6 hours to reconcile all active integrations.
+    """
+    from app.models.integration import Integration, IntegrationStatus
+    from app.services.shopify.tasks import run_shopify_sync_task
+    from sqlmodel import select
+    from app.core.db import get_session
+    
+    logger.info("Reconciliation worker started.")
+    
+    while True:
+        try:
+            # Wait 6 hours between runs (or 10 mins for initial testing if needed? 
+            # In production, 6 hours is set in the plan)
+            # For this session, let's stick to 6 hours or 3600*6
+            await asyncio.sleep(3600 * 6) 
+            
+            logger.info("Triggering scheduled reconciliation for all active integrations...")
+            
+            session_gen = get_session()
+            session = await session_gen.__anext__()
+            
+            stmt = select(Integration).where(Integration.status == IntegrationStatus.ACTIVE)
+            result = await session.execute(stmt)
+            active_integrations = result.scalars().all()
+            
+            for integration in active_integrations:
+                # Trigger delta sync in background
+                # Note: We don't await the task itself here to allow parallel processing across integrations
+                # and to not block the sleeper.
+                asyncio.create_task(run_shopify_sync_task(integration.id, delta=True))
+                logger.info(f"Scheduled delta sync for integration {integration.id}")
+            
+            await session.close()
+            
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"Reconciliation worker loop error: {e}")
+            await asyncio.sleep(60) # Fail-safe sleep
 
 app = FastAPI(
     title="Unclutr.ai API",
@@ -39,16 +91,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Rate Limiting
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from app.core.limiter import limiter
 
 if settings.RATE_LIMIT_ENABLED:
-    limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     logger.info(f"Rate limiting enabled: {settings.RATE_LIMIT_PER_MINUTE} requests/minute")
 else:
+    # If disabled, we can either not register or register with no-op.
+    # SlowAPI uses decorators, so if enabled is False, we might want to configure limiter to be enabled=False
+    limiter.enabled = False
     logger.warning("Rate limiting is DISABLED")
 
 # CORS Configuration
@@ -99,13 +153,16 @@ app.add_middleware(RequestLoggingMiddleware)
 # CORSMiddleware must be added LAST to be the OUTERMOST layer (runs first)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=origin_regex if not settings.is_production else None,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://unwastable-godsent-see.ngrok-free.dev"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
-
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

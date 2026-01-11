@@ -30,8 +30,10 @@ export default function IntegrationsPage() {
     const [integrations, setIntegrations] = useState<Integration[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
+    const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
+
+    const selectedIntegration = integrations.find(i => i.id === selectedIntegrationId) || null;
 
     const handleSetupStack = async () => {
         setIsSyncing(true);
@@ -55,27 +57,67 @@ export default function IntegrationsPage() {
     const [shopifyStoreName, setShopifyStoreName] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchIntegrations = async () => {
+    const fetchIntegrations = async (silent = false): Promise<Integration[] | undefined> => {
         if (!companyId) return;
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const data = await listIntegrations(companyId);
             setIntegrations(data);
+            return data;
         } catch (error) {
             console.error("Error fetching integrations:", error);
-            toast.error("Integration Hub Unavailable", {
-                description: "We couldn't reach the command center. Try refreshing?"
-            });
+            if (!silent) {
+                toast.error("Integration Hub Unavailable", {
+                    description: "We couldn't reach the command center. Try refreshing?"
+                });
+            }
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (!authLoading && user) {
-            fetchIntegrations();
+        if (!authLoading && user && companyId) {
+            fetchIntegrations().then((data) => {
+                // Trigger auto-delta sync for any active integration that hasn't been synced in > 1 hour
+                if (data && Array.isArray(data)) {
+                    data.forEach(async (integration) => {
+                        if (integration.status === 'active' || integration.status === 'ACTIVE') {
+                            const lastSync = integration.last_sync_at ? new Date(integration.last_sync_at) : new Date(0);
+                            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+                            if (lastSync < oneHourAgo) {
+                                try {
+                                    console.log(`Triggering auto-delta sync for ${integration.id}`);
+                                    await syncIntegration(companyId, integration.id, true);
+                                    // Silent update to transition UI to syncing if backend already updated it
+                                    fetchIntegrations(true);
+                                } catch (e) {
+                                    console.error("Auto-sync failed", e);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
         }
-    }, [user, authLoading]);
+    }, [user, authLoading, companyId]);
+
+    // Poll for updates if any integration is syncing
+    useEffect(() => {
+        const anySyncing = integrations.some(i => i.status === 'syncing');
+        let interval: NodeJS.Timeout;
+
+        if (anySyncing) {
+            interval = setInterval(() => {
+                fetchIntegrations(true);
+            }, 5000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [integrations, companyId]);
 
     // Handle OAuth Callback Feedback
     useEffect(() => {
@@ -140,12 +182,17 @@ export default function IntegrationsPage() {
                 description: "Recalibrating your data metrics...",
                 id: 'sync'
             });
+            // Optimistically update the status locally for immediate feedback
+            setIntegrations(prev => prev.map(i =>
+                i.id === id ? { ...i, status: 'syncing' } : i
+            ));
+
             await syncIntegration(companyId, id);
             toast.success("Sync in Motion", {
                 description: "Your dashboard will update with the latest figures shortly.",
                 id: 'sync'
             });
-            fetchIntegrations();
+            fetchIntegrations(true); // Always silent when triggering from detail drawer
         } catch (error) {
             toast.error("Sync hit a snag", {
                 description: "We couldn't refresh the data. Try again in a minute?",
@@ -193,7 +240,7 @@ export default function IntegrationsPage() {
     };
 
     const handleViewDetails = (integration: Integration) => {
-        setSelectedIntegration(integration);
+        setSelectedIntegrationId(integration.id);
         setDrawerOpen(true);
     };
 
@@ -428,6 +475,7 @@ export default function IntegrationsPage() {
                                                         onViewDetails={handleViewDetails}
                                                         onAdd={handleAddSource}
                                                         onRemove={handleDisconnect}
+                                                        onRefresh={() => fetchIntegrations(true)}
                                                     />
                                                 ))}
                                             </div>
@@ -509,6 +557,7 @@ export default function IntegrationsPage() {
                                                         onViewDetails={handleViewDetails}
                                                         onAdd={handleAddSource}
                                                         onRemove={handleDisconnect}
+                                                        onRefresh={() => fetchIntegrations(true)}
                                                     />
                                                 ))}
                                             </div>
@@ -551,6 +600,8 @@ export default function IntegrationsPage() {
                 onOpenChange={setDrawerOpen}
                 onSync={handleSync}
                 onDisconnect={handleDisconnect}
+                onConnect={handleConnect}
+                onRefresh={() => fetchIntegrations(true)}
             />
 
             <AddSourceDialog

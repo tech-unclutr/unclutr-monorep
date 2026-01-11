@@ -29,7 +29,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         # 2. Bypass check
         path = request.url.path
-        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources", "/company/me", "/users", "/integrations/shopify/callback"]):
+        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources", "/company/me", "/users", "/integrations/shopify/callback", "/integrations/shopify/webhooks", "/integrations/shopify/install", "/integrations/shopify/rate-limit-test", "/integrations/shopify/validate-shop", "/integrations/shopify/auth/url"]):
             return await call_next(request)
 
         # 3. Validation

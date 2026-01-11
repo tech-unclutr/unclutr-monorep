@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import select, and_
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -192,6 +192,7 @@ async def get_integrations_for_company(session: AsyncSession, company_id: uuid.U
             "in_stack": is_in_stack,
             "last_sync_at": integration.last_sync_at,
             "error_message": integration.error_message,
+            "metadata_info": integration.metadata_info,
             "datasource": {
                 "id": str(datasource.id),
                 "name": datasource.name,
@@ -202,7 +203,7 @@ async def get_integrations_for_company(session: AsyncSession, company_id: uuid.U
                 "is_implemented": datasource.is_implemented,
             },
             "stats": {
-                "records_count": integration.metadata_info.get("records_count", 0),
+                "records_count": integration.metadata_info.get("sync_stats", {}).get("orders_count", integration.metadata_info.get("records_count", 0)),
                 "sync_success_rate": integration.metadata_info.get("sync_success_rate", 100.0),
                 "health": "healthy" if integration.status == IntegrationStatus.ACTIVE else "warning"
             }
@@ -278,12 +279,12 @@ async def connect_integration(session: AsyncSession, company_id: uuid.UUID, slug
             workspace_id=workspace.id,
             datasource_id=datasource.id,
             status=IntegrationStatus.ACTIVE,
-            last_sync_at=datetime.utcnow()
+            last_sync_at=datetime.now(timezone.utc)
         )
         session.add(integration)
     else:
         integration.status = IntegrationStatus.ACTIVE
-        integration.last_sync_at = datetime.utcnow()
+        integration.last_sync_at = datetime.now(timezone.utc)
         session.add(integration)
         
     await session.commit()

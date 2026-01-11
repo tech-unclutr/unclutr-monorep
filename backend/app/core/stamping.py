@@ -10,7 +10,11 @@ SCOPED_MODELS = [
     "Workspace",
     "AuditTrail",
     "Integration",
-    "IntegrationMetrics"
+    "IntegrationMetrics",
+    "ShopifyRawIngest",
+    "ShopifyOrder",
+    "ShopifyLineItem",
+    "ShopifyCustomer",
 ]
 
 @event.listens_for(Session, "do_orm_execute")

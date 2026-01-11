@@ -7,6 +7,7 @@ description: Audit the UI for aesthetics, responsiveness, and premium quality st
     - **Aesthetics**: Harmony of colors (no generic reds/blues), typography (Inter/Roboto/Outfit), and smooth gradients.
     - **Dynamic Feel**: Micro-animations on hover/interaction, glassmorphism effects, and responsiveness.
     - **Spacing**: Balanced internal and external spacing; no cramped or excessively empty areas.
+    - **Purpose & Importance**: Evaluate if the visual design (weight, color, prominence) aligns with the component's functional importance and intended purpose.
 4. **Grade the UI out of 10**.
 5. If the grade is **less than 9**:
     - List specific design flaws or areas for improvement.

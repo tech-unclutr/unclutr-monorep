@@ -1,5 +1,6 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlmodel import select, col
 from sqlmodel.ext.asyncio.session import AsyncSession
 import uuid
 
@@ -38,6 +39,47 @@ async def list_integrations(
     """
     return await integration_service.get_integrations_for_company(session, company_id)
 
+@router.get("/{integration_id}", response_model=dict)
+async def get_integration(
+    integration_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(get_current_company_id)
+):
+    """
+    Get a specific integration with current stats.
+    """
+    from app.models.integration import Integration
+    from app.models.datasource import DataSource
+    
+    stmt = (
+        select(Integration, DataSource)
+        .join(DataSource, Integration.datasource_id == DataSource.id)
+        .where(
+            Integration.id == integration_id,
+            Integration.company_id == company_id
+        )
+    )
+    result = await session.execute(stmt)
+    row = result.first()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Integration not found")
+        
+    integration, datasource = row
+    
+    return {
+        "id": str(integration.id),
+        "status": integration.status,
+        "last_sync_at": integration.last_sync_at,
+        "metadata_info": integration.metadata_info,
+        "datasource": {
+            "id": str(datasource.id),
+            "name": datasource.name,
+            "slug": datasource.slug,
+            "logo_url": datasource.logo_url,
+        }
+    }
+
 @router.post("/connect/{slug}")
 async def connect_datasource(
     slug: str,
@@ -56,14 +98,35 @@ async def connect_datasource(
 @router.post("/sync/{integration_id}")
 async def sync_integration(
     integration_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    delta: bool = False,
     session: AsyncSession = Depends(get_session),
     company_id: uuid.UUID = Depends(get_current_company_id)
 ):
     """
-    Trigger manual sync (simulated).
+    Trigger manual sync.
     """
-    # For now, just return success
-    return {"status": "sync_triggered", "integration_id": str(integration_id)}
+    from app.models.integration import Integration
+    from app.models.datasource import DataSource
+    # Import specific tasks
+    from app.services.shopify.tasks import run_shopify_sync_task
+
+    # 1. Fetch Integration & Datasource
+    integration = await session.get(Integration, integration_id)
+    if not integration or integration.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Integration not found")
+        
+    datasource = await session.get(DataSource, integration.datasource_id)
+    if not datasource:
+         raise HTTPException(status_code=500, detail="Datasource missing")
+
+    # 2. Dispatch based on Slug/Category
+    if datasource.slug == 'shopify':
+        background_tasks.add_task(run_shopify_sync_task, integration_id=integration.id, delta=delta)
+        return {"status": "queued", "message": f"Shopify {'delta ' if delta else ''}sync started"}
+    else:
+        # Placeholder for others
+        return {"status": "ignored", "message": f"No sync handler for {datasource.slug}"}
 
 @router.post("/disconnect/{integration_id}")
 async def disconnect_integration(

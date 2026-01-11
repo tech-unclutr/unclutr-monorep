@@ -14,4 +14,6 @@ from .metrics import (
     SystemMetrics,
     MetricType
 )
-
+from .shopify.raw_ingest import ShopifyRawIngest
+from .shopify.order import ShopifyOrder, ShopifyLineItem
+from .shopify.customer import ShopifyCustomer

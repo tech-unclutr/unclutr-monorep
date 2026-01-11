@@ -46,4 +46,21 @@ export const shopifyApi = {
             throw new Error("Failed to generate auth URL");
         }
     },
+
+    /**
+     * Triggers a historical sync for a specific integration.
+     */
+    triggerSync: async (integrationId: string, companyId: string, months: number = 12): Promise<any> => {
+        try {
+            const data = await api.post(
+                `/integrations/shopify/sync/${integrationId}`,
+                { months },
+                { "X-Company-ID": companyId }
+            );
+            return data;
+        } catch (error) {
+            console.error("Failed to trigger sync:", error);
+            throw error;
+        }
+    },
 };

@@ -21,15 +21,22 @@ def _remove_targets_recursively(data: Any, targets: List[str]) -> Any:
     Recursively removes a set of target strings (case-insensitive) from lists within a nested structure.
     """
     targets_lower = [t.lower() for t in targets]
+    # print(f"DEBUG: Recursion level. targets_lower={targets_lower}")
     
     if isinstance(data, list):
-        return [
+        filtered = [
             _remove_targets_recursively(item, targets) 
             for item in data 
             if not (isinstance(item, str) and item.lower() in targets_lower)
         ]
+        return filtered
     elif isinstance(data, dict):
-        return {k: _remove_targets_recursively(v, targets) for k, v in data.items()}
+        filtered = {}
+        for k, v in data.items():
+            if isinstance(k, str) and k.lower() in targets_lower:
+                continue
+            filtered[k] = _remove_targets_recursively(v, targets)
+        return filtered
     return data
 
 async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID) -> None:
@@ -98,6 +105,8 @@ async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID
     existing_integrations = result.all()
     existing_ds_ids = {i.datasource_id for i in existing_integrations}
     
+    changes_detected = False
+    
     # 1. Create missing ones
     for ds in datasources:
         if ds.id not in existing_ds_ids:
@@ -108,18 +117,31 @@ async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID
                 status=IntegrationStatus.INACTIVE
             )
             session.add(new_integration)
+            changes_detected = True
             logger.info(f"Auto-healed integration entry for {ds.name} (Company: {company_id})")
     
-    # 2. Delete INACTIVE ones that are no longer in the stack
+    # 2. Cleanup INACTIVE ones that are no longer in the stack
     intended_ds_ids = {ds.id for ds in datasources}
     for integration in existing_integrations:
         if (integration.status == IntegrationStatus.INACTIVE and 
             integration.datasource_id not in intended_ds_ids):
-            await session.delete(integration)
-            logger.info(f"Cleanup integration entry for {integration.datasource_id} (Not in stack, Company: {company_id})")
+            try:
+                await session.delete(integration)
+                changes_detected = True
+                logger.info(f"Cleanup integration placeholder for {integration.datasource_id} (Not in stack, Company: {company_id})")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup INACTIVE integration {integration.id}: {e}")
+                await session.rollback()
+                # If rollback happened, we must re-fetch company etc. but since we are at the end, we can just return
+                return
     
-    await session.flush()
-    await session.commit()
+    if changes_detected:
+        await session.flush()
+        await session.commit()
+    else:
+        # Just flush if no explicit changes were added to session manually here, 
+        # but in most cases we don't even need to flush.
+        pass
 
 async def get_integrations_for_company(session: AsyncSession, company_id: uuid.UUID) -> List[Dict[str, Any]]:
     """
@@ -312,42 +334,63 @@ async def disconnect_integration(session: AsyncSession, company_id: uuid.UUID, i
         logger.info(f"Disconnected and reset integration {integration_id} to INACTIVE (State 0)")
         return integration
     else:
-        # If it was never connected (INACTIVE) or already in error/requested state, we can remove it from the stack
-        # 1. Get DataSource to find the slug
+        # If it was never connected (INACTIVE) or already in error/requested state, 
+        # we surgically remove it from the stack.
+        
+        # 1. Targets for removal
+        # We MUST use the ID (UUID string) as much as possible to avoid global slug removal
+        # unless it's the LAST integration of that type.
         datasource = await session.get(DataSource, integration.datasource_id)
-        if datasource:
-            targets = [datasource.slug, str(datasource.id)]
-            
-            # 2. Cleanup Company Summaries (stack_data, channels_data)
-            company = await session.get(Company, company_id)
-            if company:
-                if company.stack_data:
-                    company.stack_data = _remove_targets_recursively(company.stack_data, targets)
-                    flag_modified(company, "stack_data")
-                if company.channels_data:
-                    company.channels_data = _remove_targets_recursively(company.channels_data, targets)
-                    flag_modified(company, "channels_data")
-                session.add(company)
+        if not datasource:
+             await session.delete(integration)
+             await session.commit()
+             return None
 
-            # 3. Cleanup OnboardingState for all company members
-            stmt = select(CompanyMembership.user_id).where(CompanyMembership.company_id == company_id)
-            result = await session.exec(stmt)
-            user_ids = result.all()
+        # Check if other integrations of this type exist for this company
+        stmt = select(Integration).where(
+            Integration.company_id == company_id,
+            Integration.datasource_id == datasource.id,
+            Integration.id != integration_id
+        )
+        res = await session.exec(stmt)
+        other_exists = res.first() is not None
+        
+        # Only remove the slug globally if this is the last one
+        targets = [str(integration.id)]
+        if not other_exists:
+            targets.append(datasource.slug)
+            targets.append(str(datasource.id))
             
-            if user_ids:
-                stmt = select(OnboardingState).where(OnboardingState.user_id.in_(user_ids))
-                result = await session.exec(stmt)
-                states = result.all()
-                
-                for state in states:
-                    modified = False
-                    if state.channels_data:
-                        state.channels_data = _remove_targets_recursively(state.channels_data, targets)
-                        flag_modified(state, "channels_data")
-                    if state.stack_data:
-                        state.stack_data = _remove_targets_recursively(state.stack_data, targets)
-                        flag_modified(state, "stack_data")
-                    session.add(state)
+            
+        # 2. Cleanup Company Summaries (stack_data, channels_data)
+        company = await session.get(Company, company_id)
+        if company:
+            if company.stack_data:
+                company.stack_data = _remove_targets_recursively(company.stack_data, targets)
+                flag_modified(company, "stack_data")
+            if company.channels_data:
+                company.channels_data = _remove_targets_recursively(company.channels_data, targets)
+                flag_modified(company, "channels_data")
+            session.add(company)
+
+        # 3. Cleanup OnboardingState for all company members
+        stmt = select(CompanyMembership.user_id).where(CompanyMembership.company_id == company_id)
+        result = await session.exec(stmt)
+        user_ids = result.all()
+        
+        if user_ids:
+            stmt = select(OnboardingState).where(OnboardingState.user_id.in_(user_ids))
+            result = await session.exec(stmt)
+            states = result.all()
+            
+            for state in states:
+                if state.channels_data:
+                    state.channels_data = _remove_targets_recursively(state.channels_data, targets)
+                    flag_modified(state, "channels_data")
+                if state.stack_data:
+                    state.stack_data = _remove_targets_recursively(state.stack_data, targets)
+                    flag_modified(state, "stack_data")
+                session.add(state)
         
         # 4. Delete the integration record entirely
         await session.delete(integration)

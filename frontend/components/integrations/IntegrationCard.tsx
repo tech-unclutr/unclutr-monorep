@@ -4,7 +4,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, AlertCircle, RefreshCw, Shield, Eye, Settings2, Sparkles, Info, Plus, X } from 'lucide-react';
+import { CheckCircle2, RefreshCw, Shield, Eye, Settings2, Sparkles, Plus, Activity } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Integration } from '@/lib/api/integrations';
-import { SyncProgress } from '@/components/integrations/SyncProgress';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface IntegrationCardProps {
     integration: Integration;
@@ -22,6 +22,7 @@ interface IntegrationCardProps {
     onAdd?: (slug: string, category: string) => void;
     onRemove?: (id: string) => void;
     onRefresh?: () => void;
+    onSync?: (id: string) => void;
 }
 
 export const IntegrationCard: React.FC<IntegrationCardProps> = ({
@@ -29,215 +30,214 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
     onConnect,
     onViewDetails,
     onAdd,
-    onRemove,
-    onRefresh
+    onRefresh,
+    onSync
 }) => {
     const isConnected = integration.status === 'active';
-    const isSyncing = integration.status === 'syncing';
+    const isSyncing = integration.status === 'syncing' || integration.status === 'SYNCING';
     const isError = integration.status === 'error';
-    const isInactive = integration.status === 'inactive';
     const isInStack = integration.in_stack;
+    const isImplemented = integration.datasource.is_implemented;
 
     // An item is "fully active/connected" if it is active, syncing, or has an error but is connected
     const isFullyConnected = isConnected || isSyncing || isError;
 
     return (
-        <Card className="w-full min-w-[320px] lg:min-w-[380px] p-6 border-gray-200/80 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-900/60 backdrop-blur-md hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-zinc-900/50 transition-all duration-300 ease-out group hover:scale-[1.01] hover:border-gray-300/80 dark:hover:border-zinc-700/80 relative overflow-hidden">
-            {/* Subtle gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent dark:from-zinc-800/20 dark:via-transparent dark:to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="h-full"
+        >
+            {/* Increased padding to p-6 for premium spaciousness */}
+            <Card className="group relative h-full flex flex-col w-full p-6 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-xl dark:hover:shadow-zinc-900/50 hover:-translate-y-1 transition-all duration-300 ease-spring overflow-hidden">
 
-            <div className="relative z-10 flex items-start justify-between mb-5">
-                <div className="flex items-center gap-4 flex-1">
-                    {/* Premium Logo Container */}
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white to-gray-50 dark:from-zinc-800 dark:to-zinc-900 border border-gray-200 dark:border-zinc-700 flex items-center justify-center p-2 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300 ease-out overflow-hidden shrink-0 relative">
-                        {/* Subtle glow effect on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 to-orange-500/0 group-hover:from-orange-500/10 group-hover:to-transparent transition-all duration-300" />
-                        {integration.datasource.logo_url ? (
-                            <img
-                                src={integration.datasource.logo_url}
-                                alt={integration.datasource.name}
-                                className="w-full h-full object-contain relative z-10"
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold relative z-10">
-                                {integration.datasource.name[0]}
+                {/* Dynamic Spotlight Effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-zinc-50/50 via-transparent to-transparent dark:from-zinc-800/20 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                {/* Header */}
+                <div className="relative z-10 flex items-start gap-5 mb-6">
+                    {/* Logo Container */}
+                    <div className="relative shrink-0">
+                        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center p-2.5 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 ease-spring">
+                            {integration.datasource.logo_url ? (
+                                <img
+                                    src={integration.datasource.logo_url}
+                                    alt={integration.datasource.name}
+                                    className="w-full h-full object-contain drop-shadow-sm"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-orange-50 dark:bg-orange-900/20 rounded-lg flex items-center justify-center text-orange-600 dark:text-orange-400 font-bold text-xl">
+                                    {integration.datasource.name[0]}
+                                </div>
+                            )}
+                        </div>
+                        {isFullyConnected && (
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900 flex items-center justify-center shadow-sm z-20">
+                                <CheckCircle2 className="w-3 h-3 text-white" strokeWidth={3} />
                             </div>
                         )}
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                        {!integration.datasource.is_implemented && (
-                            <div className="text-[9px] font-medium text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">
-                                Coming Soon
-                            </div>
-                        )}
-                        <div className="flex items-center gap-2.5">
-                            <h3 className="font-semibold text-base text-gray-900 dark:text-zinc-100 truncate group-hover:text-gray-950 dark:group-hover:text-white transition-colors">
+                    <div className="min-w-0 flex-1 py-1">
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 truncate tracking-tight group-hover:text-primary transition-colors duration-300">
                                 {integration.datasource.name}
                             </h3>
-                            {isConnected && (
-                                <Badge variant="outline" className="bg-gradient-to-r from-emerald-500/10 to-emerald-400/10 dark:from-emerald-500/20 dark:to-emerald-400/20 border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-[10px] py-0 px-2 flex items-center gap-1 shrink-0 relative overflow-hidden shadow-sm shadow-emerald-500/20">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" />
-                                    <div className="absolute top-1/2 left-2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping opacity-75" />
-                                    Active
-                                </Badge>
-                            )}
-                            {isSyncing && (
-                                <Badge variant="outline" className="bg-gradient-to-r from-blue-500/10 to-blue-400/10 dark:from-blue-500/20 dark:to-blue-400/20 border-blue-500/30 dark:border-blue-500/40 text-blue-600 dark:text-blue-400 text-[10px] py-0 px-2 flex items-center gap-1 shrink-0 relative overflow-hidden shadow-sm shadow-blue-500/20">
-                                    <RefreshCw className="w-3 h-3 animate-spin mr-1" />
-                                    Syncing
-                                </Badge>
+                            {!isImplemented && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-center min-w-[3rem]">
+                                    Soon
+                                </span>
                             )}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1.5 leading-relaxed line-clamp-1 group-hover:line-clamp-none transition-all duration-300">
-                            {integration.datasource.description || `Sync your ${integration.datasource.name} data.`}
-                        </p>
+
+                        <div className="flex flex-col gap-1 mt-1.5">
+                            {integration.metadata_info?.shop ? (
+                                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate font-mono">
+                                    {integration.metadata_info.shop.replace('.myshopify.com', '')}
+                                </span>
+                            ) : (
+                                <p className="text-xs text-zinc-500 dark:text-zinc-500 line-clamp-2 leading-relaxed">
+                                    {integration.datasource.description || `Integrate ${integration.datasource.name} with your stack.`}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-stretch gap-2.5 shrink-0">
-                    {isFullyConnected ? (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onViewDetails(integration)}
-                                className="h-8 rounded-lg border-gray-200 dark:border-zinc-700 text-xs font-medium transition-all duration-300 hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 dark:hover:from-zinc-800 dark:hover:to-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600 group/config"
+                {/* ARCHITECTURAL SPLIT: Status vs Trust */}
+                {/* ARCHITECTURAL SPLIT: Status vs Trust */}
+                {/* Changed items-start to items-center for better vertical alignment on the row */}
+                <div className="relative z-10 flex items-center justify-between gap-4 mb-6">
+                    {/* LEFT PILLAR: Status Pulse */}
+                    <div className="flex-shrink-0">
+                        {isConnected ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:bg-emerald-500/15 transition-colors">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Active
+                            </div>
+                        ) : isSyncing ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-600 dark:text-blue-400 shadow-sm">
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                Syncing
+                            </div>
+                        ) : isInStack ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] font-bold text-orange-600 dark:text-orange-400 shadow-sm">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                In Stack
+                            </div>
+                        ) : (
+                            <div className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-medium text-zinc-500 border border-zinc-200 dark:border-zinc-700/50">
+                                Not Connected
+                            </div>
+                        )}
+                    </div>
+
+                    {/* RIGHT PILLAR: Trust Signal Stack */}
+                    <div className="flex flex-col items-end gap-1.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide">
+                            <span>Enterprise Security</span>
+                            <Shield className="w-3 h-3" />
+                        </div>
+                        <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide">
+                            <span>Read-only Access</span>
+                            <Eye className="w-3 h-3" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Action Area */}
+                <div className="mt-auto pt-5 border-t border-zinc-100 dark:border-zinc-800/50">
+                    <AnimatePresence mode="wait">
+                        {isFullyConnected ? (
+                            <motion.div
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-2 gap-3"
                             >
-                                <Settings2 className="w-4 h-4 mr-1.5 group-hover/config:rotate-45 transition-transform duration-300" />
-                                Configure
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-2.5">
-                            <div className="flex items-center gap-2">
-                                {integration.datasource.is_implemented && (
-                                    <Button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onConnect(integration.datasource.slug);
-                                        }}
-                                        size="sm"
-                                        className="h-9 rounded-xl text-xs font-bold px-5 transition-all duration-300 ease-out bg-gradient-to-r from-[#FF8A4C] to-[#FF7026] hover:from-[#ff965e] hover:to-[#ff8240] text-white shadow-[0_4px_12px_rgba(255,138,76,0.3)] hover:shadow-[0_6px_16px_rgba(255,138,76,0.4)] dark:shadow-[0_4px_16px_rgba(255,138,76,0.4)] dark:hover:shadow-[0_6px_20px_rgba(255,138,76,0.5)] hover:-translate-y-0.5 active:translate-y-0 flex-1 border-none"
-                                    >
-                                        Connect
-                                    </Button>
-                                )}
-                                {isInStack && integration.datasource.is_implemented && (
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onViewDetails(integration);
-                                        }}
-                                        className="h-9 w-9 rounded-xl border-gray-200/70 dark:border-zinc-800/70 bg-white/50 dark:bg-zinc-900/40 backdrop-blur-sm text-gray-500 dark:text-zinc-400 hover:border-gray-300 dark:hover:border-zinc-700 hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 dark:hover:from-zinc-800 dark:hover:to-zinc-900 transition-all duration-300 shrink-0 shadow-sm group/settings"
-                                    >
-                                        <Settings2 className="w-4 h-4 group-hover/settings:rotate-45 transition-transform duration-300" />
-                                    </Button>
-                                )}
-                            </div>
-
-                            {/* Functional Stack Badges - Compact & Premium */}
-                            {isInStack ? (
-                                <Badge
+                                <Button
                                     variant="outline"
-                                    className="group/badge relative bg-orange-500/[0.04] dark:bg-orange-500/[0.08] border border-orange-500/20 dark:border-orange-500/30 text-[#FF8A4C] dark:text-orange-400 text-[10px] h-6 px-2.5 flex items-center justify-center gap-1 whitespace-nowrap rounded-xl backdrop-blur-sm font-semibold tracking-tight cursor-pointer hover:bg-orange-500/[0.08] dark:hover:bg-orange-500/[0.15] hover:border-orange-500/30 dark:hover:border-orange-500/40 transition-all duration-300 shadow-inner hover:shadow-[0_0_12px_rgba(255,138,76,0.2)] dark:hover:shadow-[0_0_16px_rgba(255,138,76,0.3)]"
+                                    size="sm"
+                                    onClick={() => onViewDetails(integration)}
+                                    className="w-full h-9 rounded-lg border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 group/btn shadow-sm cursor-pointer"
+                                >
+                                    <Settings2 className="w-3.5 h-3.5 mr-2 group-hover/btn:rotate-45 transition-transform text-zinc-400 group-hover/btn:text-zinc-600 dark:group-hover/btn:text-zinc-300" />
+                                    Configure
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (onRemove && integration.id) onRemove(integration.id);
+                                        if (onSync) onSync(integration.id);
                                     }}
+                                    disabled={isSyncing}
+                                    className="w-full h-9 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/10 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
                                 >
-                                    <Sparkles className="w-2.5 h-2.5 animate-pulse" />
-                                    In Stack
-                                    <X className="w-0 h-2.5 opacity-0 group-hover/badge:w-2.5 group-hover/badge:opacity-60 group-hover/badge:ml-0.5 hover:!opacity-100 hover:text-red-500 hover:scale-110 transition-all duration-300 overflow-hidden" />
-                                </Badge>
-                            ) : (
-                                <Badge
-                                    variant="outline"
-                                    className="bg-gray-50 dark:bg-zinc-900/40 border border-gray-200/70 dark:border-zinc-800/70 text-gray-400 dark:text-zinc-500 text-[10px] h-6 px-2.5 flex items-center justify-center gap-1 whitespace-nowrap rounded-xl font-medium tracking-tight hover:border-orange-500/25 dark:hover:border-orange-500/30 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-500/[0.03] dark:hover:bg-orange-500/[0.05] transition-all duration-300 cursor-pointer group/add-badge"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (onAdd) onAdd(integration.datasource.slug, integration.datasource.category);
-                                    }}
-                                >
-                                    <Plus className="w-2.5 h-2.5 group-hover/add-badge:rotate-90 transition-transform duration-300" />
-                                    Add to Stack
-                                </Badge>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {isSyncing && (
-                <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <SyncProgress
-                        integrationId={integration.id || ''}
-                        status={integration.status}
-                        metadata={integration.metadata_info}
-                        onRefresh={() => onRefresh?.()}
-                    />
-                </div>
-            )}
-
-            {/* Privacy & Safety Stickers - Enhanced Footer */}
-            <TooltipProvider>
-                <div className="relative z-10 flex items-center gap-4 pt-5 border-t border-gray-200/70 dark:border-zinc-800/40 bg-gray-50/30 dark:bg-zinc-900/30 -mx-6 px-6 -mb-6 pb-6 rounded-b-xl">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-zinc-400 cursor-help group/security">
-                                <Shield className="w-3 h-3 text-orange-400 dark:text-orange-500 group-hover/security:scale-110 transition-transform duration-200" />
-                                <span>AES-256</span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-[10px] p-2 bg-zinc-900 border-zinc-800 text-zinc-400 max-w-[200px]">
-                            Credentials encrypted at rest with authenticated symmetric encryption.
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-zinc-400 cursor-help group/read">
-                                <Eye className="w-3 h-3 text-emerald-400 dark:text-emerald-500 group-hover/read:scale-110 transition-transform duration-200" />
-                                <span>Read-only</span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="text-[10px] p-2 bg-zinc-900 border-zinc-800 text-zinc-400 max-w-[200px]">
-                            We never modify your Shopify data. We only sync what's needed for analytics.
-                        </TooltipContent>
-                    </Tooltip>
-
-                    {isConnected && (
-                        <div className="ml-auto flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-zinc-400">
-                            <RefreshCw className={cn("w-3 h-3 text-emerald-400 dark:text-emerald-500", isSyncing && "animate-spin")} />
-                            <span>
-                                {isSyncing ? 'Syncing now...' : (
-                                    integration.last_sync_at ? (
-                                        (() => {
-                                            try {
-                                                const ds = integration.last_sync_at;
-                                                // Ensure the string is treated as UTC if it doesn't have a timezone suffix
-                                                const isoString = (ds.endsWith('Z') || ds.includes('+')) ? ds : ds + 'Z';
-                                                const date = new Date(isoString);
-                                                const now = new Date();
-                                                const diff = (now.getTime() - date.getTime()) / 1000;
-
-                                                if (diff < 60) return 'Just now';
-                                                if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-                                                if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-                                                return `${Math.floor(diff / 86400)}d ago`;
-                                            } catch (e) {
-                                                return 'Unknown';
-                                            }
-                                        })()
-                                    ) : 'Never'
+                                    <Activity className={cn("w-3.5 h-3.5 mr-2", isSyncing && "animate-spin")} />
+                                    {isSyncing ? "Syncing..." : "Sync Now"}
+                                </Button>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-center gap-3"
+                            >
+                                {isImplemented ? (
+                                    <>
+                                        <Button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onConnect(integration.datasource.slug);
+                                            }}
+                                            size="sm"
+                                            className="flex-1 h-9 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 font-bold text-xs shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all active:translate-y-0 active:shadow-sm cursor-pointer"
+                                        >
+                                            Connect
+                                        </Button>
+                                        {!isInStack ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (onAdd) onAdd(integration.datasource.slug, integration.datasource.category);
+                                                }}
+                                                className="aspect-square h-9 p-0 rounded-lg border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-orange-500 hover:border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors shadow-sm bg-white dark:bg-zinc-800/50 cursor-pointer"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="aspect-square h-9 p-0 rounded-lg text-orange-500 bg-orange-50 dark:bg-orange-500/10 cursor-default"
+                                            >
+                                                <Sparkles className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Button disabled variant="outline" className="w-full h-9 rounded-lg bg-zinc-50 dark:bg-zinc-900 border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400 text-xs font-medium cursor-not-allowed opacity-70">
+                                        Coming Soon
+                                    </Button>
                                 )}
-                            </span>
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-            </TooltipProvider>
-        </Card >
+
+                {isSyncing && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-100 dark:bg-zinc-800 overflow-hidden rounded-b-xl">
+                        <div className="h-full bg-emerald-500 animate-progress origin-left" style={{ width: '100%' }} />
+                    </div>
+                )}
+            </Card>
+        </motion.div>
     );
 };

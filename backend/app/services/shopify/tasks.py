@@ -10,6 +10,7 @@ from app.core.db import engine
 from app.models.integration import Integration, IntegrationStatus
 from app.services.shopify.sync_service import shopify_sync_service
 from app.services.shopify.refinement_service import shopify_refinement_service
+from app.services.analytics.service import AnalyticsService
 
 async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, months: Optional[int] = None):
     """
@@ -82,7 +83,7 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
             # --- Backfilling Phase ---
             current_meta["sync_stats"].update({
                 "current_step": "backfilling",
-                "message": "Streaming historical records from Shopify...",
+                "message": "Streaming Orders from Shopify...",
                 "progress": 30
             })
             integration.metadata_info = current_meta
@@ -91,13 +92,161 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
             session.add(integration)
             await session.commit()
             
-            # This will update orders_count in real-time inside fetch_and_ingest_orders
-            stats = await shopify_sync_service.fetch_and_ingest_orders(session, integration_id, start_date=start_date)
-            await session.commit() 
+            # 1. Orders
+            order_stats, order_ids = await shopify_sync_service.fetch_and_ingest_orders(session, integration_id, start_date=start_date)
+            await session.commit()
+
+            # 1b. Transactions
+            if order_ids:
+                current_meta["sync_stats"].update({
+                    "message": f"Fetching payment details for {len(order_ids)} orders...",
+                    "progress": 40
+                })
+                integration.metadata_info = current_meta
+                flag_modified(integration, "metadata_info")
+                session.add(integration)
+                await session.commit()
+                transaction_stats = await shopify_sync_service.fetch_and_ingest_transactions(session, integration_id, order_ids)
+                await session.commit()
+            else:
+                transaction_stats = {"ingested": 0}
+            # 2. Products
+            current_meta["sync_stats"].update({
+                "message": "Streaming Product Catalog...",
+                "progress": 50
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            product_stats = await shopify_sync_service.fetch_and_ingest_products(session, integration_id, start_date=start_date)
+            await session.commit()
+
+            # 3. Inventory (Locations + Levels)
+            current_meta["sync_stats"].update({
+                "message": "Mapping Inventory across Locations...",
+                "progress": 65
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            inventory_stats = await shopify_sync_service.fetch_and_ingest_inventory(session, integration_id)
+            await session.commit()
+
+            # 4. Customers
+            current_meta["sync_stats"].update({
+                "message": "Unified Customer Database sync...",
+                "progress": 75
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            customer_sync_stats = await shopify_sync_service.fetch_and_ingest_customers(session, integration_id, start_date=start_date)
+            await session.commit()
+
+            # 5. Reports (Metadata)
+            current_meta["sync_stats"].update({
+                "message": "Cataloging Analytics Reports...",
+                "progress": 75
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            report_stats = await shopify_sync_service.fetch_and_ingest_reports(session, integration_id)
+            await session.commit()
+
+            # 6. Refunds
+            current_meta["sync_stats"].update({
+                "message": "Collecting refund data...",
+                "progress": 76
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            refund_stats = await shopify_sync_service.fetch_and_ingest_refunds(session, integration_id, start_date=start_date)
+            await session.commit()
+
+            # 7. Financials (Payouts + Disputes + Balance Transactions)
+            current_meta["sync_stats"].update({
+                "message": "Reconciling bank payouts & disputes...",
+                "progress": 77
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            
+            payout_stats = await shopify_sync_service.fetch_and_ingest_payouts(session, integration_id, start_date=start_date)
+            dispute_stats = await shopify_sync_service.fetch_and_ingest_disputes(session, integration_id, start_date=start_date)
+            balance_stats = await shopify_sync_service.fetch_and_ingest_balance_transactions(session, integration_id)
+            await session.commit()
+
+            # 8. Fulfillments (Requires Order IDs)
+            if order_ids:
+                current_meta["sync_stats"].update({
+                    "message": f"Mapping fulfillment logistics for {len(order_ids)} orders...",
+                    "progress": 78
+                })
+                integration.metadata_info = current_meta
+                flag_modified(integration, "metadata_info")
+                session.add(integration)
+                await session.commit()
+                fulfillment_stats = await shopify_sync_service.fetch_and_ingest_fulfillments(session, integration_id, order_ids)
+                await session.commit()
+            else:
+                fulfillment_stats = {"ingested": 0}
+
+            # 9. Marketing (Abandoned Checkouts + Events)
+            current_meta["sync_stats"].update({
+                "message": "Analyzing marketing & abandonments...",
+                "progress": 79
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            checkout_stats = await shopify_sync_service.fetch_and_ingest_checkouts(session, integration_id, start_date=start_date)
+            marketing_stats = await shopify_sync_service.fetch_and_ingest_marketing_events(session, integration_id)
+            await session.commit()
+
+            # 10. Promotional Rules (Price Rules + Discount Codes)
+            current_meta["sync_stats"].update({
+                "message": "Harvesting promotional rules...",
+                "progress": 80
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            promo_stats = await shopify_sync_service.fetch_and_ingest_price_rules(session, integration_id)
+            await session.commit()
+
+            stats = {
+                "orders": order_stats.get("ingested", 0),
+                "products": product_stats.get("ingested", 0),
+                "inventory": inventory_stats.get("levels", 0),
+                "customers": customer_sync_stats.get("ingested", 0),
+                "transactions": transaction_stats.get("ingested", 0),
+                "reports": report_stats.get("ingested", 0),
+                "refunds": refund_stats.get("ingested", 0),
+                "payouts": payout_stats.get("ingested", 0),
+                "disputes": dispute_stats.get("ingested", 0),
+                "balance_transactions": balance_stats.get("ingested", 0),
+                "fulfillments": fulfillment_stats.get("ingested", 0),
+                "checkouts": checkout_stats.get("ingested", 0),
+                "marketing_events": marketing_stats.get("ingested", 0),
+                "price_rules": promo_stats.get("price_rules", 0),
+                "discount_codes": promo_stats.get("discount_codes", 0)
+            }
+
             
             logger.info(f"Sync Consumed. Starting Refinement...")
             
-            # --- Refinement Phase ---
+            # --- Refinement Phase (First Pass - Metadata) ---
             from app.models.shopify.raw_ingest import ShopifyRawIngest
             from sqlmodel import func
 
@@ -137,7 +286,7 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
             while True:
                 # Process a batch
                 batch_size = max(50, total_pending // 5) if total_pending > 0 else 50
-                num_processed = await shopify_refinement_service.process_pending_records(session, limit=batch_size)
+                num_processed = await shopify_refinement_service.process_pending_records(session, integration_id=integration_id, limit=batch_size)
                 
                 if num_processed == 0:
                     break
@@ -169,6 +318,28 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
                 session.add(integration)
                 await session.commit()
                 
+            # --- Report Data Sync Phase ---
+            logger.info(f"Starting Report Data Sync for {integration_id}")
+            current_meta = integration.metadata_info or {}
+            current_meta["sync_stats"].update({
+                "current_step": "analytics",
+                "message": "Executing ShopifyQL Analytics Queries...",
+                "progress": 96
+            })
+            integration.metadata_info = current_meta
+            flag_modified(integration, "metadata_info")
+            session.add(integration)
+            await session.commit()
+            
+            report_data_stats = await shopify_sync_service.sync_report_data(session, integration_id, start_date=start_date)
+            await session.commit()
+            
+            # Refine report data
+            if report_data_stats.get("ingested", 0) > 0:
+                logger.info(f"Refining {report_data_stats['ingested']} report data records...")
+                await shopify_refinement_service.process_pending_records(session, integration_id=integration_id, limit=100)
+                await session.commit()
+            
             # --- Finalizing Phase ---
             current_meta["sync_stats"].update({
                 "current_step": "finalizing",
@@ -213,6 +384,19 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
                 cust_stmt = select(func.count(ShopifyCustomer.id)).where(ShopifyCustomer.integration_id == integration_id)
                 cust_count = (await session.execute(cust_stmt)).scalar_one() or 0
 
+                # Count refined products & variants
+                from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+                prod_stmt = select(func.count(ShopifyProduct.id)).where(ShopifyProduct.integration_id == integration_id)
+                prod_count = (await session.execute(prod_stmt)).scalar_one() or 0
+
+                # Count refined inventory locations & levels
+                from app.models.shopify.inventory import ShopifyLocation, ShopifyInventoryLevel
+                loc_stmt = select(func.count(ShopifyLocation.id)).where(ShopifyLocation.integration_id == integration_id)
+                loc_count = (await session.execute(loc_stmt)).scalar_one() or 0
+                
+                inv_stmt = select(func.sum(ShopifyInventoryLevel.available)).where(ShopifyInventoryLevel.integration_id == integration_id)
+                inv_count = (await session.execute(inv_stmt)).scalar_one() or 0
+
                 integration.status = IntegrationStatus.ACTIVE
                 integration.last_sync_at = datetime.now(timezone.utc)
                 
@@ -236,6 +420,9 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
                         "returns": float(rev_res.returns or 0) if rev_res else 0.0,
                         "net_tax": float(rev_res.net_tax or 0) if rev_res else 0.0,
                         "customers_count": cust_count,
+                        "products_count": prod_count,
+                        "locations_count": loc_count,
+                        "inventory_count": int(inv_count or 0),
                         "last_updated": datetime.now(timezone.utc).isoformat()
                     })
                 integration.metadata_info = current_meta
@@ -243,16 +430,113 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
                 flag_modified(integration, "metadata_info")
                 session.add(integration)
                 await session.commit()
+
+                # --- Metrics Generation Phase (Module 6 Refactored) ---
+                logger.info(f"🚀 Starting Unified Metrics Generation for {integration_id}")
+                today = datetime.now(timezone.utc).date()
+                for i in range(31): 
+                    target_date = today - timedelta(days=i)
+                    try:
+                        await AnalyticsService.refresh_snapshot(session, integration, target_date)
+                    except Exception as metric_err:
+                        logger.error(f"Failed to generate metrics for {target_date}: {metric_err}")
+                
+                await session.commit()
+                logger.info(f"✅ Historical Metrics baseline established for {integration_id}")
                 
         except Exception as e:
             logger.error(f"Background sync failed: {e}")
             import traceback
             logger.error(traceback.format_exc())
             
-            # Reset Status to ERROR or ACTIVE with warning
+            # Reset Status to ACTIVE (with error message) for transient failures
+            # Only set to ERROR if it's a configuration/auth issue
             integration = await session.get(Integration, integration_id)
             if integration:
-                integration.status = IntegrationStatus.ERROR
-                # integration.error_message = str(e) # If we had this field
+                is_auth_error = "401" in str(e) or "403" in str(e) or "Unauthorized" in str(e) or isinstance(e, ValueError)
+                
+                integration.status = IntegrationStatus.ERROR if is_auth_error else IntegrationStatus.ACTIVE
+                integration.error_message = str(e)  # Persist actual error for debugging
+                
+                # If reverting to ACTIVE, we should clear the "Syncing..." state in metadata too if possible
+                if integration.status == IntegrationStatus.ACTIVE:
+                    current_meta = integration.metadata_info or {}
+                    if "sync_stats" in current_meta:
+                        current_meta["sync_stats"]["message"] = f"Sync interrupted: {str(e)[:50]}..."
+                        # Don't set 'error' step, just leave it or set to idle/partial
+                        current_meta["sync_stats"]["current_step"] = "complete" # Or "partial"
+                    integration.metadata_info = current_meta
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(integration, "metadata_info")
+
                 session.add(integration)
                 await session.commit()
+
+async def run_reconciliation_task(integration_id: uuid.UUID):
+    """
+    Background Task: Zero-Drift Reconciliation
+    """
+    from app.core.db import async_session_factory
+    from app.services.shopify.reconciliation_service import shopify_reconciliation_service
+    from app.models.integration import Integration
+    
+    logger.info(f"🛡️ Triggering Reconciliation Task for {integration_id}")
+    
+    async with async_session_factory() as session:
+        try:
+            integration = await session.get(Integration, integration_id)
+            if not integration:
+                logger.error(f"Integration {integration_id} not found/inactive")
+                return
+
+            try:
+                # Add strict 5-minute timeout to prevent hangs
+                await asyncio.wait_for(
+                    shopify_reconciliation_service.reconcile_integration(session, integration),
+                    timeout=300
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Reconciliation timed out for {integration_id}")
+                # Reset status to ACTIVE (not ERROR, as timeout is likely data volume related, not auth)
+                integration.status = IntegrationStatus.ACTIVE
+                # Update metadata to show warning
+                meta = integration.metadata_info or {}
+                if "sync_stats" not in meta: meta["sync_stats"] = {}
+                meta["sync_stats"].update({
+                    "current_step": "complete", # Treat as complete but with warning message
+                    "message": "Verification timed out (Data too large)",
+                    "last_updated": datetime.now(timezone.utc).isoformat()
+                })
+                integration.metadata_info = meta
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(integration, "metadata_info")
+                session.add(integration)
+                await session.commit()
+            logger.info(f"✅ Reconciliation Task Complete for {integration_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Reconciliation Task Critical Failure: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            # Fatal recovery: ensure the UI doesn't stick in "Auditing"
+            try:
+                await session.rollback() # Ensure session is clean before status update
+                # Re-fetch in a fresh session block if needed, but we have the session here
+                integration = await session.get(Integration, integration_id)
+                if integration:
+                    meta = integration.metadata_info or {}
+                    if "sync_stats" not in meta: meta["sync_stats"] = {}
+                    meta["sync_stats"].update({
+                        "current_step": "error",
+                        "message": f"System Error: {str(e)}",
+                        "progress": 0,
+                        "last_updated": datetime.now(timezone.utc).isoformat()
+                    })
+                    integration.metadata_info = meta
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(integration, "metadata_info")
+                    session.add(integration)
+                    await session.commit()
+            except Exception as nested_e:
+                logger.error(f"Failed to write error status to DB: {nested_e}")

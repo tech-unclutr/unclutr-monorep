@@ -8,7 +8,7 @@ import { SupportContact } from "@/components/settings/brand-profile/support-cont
 import { OnboardingSummary } from "@/components/settings/brand-profile/onboarding-summary";
 import { UserProfileCard } from "@/components/settings/user-profile-card";
 import { DangerZone } from "@/components/settings/danger-zone";
-import { MOCK_USER_PROFILE } from "@/lib/mock-data";
+
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getOnboardingSettings, OnboardingSettingsResponse } from "@/lib/api/settings";

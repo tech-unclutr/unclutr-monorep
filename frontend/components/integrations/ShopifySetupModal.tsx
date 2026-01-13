@@ -62,9 +62,6 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
             // 2. Transition to redirecting
             setStep("redirecting");
 
-            // Artificial delay for "Magic" feel
-            await new Promise(r => setTimeout(r, 800));
-
             // 3. Get Auth URL
             const authUrl = await shopifyApi.getAuthUrl(cleanDomain, companyId);
 
@@ -80,7 +77,7 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[440px] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-0 overflow-hidden rounded-3xl shadow-2xl transition-all duration-500">
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {step === "input" ? (
                         <motion.div
                             key="input"
@@ -151,10 +148,15 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
                                 <div className="flex flex-col gap-4 mt-8">
                                     <Button
                                         onClick={handleConnect}
-                                        disabled={!shopDomain.trim()}
+                                        disabled={!shopDomain.trim() || step !== "input"}
                                         className="h-12 w-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-xl font-bold text-base shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     >
-                                        Initialize Handshake
+                                        {step === "validating" ? (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Verifying...
+                                            </div>
+                                        ) : "Initialize Handshake"}
                                     </Button>
 
                                     <div className="flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 opacity-80">

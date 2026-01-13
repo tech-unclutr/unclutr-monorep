@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Search, Check, Crosshair } from 'lucide-react';
+import { ChevronDown, Search, Check, Crosshair, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Option {
@@ -14,12 +14,13 @@ interface Option {
     tag?: string;
 }
 
-interface SearchableSelectProps {
+export interface SearchableSelectProps {
     label?: string;
     value: string;
     options: Option[];
     onChange: (value: string) => void;
     onLocate?: () => void; // New prop for "Locate automatically"
+    allowCustomValue?: boolean; // New prop to allow custom values
     placeholder?: string;
     className?: string;
 }
@@ -30,6 +31,7 @@ export function SearchableSelect({
     options,
     onChange,
     onLocate,
+    allowCustomValue = false,
     placeholder = "Select...",
     className
 }: SearchableSelectProps) {
@@ -163,7 +165,7 @@ export function SearchableSelect({
                         // Ensure text color matches input styles
                         selectedOption ? "text-zinc-900 dark:text-zinc-100" : "text-gray-500 dark:text-gray-400"
                     )}>
-                        {selectedOption ? selectedOption.label : placeholder}
+                        {selectedOption ? selectedOption.label : (value && allowCustomValue ? value : placeholder)}
                     </span>
                     {selectedOption?.subLabel && (
                         <span className="text-zinc-400 text-xs hidden sm:inline-block pl-1">{selectedOption.subLabel}</span>
@@ -261,9 +263,30 @@ export function SearchableSelect({
                                         </motion.button>
                                     ))
                                 ) : (
-                                    <div className="py-6 text-center text-zinc-400 text-xs italic">
-                                        No results found
-                                    </div>
+                                    <>
+                                        {allowCustomValue && search.trim() ? (
+                                            <motion.button
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                onClick={() => {
+                                                    onChange(search);
+                                                    setIsOpen(false);
+                                                    setSearch('');
+                                                }}
+                                                className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-all group hover:bg-indigo-50 bg-indigo-50/50 text-indigo-600 border border-indigo-100"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Plus size={14} className="text-indigo-600" />
+                                                    <span className="font-semibold">Use "{search}"</span>
+                                                </div>
+                                                <span className="text-[10px] uppercase font-bold bg-white px-2 py-0.5 rounded border border-indigo-100">Custom</span>
+                                            </motion.button>
+                                        ) : (
+                                            <div className="py-6 text-center text-zinc-400 text-xs italic">
+                                                No results found
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </motion.div>

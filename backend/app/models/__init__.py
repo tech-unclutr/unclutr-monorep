@@ -17,3 +17,16 @@ from .metrics import (
 from .shopify.raw_ingest import ShopifyRawIngest
 from .shopify.order import ShopifyOrder, ShopifyLineItem
 from .shopify.customer import ShopifyCustomer
+from .shopify.address import ShopifyAddress
+from .shopify.product import ShopifyProduct, ShopifyProductVariant, ShopifyProductImage
+from .shopify.inventory import ShopifyLocation, ShopifyInventoryItem, ShopifyInventoryLevel
+from .shopify.transaction import ShopifyTransaction
+from .shopify.refund import ShopifyRefund
+from .shopify.analytics import ShopifyReport, ShopifyReportData, ShopifyAnalyticsSnapshot
+from .shopify.metrics import ShopifyDailyMetric
+from .shopify.financials import ShopifyPayout, ShopifyDispute, ShopifyBalanceTransaction
+from .shopify.fulfillment import ShopifyFulfillment
+from .shopify.checkout import ShopifyCheckout
+from .shopify.marketing import ShopifyMarketingEvent
+from .shopify.discount import ShopifyPriceRule, ShopifyDiscountCode
+from .integration_analytics import IntegrationDailyMetric

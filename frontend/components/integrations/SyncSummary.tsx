@@ -21,8 +21,9 @@ interface SyncSummaryProps {
         orders_count?: number;
         products_count?: number;
         discounts_count?: number;
-        taxes_count?: number;
-        shipping_zones_count?: number;
+        customers_count?: number;
+        locations_count?: number;
+        inventory_count?: number;
     };
 }
 
@@ -33,9 +34,7 @@ export const SyncSummary: React.FC<SyncSummaryProps> = ({ status, syncStats = {}
     const items = [
         { icon: ShoppingBag, label: 'Orders', count: syncStats.orders_count || 0, color: "text-blue-500" },
         { icon: Box, label: 'Products', count: syncStats.products_count || 0, color: "text-orange-500" },
-        { icon: Percent, label: 'Discounts', count: syncStats.discounts_count || 0, color: "text-purple-500" },
-        { icon: Receipt, label: 'Taxes', count: syncStats.taxes_count || 0, color: "text-emerald-500" },
-        { icon: Truck, label: 'Shipping', count: syncStats.shipping_zones_count || 0, color: "text-indigo-500" },
+        { icon: CheckCircle2, label: 'Inventory', count: syncStats.inventory_count || 0, color: "text-emerald-500" },
     ];
 
     // Progressive Ticker Effect

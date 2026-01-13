@@ -1,23 +1,25 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base_mixins import UserTrackedModel
 
 class ShopifyCustomer(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_customer"
+    __table_args__ = (UniqueConstraint("integration_id", "shopify_customer_id"),)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     
     # Context
-    integration_id: UUID = Field(foreign_key="integration.id", index=True, nullable=False)
+    integration_id: UUID = Field(sa_column=Column(ForeignKey("integration.id", ondelete="CASCADE"), index=True, nullable=False))
     company_id: UUID = Field(foreign_key="company.id", index=True, nullable=False)
     
     # Identity
-    shopify_customer_id: int = Field(sa_column=Column(BigInteger, unique=True, index=True))
+    shopify_customer_id: int = Field(sa_column=Column(BigInteger, index=True))
     email: Optional[str] = Field(default=None, index=True)
     first_name: Optional[str] = Field(default=None)
     last_name: Optional[str] = Field(default=None)
@@ -41,3 +43,6 @@ class ShopifyCustomer(UserTrackedModel, SQLModel, table=True):
     # Timestamps
     shopify_created_at: datetime = Field(index=True)
     shopify_updated_at: datetime = Field(index=True)
+    
+    # Store the latest raw data
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))

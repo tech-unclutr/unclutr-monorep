@@ -18,8 +18,8 @@ async def get_current_user(
         raise HTTPException(status_code=400, detail="Invalid token")
         
     statement = select(User).where(User.id == uid)
-    result = await session.exec(statement)
-    user = result.first()
+    result = await session.execute(statement) # Using execute for safety
+    user = result.scalars().first()
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

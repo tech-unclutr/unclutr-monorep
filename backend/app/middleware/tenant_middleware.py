@@ -27,9 +27,23 @@ class TenantMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 pass
 
-        # 2. Bypass check
+        # 2. Bypass check for public endpoints
         path = request.url.path
-        if any(p in path for p in ["/health", "/docs", "/openapi.json", "/auth/login", "/auth/sync", "/onboarding", "/datasources", "/company/me", "/users", "/integrations/shopify/callback", "/integrations/shopify/webhooks", "/integrations/shopify/install", "/integrations/shopify/rate-limit-test", "/integrations/shopify/validate-shop", "/integrations/shopify/auth/url"]):
+        public_paths = [
+            "/health", "/docs", "/openapi.json", 
+            "/auth/login", "/auth/sync", 
+            "/onboarding", "/datasources", 
+            "/company/me", "/users",
+            "/dev/",
+            "/integrations/shopify/callback",
+            "/integrations/shopify/install",
+            "/integrations/shopify/rate-limit-test",
+            "/integrations/shopify/validate-shop",
+            "/integrations/shopify/auth/url"
+        ]
+        
+        # Check if path starts with any public path OR contains /webhooks/ OR is exactly /
+        if path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path:
             return await call_next(request)
 
         # 3. Validation
@@ -61,21 +75,29 @@ class TenantMiddleware(BaseHTTPMiddleware):
         if not user_id:
              return JSONResponse(content={"detail": "Unauthorized: Invalid Token (No User ID)"}, status_code=401)
 
-        session_gen = get_session()
-        session = await session_gen.__anext__()
         try:
-            stmt = select(CompanyMembership).where(
-                CompanyMembership.company_id == company_id,
-                CompanyMembership.user_id == user_id
+            session_gen = get_session()
+            session = await session_gen.__anext__()
+            try:
+                stmt = select(CompanyMembership).where(
+                    CompanyMembership.company_id == company_id,
+                    CompanyMembership.user_id == user_id
+                )
+                membership = (await session.exec(stmt)).first()
+                
+                if not membership:
+                    return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
+                
+                request.state.role = membership.role
+            finally:
+                await session.close()
+        except Exception as e:
+            import traceback
+            logger.error(f"TenantMiddleware Error: {str(e)}\n{traceback.format_exc()}")
+            return JSONResponse(
+                content={"detail": "Internal Server Error in Tenant Verification", "error": str(e)}, 
+                status_code=500
             )
-            membership = (await session.exec(stmt)).first()
-            
-            if not membership:
-                return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
-            
-            request.state.role = membership.role
-        finally:
-            await session.close()
             
         response = await call_next(request)
         return response

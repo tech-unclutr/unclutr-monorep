@@ -18,7 +18,7 @@ class IntegrationStatus(str, Enum):
     SYNCING = "syncing"
     DISCONNECT_REQUESTED = "disconnect_requested"
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, String
 
 class Integration(SQLModel, table=True):
     __tablename__ = "integration"
@@ -30,13 +30,16 @@ class Integration(SQLModel, table=True):
     workspace_id: uuid.UUID = Field(foreign_key="workspace.id", index=True)
     datasource_id: uuid.UUID = Field(foreign_key="data_source.id", index=True)
     
-    status: IntegrationStatus = Field(default=IntegrationStatus.INACTIVE)
+    status: IntegrationStatus = Field(default=IntegrationStatus.INACTIVE, sa_column=Column(String))
     
     # Storage for credentials and config
     # Note: In production, 'credentials' should be encrypted at rest or stored in a secrets manager
     credentials: Dict = Field(default={}, sa_column=Column(JSON)) 
     config: Dict = Field(default={}, sa_column=Column(JSON))
     metadata_info: Dict = Field(default={}, sa_column=Column(JSONB)) # Use JSONB for PG optimization
+    
+    # Track which version of the app was installed
+    app_version: Optional[str] = Field(default=None)
     
     error_message: Optional[str] = None
     last_sync_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))

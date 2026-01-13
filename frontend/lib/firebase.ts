@@ -27,15 +27,28 @@ export const storage = getStorage(app);
 
 // Initialize Analytics & Performance (Client-side only)
 if (typeof window !== "undefined") {
+    const isDev = process.env.NODE_ENV === "development";
+    const shouldSkipLive = isDev && !localStorage.getItem('ENABLE_GA_IN_DEV');
+
     // Analytics
-    isSupported().then((supported) => {
-        if (supported) {
-            getAnalytics(app);
-        }
-    });
+    if (!shouldSkipLive) {
+        isSupported().then((supported) => {
+            if (supported) {
+                try {
+                    getAnalytics(app);
+                } catch (err) {
+                    if (isDev) console.warn("[Firebase] Analytics initialization failed (likely blocked).");
+                }
+            }
+        });
+    }
 
     // Performance
-    getPerformance(app);
+    try {
+        getPerformance(app);
+    } catch (err) {
+        if (isDev) console.warn("[Firebase] Performance monitoring initialization failed.");
+    }
 }
 
 // Remote Config Helper

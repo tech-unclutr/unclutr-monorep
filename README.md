@@ -26,5 +26,8 @@ This is a Monorepo containing both the Next.js Frontend and Python FastAPI Backe
    - App: http://localhost:3000
 
 ## Architecture
+For a detailed breakdown of our multi-tenancy model, data isolation, and synchronization pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 - **Auth**: Google Firebase (Client SDK calls Backend with Bearer Token).
 - **Style**: Minimalist "Tally.so/Notion" aesthetic. High signal, zero noise.
+- **Isolation**: Tenant-scoped processing via `X-Company-ID` and `X-Workspace-ID` headers.

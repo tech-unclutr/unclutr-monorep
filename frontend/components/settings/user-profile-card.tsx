@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 
 export function UserProfileCard() {
-    const { user, dbUser, role } = useAuth();
+    const { user, dbUser, role, refreshAuth } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [fullName, setFullName] = useState(dbUser?.full_name || user?.displayName || "");
 
@@ -35,6 +35,9 @@ export function UserProfileCard() {
 
             // 2. Update Backend Database
             await api.patch("/users/me", { full_name: fullName });
+
+            // 3. Refresh Auth Context to update UI immediately
+            await refreshAuth();
 
             toast.success("Profile Updated", {
                 description: "Looking good! Your changes are saved."

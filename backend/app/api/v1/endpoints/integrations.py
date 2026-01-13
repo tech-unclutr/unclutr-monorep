@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import select, col
 from sqlmodel.ext.asyncio.session import AsyncSession
 import uuid
+from datetime import datetime, timezone
 
 from app.core.db import get_session
 from app.core.security import get_current_user
@@ -38,7 +39,6 @@ async def list_integrations(
     List all integrations for the current company.
     """
     return await integration_service.get_integrations_for_company(session, company_id)
-
 @router.get("/{integration_id}", response_model=dict)
 async def get_integration(
     integration_id: uuid.UUID,
@@ -106,7 +106,7 @@ async def sync_integration(
     """
     Trigger manual sync.
     """
-    from app.models.integration import Integration
+    from app.models.integration import Integration, IntegrationStatus
     from app.models.datasource import DataSource
     # Import specific tasks
     from app.services.shopify.tasks import run_shopify_sync_task
@@ -122,11 +122,71 @@ async def sync_integration(
 
     # 2. Dispatch based on Slug/Category
     if datasource.slug == 'shopify':
+        # Update status immediately to prevent UI race conditions
+        integration.status = IntegrationStatus.SYNCING
+        session.add(integration)
+        await session.commit()
+        
         background_tasks.add_task(run_shopify_sync_task, integration_id=integration.id, delta=delta)
         return {"status": "queued", "message": f"Shopify {'delta ' if delta else ''}sync started"}
     else:
         # Placeholder for others
         return {"status": "ignored", "message": f"No sync handler for {datasource.slug}"}
+
+@router.post("/verify-integrity/{integration_id}")
+async def verify_integration_integrity(
+    integration_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(get_current_company_id)
+):
+    """
+    Perform deep health check on integration.
+    """
+    from app.models.integration import Integration
+    from app.models.datasource import DataSource
+    from app.services.shopify.sync_service import shopify_sync_service
+
+    # 1. Fetch Integration & Datasource
+    integration = await session.get(Integration, integration_id)
+    if not integration or integration.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Integration not found")
+        
+    datasource = await session.get(DataSource, integration.datasource_id)
+    if not datasource:
+         raise HTTPException(status_code=500, detail="Datasource missing")
+
+    if datasource.slug == 'shopify':
+        # 2. Trigger Zero-Drift Reconciliation in background
+        from app.services.shopify.tasks import run_reconciliation_task
+        background_tasks.add_task(run_reconciliation_task, integration_id)
+        
+        # 3. Return current health report + notify about background audit
+        report = await shopify_sync_service.verify_integration_integrity(session, integration_id)
+        
+        # 4. Immediate Stats Sync: Update metadata_info with these fresh counts so UI is snappy
+        meta = integration.metadata_info or {}
+        if "sync_stats" not in meta: meta["sync_stats"] = {}
+        
+        completeness = report.get("data_completeness", {})
+        
+        meta["sync_stats"].update({
+            "orders_count": completeness.get("orders", 0),
+            "products_count": completeness.get("products", 0),
+            "inventory_count": completeness.get("inventory_items", 0),
+            "last_updated": datetime.now(timezone.utc).isoformat()
+        })
+        
+        integration.metadata_info = meta
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(integration, "metadata_info")
+        session.add(integration)
+        await session.commit()
+        
+        report["message"] = "Deep integrity audit initiated. Self-healing in progress."
+        return report
+    else:
+        return {"status": "Unsupported", "message": f"Verification not implemented for {datasource.slug}"}
 
 @router.post("/disconnect/{integration_id}")
 async def disconnect_integration(

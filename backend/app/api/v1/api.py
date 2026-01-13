@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, health, onboarding, dev, datasources, metrics, companies, settings, company, users, integrations, shopify_auth, shopify_data
+from app.api.v1.endpoints import auth, health, onboarding, dev, datasources, metrics, companies, settings, company, users, integrations, analytics
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -13,5 +13,4 @@ api_router.include_router(settings.router, prefix="/settings", tags=["Settings"]
 api_router.include_router(company.router, prefix="/company", tags=["Company"])
 api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(integrations.router, prefix="/integrations", tags=["Integrations"])
-api_router.include_router(shopify_auth.router, prefix="/integrations/shopify", tags=["Shopify Integration"])
-api_router.include_router(shopify_data.router, prefix="/integrations/shopify", tags=["Shopify Data Integration"])
+api_router.include_router(analytics.router, prefix="/analytics", tags=["Unified Analytics"])

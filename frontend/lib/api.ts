@@ -17,9 +17,11 @@ export const api = {
             console.log(`DEBUG: explicit Authorization header present`);
         }
 
+        const companyId = typeof window !== 'undefined' ? localStorage.getItem('unclutr_company_id') : null;
         const combinedHeaders: any = {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(companyId ? { "X-Company-ID": companyId } : {}),
             ...((options.headers as any) || {}),
         };
 

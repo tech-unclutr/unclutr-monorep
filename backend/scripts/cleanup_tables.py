@@ -1,5 +1,11 @@
 
 import asyncio
+import sys
+import os
+
+# Add backend directory to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from sqlalchemy import text
 from app.core.db import get_session
 

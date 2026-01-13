@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,6 +38,10 @@ export function ShopifySuccessModal({ isOpen, onClose, shopName }: ShopifySucces
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[440px] border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-zinc-950 p-0 overflow-hidden rounded-3xl shadow-2xl">
+                <DialogTitle className="sr-only">Store Connected Successfully</DialogTitle>
+                <DialogDescription className="sr-only">
+                    Your Shopify store has been successfully connected and data synchronization has started.
+                </DialogDescription>
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div

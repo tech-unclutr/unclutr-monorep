@@ -1,24 +1,26 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 from uuid import UUID, uuid4
 from decimal import Decimal
 from sqlmodel import Field, SQLModel, Relationship, Column
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
+from sqlalchemy.dialects import postgresql
 
 from app.models.base_mixins import UserTrackedModel
 
 class ShopifyOrder(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_order"
+    __table_args__ = (UniqueConstraint("integration_id", "shopify_order_id"),)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     
     # Context
-    integration_id: UUID = Field(foreign_key="integration.id", index=True, nullable=False)
+    integration_id: UUID = Field(sa_column=Column(ForeignKey("integration.id", ondelete="CASCADE"), index=True, nullable=False))
     company_id: UUID = Field(foreign_key="company.id", index=True, nullable=False)
     
     # Shopify Identity
-    shopify_order_id: int = Field(sa_column=Column(BigInteger, unique=True, index=True))
-    shopify_order_number: int = Field(index=True)
+    shopify_order_id: int = Field(sa_column=Column(BigInteger, index=True))
+    shopify_order_number: int = Field(sa_column=Column(BigInteger, index=True))
     shopify_name: str = Field(index=True) # e.g. #1001
     
     # Status
@@ -30,6 +32,8 @@ class ShopifyOrder(UserTrackedModel, SQLModel, table=True):
     subtotal_price: Decimal = Field(default=0, max_digits=20, decimal_places=2)
     total_tax: Decimal = Field(default=0, max_digits=20, decimal_places=2)
     total_discounts: Decimal = Field(default=0, max_digits=20, decimal_places=2)
+    total_shipping: Decimal = Field(default=0, max_digits=20, decimal_places=2)
+    total_shipping_tax: Decimal = Field(default=0, max_digits=20, decimal_places=2)
     refunded_subtotal: Decimal = Field(default=0, max_digits=20, decimal_places=2)
     refunded_tax: Decimal = Field(default=0, max_digits=20, decimal_places=2)
     currency: str = Field(default="USD")
@@ -43,6 +47,9 @@ class ShopifyOrder(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: datetime = Field(index=True)
     shopify_processed_at: Optional[datetime] = Field(default=None)
     shopify_closed_at: Optional[datetime] = Field(default=None)
+
+    # Store the latest raw data
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
     
     # Relationships
     line_items: List["ShopifyLineItem"] = Relationship(back_populates="order", sa_relationship_kwargs={"cascade": "all, delete"})
@@ -53,11 +60,11 @@ class ShopifyLineItem(UserTrackedModel, SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     
     # Context
-    integration_id: UUID = Field(foreign_key="integration.id", index=True, nullable=False)
+    integration_id: UUID = Field(sa_column=Column(ForeignKey("integration.id", ondelete="CASCADE"), index=True, nullable=False))
     company_id: UUID = Field(foreign_key="company.id", index=True, nullable=False)
     
     # Parent
-    order_id: UUID = Field(foreign_key="shopify_order.id", index=True, nullable=False)
+    order_id: UUID = Field(sa_column=Column(ForeignKey("shopify_order.id", ondelete="CASCADE"), index=True, nullable=False))
     
     # Identity
     shopify_line_item_id: int = Field(sa_column=Column(BigInteger, index=True))

@@ -32,16 +32,22 @@ else:
 
 engine: AsyncEngine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
+async_session_factory = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
+
 async def init_db():
-    """Initialize database tables"""
+    """Initialize database tables and repair constraints"""
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-    logger.info("Database initialized")
+    
+    # Automated healing of integration constraints (Once For All fix)
+    from app.core.db_repair import heal_integration_constraints
+    await heal_integration_constraints(engine)
+    
+    logger.info("Database initialized and healed")
 
 async def get_session() -> AsyncSession:
     """Dependency for getting async database session"""
-    async_session = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
-    async with async_session() as session:
+    async with async_session_factory() as session:
         yield session

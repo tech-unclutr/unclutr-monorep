@@ -143,6 +143,7 @@ export function SupportContact({ data: initialData, onUpdate }: SupportContactPr
                             options={majorCities}
                             onChange={(val) => setData({ ...data, hq_city: val })}
                             placeholder="Search city..."
+                            allowCustomValue={true}
                             className="bg-zinc-50/50 border-zinc-200 focus:bg-white transition-all text-gray-900"
                         />
                     ) : (

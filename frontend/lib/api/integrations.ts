@@ -125,3 +125,86 @@ export const addManualSource = async (companyId: string, slug: string, category:
     if (!response.ok) throw new Error("Failed to add manual source");
     return response.json();
 };
+
+// --- Unified Analytics (Module 6 Refactored) ---
+
+export interface IntegrationDailyMetric {
+    id: string;
+    snapshot_date: string;
+    metric_type: string;
+    total_sales: number;
+    net_sales: number;
+    gross_sales: number;
+    count_primary: number; // e.g. Order count
+    count_secondary: number; // e.g. New customer count
+    total_discounts: number;
+    total_refunds: number;
+    total_tax: number;
+    total_shipping: number;
+    average_value: number;
+    currency: string;
+    meta_data: any;
+}
+
+export interface IntegrationOverview {
+    metrics_30d: IntegrationDailyMetric[];
+    summary: {
+        total_sales_30d: number;
+        growth_pct: number;
+        order_count_30d: number;
+    };
+}
+
+export const getIntegrationDailyMetrics = async (companyId: string, integrationId: string, days: number = 30): Promise<IntegrationDailyMetric[]> => {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/api/v1/analytics/daily/${integrationId}?days=${days}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "X-Company-ID": companyId
+        }
+    });
+    if (!response.ok) throw new Error("Failed to fetch daily metrics");
+    return response.json();
+};
+
+export const getIntegrationOverview = async (companyId: string, integrationId: string): Promise<IntegrationOverview> => {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/api/v1/analytics/overview/${integrationId}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "X-Company-ID": companyId
+        }
+    });
+    if (!response.ok) throw new Error("Failed to fetch overview metrics");
+    return response.json();
+};
+export const triggerShopifyReconciliation = async (companyId: string, integrationId: string): Promise<void> => {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/api/v1/integrations/shopify/integrations/${integrationId}/reconcile`, {
+        method: 'POST',
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "X-Company-ID": companyId
+        }
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: "Failed to trigger reconciliation" }));
+        throw new Error(err.detail || "Failed to trigger reconciliation");
+    }
+};
+
+export const verifyIntegrationIntegrity = async (companyId: string, integrationId: string): Promise<any> => {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/api/v1/integrations/verify-integrity/${integrationId}`, {
+        method: 'POST',
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "X-Company-ID": companyId
+        }
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: "Failed to verify integrity" }));
+        throw new Error(err.detail || "Failed to verify integrity");
+    }
+    return response.json();
+};

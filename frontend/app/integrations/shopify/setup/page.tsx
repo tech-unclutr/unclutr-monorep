@@ -21,6 +21,7 @@ function ShopifySetupContent() {
     const [shopDomain, setShopDomain] = useState("");
     const [isValidating, setIsValidating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [targetUrl, setTargetUrl] = useState<string | null>(null);
 
     // Config State
     const [isConfigMode, setIsConfigMode] = useState(false);
@@ -54,7 +55,10 @@ function ShopifySetupContent() {
     };
 
     const handleContinue = async () => {
-        if (!companyId) return;
+        if (!companyId) {
+            console.error("handleContinue: Missing companyId");
+            return;
+        }
         setIsValidating(true);
         setError(null);
 
@@ -64,13 +68,22 @@ function ShopifySetupContent() {
             .replace(/\/$/, "");
 
         if (!cleanDomain.includes(".")) cleanDomain += ".myshopify.com";
+        console.log(`handleContinue: Validating domain ${cleanDomain}`);
 
         try {
-            const isValid = await shopifyApi.validateShopDomain(cleanDomain, companyId);
-            if (!isValid) throw new Error("Could not reach store. Check if the URL is correct.");
+            // Optimization: Skip explicit validation to reduce latency.
+            // If the shop is invalid, Shopify's OAuth page will handle the 404/error.
+            console.log("handleContinue: Requesting Auth URL directly (Fast Path)...");
+
             const authUrl = await shopifyApi.getAuthUrl(cleanDomain, companyId);
-            window.location.href = authUrl;
+            console.log(`handleContinue: Redirecting to ${authUrl}`);
+            setTargetUrl(authUrl);
+
+            // Use assign() which is generally more reliable for cross-origin navigation
+            window.location.assign(authUrl);
+
         } catch (err: any) {
+            console.error("handleContinue Error:", err);
             setError(err.message || "Failed to validate store");
             setIsValidating(false);
             toast.error("Connection Failed", { description: err.message });
@@ -82,7 +95,7 @@ function ShopifySetupContent() {
         setIsValidating(true);
         try {
             await shopifyApi.triggerSync(integrationId, companyId, selectedRange);
-            router.push(`/dashboard-new/integrations?syncing=${integrationId}`);
+            router.push(`/dashboard-new/integrations?success=true&shop=${shopDomain}&syncing=${integrationId}`);
             toast.success("Import Started", { description: "Streaming your Shopify data now." });
         } catch (err: any) {
             toast.error("Sync Failed", { description: "Wait a moment and try again." });
@@ -118,7 +131,7 @@ function ShopifySetupContent() {
                     </div>
                 </div>
 
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {!isConfigMode ? (
                         <motion.div key="input" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-8">
                             <div className="flex justify-center">
@@ -143,9 +156,30 @@ function ShopifySetupContent() {
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">.myshopify.com</div>
                                     </div>
                                 </div>
-                                <Button onClick={handleContinue} disabled={!shopDomain || isValidating} className="h-14 w-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-2xl font-bold text-lg shadow-2xl transition-all active:scale-95">
-                                    {isValidating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "Initiate Handshake →"}
-                                </Button>
+                                <div className="space-y-4">
+                                    <Button onClick={handleContinue} disabled={!shopDomain || isValidating} className="h-14 w-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-2xl font-bold text-lg shadow-2xl transition-all active:scale-95">
+                                        {isValidating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "Initiate Handshake →"}
+                                    </Button>
+
+                                    {/* Manual Fallback for stalled redirects */}
+                                    {isValidating && targetUrl && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: 3 }}
+                                            className="text-center"
+                                        >
+                                            <p className="text-xs text-zinc-400 mb-2">Taking longer than expected?</p>
+                                            <Button
+                                                variant="link"
+                                                asChild
+                                                className="text-emerald-500 h-auto p-0 text-xs font-bold"
+                                            >
+                                                <a href={targetUrl}>Click here to connect manually</a>
+                                            </Button>
+                                        </motion.div>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     ) : (

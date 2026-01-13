@@ -1,14 +1,16 @@
+from __future__ import annotations
 import hmac
 import hashlib
 import base64
 import uuid
 import json
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any
 from urllib.parse import urlencode, urlparse, parse_qs
 from datetime import datetime
 
 import httpx
+import asyncio
 from cryptography.fernet import Fernet
 from fastapi import HTTPException, status
 from loguru import logger
@@ -31,9 +33,15 @@ class ShopifyOAuthService:
         "read_orders", 
         "read_customers", 
         "read_inventory", 
+        "read_locations",
+        "read_fulfillments",
         "read_marketing_events", 
         "read_checkouts",
-        "read_all_orders"
+        "read_all_orders",
+        "read_price_rules",
+        "read_shopify_payments_payouts",
+        "read_shopify_payments_disputes",
+        "read_reports"  # For Shopify built-in reports
     ]
 
     def __init__(self):
@@ -205,9 +213,10 @@ class ShopifyOAuthService:
         
         return hmac.compare_digest(computed_hmac, hmac_header)
 
-    async def register_webhooks(self, shop_domain: str, access_token: str):
+    async def register_webhooks(self, shop_domain: str, access_token: str) -> Dict[str, Any]:
         """
         Subscribes to important Shopify Webhook topics.
+        Returns detailed registration status with retry logic.
         """
         topics = [
             "orders/create",
@@ -221,40 +230,153 @@ class ShopifyOAuthService:
             "customers/delete",
             "price_rules/create",
             "price_rules/update",
-            "price_rules/delete"
+            "price_rules/delete",
+            "checkouts/create",
+            "checkouts/update",
+            "marketing_events/create",
+            "marketing_events/update",
+            "inventory_levels/update",
+            "locations/update",
+            "fulfillments/create",
+            "fulfillments/update",
+            "refunds/create",
+            "shopify_payments/payouts/create",
+            "shopify_payments/disputes/create",
+            "shopify_payments/disputes/updated"
         ]
         
-        async with httpx.AsyncClient() as client:
-            for topic in topics:
-                # Use hyphens for URL if preferred, but our path param now handles slashes
-                # Let's keep it simple: matches the topic name
-                address = f"{self.backend_url}/api/v1/integrations/shopify/webhooks/{topic}"
-                
-                url = f"https://{shop_domain}/admin/api/{self.API_VERSION}/webhooks.json"
-                headers = {
-                    "X-Shopify-Access-Token": access_token,
-                    "Content-Type": "application/json"
+        registration_results = {
+            "success": [],
+            "already_exists": [],
+            "failed": [],
+            "total": len(topics)
+        }
+        
+        async def register_single_webhook(topic: str):
+            address = f"{self.backend_url}/api/v1/integrations/shopify/webhooks/{topic}"
+            url = f"https://{shop_domain}/admin/api/{self.API_VERSION}/webhooks.json"
+            headers = {
+                "X-Shopify-Access-Token": access_token,
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "webhook": {
+                    "topic": topic,
+                    "address": address,
+                    "format": "json"
                 }
-                
-                payload = {
-                    "webhook": {
-                        "topic": topic,
-                        "address": address,
-                        "format": "json"
-                    }
-                }
-                
+            }
+            
+            # Retry logic with exponential backoff
+            max_retries = 3
+            retry_delay = 1  # seconds
+            
+            for attempt in range(max_retries):
                 try:
-                    resp = await client.post(url, headers=headers, json=payload)
+                    resp = await client.post(url, headers=headers, json=payload, timeout=15.0)
+                    
                     if resp.status_code == 201:
-                        logger.info(f"Registered webhook {topic} for {shop_domain}")
+                        logger.info(f"✅ Registered webhook {topic} for {shop_domain}")
+                        return ("success", topic)
                     elif resp.status_code == 422:
-                        # Likely already exists
-                        logger.debug(f"Webhook {topic} already exists for {shop_domain}")
+                        # Webhook already exists - verify it's pointing to our endpoint
+                        error_data = resp.json()
+                        if "address" in str(error_data):
+                            logger.debug(f"Webhook {topic} already exists for {shop_domain}")
+                            return ("already_exists", topic)
+                        else:
+                            logger.warning(f"Webhook {topic} registration failed with 422: {error_data}")
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(retry_delay * (2 ** attempt))
+                                continue
+                            return ("failed", {"topic": topic, "error": str(error_data)})
+                    elif resp.status_code == 429:
+                        # Rate limited - wait and retry
+                        retry_after = int(resp.headers.get("Retry-After", retry_delay * (2 ** attempt)))
+                        logger.warning(f"Rate limited on webhook {topic}, retrying after {retry_after}s")
+                        await asyncio.sleep(retry_after)
+                        continue
                     else:
-                        logger.error(f"Failed to register webhook {topic}: {resp.text}")
+                        error_msg = f"Status {resp.status_code}: {resp.text}"
+                        logger.error(f"Failed to register webhook {topic}: {error_msg}")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(retry_delay * (2 ** attempt))
+                            continue
+                        return ("failed", {"topic": topic, "error": error_msg})
+                        
                 except Exception as e:
-                    logger.error(f"Error registering webhook {topic}: {e}")
+                    error_msg = str(e)
+                    logger.error(f"Error registering webhook {topic}: {error_msg}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(retry_delay * (2 ** attempt))
+                        continue
+                    return ("failed", {"topic": topic, "error": error_msg})
+            return ("failed", {"topic": topic, "error": "Max retries exceeded"})
+
+        async with httpx.AsyncClient() as client:
+            tasks = [register_single_webhook(topic) for topic in topics]
+            results = await asyncio.gather(*tasks)
+            
+            for status, data in results:
+                if status == "success":
+                    registration_results["success"].append(data)
+                elif status == "already_exists":
+                    registration_results["already_exists"].append(data)
+                elif status == "failed":
+                    registration_results["failed"].append(data)
+        
+        # Calculate success rate
+        successful_count = len(registration_results["success"]) + len(registration_results["already_exists"])
+        registration_results["success_rate"] = (successful_count / registration_results["total"]) * 100
+        registration_results["status"] = "complete" if successful_count == registration_results["total"] else "partial"
+        
+        return registration_results
+    
+    async def verify_webhooks(self, shop_domain: str, access_token: str) -> Dict[str, Any]:
+        """
+        Verifies that webhooks are registered and active in Shopify.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"https://{shop_domain}/admin/api/{self.API_VERSION}/webhooks.json"
+                headers = {"X-Shopify-Access-Token": access_token}
+                
+                resp = await client.get(url, headers=headers, timeout=10.0)
+                
+                if resp.status_code == 200:
+                    webhooks = resp.json().get("webhooks", [])
+                    
+                    # Filter for our webhooks
+                    our_webhooks = [
+                        w for w in webhooks 
+                        if self.backend_url in w.get("address", "")
+                    ]
+                    
+                    return {
+                        "status": "active",
+                        "count": len(our_webhooks),
+                        "webhooks": [
+                            {
+                                "topic": w["topic"],
+                                "address": w["address"],
+                                "created_at": w.get("created_at")
+                            }
+                            for w in our_webhooks
+                        ]
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "error": f"Failed to fetch webhooks: {resp.status_code}"
+                    }
+                    
+        except Exception as e:
+            logger.error(f"Webhook verification failed: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
 
     # --- Utilities ---
 

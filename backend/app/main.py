@@ -1,24 +1,30 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from pathlib import Path
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.db import init_db
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+from app.core.db import init_db, get_session
+from app.models.company import Company
+from app.services.shopify.oauth_service import shopify_oauth_service
+
+from app.core.version import APP_VERSION
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
     
-    # Start Background Reconciliation (Layer 2)
-    reconciliation_task = asyncio.create_task(run_reconciliation_worker())
+    # Start Background Reconciliation (Layer 3 - Scheduler)
+    from app.services.scheduler import start_scheduler, shutdown_scheduler
+    start_scheduler()
     
     yield
     # Shutdown
-    reconciliation_task.cancel()
-    try:
-        await reconciliation_task
-    except asyncio.CancelledError:
-        pass
+    shutdown_scheduler()
 
 async def run_reconciliation_worker():
     """
@@ -79,9 +85,155 @@ To test protected endpoints, click the **Authorize** button:
    - Copy the `stsTokenManager.accessToken`.
    - Paste it directly into the **Bearer** field in Swagger (click Authorize -> JWT (Bearer)).
 """,
-    version="v0.1.0",
+    version=APP_VERSION,
     lifespan=lifespan
 )
+
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    # Log all query parameters for debugging
+    params = dict(request.query_params)
+    if params:
+        logger.info(f"Root accessed with params: {list(params.keys())}")
+    
+    # Check if this is a Shopify Installation Handshake
+    # Install requests have: shop, hmac, timestamp, and sometimes host
+    shop = params.get("shop")
+    hmac_val = params.get("hmac")
+    timestamp = params.get("timestamp")
+    embedded = params.get("embedded")
+    
+    # Only trigger OAuth if this is an install request (has shop, hmac, AND timestamp)
+    # Skip if embedded=1 (coming from OAuth callback redirect)
+    # Regular app loads from Shopify admin may have shop but not hmac/timestamp
+    if shop and hmac_val and timestamp and not embedded:
+        # Verify HMAC (Security)
+        if shopify_oauth_service.verify_callback_hmac(params):
+            logger.info(f"Root: Detected valid Shopify install request for {shop}")
+            
+            # Auto-Select Company for Dev Flow (Simplification)
+            if not settings.is_production:
+                session_gen = get_session()
+                session = await session_gen.__anext__()
+                try:
+                    stmt = select(Company)
+                    result = await session.execute(stmt)
+                    company = result.scalars().first()
+                    
+                    if company:
+                        logger.info(f"Dev Mode: Auto-selecting company {company.id} for install")
+                        auth_url = await shopify_oauth_service.generate_authorization_url(
+                            shop_domain=shop,
+                            company_id=company.id
+                        )
+                        # Use JS redirect to break out of iframe with loading UI
+                        return HTMLResponse(f"""
+                        <html>
+                            <head>
+                                <title>Redirecting to Shopify...</title>
+                                <style>
+                                    body {{ font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f9fafb; }}
+                                    .container {{ text-align: center; }}
+                                    .spinner {{ border: 3px solid #f3f3f3; border-top: 3px solid #065f46; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }}
+                                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                                    p {{ color: #6b7280; }}
+                                    a {{ color: #065f46; text-decoration: underline; }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="spinner"></div>
+                                    <p>Redirecting to Shopify authorization...</p>
+                                    <p><a href="{auth_url}" onclick="window.top.location.href=this.href; return false;">Click here if not redirected automatically</a></p>
+                                </div>
+                                <script>
+                                    // Immediate redirect
+                                    window.top.location.href = '{auth_url}';
+                                </script>
+                            </body>
+                        </html>
+                        """)
+                    else:
+                        logger.warning("Dev Mode: No company found in DB to attach integration to.")
+                finally:
+                    await session.close()
+        else:
+            logger.warning(f"Root: HMAC verification failed for {shop}")
+
+    # Get last installed date/time from database if shop parameter is present
+    last_installed = None
+    if shop:
+        session_gen = get_session()
+        session = await session_gen.__anext__()
+        try:
+            from app.models.integration import Integration
+            from datetime import datetime
+            # Query all integrations and filter in Python
+            stmt = select(Integration).order_by(Integration.updated_at.desc())
+            result = await session.execute(stmt)
+            integrations = result.scalars().all()
+            # Find integration matching the shop
+            for integration in integrations:
+                if integration.credentials and integration.credentials.get("shop") == shop:
+                    if integration.updated_at:
+                        # Convert to IST (UTC+5:30) and format as human-readable date/time
+                        from datetime import timedelta, timezone as tz
+                        ist = tz(timedelta(hours=5, minutes=30))
+                        ist_time = integration.updated_at.astimezone(ist)
+                        last_installed = ist_time.strftime("%b %d, %Y at %I:%M %p IST")
+                    break
+        except Exception as e:
+            logger.error(f"Error querying integration timestamp: {e}")
+        finally:
+            await session.close()
+    
+    # Fallback message if no installation found
+    display_info = last_installed or "Not yet installed"
+    
+    return f"""
+    <html>
+        <head>
+            <title>Unclutr.ai - Shopify App</title>
+            <style>
+                body {{ font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }}
+                .container {{ text-align: center; padding: 3rem; background: white; border-radius: 16px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); max-width: 500px; }}
+                h1 {{ color: #111827; margin-bottom: 0.5rem; font-size: 2rem; }}
+                .version {{ display: inline-block; padding: 0.5rem 1rem; background: #f3f4f6; color: #374151; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; margin: 1rem 0; }}
+                .status {{ display: inline-block; padding: 0.5rem 1rem; background: #d1fae5; color: #065f46; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; margin-top: 1rem; }}
+                p {{ color: #6b7280; line-height: 1.6; }}
+                .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; text-align: left; }}
+                .info-item {{ padding: 1rem; background: #f9fafb; border-radius: 8px; }}
+                .info-label {{ font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }}
+                .info-value {{ font-size: 1.125rem; color: #111827; font-weight: 600; margin-top: 0.25rem; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎯 Unclutr.ai</h1>
+                <p>Shopify Integration Active</p>
+                <div class="version">Last Installed: {display_info}</div>
+                <div class="status">● Connected</div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value">Installed</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Environment</div>
+                        <div class="info-value">{'Production' if settings.is_production else 'Development'}</div>
+                    </div>
+                </div>
+                
+                <p style="margin-top: 2rem; font-size: 0.875rem;">
+                    This app is successfully connected to your Shopify store.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
 
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -106,18 +258,33 @@ else:
     logger.warning("Rate limiting is DISABLED")
 
 # CORS Configuration
+# Base origins for exact matching
+base_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+# Development: Broaden CORS
+# This regex covers http://localhost, http://127.0.0.1 on any port,
+# and any ngrok-free.dev or ngrok.io subdomain.
+allow_origin_regex = None
+if not settings.is_production:
+    # Regex to match:
+    # 1. http://localhost:* or http://127.0.0.1:*
+    # 2. https://*.ngrok-free.dev or https://*.ngrok.io
+    # 3. https://unwastable-godsent-see.ngrok-free.dev (specific one just in case)
+    allow_origin_regex = r"https?://((localhost|127\.0\.0\.1)(:\d+)?|.*\.ngrok-free\.dev|.*\.ngrok\.io)"
+    logger.info(f"CORS: Enabled broad development regex: {allow_origin_regex}")
+
+# Merge with settings origins
 if settings.is_production:
-    # Production: Use whitelist
     origins = settings.allowed_origins_list
-    logger.info(f"CORS whitelist (production): {origins}")
 else:
-    # Development: Allow localhost
-    # Development: Allow all localhost variants
-    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    # Regex to match http://localhost:PORT or http://127.0.0.1:PORT
-    origin_regex = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
-    logger.info("CORS: Allowing localhost regex (development)")
-    logger.info("CORS: Allowing localhost (development)")
+    origins = list(set(base_origins + settings.allowed_origins_list))
+
+logger.info(f"CORS origins (static): {origins}")
 
 
 # (Moved CORSMiddleware to end to ensure it runs first)
@@ -153,11 +320,8 @@ app.add_middleware(RequestLoggingMiddleware)
 # CORSMiddleware must be added LAST to be the OUTERMOST layer (runs first)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://unwastable-godsent-see.ngrok-free.dev"
-    ],
+    allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -166,7 +330,15 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Shopify Sub-App (Separate Documentation Page)
+from app.api.v1.endpoints.shopify.app import shopify_app
+# Mount at /api/v1/integrations/shopify
+# This preserves the paths while providing a separate /docs at this URL
+app.mount(f"{settings.API_V1_STR}/integrations/shopify", shopify_app)
+
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "Unclutr.ai Backend"}
+    return {"status": "ok", "service": "Unclutr.ai Backend", "version": "v2-root-fix"}
+
+
 

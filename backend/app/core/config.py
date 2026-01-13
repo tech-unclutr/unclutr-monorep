@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     
     # Security - Dev Auth (DISABLE IN PRODUCTION!)
     ENABLE_DEV_AUTH: bool = True  # Set to False in production
-    SWAGGER_DEV_PASSWORD: str = os.getenv("DEV_PASSWORD", "")
-    SWAGGER_DEV_TOKEN: str = os.getenv("DEV_TOKEN", "")
+    SWAGGER_DEV_PASSWORD: str = "admin"
+    SWAGGER_DEV_TOKEN: str = "secret"
     
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True

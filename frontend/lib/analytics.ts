@@ -4,17 +4,34 @@ import { useEffect } from "react";
 import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
 import { app } from "./firebase"; // Import the initialized app
 
+const isDev = process.env.NODE_ENV === "development";
+
 export const useAnalytics = () => {
     useEffect(() => {
         // Only init on client side
         if (typeof window !== "undefined") {
+            const shouldSkipLive = isDev && !localStorage.getItem('ENABLE_GA_IN_DEV');
+
+            if (isDev) {
+                console.log("[Analytics] Page view tracked", {
+                    page_path: window.location.pathname,
+                    page_title: document.title,
+                });
+            }
+
+            if (shouldSkipLive) return;
+
             isSupported().then((supported) => {
                 if (supported) {
-                    const analytics = getAnalytics(app);
-                    logEvent(analytics, "page_view", {
-                        page_path: window.location.pathname,
-                        page_title: document.title,
-                    });
+                    try {
+                        const analytics = getAnalytics(app);
+                        logEvent(analytics, "page_view", {
+                            page_path: window.location.pathname,
+                            page_title: document.title,
+                        });
+                    } catch (err) {
+                        if (isDev) console.warn("[Analytics] GA blocked by browser or ad-blocker.");
+                    }
                 }
             });
         }
@@ -53,10 +70,22 @@ export const useAutoTrackInteractions = () => {
 
 export const trackEvent = (eventName: string, params?: Record<string, any>) => {
     if (typeof window !== "undefined") {
+        const shouldSkipLive = isDev && !localStorage.getItem('ENABLE_GA_IN_DEV');
+
+        if (isDev) {
+            console.log(`[Analytics] Event: ${eventName}`, params);
+        }
+
+        if (shouldSkipLive) return;
+
         isSupported().then((supported) => {
             if (supported) {
-                const analytics = getAnalytics(app);
-                logEvent(analytics, eventName, params);
+                try {
+                    const analytics = getAnalytics(app);
+                    logEvent(analytics, eventName, params);
+                } catch (err) {
+                    if (isDev) console.warn(`[Analytics] Failed to send event "${eventName}" (likely blocked).`);
+                }
             }
         });
     }
@@ -109,11 +138,6 @@ export function trackOnboardingEvent(
         timestamp,
         ...data,
     };
-
-    // Console log for development
-    if (process.env.NODE_ENV === 'development') {
-        console.log('[Onboarding Analytics]', eventData);
-    }
 
     // Send to Firebase Analytics
     trackEvent(event, data);

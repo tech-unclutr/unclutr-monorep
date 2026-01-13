@@ -1,26 +1,23 @@
 
 import asyncio
-from sqlalchemy import text
-from app.core.db import get_session
+from sqlmodel import select, func
+from app.api.deps import get_db_session
+from app.models.shopify.order import ShopifyOrder
+from app.models.shopify.product import ShopifyProduct
+from app.models.shopify.inventory import ShopifyInventoryLevel
+from app.core.db import async_session_factory
 
-async def check_counts():
-    session_gen = get_session()
-    session = await session_gen.__anext__()
-    
-    tables = [
-        "companymembership", "company_membership",
-        "workspacemembership", "workspace_membership",
-        "companyentitlement", "company_entitlement"
-    ]
-    
-    for t in tables:
-        try:
-            result = await session.exec(text(f"SELECT count(*) FROM {t}"))
-            print(f"{t}: {result.first()[0]}")
-        except Exception as e:
-            print(f"{t}: Error {e}")
-            
-    await session.close()
+async def main():
+    async with async_session_factory() as session:
+        print("Checking Database Counts...")
+        
+        orders_count = (await session.execute(select(func.count(ShopifyOrder.id)))).scalar_one()
+        products_count = (await session.execute(select(func.count(ShopifyProduct.id)))).scalar_one()
+        inventory_count = (await session.execute(select(func.count(ShopifyInventoryLevel.id)))).scalar_one()
+        
+        print(f"Orders: {orders_count}")
+        print(f"Products: {products_count}")
+        print(f"Inventory Levels: {inventory_count}")
 
 if __name__ == "__main__":
-    asyncio.run(check_counts())
+    asyncio.run(main())

@@ -76,13 +76,27 @@ class MetricsService:
         interaction_score = min(metrics.interactions / 10, 1.0) * 40
         page_view_score = min(metrics.page_views / 20, 1.0) * 30
         feature_score = min(len(features_used) / 5, 1.0) * 30
-        metrics.engagement_score = interaction_score + page_view_score + feature_score
-        
         metrics.updated_at = datetime.utcnow()
         
-        session.add(metrics)
-        await session.commit()
-        await session.refresh(metrics)
+        try:
+            session.add(metrics)
+            await session.commit()
+            await session.refresh(metrics)
+        except Exception as e:
+            await session.rollback()
+            logger.warning(f"Race condition in calculate_user_metrics for {user_id}: {e}")
+            stmt = select(UserMetrics).where(
+                and_(UserMetrics.user_id == user_id, UserMetrics.metric_date == target_date)
+            )
+            res = await session.exec(stmt)
+            existing = res.first()
+            if existing:
+                for key, val in metrics.dict(exclude={"id", "created_at"}).items():
+                    setattr(existing, key, val)
+                existing.updated_at = datetime.utcnow()
+                session.add(existing)
+                await session.commit()
+                metrics = existing
         
         return metrics
     
@@ -139,9 +153,23 @@ class MetricsService:
         
         metrics.updated_at = datetime.utcnow()
         
-        session.add(metrics)
-        await session.commit()
-        await session.refresh(metrics)
+        try:
+            session.add(metrics)
+            await session.commit()
+            await session.refresh(metrics)
+        except Exception as e:
+            await session.rollback()
+            logger.warning(f"Race condition in calculate_onboarding_metrics for {user_id}: {e}")
+            stmt = select(OnboardingMetrics).where(OnboardingMetrics.user_id == user_id)
+            res = await session.exec(stmt)
+            existing = res.first()
+            if existing:
+                for key, val in metrics.dict(exclude={"id", "created_at"}).items():
+                    setattr(existing, key, val)
+                existing.updated_at = datetime.utcnow()
+                session.add(existing)
+                await session.commit()
+                metrics = existing
         
         return metrics
     
@@ -262,9 +290,23 @@ class MetricsService:
         
         metrics.updated_at = datetime.utcnow()
         
-        session.add(metrics)
-        await session.commit()
-        await session.refresh(metrics)
+        try:
+            session.add(metrics)
+            await session.commit()
+            await session.refresh(metrics)
+        except Exception as e:
+            await session.rollback()
+            logger.warning(f"Race condition in calculate_business_metrics for {target_date}: {e}")
+            stmt = select(BusinessMetrics).where(BusinessMetrics.metric_date == target_date)
+            res = await session.exec(stmt)
+            existing = res.first()
+            if existing:
+                for key, val in metrics.dict(exclude={"id", "created_at"}).items():
+                    setattr(existing, key, val)
+                existing.updated_at = datetime.utcnow()
+                session.add(existing)
+                await session.commit()
+                metrics = existing
         
         return metrics
     
@@ -286,7 +328,7 @@ class MetricsService:
         
         # Calculate growth trends (compare to yesterday)
         yesterday = today - timedelta(days=1)
-        yesterday_stmt = select(BusinessMetrics).where(BusinessMetrics.date == yesterday)
+        yesterday_stmt = select(BusinessMetrics).where(BusinessMetrics.metric_date == yesterday)
         yesterday_result = await session.exec(yesterday_stmt)
         yesterday_metrics = yesterday_result.first()
         

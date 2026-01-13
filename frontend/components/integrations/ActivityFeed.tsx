@@ -14,6 +14,8 @@ interface ActivityLog {
     emoji: string
     source: string
     category?: string
+    is_stacked?: boolean
+    stacked_count?: number
 }
 
 interface ActivityFeedProps {
@@ -49,15 +51,18 @@ export function ActivityFeed({ integrationId, open, companyId, workspaceId, onSy
             return
         }
 
-        let interval: NodeJS.Timeout
+        let isMounted = true;
+        let timeoutId: NodeJS.Timeout;
 
         const fetchLogs = async () => {
+            if (!isMounted) return;
             try {
                 const token = await getAuthToken()
                 if (!token) return
 
                 // Fetch only important events (webhooks + errors + recent backfills)
-                const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/integrations/shopify/activity?integration_id=${integrationId}&limit=15&important_only=true`
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                const url = `${apiBase}/api/v1/integrations/shopify/activity?integration_id=${integrationId}&limit=15&important_only=true`
 
                 const res = await fetch(url, {
                     headers: {
@@ -69,36 +74,41 @@ export function ActivityFeed({ integrationId, open, companyId, workspaceId, onSy
 
                 if (res.ok) {
                     const newLogs = await res.json()
-                    setIsConnected(true)
+                    if (isMounted) {
+                        setIsConnected(true)
+                        setLogs(prevLogs => {
+                            const combined = [...newLogs, ...prevLogs]
+                            const uniqueMap = new Map()
 
-                    setLogs(prevLogs => {
-                        const combined = [...newLogs, ...prevLogs]
-                        const uniqueMap = new Map()
+                            combined.forEach(log => {
+                                if (!uniqueMap.has(log.id)) {
+                                    uniqueMap.set(log.id, log)
+                                }
+                            })
 
-                        combined.forEach(log => {
-                            if (!uniqueMap.has(log.id)) {
-                                uniqueMap.set(log.id, log)
-                            }
+                            return Array.from(uniqueMap.values()).sort((a, b) =>
+                                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                            )
                         })
-
-                        return Array.from(uniqueMap.values()).sort((a, b) =>
-                            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-                        )
-                    })
+                    }
                 }
             } catch (e) {
                 console.error("Activity stream error", e)
-                setIsConnected(false)
+                if (isMounted) setIsConnected(false)
+            } finally {
+                if (isMounted) {
+                    timeoutId = setTimeout(fetchLogs, 3500)
+                }
             }
         }
 
         // Initial fetch
         fetchLogs()
 
-        // Poll regularly
-        interval = setInterval(fetchLogs, 3500)
-
-        return () => clearInterval(interval)
+        return () => {
+            isMounted = false;
+            if (timeoutId) clearTimeout(timeoutId);
+        }
     }, [integrationId, open, lastSyncTime])
 
     // Expose method to clear logs (called when sync is triggered)
@@ -175,12 +185,28 @@ export function ActivityFeed({ integrationId, open, companyId, workspaceId, onSy
                                     initial={{ opacity: 0, y: -10, scale: 0.98 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     layout
-                                    className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 p-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group"
+                                    className={`bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 p-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group relative ${log.is_stacked ? 'mb-2' : ''
+                                        }`}
                                 >
+                                    {/* Stacked Effect Layers */}
+                                    {log.is_stacked && (
+                                        <>
+                                            <div className="absolute top-1 left-2 right-2 h-full bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 rounded-xl z-[-1] scale-x-[0.96] translate-y-1 opacity-60" />
+                                            <div className="absolute top-2 left-4 right-4 h-full bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 rounded-xl z-[-2] scale-x-[0.92] translate-y-2 opacity-30" />
+                                        </>
+                                    )}
+
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex items-start gap-3">
-                                            <div className="text-xl shrink-0 mt-0.5 select-none grayscale group-hover:grayscale-0 transition-all duration-300">
-                                                {log.emoji}
+                                            <div className="relative">
+                                                <div className="text-xl shrink-0 mt-0.5 select-none grayscale group-hover:grayscale-0 transition-all duration-300">
+                                                    {log.emoji}
+                                                </div>
+                                                {log.is_stacked && (
+                                                    <Badge className="absolute -bottom-2 -right-2 h-4 min-w-[1.25rem] px-1 flex items-center justify-center text-[9px] bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-2 border-white dark:border-zinc-900 shadow-sm pointer-events-none">
+                                                        x{log.stacked_count}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <div>
                                                 <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 leading-tight">
@@ -200,15 +226,15 @@ export function ActivityFeed({ integrationId, open, companyId, workspaceId, onSy
                                                             Failed
                                                         </Badge>
                                                     )}
-                                                    {log.source === 'Real-time' && (
-                                                        <Badge className="text-[9px] h-4 px-1.5 rounded-md bg-orange-500 text-white border-none animate-pulse">
-                                                            Pulse
-                                                        </Badge>
-                                                    )}
                                                     {log.category && (
                                                         <Badge variant="outline" className="text-[9px] h-4 px-1.5 rounded-md text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-500/10 dark:border-blue-500/20">
-                                                            {log.category}
+                                                            <span className="truncate max-w-[80px]">{log.category}</span>
                                                         </Badge>
+                                                    )}
+                                                    {log.is_stacked && (
+                                                        <span className="text-[9px] text-gray-400 italic">
+                                                            Consolidated
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

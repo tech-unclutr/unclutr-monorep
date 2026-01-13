@@ -24,6 +24,9 @@ async def get_onboarding_settings(
     session: AsyncSession = Depends(get_session),
     current_user: dict = Depends(get_current_user),
 ) -> Any:
+    # Guard against missing or invalid JWT
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Missing or invalid authentication")
     """
     Get onboarding settings for the current user's company.
     Resolves DataSource UUIDs into human-readable names.

@@ -80,17 +80,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     try {
                         const syncData = await syncUserWithBackend(firebaseUser);
                         console.log("DEBUG: AuthProvider [Sync] Data received:", syncData);
+
+                        // Persist to localStorage FIRST, before state updates
+                        // This ensures the OpenAPI client can read companyId synchronously when components re-render
+                        if (syncData.current_company_id) {
+                            localStorage.setItem('unclutr_company_id', syncData.current_company_id);
+                        } else {
+                            localStorage.removeItem('unclutr_company_id');
+                        }
+
                         if (isMounted) {
-                            setOnboardingCompleted(syncData.onboarding_completed);
-                            setCompanyId(syncData.current_company_id);
                             setOnboardingCompleted(syncData.onboarding_completed);
                             setCompanyId(syncData.current_company_id);
                             setRole(syncData.role || null);
                             setDbUser(syncData);
-                            // Also persist to localStorage for client.ts to access synchronously if needed
-                            if (syncData.current_company_id) {
-                                localStorage.setItem('unclutr_company_id', syncData.current_company_id);
-                            }
                         }
                     } catch (e) {
                         console.error("DEBUG: AuthProvider [Sync] Background Error:", e);
@@ -102,22 +105,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     } finally {
                         syncInProgress.current = null;
                         setIsSyncing(false);
+
+                        // Clear loading state AFTER sync completes (success or failure)
+                        // This ensures components don't make API calls until companyId is available
+                        if (isMounted && loading) {
+                            console.log("DEBUG: AuthProvider [Init] Clearing loading state after sync.");
+                            setLoading(false);
+                        }
                     }
                 } else {
                     console.log("DEBUG: AuthProvider [Sync] No user, clearing onboarding status");
                     setOnboardingCompleted(null);
                     setCompanyId(null);
-                    setCompanyId(null);
                     setRole(null);
                     setDbUser(null);
                     localStorage.removeItem('unclutr_company_id');
                     syncInProgress.current = null;
-                }
 
-                // Once the first state change fires, we are "initialized"
-                if (isMounted && loading) {
-                    console.log("DEBUG: AuthProvider [Init] Clearing loading state.");
-                    setLoading(false);
+                    // Clear loading state when no user
+                    if (isMounted && loading) {
+                        console.log("DEBUG: AuthProvider [Init] Clearing loading state (no user).");
+                        setLoading(false);
+                    }
                 }
             });
 
@@ -145,7 +154,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsSyncing(true);
             try {
                 const syncData = await syncUserWithBackend(user);
+
+                // Update local persistence first (matches init flow)
+                if (syncData.current_company_id) {
+                    localStorage.setItem('unclutr_company_id', syncData.current_company_id);
+                } else {
+                    localStorage.removeItem('unclutr_company_id');
+                }
+
+                // Update all context states to reflect new data
                 setOnboardingCompleted(syncData.onboarding_completed);
+                setCompanyId(syncData.current_company_id);
+                setRole(syncData.role || null);
+                setDbUser(syncData);
+
+                // If displayName changed in backend but not firebase (edge case), we might want to reload firebase user?
+                // But typically firebase auth token claims are source of truth for name until refresh.
+                // We rely on dbUser for UI display anyway.
             } catch (e) {
                 console.error("DEBUG: AuthProvider [Refresh] Error:", e);
             } finally {

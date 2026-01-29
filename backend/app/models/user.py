@@ -1,5 +1,6 @@
-from typing import Optional
-from sqlmodel import Field, SQLModel
+from typing import Optional, Dict, Any
+from sqlmodel import Field, SQLModel, Column
+from sqlalchemy.dialects.postgresql import JSONB 
 from datetime import datetime
 import uuid
 
@@ -19,6 +20,13 @@ class User(UserBase, table=True):
     # Transient field for API response
     onboarding_completed: bool = Field(default=False)
     current_company_id: Optional[uuid.UUID] = Field(default=None)
+    
+    # Contact Details
+    contact_number: Optional[str] = Field(default=None)
+    otp_verified: bool = Field(default=False)
+
+    # Phase 5: User Preferences (Bird's Eye Goal, etc.)
+    settings: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
 
     class Config:
         extra = "ignore"
@@ -29,6 +37,8 @@ class UserCreate(UserBase):
 class UserUpdate(SQLModel):
     full_name: Optional[str] = None
     picture_url: Optional[str] = None
+    contact_number: Optional[str] = None
+    otp_verified: Optional[bool] = None
     role: Optional[str] = None # Logic to handle role update if needed (usually handled via specialized endpoint)
 
 
@@ -39,3 +49,5 @@ class UserRead(UserBase):
     onboarding_completed: bool = False
     current_company_id: Optional[uuid.UUID] = None # Added for frontend context
     role: Optional[str] = None # Added for frontend context
+    contact_number: Optional[str] = None
+    otp_verified: bool = False

@@ -92,6 +92,9 @@ class ShopifySyncService:
                 "limit": 250,
             }
             if start_date:
+                # Ensure start_date is aware before formatting
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=timezone.utc)
                 params["updated_at_min"] = start_date.isoformat()
                 logger.info(f"Triggering delta sync for {shop_domain} since {params['updated_at_min']}")
 
@@ -213,6 +216,9 @@ class ShopifySyncService:
             base_url = f"https://{shop_domain}/admin/api/{self.api_version}/customers.json"
             params = {"limit": 250}
             if start_date:
+                # Ensure start_date is aware before formatting
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=timezone.utc)
                 params["updated_at_min"] = start_date.isoformat()
 
             next_page_info = None

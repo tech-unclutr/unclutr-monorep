@@ -6,7 +6,8 @@ import { useTheme } from "next-themes";
 import {
     Leaf,
     PanelLeftClose,
-    Eye,
+    Users,
+    DollarSign,
     Compass,
     GitCompare,
     Plug,
@@ -55,9 +56,14 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
             if (cachedName) setCompanyName(cachedName);
 
             client.companies.readCompany(companyId)
-                .then(company => {
-                    setCompanyName(company.brand_name);
-                    localStorage.setItem(`company_name_${companyId}`, company.brand_name);
+                .then((company: any) => {
+                    // Prefer Brand Name if available (since User wants Brand Name visible)
+                    const display = (company.brands && company.brands.length > 0)
+                        ? company.brands[0].name
+                        : company.name;
+
+                    setCompanyName(display || "Your Brand");
+                    localStorage.setItem(`company_name_${companyId}`, display || "Your Brand");
                 })
                 .catch(err => {
                     console.error("Failed to fetch company details:", err);
@@ -135,7 +141,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         </h3>
                     )}
                     <div className="space-y-1">
-                        <Link
+                        {/*                         <Link
                             href="/dashboard-new/birds-eye"
                             className={cn(
                                 "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
@@ -148,7 +154,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         >
                             <Eye className="w-4 h-4 shrink-0" />
                             {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Bird's Eye View</span>}
-                        </Link>
+                        </Link> */}
 
                         <Link
                             href="/dashboard-new"
@@ -163,6 +169,21 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         >
                             <Compass className="w-4 h-4 shrink-0" />
                             {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Cash Compass</span>}
+                        </Link>
+
+                        <Link
+                            href="/dashboard-new/customer-intelligence"
+                            className={cn(
+                                "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
+                                isActive("/dashboard-new/customer-intelligence")
+                                    ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
+                                    : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
+                                isCollapsed ? "justify-center" : ""
+                            )}
+                            title={isCollapsed ? "Customer Intelligence" : ""}
+                        >
+                            <Users className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Customer Intelligence</span>}
                         </Link>
 
                     </div>

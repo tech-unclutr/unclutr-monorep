@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from typing import Dict, Any
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from app.core import security
@@ -6,6 +7,27 @@ from app.core.db import get_session
 from app.models.user import User, UserRead, UserUpdate
 
 router = APIRouter()
+
+@router.get("/me", response_model=UserRead)
+async def read_user_me(
+    current_user_token: dict = Depends(security.get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get current user profile.
+    """
+    uid = current_user_token.get("uid")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Invalid token")
+        
+    statement = select(User).where(User.id == uid)
+    result = await session.exec(statement)
+    user = result.first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return user
 
 @router.patch("/me", response_model=UserRead)
 async def update_user_me(
@@ -31,7 +53,44 @@ async def update_user_me(
         user.full_name = user_in.full_name
     if user_in.picture_url is not None:
         user.picture_url = user_in.picture_url
+    if user_in.contact_number is not None:
+        user.contact_number = user_in.contact_number
+    if user_in.otp_verified is not None:
+        user.otp_verified = user_in.otp_verified
         
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    
+    return user
+
+@router.patch("/settings", response_model=UserRead)
+async def update_user_settings(
+    settings: Dict[str, Any] = Body(...),
+    current_user_token: dict = Depends(security.get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Update user settings (merged with existing).
+    """
+    uid = current_user_token.get("uid")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Invalid token")
+        
+    statement = select(User).where(User.id == uid)
+    result = await session.exec(statement)
+    user = result.first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Merge settings
+    current_settings = user.settings or {}
+    updated_settings = {**current_settings, **settings}
+    
+    # SQLModel/SQLAlchemy JSONB update trick to ensure change is detected
+    user.settings = dict(updated_settings) 
+    
     session.add(user)
     await session.commit()
     await session.refresh(user)

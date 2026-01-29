@@ -8,7 +8,7 @@ import { useAuth } from "@/context/auth-context";
 
 export default function ShopifyConnectPage() {
     const router = useRouter();
-    const { company } = useAuth();
+    const { } = useAuth();
 
     const features = [
         {

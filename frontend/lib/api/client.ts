@@ -11,6 +11,6 @@ export const client = new UnclutrClient({
     HEADERS: async () => {
         // Read company ID from localStorage independently of React state
         const companyId = typeof window !== 'undefined' ? localStorage.getItem('unclutr_company_id') : null;
-        return companyId ? { 'X-Company-ID': companyId } : {};
+        return companyId ? { 'X-Company-ID': companyId } : {} as Record<string, string>;
     }
 });

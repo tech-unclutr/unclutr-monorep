@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, health, onboarding, dev, datasources, metrics, companies, settings, company, users, integrations, analytics
+from app.api.v1.endpoints import auth, health, onboarding, dev, datasources, metrics, companies, settings, company, users, integrations, analytics, brand, monitoring, intelligence, dashboard
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -14,3 +14,7 @@ api_router.include_router(company.router, prefix="/company", tags=["Company"])
 api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(integrations.router, prefix="/integrations", tags=["Integrations"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["Unified Analytics"])
+api_router.include_router(brand.router, prefix="/metrics/brand", tags=["Brand Metrics"])
+api_router.include_router(intelligence.router, prefix="/intelligence", tags=["Intelligence"])
+api_router.include_router(monitoring.router, tags=["Monitoring"])  # Prometheus metrics at /metrics endpoint
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])

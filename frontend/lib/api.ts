@@ -3,7 +3,21 @@
 import { auth } from "./firebase";
 
 // Use direct backend URL for local dev to avoid Next.js proxy stripping headers/slashes
-const API_BASE_URL = "http://localhost:8000/api/v1";
+// Use dynamic base URL: prioritize env var, then current origin, fallback to localhost
+const getBaseUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    if (typeof window !== 'undefined') {
+        const { hostname } = window.location;
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+            // If on ngrok or other, use the same domain for API (assumes proxy or standard setup)
+            // But here we know backend is usually on :8000
+            return `http://${hostname}:8000/api/v1`;
+        }
+    }
+    return "http://localhost:8000/api/v1";
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export const api = {
     async request(endpoint: string, options: RequestInit = {}) {
@@ -67,5 +81,17 @@ export const api = {
             body: JSON.stringify(body),
             headers,
         });
+    },
+
+    put(endpoint: string, body: any = {}, headers?: any) {
+        return this.request(endpoint, {
+            method: "PUT",
+            body: JSON.stringify(body),
+            headers,
+        });
+    },
+
+    delete(endpoint: string, headers?: any) {
+        return this.request(endpoint, { method: "DELETE", headers });
     },
 };

@@ -122,6 +122,7 @@ interface OnboardingEventData {
     variant?: 'channels' | 'stack';
     fieldName?: string;
     errorMessage?: string;
+    priorityCategory?: string;
 }
 
 /**

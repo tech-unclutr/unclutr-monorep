@@ -37,7 +37,7 @@ async def health_check_full(session: AsyncSession = Depends(get_session)):
     try:
         # A simple model check to verify the SDK and credentials are working
         from vertexai.generative_models import GenerativeModel
-        model = GenerativeModel("gemini-1.5-pro")
+        model = GenerativeModel("gemini-2.0-flash")
         # Note: We don't actually generate content here to avoid cost/latency, 
         # just initializing the model object is usually enough to check SDK config.
         # But to be sure, we can check if initialization was successful.

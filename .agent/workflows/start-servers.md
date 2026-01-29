@@ -1,11 +1,17 @@
 ---
-description: Start all development servers (Backend, Frontend, Ngrok)
+description: Robustly start all development servers (Force Restart)
 ---
-This workflow starts the entire development stack. It ensures the Backend, Frontend, and Ngrok tunnel are running with the correct configurations to avoid connection errors.
+This workflow performs a clean restart of the development stack. It forcefully terminates existing processes to resolve conflicts before starting the Backend, Frontend, and Ngrok.
 
-1. Check if servers are already running.
+1. Stop existing servers and free up ports.
 // turbo
-2. Start the Backend Server (if not running).
+```bash
+cd backend
+source venv/bin/activate
+python scripts/stop_servers.py
+```
+
+2. Start the Backend Server.
 ```bash
 # In a new terminal tab/window
 cd backend
@@ -13,7 +19,7 @@ source venv/bin/activate
 uvicorn app.main:app --reload
 ```
 
-3. Start the Frontend Server (if not running).
+3. Start the Frontend Server.
 ```bash
 # In a new terminal tab/window
 cd frontend

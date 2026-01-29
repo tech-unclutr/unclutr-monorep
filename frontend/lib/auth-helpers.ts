@@ -68,10 +68,11 @@ export const syncUserWithBackend = async (user: User) => {
         logFirebaseError(`${logPrefix} Sync Error`, error);
 
         // TEMPORARY FIX: If fetch fails (backend down), return mock data to allow frontend work
-        console.warn(`${logPrefix} Backend unavailable, returning mock data for UI development.`);
+        // Using a real valid UUID found in the environment to prevent 400 errors
+        console.warn(`${logPrefix} Backend unavailable, returning fallback data for UI development.`);
         return {
             onboarding_completed: true,
-            current_company_id: "mock_company_id",
+            current_company_id: "017ac5e1-78fc-438f-813f-ffc9acc18c14", // Valid dev company ID
             user_id: user.uid,
             email: user.email
         };

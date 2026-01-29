@@ -12,11 +12,11 @@ interface OnboardingSummaryProps {
     data: {
         companyName: string
         brandName: string
-        category: string
+        category: string | null
         region: {
-            country: string
-            currency: string
-            timezone: string
+            country: string | null
+            currency: string | null
+            timezone: string | null
         }
         channels: {
             d2c: string[]
@@ -32,6 +32,7 @@ interface OnboardingSummaryProps {
             marketing: string[]
             analytics: string[]
             finance: string[]
+            others: string[]
         }
     }
 }

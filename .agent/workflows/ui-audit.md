@@ -1,6 +1,7 @@
 ---
 description: Audit the UI for aesthetics, responsiveness, and premium quality standards.
 ---
+
 1. Navigate to the target [page_url] using the browser tool.
 2. Capture a high-quality screenshot or video of the page.
 3. Analyze the UI against the following "Premium" standards:
@@ -14,3 +15,4 @@ description: Audit the UI for aesthetics, responsiveness, and premium quality st
     - Propose code updates (CSS or Component structure) to achieve a score of 9+.
     - Proactively offer to implement these changes.
 6. Summarize the findings and the assigned grade for the user.
+7. Aim for 15/10 in UI

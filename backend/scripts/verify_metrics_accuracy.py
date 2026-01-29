@@ -36,7 +36,12 @@ async def verify_metrics():
         today = date.today()
         yesterday = today - timedelta(days=1)
         
-        # 2. Scenario 1: Order Today
+        # 2. Cleanup old test data
+        await session.execute(delete(ShopifyTransaction).where(ShopifyTransaction.shopify_transaction_id.in_([777777])))
+        await session.execute(delete(ShopifyOrder).where(ShopifyOrder.shopify_order_id.in_([999999, 888888])))
+        await session.commit()
+
+        # 3. Scenario 1: Order Today
         # Gross: 100, Discount: 10, Tax: 5, Shipping: 15
         # Total Sales = 100 - 10 + 5 + 15 = 110
         # Net Sales = 100 - 10 = 90
@@ -111,7 +116,7 @@ async def verify_metrics():
             currency="USD",
             kind="refund",
             status="success",
-            processed_at=datetime.utcnow()
+            shopify_processed_at=datetime.utcnow()
         )
         session.add(refund_txn)
         await session.commit()

@@ -133,10 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Safety: ensure loading is cleared even if observer is slow
             setTimeout(() => {
                 if (isMounted && loading) {
-                    console.log("DEBUG: AuthProvider [Init] Safety timeout clearing loading.");
+                    console.log("DEBUG: AuthProvider [Init] Safety timeout clearing loading (10s reached).");
                     setLoading(false);
                 }
-            }, 3000);
+            }, 10000);
 
             return unsubscribe;
         };

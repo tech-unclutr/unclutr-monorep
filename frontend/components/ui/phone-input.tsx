@@ -84,21 +84,21 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
                         variant="outline"
                         role="combobox"
                         aria-expanded={isOpen}
-                        className="w-[100px] justify-between px-3 bg-zinc-50/50 border-zinc-200"
+                        className="w-[100px] justify-between px-3 bg-white/50 dark:bg-white/5 border-gray-200 dark:border-white/10"
                     >
                         <span className="flex items-center gap-2">
                             <span className="text-lg leading-none">{localState.flag}</span>
-                            <span className="text-sm font-medium text-zinc-600">{localState.countryCode}</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">{localState.countryCode}</span>
                         </span>
                         <ChevronDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                    <div className="p-2 border-b border-zinc-100">
-                        <div className="flex items-center px-3 py-2 bg-zinc-50 rounded-md border border-zinc-200">
-                            <Search className="h-4 w-4 text-zinc-400 mr-2" />
+                <PopoverContent className="w-[300px] p-0 bg-white dark:bg-zinc-900 border-gray-200 dark:border-white/10" align="start">
+                    <div className="p-2 border-b border-gray-100 dark:border-white/10">
+                        <div className="flex items-center px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-md border border-gray-200 dark:border-white/10">
+                            <Search className="h-4 w-4 text-gray-400 mr-2" />
                             <input
-                                className="bg-transparent border-none focus:outline-none text-sm w-full"
+                                className="bg-transparent border-none focus:outline-none text-sm w-full text-gray-900 dark:text-white placeholder:text-gray-400"
                                 placeholder="Search country..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -112,19 +112,19 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
                                 key={region.country}
                                 onClick={() => handleCountrySelect(region)}
                                 className={cn(
-                                    "w-full flex items-center justify-between px-3 py-2 text-sm rounded-sm hover:bg-zinc-100 transition-colors",
-                                    localState.countryCode === region.dialCode && "bg-zinc-50 text-black font-medium"
+                                    "w-full flex items-center justify-between px-3 py-2 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-gray-900 dark:text-white",
+                                    localState.countryCode === region.dialCode && "bg-gray-50 dark:bg-white/5 font-medium"
                                 )}
                             >
                                 <span className="flex items-center gap-3">
                                     <span className="text-xl leading-none">{region.flag}</span>
                                     <span>{region.country}</span>
                                 </span>
-                                <span className="text-zinc-400 font-mono text-xs">{region.dialCode}</span>
+                                <span className="text-gray-400 font-mono text-xs">{region.dialCode}</span>
                             </button>
                         ))}
                         {filteredRegions.length === 0 && (
-                            <p className="p-4 text-center text-xs text-zinc-400">No country found.</p>
+                            <p className="p-4 text-center text-xs text-gray-400">No country found.</p>
                         )}
                     </div>
                 </PopoverContent>
@@ -133,7 +133,7 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
             <input
                 className={cn(
                     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                    "bg-zinc-50/50 border-zinc-200 focus:bg-white transition-all text-gray-900",
+                    "bg-white/50 dark:bg-white/5 border-gray-200 dark:border-white/10 focus:bg-white dark:focus:bg-white/10 transition-all text-gray-900 dark:text-white",
                     className
                 )}
                 placeholder={placeholder}

@@ -279,7 +279,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                 updatePrimaryPartners,
                 updateStack,
                 addIntegrationRequest,
-                addIntegrationRequest,
+
                 saveAndExit,
                 saveCurrentPage,
                 isSaving,

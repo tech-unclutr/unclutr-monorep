@@ -1,15 +1,24 @@
+import logging
+import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request, Response, HTTPException
 from fastapi.responses import JSONResponse
-import uuid
+
 from app.core.security import get_current_user_no_depends
 from app.core.context import set_company_ctx, set_workspace_ctx, set_user_ctx
 from sqlmodel import select
-from app.core.db import AsyncSession, get_session
+from app.core.db import AsyncSession, get_session, async_session_factory
 from app.models.iam import CompanyMembership
+
+logger = logging.getLogger(__name__)
 
 class TenantMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        # Log path for debugging 403
+        if "/api/v1/companies" in path:
+             logger.info(f"TenantMiddleware: Processing path: {path}")
+             
         if request.method == "OPTIONS":
             return await call_next(request)
 
@@ -34,16 +43,20 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/auth/login", "/auth/sync", 
             "/onboarding", "/datasources", 
             "/company/me", "/users",
-            "/dev/",
+            "/dev/", "/companies",
             "/integrations/shopify/callback",
             "/integrations/shopify/install",
             "/integrations/shopify/rate-limit-test",
             "/integrations/shopify/validate-shop",
-            "/integrations/shopify/auth/url"
+            "/integrations/shopify/auth/url",
+            "/intelligence/calendar/google/callback",
+            "/intelligence/interview/bolna-webhook"
         ]
         
         # Check if path starts with any public path OR contains /webhooks/ OR is exactly /
-        if path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path:
+        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path
+        
+        if is_public:
             return await call_next(request)
 
         # 3. Validation
@@ -76,26 +89,23 @@ class TenantMiddleware(BaseHTTPMiddleware):
              return JSONResponse(content={"detail": "Unauthorized: Invalid Token (No User ID)"}, status_code=401)
 
         try:
-            session_gen = get_session()
-            session = await session_gen.__anext__()
-            try:
+            async with async_session_factory() as session:
                 stmt = select(CompanyMembership).where(
                     CompanyMembership.company_id == company_id,
                     CompanyMembership.user_id == user_id
                 )
-                membership = (await session.exec(stmt)).first()
+                result = await session.execute(stmt)
+                membership = result.scalars().first()
                 
                 if not membership:
                     return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
                 
                 request.state.role = membership.role
-            finally:
-                await session.close()
         except Exception as e:
             import traceback
             logger.error(f"TenantMiddleware Error: {str(e)}\n{traceback.format_exc()}")
             return JSONResponse(
-                content={"detail": "Internal Server Error in Tenant Verification", "error": str(e)}, 
+                content={"detail": f"Internal Server Error in Tenant Verification: {str(e)}"}, 
                 status_code=500
             )
             

@@ -14,6 +14,7 @@ from .metrics import (
     SystemMetrics,
     MetricType
 )
+from .brand_metrics import BrandMetrics
 from .shopify.raw_ingest import ShopifyRawIngest
 from .shopify.order import ShopifyOrder, ShopifyLineItem
 from .shopify.customer import ShopifyCustomer
@@ -30,3 +31,9 @@ from .shopify.checkout import ShopifyCheckout
 from .shopify.marketing import ShopifyMarketingEvent
 from .shopify.discount import ShopifyPriceRule, ShopifyDiscountCode
 from .integration_analytics import IntegrationDailyMetric
+from .insight_feedback import InsightFeedback, FeedbackLearning
+from .calendar_connection import CalendarConnection
+from .insight_tracking import InsightGenerationLog, InsightImpression, InsightSuppression
+from .campaign import Campaign
+from .interview import InterviewSession
+from .campaign_goal_detail import CampaignGoalDetail

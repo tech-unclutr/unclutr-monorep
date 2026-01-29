@@ -78,12 +78,11 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
     // This ensures we always have data to render if the drawer is meant to be open
     const targetIntegration = integration || lastValidIntegration.current;
 
-    if (!targetIntegration) return null;
-
     // Real-time Pulse: Poll for latest integration status/stats when drawer is open
+    // IMPORTANT: This hook must be called unconditionally (before any early returns)
     const { data: latestIntegration, error: syncError, isValidating, mutate } = useSWR(
         open && targetIntegration?.id ? [`/api/v1/integrations/${targetIntegration.id}`, companyId] : null,
-        () => getIntegration(companyId!, targetIntegration.id),
+        () => targetIntegration ? getIntegration(companyId!, targetIntegration.id) : null,
         {
             refreshInterval: 1000, // Speed up poll to 1s for smoother progress bars
             dedupingInterval: 500,
@@ -93,69 +92,53 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
         }
     );
 
-    // Use latest data if available, fallback to target
-    const activeIntegration = latestIntegration || targetIntegration;
-
-    const isConnected = activeIntegration.status === 'active';
-    const isSyncing = activeIntegration.status === 'syncing' || activeIntegration.status === 'SYNCING';
-    const isError = activeIntegration.status === 'error'; // Use activeIntegration to be responsive
-    const isActiveState = isConnected || isSyncing || isError;
-
+    // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
     const [verificationCompleteTime, setVerificationCompleteTime] = React.useState<number | null>(null);
     const [reconciliationStartTime, setReconciliationStartTime] = React.useState<number | null>(null);
     const lastShownCompletionRef = React.useRef<string | null>(null);
+    const hasAutoSyncedRef = React.useRef<string | null>(null);
+    const [isManualVerification, setIsManualVerification] = React.useState(false);
 
-    // Check for Reconciliation Status
-    const syncStats = activeIntegration.metadata_info?.sync_stats || {};
+    // Calculate values needed for hooks (use optional chaining for safety before early return)
+    const activeIntegration = latestIntegration || targetIntegration;
+    const syncStats = activeIntegration?.metadata_info?.sync_stats || {};
+    const isReconciling = syncStats.current_step === 'reconciling';
+    const isComplete = syncStats.current_step === 'complete' && syncStats.message === 'Integrity Verified';
+    const isErrorState = syncStats.current_step === 'error';
+    const isConnected = activeIntegration?.status === 'active';
+    const isSyncing = activeIntegration?.status === 'syncing' || activeIntegration?.status === 'SYNCING';
 
     // Robust Date Parser
-    const parseResilientDate = (dateStr?: string) => {
+    const parseResilientDate = React.useCallback((dateStr?: string) => {
         if (!dateStr) return 0;
         try {
             const isoString = (dateStr.endsWith('Z') || dateStr.includes('+')) ? dateStr : dateStr + 'Z';
             return new Date(isoString).getTime();
         } catch { return 0; }
-    };
+    }, []);
 
-    const isReconciling = syncStats.current_step === 'reconciling';
-    const isComplete = syncStats.current_step === 'complete' && syncStats.message === 'Integrity Verified';
-    const isErrorState = syncStats.current_step === 'error';
-
-    // Local Timer Logic:
-    // If we detect a fresh completion/error, set the local timestamp to NOW.
-    // The UI stays in that state for 3 seconds from THAT local moment.
+    // ALL useEffect HOOKS MUST BE CALLED BEFORE EARLY RETURN
+    // Local Timer Logic
     React.useEffect(() => {
         if ((isComplete || isErrorState) && !verificationCompleteTime) {
             setVerificationCompleteTime(Date.now());
-            setReconciliationStartTime(null); // Reset start time
+            setReconciliationStartTime(null);
         }
         if (isReconciling) {
-            setVerificationCompleteTime(null); // Reset on new run
+            setVerificationCompleteTime(null);
             if (!reconciliationStartTime) {
                 setReconciliationStartTime(Date.now());
             }
         }
     }, [isComplete, isErrorState, isReconciling, verificationCompleteTime, reconciliationStartTime]);
 
-    const timeSinceCompletion = verificationCompleteTime ? Date.now() - verificationCompleteTime : 99999;
-
-    // Check if stuck (running > 5 mins without completion)
-    const isStuck = reconciliationStartTime && (Date.now() - reconciliationStartTime > 300000);
-
-    // Active if truly reconciling (and not stuck) OR within 3s cooldown of specific local completion
-    const isProcessingOrCoolingDown = (isReconciling && !isStuck) || (verificationCompleteTime !== null && timeSinceCompletion < 3000);
-
     // Effect to trigger auto-sync on open
-    const hasAutoSyncedRef = React.useRef<string | null>(null);
-    const [isManualVerification, setIsManualVerification] = React.useState(false);
-
     React.useEffect(() => {
         if (open && activeIntegration?.id && isConnected && !isSyncing && !isReconciling) {
-            // Only auto-sync once per "open session" for this specific integration
             if (hasAutoSyncedRef.current !== activeIntegration.id) {
                 console.log(`[Drawer] Auto-triggering integrity check for ${activeIntegration.id}`);
                 hasAutoSyncedRef.current = activeIntegration.id;
-                setIsManualVerification(false); // Auto-trigger
+                setIsManualVerification(false);
 
                 import('@/lib/api/integrations').then(({ verifyIntegrationIntegrity }) => {
                     verifyIntegrationIntegrity(companyId!, activeIntegration.id)
@@ -164,7 +147,6 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                 });
             }
         }
-        // Reset ref when drawer closes so it can trigger again next time it's opened
         if (!open) {
             hasAutoSyncedRef.current = null;
         }
@@ -174,19 +156,31 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
     React.useEffect(() => {
         if (isComplete) {
             const completionKey = syncStats.last_updated || '';
-            // Only show modal if:
-            // 1. We haven't shown it for this specific completion event yet
-            // 2. The server update was recent (<15s) to avoid showing on stale data
             if (completionKey && lastShownCompletionRef.current !== completionKey) {
                 const serverTime = parseResilientDate(syncStats.last_updated);
-                // Only show modal if manual verification
                 if (Date.now() - serverTime < 15000 && isManualVerification) {
                     lastShownCompletionRef.current = completionKey;
                     setShowIntegrityModal(true);
                 }
             }
         }
-    }, [isComplete, syncStats.last_updated]);
+    }, [isComplete, syncStats.last_updated, isManualVerification, parseResilientDate, setShowIntegrityModal]);
+
+    // Early return AFTER all hooks have been called
+    if (!targetIntegration) return null;
+    // Ensure activeIntegration is defined (it should be if targetIntegration is defined)
+    if (!activeIntegration) return null;
+
+    // Recalculate values after early return for use in JSX (now we know activeIntegration exists)
+    // We already know targetIntegration is not null here. But activeIntegration can be latestIntegration (which could be undefined/null).
+    // So we ensure it falls back to targetIntegration.
+    const safeIntegration = latestIntegration || targetIntegration!;
+    const isError = safeIntegration.status === 'error';
+    const isActiveState = isConnected || isSyncing || isError;
+
+    const timeSinceCompletion = verificationCompleteTime ? Date.now() - verificationCompleteTime : 99999;
+    const isStuck = reconciliationStartTime && (Date.now() - reconciliationStartTime > 300000);
+    const isProcessingOrCoolingDown = (isReconciling && !isStuck) || (verificationCompleteTime !== null && timeSinceCompletion < 3000);
 
 
     const getTimeAgo = (dateStr?: string) => {
@@ -249,7 +243,7 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                                     </Badge>
                                     {isError && (
                                         <button
-                                            onClick={() => onConnect(integration.datasource.slug)}
+                                            onClick={() => integration && onConnect(integration.datasource.slug)}
                                             className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1.5 px-1.5 py-0.5 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10"
                                         >
                                             <RefreshCw className="w-3 h-3" />
@@ -327,7 +321,7 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                                 {/* Control & Statistics */}
                                 <SyncStatusCard
                                     status={activeIntegration.status}
-                                    lastSynced={activeIntegration.last_sync_at}
+                                    lastSynced={activeIntegration.last_sync_at || undefined}
                                     syncStats={activeIntegration.metadata_info?.sync_stats}
                                     onSync={() => onSync(activeIntegration.id)}
                                 />
@@ -357,9 +351,7 @@ export const IntegrationDetailDrawer: React.FC<IntegrationDetailDrawerProps> = (
                                                                     </TooltipTrigger>
                                                                     <TooltipContent
                                                                         side={isLast ? "left" : "bottom"}
-                                                                        align={index === 0 ? "start" : "center"}
-                                                                        sideOffset={8}
-                                                                        collisionPadding={16}
+
                                                                         className={cn(
                                                                             "max-w-[240px] p-0 overflow-hidden bg-zinc-900/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 ring-1 ring-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] rounded-xl animate-in fade-in zoom-in-95 duration-200",
                                                                             isLast ? "slide-in-from-right-2 origin-right" : "slide-in-from-top-1 origin-top"

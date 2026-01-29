@@ -39,12 +39,24 @@ class Settings(BaseSettings):
     # Shopify Integration
     SHOPIFY_API_KEY: Optional[str] = None
     SHOPIFY_API_SECRET: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
     SHOPIFY_ENCRYPTION_KEY: Optional[str] = None
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # Google Calendar Integration
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REDIRECT_URI: Optional[str] = None
+
+    # Bolna Voice AI Integration
+    BOLNA_API_KEY: Optional[str] = None
+    BOLNA_AGENT_ID: Optional[str] = None
+    BOLNA_API_BASE_URL: str = "https://api.bolna.dev"
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
         
     @property
     def is_production(self) -> bool:

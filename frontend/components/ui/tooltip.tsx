@@ -61,15 +61,15 @@ export const TooltipTrigger = ({
             },
             onMouseEnter: (e: React.MouseEvent) => {
                 context.setIsOpen(true);
-                child.props.onMouseEnter?.(e);
+                (child.props as any).onMouseEnter?.(e);
             },
             onFocus: (e: React.FocusEvent) => {
                 context.setIsOpen(true);
-                child.props.onFocus?.(e);
+                (child.props as any).onFocus?.(e);
             },
             onBlur: (e: React.FocusEvent) => {
                 context.setIsOpen(false);
-                child.props.onBlur?.(e);
+                (child.props as any).onBlur?.(e);
             }
         });
     }

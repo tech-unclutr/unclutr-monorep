@@ -47,6 +47,7 @@ class ShopifyOrder(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: datetime = Field(index=True)
     shopify_processed_at: Optional[datetime] = Field(default=None)
     shopify_closed_at: Optional[datetime] = Field(default=None)
+    shopify_cancelled_at: Optional[datetime] = Field(default=None, index=True)
 
     # Store the latest raw data
     raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))

@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={clsx(inter.variable, outfit.variable, "min-h-screen bg-background font-sans antialiased")}>
+      <body className={clsx(inter.variable, outfit.variable, "min-h-screen bg-background font-sans antialiased")} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

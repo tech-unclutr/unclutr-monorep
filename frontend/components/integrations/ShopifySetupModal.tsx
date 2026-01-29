@@ -151,12 +151,7 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
                                         disabled={!shopDomain.trim() || step !== "input"}
                                         className="h-12 w-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-xl font-bold text-base shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     >
-                                        {step === "validating" ? (
-                                            <div className="flex items-center gap-2">
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                Verifying...
-                                            </div>
-                                        ) : "Initialize Handshake"}
+                                        Initialize Handshake
                                     </Button>
 
                                     <div className="flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 opacity-80">

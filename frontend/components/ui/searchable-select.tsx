@@ -41,7 +41,7 @@ export function SearchableSelect({
     // We store exact styles for the dropdown (position, dimensions)
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLButtonElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const filteredOptions = options.filter(opt =>

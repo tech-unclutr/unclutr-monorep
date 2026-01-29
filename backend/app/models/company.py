@@ -7,11 +7,7 @@ from enum import Enum
 
 from app.models.base_mixins import UserTrackedModel
 
-class Company(UserTrackedModel, SQLModel, table=True):
-    __tablename__ = "company"
-    
-    # Basic ID
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+class CompanyBase(SQLModel):
     brand_name: str = Field(index=True)
     
     # Brand Identity
@@ -36,6 +32,13 @@ class Company(UserTrackedModel, SQLModel, table=True):
     # Legacy / Calculated
     stack_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     channels_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+
+class Company(CompanyBase, UserTrackedModel, table=True):
+    __tablename__ = "company"
+    model_config = {"arbitrary_types_allowed": True}
+    
+    # Basic ID
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships

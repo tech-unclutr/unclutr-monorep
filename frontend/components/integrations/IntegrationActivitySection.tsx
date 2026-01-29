@@ -145,7 +145,7 @@ export const IntegrationActivitySection: React.FC<IntegrationActivitySectionProp
                             </TooltipTrigger>
                             <TooltipContent
                                 side="bottom"
-                                sideOffset={12}
+
                                 className="max-w-[260px] p-0 overflow-hidden bg-zinc-900/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 ring-1 ring-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] rounded-xl animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
                             >
                                 <div className="px-4 py-3 border-b border-zinc-800/50 bg-gradient-to-b from-white/5 to-transparent">

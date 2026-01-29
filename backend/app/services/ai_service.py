@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class AIService:
     def __init__(self):
         vertexai.init(project=settings.GOOGLE_CLOUD_PROJECT, location=settings.GOOGLE_CLOUD_LOCATION)
-        self.model = GenerativeModel("gemini-1.5-pro")
+        self.model = GenerativeModel("gemini-2.0-flash")
 
     async def get_insight(self, prompt: str) -> str:
         """

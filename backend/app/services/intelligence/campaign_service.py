@@ -1,12 +1,18 @@
 import logging
 import re
 import json
-from uuid import UUID
+from uuid import UUID, uuid4
+from typing import List, Dict, Any
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign
+from app.models.campaign_lead import CampaignLead
+from app.models.campaign_goal_detail import CampaignGoalDetail
+from app.models.archived_campaign_lead import ArchivedCampaignLead
 from app.models.interview import InterviewSession
 from app.services.intelligence.mock_bolna_service import mock_bolna_service
 from app.services.intelligence.llm_service import llm_service
@@ -16,7 +22,7 @@ logger = logging.getLogger(__name__)
 class CampaignService:
     async def create_initial_campaign(
         self,
-        session: Session,
+        session: AsyncSession,
         company_id: UUID,
         user_id: str,
         phone_number: str
@@ -52,7 +58,7 @@ class CampaignService:
         
     async def update_campaign_execution_id(
         self,
-        session: Session,
+        session: AsyncSession,
         campaign_id: UUID,
         new_execution_id: str
     ) -> Campaign:
@@ -84,7 +90,7 @@ class CampaignService:
     
     async def update_campaign_from_bolna_webhook(
         self,
-        session: Session,
+        session: AsyncSession,
         execution_id: str,
         bolna_payload: dict
     ) -> Campaign:
@@ -163,7 +169,7 @@ class CampaignService:
         logger.info(f"Campaign {campaign.id} updated from webhook. Status: {campaign.status}")
         return campaign
 
-    async def sync_campaign_with_bolna(self, session: Session, campaign: Campaign) -> Campaign:
+    async def sync_campaign_with_bolna(self, session: AsyncSession, campaign: Campaign) -> Campaign:
         """
         Actively fetch latest status from Bolna and update campaign.
         Useful when webhooks fail or are delayed.
@@ -229,7 +235,7 @@ class CampaignService:
         finally:
             await session.close()
 
-    async def _apply_bolna_data_to_campaign(self, session: Session, campaign: Campaign, bolna_payload: dict):
+    async def _apply_bolna_data_to_campaign(self, session: AsyncSession, campaign: Campaign, bolna_payload: dict):
         """
         Helper to apply Bolna payload data to campaign model.
         Also creates or updates CampaignGoalDetail.
@@ -325,7 +331,7 @@ class CampaignService:
 
     async def update_campaign_extracted_data(
         self,
-        session: Session,
+        session: AsyncSession,
         campaign_id: UUID,
         new_extracted_data: dict
     ) -> Campaign:
@@ -383,7 +389,7 @@ class CampaignService:
         logger.info(f"Updated extracted data for campaign {campaign.id}")
         return campaign
 
-    async def _upsert_campaign_goal_detail(self, session: Session, campaign: Campaign, payload: dict):
+    async def _upsert_campaign_goal_detail(self, session: AsyncSession, campaign: Campaign, payload: dict):
         """
         Creates or updates the detailed analytics record.
         """
@@ -523,8 +529,344 @@ class CampaignService:
         except Exception as e:
             logger.error(f"Failed to generate campaign name: {e}")
             return "Campaign Planning Call"
+
+    async def generate_brand_context(self, session: AsyncSession, company_id: UUID) -> str:
+        """
+        Generate a 2-line brand description using Gemini based on company profile.
+        Includes caching to prevent repeated slow LLM calls.
+        """
+        from app.models.company import Company
+        import time
+        
+        # 1. Check Cache first
+        cache_key = f"brand_context_{company_id}"
+        from app.services.intelligence.llm_service import llm_service
+        if cached := llm_service._get_from_cache(cache_key):
+            logger.info(f"Returning cached brand context for {company_id}")
+            return cached
+
+        start_time = time.time()
+        # Fetch company and its brands
+        from app.models.company import Brand
+        from sqlalchemy.future import select
+        
+        # We fetch them separately or together
+        company = await session.get(Company, company_id)
+        if not company:
+            return ""
+
+        # Check if brand_context is already saved in company
+        if company.brand_context:
+            logger.info(f"Returning pre-saved brand context for company {company_id}")
+            return company.brand_context
+
+        stmt = select(Brand).where(Brand.company_id == company_id)
+        result = await session.execute(stmt)
+        brands = result.scalars().all()
+        brand_names = [b.name for b in brands]
+        
+        # Define primary brand name for logging/fallback
+        brand_name = company.brand_name
+        
+        # Restore variables needed for fallback
+        industry = company.industry or "Retail/E-commerce"
+        tagline = company.tagline or ""
+        tags = ", ".join(company.tags or [])
+        
+        # Prepare Known Facts (excluding tagline as requested)
+        legal_name = company.legal_name or brand_name
+        hq_city = company.hq_city or "your city"
+        
+        prompt = f"""
+        You are a brand strategist.
+
+        Task: Write a single, objective "Functional Description" sentence for the brand below, using the provided facts.
+
+        Known Facts:
+        - Brand: {brand_name}
+        - Legal Name: {legal_name}
+        - Category: {industry}
+        - Keywords: {tags}
+        - HQ Location: {hq_city}
+
+        Structure:
+        "[Brand] is a [Category/Type] based in [City] best known for [Key Offering/Keywords], built for [Value Proposition]."
+
+        Hard constraints:
+        - Output exactly 1 sentence.
+        - Use 3rd person objective tone (e.g. "Faasos is...", NOT "We are...").
+        - NO marketing fluff or "team" persona.
+        - Focus on utility and function.
+        - Output ONLY the final sentence.
+
+        Input:
+        Brand Name: {brand_name}
+        """
+        
+        try:
+            # We use 'flash' for speed, grounded by the facts above
+            logger.info(f"Generating brand context for {brand_name}...")
+            context = await llm_service._generate(prompt, model_type="flash")
+            
+            # Clean up
+            context = context.strip()
+            
+            # Cache it for 24h as brand profile changes slowly
+            llm_service._set_cache(cache_key, context, ttl=86400)
+            
+            # Auto-save generated context to Company so we don't regenerate
+            try:
+                company.brand_context = context
+                session.add(company)
+                await session.commit()
+                # logger.info(f"Auto-saved generated brand context to Company {company.id}")
+            except Exception as e:
+                logger.warning(f"Failed to auto-save generated brand context: {e}")
+            
+            duration = time.time() - start_time
+            logger.info(f"Brand context generated and cached in {duration:.2f}s")
+            return context
+        except Exception as e:
+            logger.error(f"Failed to generate brand context: {e}")
+            
+            # Structured Fallback (Functional)
+            fallback = f"{brand_name} is a {industry.lower()} brand based in {hq_city}, known for {tags or 'quality services'}."
+            return fallback
+
+    async def get_context_suggestions(self, session: AsyncSession, campaign_id: UUID, user_id: str) -> dict:
+        """
+        Get default suggestions for campaign context fields.
+        Optimized with asyncio.gather for speed.
+        """
+        campaign = await session.get(Campaign, campaign_id)
+        if not campaign:
+            raise ValueError("Campaign not found")
+            
+        from app.models.user import User
+        import asyncio
+
+        # Run brand context and user fetch in parallel
+        brand_context_task = self.generate_brand_context(session, campaign.company_id)
+        user_task = session.get(User, user_id)
+        
+        brand_context, user = await asyncio.gather(brand_context_task, user_task)
+        
+        team_member_context = ""
+        if user:
+            name = user.full_name or "a team member"
+            designation = user.designation or "representative"
+            team = user.team or "Customer Experience"
+            # Use campaign name safely
+            clean_campaign_name = "SquareUp"
+            if campaign.name and '-' in campaign.name:
+                clean_campaign_name = campaign.name.split('-')[0].strip()
+            
+            team_member_context = f"Hi, I'm {name}, {designation} from the {team} team at {clean_campaign_name}."
+
+        return {
+            "brand_context": brand_context,
+            "team_member_context": team_member_context
+        }
+
+    async def get_campaign_cohorts(self, session: AsyncSession, campaign_id: UUID) -> Dict[str, Any]:
+        """
+        Fetch unique cohorts and their lead counts from campaign leads.
+        """
+        from app.models.campaign_lead import CampaignLead
+        from sqlalchemy import func
+        
+        # Get counts per cohort
+        stmt = select(CampaignLead.cohort, func.count(CampaignLead.id)).where(
+            CampaignLead.campaign_id == campaign_id,
+            CampaignLead.cohort != None
+        ).group_by(CampaignLead.cohort)
+        
+        result = await session.execute(stmt)
+        rows = result.all()
+        
+        cohorts = [r[0] for r in rows if r[0]]
+        counts = {r[0]: r[1] for r in rows if r[0]}
+
+        # Fetch campaign to get selected cohorts
+        campaign = await session.get(Campaign, campaign_id)
+        selected = campaign.selected_cohorts if campaign and campaign.selected_cohorts is not None else []
+        
+        return {
+            "cohorts": cohorts,
+            "cohort_counts": counts,
+            "selected_cohorts": selected
+        }
+
+    async def export_calendar_block(self, session: AsyncSession, campaign_id: UUID) -> str:
+        """
+        Generate .ics file content for campaign execution windows.
+        """
+        campaign = await session.get(Campaign, campaign_id)
+        if not campaign or not campaign.execution_windows:
+            return ""
+
+        # ICS Format Header
+        ics_lines = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//Unclutr//Campaign Execution//EN",
+            "CALSCALE:GREGORIAN",
+            "METHOD:PUBLISH"
+        ]
+
+        day_map = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        today = datetime.now().date()
+
+        for i, window in enumerate(campaign.execution_windows):
+            day_name = window.get("day")
+            start_time_str = window.get("start")
+            end_time_str = window.get("end")
+            
+            if not start_time_str or not end_time_str:
+                continue
+
+            try:
+                if day_name in day_map:
+                    # New format: {day, start, end}
+                    target_weekday = day_map[day_name]
+                    days_ahead = target_weekday - today.weekday()
+                    if days_ahead < 0:
+                        days_ahead += 7
+                    event_date = today + timedelta(days=days_ahead)
+                    
+                    start_h, start_m = map(int, start_time_str.split(':'))
+                    end_h, end_m = map(int, end_time_str.split(':'))
+                    
+                    from datetime import time as dt_time
+                    start_dt = datetime.combine(event_date, dt_time(hour=start_h, minute=start_m))
+                    end_dt = datetime.combine(event_date, dt_time(hour=end_h, minute=end_m))
+                else:
+                    # Fallback/Legacy format: ISO strings
+                    start_dt = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+                    end_dt = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+                
+                start_ics = start_dt.strftime("%Y%m%dT%H%M%SZ")
+                end_ics = end_dt.strftime("%Y%m%dT%H%M%SZ")
+                
+                ics_lines.extend([
+                    "BEGIN:VEVENT",
+                    f"UID:{campaign.id}-{i}@unclutr.ai",
+                    f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+                    f"DTSTART:{start_ics}",
+                    f"DTEND:{end_ics}",
+                    f"SUMMARY:Campaign Execution: {campaign.name}",
+                    f"DESCRIPTION:Execution window for campaign: {campaign.name}. Expecting customer calls.",
+                    "STATUS:CONFIRMED",
+                    "END:VEVENT"
+                ])
+            except Exception as e:
+                logger.error(f"Failed to parse window for ICS: {e}")
+                continue
+
+        ics_lines.append("END:VCALENDAR")
+        return "\n".join(ics_lines)
+
+    async def delete_campaign(self, session: AsyncSession, campaign_id: UUID, company_id: UUID) -> bool:
+        """
+        Deletes a campaign and moves its leads to the archive.
+        
+        Args:
+            session: AsyncSession
+            campaign_id: Campaign UUID
+            company_id: Company UUID (for security validation)
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        logger.info(f"DEBUG: Attempting to delete campaign {campaign_id} for company {company_id}")
+        print(f"DEBUG: Delete campaign called for {campaign_id}")
+        
+        # 1. Fetch Campaign (verify ownership)
+        campaign = await session.get(Campaign, campaign_id)
+        
+        if not campaign:
+            logger.warning(f"DEBUG: Campaign {campaign_id} NOT FOUND in DB.")
+            print(f"DEBUG: Campaign not found")
+            return False
+            
+        print(f"DEBUG: Campaign Found. Owner: {campaign.user_id}, Company: {campaign.company_id}")
+        if str(campaign.company_id) != str(company_id): # Convert to string for safe comparison
+            logger.warning(f"DEBUG: Access denied. Campaign Company={campaign.company_id} vs Request Company={company_id}")
+            print(f"DEBUG: Company mismatch: {campaign.company_id} != {company_id}")
+            return False
+            
+        try:
+            # 2. Archive Leads
+            stmt = select(CampaignLead).where(CampaignLead.campaign_id == campaign_id)
+            result = await session.execute(stmt)
+            leads = result.scalars().all()
+            
+            logger.info(f"DEBUG: Found {len(leads)} leads to archive")
+            print(f"DEBUG: Found {len(leads)} leads")
+            
+            if leads:
+                archived_leads = [
+                    ArchivedCampaignLead(
+                        original_campaign_id=campaign_id,
+                        campaign_name=campaign.name,
+                        customer_name=lead.customer_name,
+                        contact_number=lead.contact_number,
+                        cohort=lead.cohort,
+                        meta_data=lead.meta_data,
+                        created_at=lead.created_at
+                    )
+                    for lead in leads
+                ]
+                session.add_all(archived_leads)
+                
+            # Use raw SQL to ensure deletion bypasses any ORM complexity
+            logger.info("DEBUG: Executing RAW SQL DELETE for Leads")
+            await session.execute(
+                text("DELETE FROM campaign_leads WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+            
+            # 3. Delete Goal Details
+            logger.info("DEBUG: Executing RAW SQL DELETE for Goal Details")
+            await session.execute(
+                text("DELETE FROM campaigns_goals_details WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+            
+            # 4. Delete the Campaign itself
+            logger.info("DEBUG: Executing RAW SQL DELETE for Campaign")
+            result = await session.execute(
+                text("DELETE FROM campaigns WHERE id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+            print(f"DEBUG: DELETE campaigns rowcount: {result.rowcount}")
+            
+            await session.commit()
+            
+            # 5. Verify Deletion
+            # Create new session/transaction or use same? Accessing 'campaign' might re-fetch?
+            # session is expired on commit usually.
+            check_campaign = await session.get(Campaign, campaign_id)
+            if check_campaign:
+                 logger.error(f"CRITICAL: Campaign {campaign_id} STILL EXISTS after commit!")
+                 print(f"CRITICAL: Campaign still exists in DB!")
+            else:
+                 print(f"DEBUG: Verified - Campaign is gone.")
+
+            logger.info(f"DEBUG: Successfully deleted campaign {campaign_id} (RAW SQL)")
+            print(f"DEBUG: Commit successful (RAW SQL)")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to delete campaign {campaign_id}: {e}")
+            print(f"DEBUG: Exception during delete: {e}")
+            await session.rollback()
+            raise
     
-    async def simulate_intake_call(self, session: Session, company_id: UUID, user_id: str) -> Campaign:
+    async def simulate_intake_call(self, session: AsyncSession, company_id: UUID, user_id: str) -> Campaign:
         """
         Orchestrates the full simulation flow (LEGACY - for backward compatibility).
         1. Create Interview Session
@@ -641,5 +983,79 @@ class CampaignService:
             gaps.append("Decision dependency/Evidence missing")
             
         return score, ", ".join(gaps) if gaps else None
+
+    async def sync_campaign_to_calendar(self, session: AsyncSession, campaign_id: UUID) -> int:
+        """
+        Sync campaign execution windows to the user's Google Calendar.
+        """
+        campaign = await session.get(Campaign, campaign_id)
+        if not campaign:
+            raise ValueError("Campaign not found")
+
+        # Find the calendar connection for this company
+        from app.models.calendar_connection import CalendarConnection
+        stmt = select(CalendarConnection).where(
+            CalendarConnection.company_id == campaign.company_id,
+            CalendarConnection.provider == "google",
+            CalendarConnection.status == "active"
+        )
+        result = await session.execute(stmt)
+        conn = result.scalars().first()
+
+        if not conn:
+            logger.error(f"No active Google Calendar connection found for company {campaign.company_id}")
+            raise ValueError("No active Google Calendar connection found")
+
+        logger.info(f"Syncing campaign {campaign_id} to calendar. Windows found: {len(campaign.execution_windows or [])}")
+        logger.debug(f"Execution windows: {campaign.execution_windows}")
+
+        from app.services.intelligence.google_calendar_service import google_calendar_service
+        events_created = await google_calendar_service.sync_campaign_windows(conn, campaign)
+        
+        logger.info(f"Successfully created {events_created} events for campaign {campaign_id}")
+        return events_created
+
+    async def replace_campaign_leads(
+        self,
+        session: AsyncSession,
+        campaign_id: UUID,
+        leads_data: List[dict]
+    ) -> bool:
+        """
+        Replaces all leads in a campaign with new ones.
+        Destructive operation: deletes existing leads and goal details.
+        """
+        logger.info(f"Replacing leads for campaign {campaign_id}. New count: {len(leads_data)}")
+        
+        # 1. Delete existing leads
+        await session.execute(
+            text("DELETE FROM campaign_leads WHERE campaign_id = :campaign_id"),
+            {"campaign_id": campaign_id}
+        )
+        
+        # 2. Delete Goal Details (Analytics) - Start fresh
+        await session.execute(
+            text("DELETE FROM campaigns_goals_details WHERE campaign_id = :campaign_id"),
+            {"campaign_id": campaign_id}
+        )
+        
+        # 3. Insert New Leads
+        if leads_data:
+            from sqlalchemy import insert
+            from app.models.campaign_lead import CampaignLead
+            
+            # Ensure campaign_id is set
+            for lead in leads_data:
+                lead["campaign_id"] = campaign_id
+                if "id" not in lead:
+                    lead["id"] = uuid4()
+                if "created_at" not in lead:
+                    lead["created_at"] = datetime.utcnow()
+                    
+            stmt = insert(CampaignLead).values(leads_data)
+            await session.execute(stmt)
+            
+        await session.commit()
+        return True
 
 campaign_service = CampaignService()

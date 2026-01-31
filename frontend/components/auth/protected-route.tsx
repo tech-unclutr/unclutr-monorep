@@ -31,7 +31,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         }
     }, [isAuthenticated, loading, onboardingCompleted, hasSkippedOnboarding, router, pathname]);
 
-    if (loading) {
+    if (loading || (isAuthenticated && onboardingCompleted === false && !hasSkippedOnboarding && !pathname?.startsWith('/onboarding'))) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <MagicLoader text="Securing session..." />

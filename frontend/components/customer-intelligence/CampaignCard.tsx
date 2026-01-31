@@ -1,603 +1,443 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import {
-    Calendar,
-    Clock,
-    ArrowRight,
-    BrainCircuit,
-    Target,
-    CheckCircle2,
-    AlertCircle,
-    MoreHorizontal,
-    Edit3,
-    Save,
-    X,
-    TrendingUp,
-    Users,
-    ShieldAlert,
-    Pencil,
-    Mic,
-    FileText,
-    AlignLeft,
-    ChevronDown,
-    ChevronUp
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use strict";
+import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { Copy, Check, ChevronDown, ChevronUp, Calendar, Clock, Target, Users, Sparkles, BrainCircuit, ShieldAlert, AlignLeft, Mic, FileText, Pencil, Trash2, Briefcase, User, MessageSquare, Gift, Layers } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
+import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CampaignCardProps {
     campaign: any;
     variant?: 'default' | 'summary';
-    index?: number;
     onClick?: () => void;
-    onUpdate?: (updatedCampaign: any) => void;
+    onEdit?: (id: string, updates: any) => Promise<void>;
+    onEditClick?: (id: string) => void;
+    onDelete?: (id: string) => Promise<void>;
+    className?: string;
 }
 
-export function CampaignCard({ campaign, variant = 'default', index = 0, onClick, onUpdate }: CampaignCardProps) {
-    // ------------------------------------------------------------------
-    // State & Helpers
-    // ------------------------------------------------------------------
+export const CampaignCard = ({
+    campaign,
+    variant = 'default',
+    onClick,
+    onEdit,
+    onEditClick,
+    onDelete,
+    className,
+    isExpanded: propIsExpanded,
+    onToggleExpand
+}: CampaignCardProps & { isExpanded?: boolean; onToggleExpand?: () => void }) => {
+    const [internalIsExpanded, setInternalIsExpanded] = useState(variant === 'default');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(variant === 'default'); // Default expands, summary starts collapsed
-    const [isExtractedDataExpanded, setIsExtractedDataExpanded] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-    // Helper: Format keys to Title Case
-    const formatKey = (key: string) => {
-        return key
-            .split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-    };
+    // Controlled or Uncontrolled
+    const isExpanded = propIsExpanded !== undefined ? propIsExpanded : internalIsExpanded;
 
-    // Helper Component: Recursively render data
-    const DataRenderer = ({ data, level = 0 }: { data: any, level?: number }) => {
-        if (!data || typeof data !== 'object') return null;
+    // Form State
+    const [primaryGoal, setPrimaryGoal] = useState(campaign?.campaign_overview?.primary_goal || campaign?.name || "Untitled Campaign");
+    const [editedData, setEditedData] = useState(campaign?.bolna_extracted_data || {});
 
-        return (
-            <div className={cn("grid gap-4", level > 0 && "border-l-2 border-gray-100 dark:border-white/10 pl-4 ml-1")}>
-                {Object.entries(data).map(([key, value]: [string, any]) => {
-                    // Skip internal fields if any
-                    if (key.startsWith('_')) return null;
-
-                    const isArray = Array.isArray(value);
-                    const isObject = typeof value === 'object' && value !== null && !isArray;
-
-                    return (
-                        <div key={key} className="space-y-1.5">
-                            <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                {formatKey(key)}
-                            </div>
-
-                            {/* Render Object */}
-                            {isObject && (
-                                <div className="mt-2">
-                                    <DataRenderer data={value} level={level + 1} />
-                                </div>
-                            )}
-
-                            {/* Render Array */}
-                            {isArray && (
-                                <div className="flex flex-wrap gap-2 mt-1">
-                                    {value.length > 0 ? value.map((item: any, i: number) => (
-                                        typeof item === 'object' ? (
-                                            <div key={i} className="w-full">
-                                                <DataRenderer data={item} level={level + 1} />
-                                            </div>
-                                        ) : (
-                                            <Badge key={i} variant="secondary" className="bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-700 font-normal">
-                                                {item}
-                                            </Badge>
-                                        )
-                                    )) : <span className="text-sm text-gray-400 italic">None</span>}
-                                </div>
-                            )}
-
-                            {/* Render Primitive */}
-                            {!isObject && !isArray && (
-                                <div className="text-sm font-medium text-gray-900 dark:text-gray-200">
-                                    {String(value)}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    };
-
-    // We maintain a local copy of the extracted data for editing
-    const [editedData, setEditedData] = useState<any>({});
-
-    // Initialize/Reset local data when campaign changes
-    useEffect(() => {
-        if (campaign?.bolna_extracted_data) {
-            // Deep copy to avoid mutating props
-            setEditedData(JSON.parse(JSON.stringify(campaign.bolna_extracted_data)));
-        } else if (campaign?.decision_context) {
-            setEditedData(JSON.parse(JSON.stringify(campaign.decision_context)));
-        } else {
-            setEditedData({});
-        }
-    }, [campaign]);
-
-    if (!campaign) return null;
-
+    // Destructure Config Data (The "Plan")
     const {
         name,
-        status,
         created_at,
-        bolna_conversation_time,
-        quality_score,
-        bolna_raw_data
+        status,
+        brand_context,
+        customer_context,
+        team_member_context,
+        cohort_config = {},
+        selected_cohorts = [],
+        cohort_questions = {},
+        cohort_incentives = {},
+        preliminary_questions = [], // Fallback for cohorts without specific questions
+        incentive, // Fallback incentive
+        execution_windows = [],
+        call_duration_limit,
+        total_call_target
     } = campaign;
 
-    const recordingUrl = bolna_raw_data?.telephony_data?.recording_url;
-    const transcript = bolna_raw_data?.transcript || "No transcript available.";
-    const summary = bolna_raw_data?.summary || "No summary available.";
-    const conversationDuration = bolna_raw_data?.conversation_duration || 0;
+    // Derived Metrics
+    const totalTargets = Object.values(cohort_config as Record<string, number>).reduce((a, b) => a + b, 0) || total_call_target || 0;
+    const activeCohortCount = selected_cohorts?.length || Object.keys(cohort_config).length || 0;
+    const maxDurationMins = call_duration_limit ? Math.floor(call_duration_limit / 60) : 10;
+    const activeWindows = execution_windows?.length || 0;
 
-
-    // Helper to safely get nested values (safe read)
-    const getNested = (obj: any, path: string, fallback = "") => {
-        if (!obj) return fallback;
-        const keys = path.split('.');
-        let current = obj;
-        for (const key of keys) {
-            if (current === null || current === undefined) return fallback;
-            current = current[key];
-        }
-        return current === undefined || current === null ? fallback : current;
+    // Status Config
+    const statusConfig: Record<string, { label: string, color: string, bg: string, border: string }> = {
+        'COMPLETED': { label: 'Completed', color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+        'IN_PROGRESS': { label: 'Active', color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+        'FAILED': { label: 'Attention', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+        'DRAFT': { label: 'Draft', color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' },
+        'SCHEDULED': { label: 'Scheduled', color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' }
     };
 
-    // Helper to update nested values (safe write)
-    const setNested = (obj: any, path: string, value: any) => {
-        const newObj = JSON.parse(JSON.stringify(obj)); // Deep clone
-        const parts = path.split('.');
-        let current = newObj;
-        for (let i = 0; i < parts.length - 1; i++) {
-            if (!current[parts[i]]) current[parts[i]] = {};
-            current = current[parts[i]];
-        }
-        current[parts[parts.length - 1]] = value;
-        return newObj;
-    };
+    const currentStatus = statusConfig[status] || statusConfig['DRAFT'];
 
-    const handleInputChange = (path: string, value: any) => {
-        const newData = setNested(editedData, path, value);
-        setEditedData(newData);
-    };
-
-    // Special handler for array inputs (comma separated)
-    const handleArrayChange = (path: string, value: string) => {
-        const array = value.split(',').map(item => item.trim()).filter(Boolean);
-        handleInputChange(path, array);
-    };
-
+    // Handlers
     const handleSave = async (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent card click
-        e.preventDefault(); // Prevent any default behavior
-
-        console.log("[CampaignCard] handleSave called", { campaignId: campaign.id, editedData });
-
+        e.stopPropagation();
+        if (!onEdit) return;
+        setIsSaving(true);
         try {
-            setIsSaving(true);
-            console.log("[CampaignCard] Sending PATCH request...");
-
-            const response = await api.patch(`/intelligence/campaigns/${campaign.id}/extracted-data`, {
-                extracted_data: editedData
+            await onEdit(campaign.id, {
+                campaign_overview: { ...campaign.campaign_overview, primary_goal: primaryGoal },
+                bolna_extracted_data: editedData
             });
-
-            console.log("[CampaignCard] Save successful", response);
-            toast.success("Campaign strategy updated");
             setIsEditing(false);
-
-            if (onUpdate) {
-                onUpdate(response); // Pass updated campaign back to parent
-            }
         } catch (error) {
-            console.error("[CampaignCard] Failed to update campaign:", error);
-            toast.error("Failed to save changes");
+            console.error("Failed to save", error);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleCancel = (e: React.MouseEvent) => {
+    const handleDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsEditing(false);
-        // Reset to original
-        if (campaign?.bolna_extracted_data) {
-            setEditedData(JSON.parse(JSON.stringify(campaign.bolna_extracted_data)));
+        setIsDeleteConfirmOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!onDelete) return;
+        setIsDeleting(true);
+        try {
+            await onDelete(campaign.id);
+            setIsDeleteConfirmOpen(false);
+        } catch (error) {
+            setIsDeleting(false);
         }
     };
 
-    // Format duration
-    const formatDuration = (seconds: number) => {
-        if (!seconds) return "0s";
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}m ${secs}s`;
+
+    const toggleExpand = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isEditing) {
+            if (onToggleExpand) {
+                onToggleExpand();
+            } else {
+                setInternalIsExpanded(!internalIsExpanded);
+            }
+        }
     };
 
-    // Status Config
-    const statusConfig = {
-        COMPLETED: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20", label: "Completed" },
-        FAILED: { icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20", label: "Failed" },
-        IN_PROGRESS: { icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", label: "In Progress" },
-        draft: { icon: Clock, color: "text-zinc-500", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Draft" },
-    };
-
-    const currentStatus = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-
-    // Derived values for display
-    const primaryGoal = getNested(editedData, "campaign_overview.primary_goal", name);
-    const successMetric = getNested(editedData, "execution_details.success_criteria", "Not defined");
-    // Handle both old and new structure or varying extraction
-    // Try explicit path first, then fallback
-    const targetCohorts = editedData?.target_cohorts ||
-        getNested(editedData, "target_customers.customer_segments") ||
-        getNested(editedData, "target_customers.primary_segments") ||
-        getNested(editedData, "target_customers") ||
-        [];
-    const timeline = getNested(editedData, "campaign_constraints.timeline", "Not specified");
-    const dependency = getNested(editedData, "execution_details.decision_dependency", "");
-
-
-    // ------------------------------------------------------------------
-    // RENDER CONTENT BLOCK
-    // ------------------------------------------------------------------
-    const CardContentBlock = () => (
-        <div className="space-y-10 pt-8 border-t border-gray-100 dark:border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
-            {/* 2. Grid Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                {/* Audience */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        <Users className="w-4 h-4 text-blue-500" />
-                        Target Cohorts
-                    </div>
-                    {isEditing ? (
-                        <div className="space-y-2">
-                            <Input
-                                value={Array.isArray(targetCohorts) ? targetCohorts.join(", ") : String(targetCohorts)}
-                                onChange={(e) => handleArrayChange("target_customers.customer_segments", e.target.value)}
-                                placeholder="e.g. Churned Users, New Signups (comma separated)"
-                                className="bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-orange-500 transition-all"
-                            />
-                            <p className="text-[10px] text-gray-400">Separate multiple cohorts with commas</p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {Array.isArray(targetCohorts) && targetCohorts.length > 0 ? (
-                                targetCohorts.map((cohort: string, i: number) => (
-                                    <Badge key={i} variant="secondary" className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20">
-                                        {cohort}
-                                    </Badge>
-                                ))
-                            ) : (
-                                <span className="text-gray-400 italic text-sm">{typeof targetCohorts === 'string' ? targetCohorts : "Not specified"}</span>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Timeline */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        <Clock className="w-4 h-4 text-purple-500" />
-                        Timeline & Constraints
-                    </div>
-                    {isEditing ? (
-                        <Input
-                            value={timeline}
-                            onChange={(e) => handleInputChange("campaign_constraints.timeline", e.target.value)}
-                            className="bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-orange-500 transition-all"
-                        />
-                    ) : (
-                        <div className="text-gray-900 dark:text-white font-medium">
-                            {timeline}
-                        </div>
-                    )}
-                </div>
-
-                {/* Success Metric */}
-                <div className="md:col-span-2 space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        <TrendingUp className="w-4 h-4 text-emerald-500" />
-                        Success Criteria
-                    </div>
-                    {isEditing ? (
-                        <Textarea
-                            value={successMetric}
-                            onChange={(e) => handleInputChange("execution_details.success_criteria", e.target.value)}
-                            className="bg-white dark:bg-zinc-900 min-h-[80px] focus:ring-2 focus:ring-orange-500 transition-all"
-                        />
-                    ) : (
-                        <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 text-gray-700 dark:text-gray-300 leading-relaxed text-sm">
-                            {successMetric}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* 3. Evidence Section (Audio & Transcript) */}
-            <div className="space-y-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    Evidence & Analysis
-                </h4>
-
-                {/* Summary */}
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        <AlignLeft className="w-3 h-3 text-purple-500" /> Conversation Summary
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-gray-100 dark:border-white/5">
-                        {summary}
-                    </p>
-                </div>
-
-                {/* Audio Player */}
-                {recordingUrl && (
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                            <Mic className="w-3 h-3 text-red-500" /> Recording
-                        </div>
-                        <div className="bg-gray-50 dark:bg-zinc-900 rounded-lg p-3 border border-gray-100 dark:border-zinc-800">
-                            <audio controls className="w-full h-8 outline-none">
-                                <source src={recordingUrl} type="audio/wav" />
-                                Your browser does not support the audio element.
-                            </audio>
-                        </div>
-                    </div>
-                )}
-
-                {/* Transcript - Scrollable */}
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        <FileText className="w-3 h-3 text-orange-500" /> Full Transcript
-                    </div>
-                    <ScrollArea className="h-[200px] w-full rounded-xl border border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4">
-                        <div className="text-xs font-mono text-gray-500 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">
-                            {transcript}
-                        </div>
-                    </ScrollArea>
-                </div>
-            </div>
-
-
-            {/* Footer / Meta */}
-            <div className="pt-6 border-t border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span className="font-semibold text-gray-900 dark:text-white">{formatDuration(conversationDuration)}</span>
-                        <span className="text-xs">Call Duration</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <div className="flex items-center gap-1 font-semibold text-gray-900 dark:text-white">
-                            <BrainCircuit className="w-4 h-4 text-orange-500" />
-                            {quality_score}/5
-                        </div>
-                        <span className="text-xs">AI Clarity Score</span>
-                    </div>
-                </div>
-
-                {dependency && !isEditing && (
-                    <div className="flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-100 dark:border-orange-500/20">
-                        <ShieldAlert className="w-3.5 h-3.5" />
-                        <span className="font-bold">Dependency:</span>
-                        {dependency}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-
-    // ------------------------------------------------------------------
-    // RENDER: UNIFIED CARD
-    // ------------------------------------------------------------------
     return (
         <Card
             className={cn(
-                "overflow-hidden border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.02] transition-all duration-700 ease-out relative group rounded-[2rem]",
-                isExpanded ? "lg:col-span-2 ring-2 ring-orange-500/30 shadow-2xl shadow-orange-500/10 scale-[1.02] z-10" : "hover:bg-gray-50 dark:hover:bg-white/[0.04] cursor-pointer hover:shadow-lg hover:scale-[1.01] hover:border-orange-200 dark:hover:border-orange-500/20"
+                "group relative overflow-hidden transition-all duration-500 ease-out bg-white dark:bg-zinc-950/50 backdrop-blur-sm",
+                isExpanded
+                    ? "rounded-[32px] border border-indigo-500/20 shadow-2xl shadow-indigo-500/10 z-20 my-2 ring-4 ring-indigo-500/5"
+                    : "rounded-[24px] border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 hover:shadow-xl hover:scale-[1.005] cursor-pointer",
+                className
             )}
-            onClick={() => !isEditing && setIsExpanded(!isExpanded)}
-            tabIndex={0}
-            role="button"
-            aria-expanded={isExpanded}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    !isEditing && setIsExpanded(!isExpanded);
-                }
+            onClick={(e) => {
+                if (onClick) onClick();
+                else if (!isEditing) toggleExpand(e);
             }}
         >
-            <div className={cn("absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 transition-all duration-500", isExpanded ? "opacity-100 h-1.5" : "opacity-0 group-hover:opacity-60 group-hover:h-0.5")} />
+            {/* Ambient Grading Glow */}
+            <div className={cn(
+                "absolute inset-0 bg-gradient-to-br from-indigo-500/[0.03] via-transparent to-purple-500/[0.03] pointer-events-none transition-opacity duration-1000",
+                isExpanded ? "opacity-100 bg-[size:100%_200%]" : "opacity-0 group-hover:opacity-100"
+            )} />
 
-            {/* Edit Controls (Only show when expanded) */}
-            {isExpanded && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                    className="absolute top-6 md:top-8 right-44 z-20 flex items-center gap-4 h-5"
-                >
-                    {isEditing ? (
-                        <>
-                            <button
-                                onClick={handleCancel}
-                                disabled={isSaving}
-                                className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Top Indicator Strip - More pronounced when expanded */}
+            <div className={cn(
+                "absolute top-0 left-0 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500",
+                isExpanded ? "h-1.5 opacity-100" : "h-0.5 opacity-0 group-hover:opacity-50"
+            )} />
+
+            <CardContent className={cn("relative transition-all duration-500", isExpanded ? "p-8 md:p-10" : "p-6 md:p-8")}>
+                {/* 1. Header Section: Identity & Status */}
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                    <div className="space-y-4 flex-1">
+                        <div className="flex items-center gap-3">
+                            <Badge
+                                variant="outline"
+                                className={cn("text-[10px] font-bold px-3 py-1 uppercase tracking-wider rounded-full transition-colors", currentStatus.color, currentStatus.bg, currentStatus.border)}
                             >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSaving ? "Saving..." : "Save Changes"}
-                            </button>
-                        </>
-                    ) : (
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-                            className="h-8 w-8 rounded-full hover:bg-orange-500/10 text-gray-400 hover:text-orange-500 transition-all hover:scale-110"
-                            aria-label="Edit campaign"
-                        >
-                            <Pencil className="w-4 h-4" />
-                        </Button>
-                    )}
-                </motion.div>
-            )}
-
-            {/* Toggle Button for Expand/Collapse (Visible always) */}
-            <div className="absolute top-6 right-4 z-20">
-                {!isExpanded && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 rounded-full text-gray-400 group-hover:text-orange-500 transition-all group-hover:scale-110"
-                        aria-label="Expand campaign details"
-                    >
-                        <ChevronDown className="w-5 h-5 group-hover:animate-bounce" />
-                    </Button>
-                )}
-                {isExpanded && !isEditing && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-                        className="h-8 w-8 rounded-full text-gray-400 hover:text-orange-500 transition-all hover:scale-110"
-                        aria-label="Collapse campaign details"
-                    >
-                        <ChevronUp className="w-5 h-5" />
-                    </Button>
-                )}
-            </div>
-
-            <CardContent className="p-6 md:p-8">
-                {/* Header Section (Always Visible) */}
-                <div className="space-y-4">
-                    {/* Meta Top */}
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {created_at ? format(new Date(created_at), 'MMM d, yyyy') : 'Just now'}
+                                {currentStatus.label}
+                            </Badge>
+                            <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5" />
+                                {created_at ? format(new Date(created_at), 'MMM d, yyyy') : 'New Campaign'}
+                            </span>
                         </div>
-                        <Badge variant="outline" className={cn("text-[10px] font-bold px-2 py-0.5 h-5 uppercase tracking-wider mr-8", currentStatus.color, currentStatus.bg, currentStatus.border)}>
-                            {currentStatus.label}
-                        </Badge>
-                    </div>
-
-                    {/* Title / Primary Goal */}
-                    <div className="pr-12 mt-6">
-                        {isEditing && isExpanded ? (
+                        {isEditing ? (
                             <Textarea
                                 value={primaryGoal}
-                                onChange={(e) => handleInputChange("campaign_overview.primary_goal", e.target.value)}
-                                className="text-xl md:text-2xl font-bold bg-white dark:bg-zinc-900 min-h-[80px] border-orange-200 focus:ring-orange-500 mb-2"
+                                onChange={(e) => setPrimaryGoal(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-3xl font-bold bg-white dark:bg-zinc-900 border-zinc-200 focus:ring-indigo-500 min-h-[80px] resize-none"
                             />
                         ) : (
-                            <h3 className={cn("font-bold text-gray-900 dark:text-white leading-tight transition-all duration-300", isExpanded ? "text-2xl md:text-3xl mb-6 leading-snug" : "text-lg md:text-xl line-clamp-2 group-hover:text-orange-600 dark:group-hover:text-orange-400")}>
-                                {primaryGoal}
+                            <h3 className={cn(
+                                "font-bold text-zinc-900 dark:text-zinc-100 leading-tight transition-all duration-500",
+                                isExpanded ? "text-4xl tracking-tight" : "text-xl group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                            )}>
+                                {name || primaryGoal}
                             </h3>
                         )}
                     </div>
 
-                    {/* Tags (Only visible when collapsed or slightly modified when expanded) */}
-                    {!isExpanded && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                            {Array.isArray(targetCohorts) && targetCohorts.slice(0, 3).map((cohort: string, i: number) => (
-                                <Badge key={i} variant="secondary" className="bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-[10px] font-medium border-none">
-                                    {cohort}
-                                </Badge>
-                            ))}
-                            {Array.isArray(targetCohorts) && targetCohorts.length > 3 && (
-                                <span className='text-[10px] text-gray-400 self-center'>+{targetCohorts.length - 3} more</span>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 self-start">
+                        {isExpanded && (
+                            <div className="flex items-center gap-2 mr-2 bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800">
+                                <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-zinc-800 rounded-full transition-all" onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onEditClick) onEditClick(campaign.id);
+                                    else setIsEditing(!isEditing);
+                                }}>
+                                    <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Separator orientation="vertical" className="h-4" />
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-9 w-9 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-all"
+                                    onClick={handleDeleteClick}
+                                    disabled={isDeleting}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        )}
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={toggleExpand}
+                            className={cn(
+                                "h-10 w-10 rounded-full transition-all duration-300",
+                                isExpanded
+                                    ? "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+                                    : "bg-zinc-50 dark:bg-zinc-900 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50"
                             )}
-                        </div>
-                    )}
+                        >
+                            {isExpanded ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-5 h-5" />}
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Expanded Content */}
+                <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                    <AlertDialogContent className="rounded-[2rem] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl text-red-600 dark:text-red-400">
+                                    <Trash2 className="w-5 h-5" />
+                                </div>
+                                Delete Campaign
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 text-base py-2">
+                                Are you sure you want to delete <span className="font-bold text-zinc-900 dark:text-zinc-100">&quot;{name || primaryGoal}&quot;</span>? This will permanently remove the campaign and archive all related leads. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="gap-3 sm:gap-0">
+                            <AlertDialogCancel className="rounded-2xl border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-900 h-12 px-6">
+                                Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    confirmDelete();
+                                }}
+                                className="rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-8 shadow-lg shadow-red-500/20 border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Deleting..." : "Delete Campaign"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                {/* 2. Expanded Content: The Strategic Plan */}
                 <AnimatePresence>
                     {isExpanded && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                            className="overflow-hidden"
                         >
-                            <CardContentBlock />
+                            <div className="pt-8 border-t border-dashed border-zinc-200 dark:border-zinc-800/50 space-y-12">
+
+                                {/* A. Context Matrix */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    {[
+                                        { title: "Brand Identity", icon: Briefcase, text: brand_context, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
+                                        { title: "Target Audience", icon: User, text: customer_context, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100" },
+                                        { title: "Agent Persona", icon: BrainCircuit, text: team_member_context, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" }
+                                    ].map((ctx, i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            className="group/card relative p-6 rounded-[20px] bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 hover:bg-white dark:hover:bg-zinc-900 hover:shadow-xl hover:shadow-zinc-200/50 dark:hover:shadow-black/20 hover:-translate-y-1 transition-all duration-300"
+                                        >
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className={cn("p-3 rounded-xl shadow-sm", ctx.bg, ctx.color)}>
+                                                    <ctx.icon className="w-5 h-5" />
+                                                </div>
+                                                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">{ctx.title}</span>
+                                            </div>
+                                            <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
+                                                {ctx.text || "No context provided."}
+                                            </p>
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                {/* B. Cohort Strategy Deck */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest flex items-center gap-3">
+                                            <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+                                                <Users className="w-4 h-4" />
+                                            </div>
+                                            Campaign Strategy Map
+                                        </h4>
+                                        <Badge variant="secondary" className="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 px-3 py-1 text-xs">
+                                            {activeCohortCount} Active Segments
+                                        </Badge>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {(selected_cohorts.length > 0 ? selected_cohorts : Object.keys(cohort_config)).map((cohortName: string, i: number) => {
+                                            const target = cohort_config[cohortName] || 0;
+                                            const questions = cohort_questions[cohortName] || preliminary_questions;
+                                            const activeIncentive = cohort_incentives[cohortName] || incentive;
+                                            const avatarIndex = (cohortName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 12) + 1;
+
+                                            return (
+                                                <motion.div
+                                                    key={cohortName}
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    transition={{ delay: 0.2 + (i * 0.05) }}
+                                                    className="flex flex-col bg-white dark:bg-black/20 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 hover:border-indigo-300 dark:hover:border-indigo-700/50 hover:shadow-lg transition-all group/cohort"
+                                                >
+                                                    {/* Header */}
+                                                    <div className="flex items-center gap-4 mb-5">
+                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white dark:border-zinc-800 shadow-md">
+                                                            <img src={`/images/avatars/avatar_${avatarIndex}.png`} alt={cohortName} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{cohortName}</h5>
+                                                            <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
+                                                                <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-md">
+                                                                    <Target className="w-3 h-3" /> {target} Targets
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Details */}
+                                                    <div className="space-y-4 flex-1">
+                                                        {activeIncentive && (
+                                                            <div className="flex items-start gap-3 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
+                                                                <Gift className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                                                                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400 leading-tight">
+                                                                    {activeIncentive}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-1">
+                                                                <MessageSquare className="w-3 h-3" /> Key Questions
+                                                            </div>
+                                                            <ul className="space-y-2">
+                                                                {questions.slice(0, 3).map((q: string, idx: number) => (
+                                                                    <li key={idx} className="text-sm text-zinc-600 dark:text-zinc-400 pl-3 border-l-[3px] border-zinc-100 dark:border-zinc-800 line-clamp-2">
+                                                                        {q}
+                                                                    </li>
+                                                                ))}
+                                                                {questions.length > 3 && (
+                                                                    <li className="text-xs text-indigo-500 font-medium pl-3 pt-1">+{questions.length - 3} more questions...</li>
+                                                                )}
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                {/* 4. Extracted Data (Collapsible) */}
-                <div className="pt-6 border-t border-gray-100 dark:border-white/5 space-y-4">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsExtractedDataExpanded(!isExtractedDataExpanded);
-                        }}
-                        className="w-full flex items-center justify-between group"
-                    >
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 group-hover:text-orange-600 transition-colors">
-                            <BrainCircuit className="w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-colors" />
-                            Extracted Data Analysis
-                        </h4>
-                        <div className={cn("p-1 rounded-full transition-colors", isExtractedDataExpanded ? "bg-orange-50 text-orange-600" : "bg-gray-50 text-gray-400 group-hover:bg-orange-50 group-hover:text-orange-500")}>
-                            {isExtractedDataExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {/* 3. Footer: Config Summary (Always Visible) */}
+                <div className={cn(
+                    "flex flex-wrap items-center gap-x-12 gap-y-6 transition-all duration-500",
+                    isExpanded ? "mt-10 pt-6 border-t border-zinc-100 dark:border-zinc-800/50" : "mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800/50"
+                )}>
+                    {/* Metric 1: Targets */}
+                    <div className="flex items-center gap-4 group/metric">
+                        <div className={cn("p-2.5 rounded-2xl transition-colors shadow-sm", isExpanded ? "bg-indigo-50 text-indigo-600" : "bg-zinc-50 text-zinc-400 group-hover/metric:bg-indigo-50 group-hover/metric:text-indigo-600")}>
+                            <Target className="w-5 h-5" />
                         </div>
-                    </button>
-
-                    <AnimatePresence>
-                        {isExtractedDataExpanded && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="overflow-hidden"
-                            >
-                                <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-xl p-6 border border-gray-100 dark:border-white/5 space-y-6">
-                                    <DataRenderer data={editedData} />
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Footer Preview (Only visible when collapsed) */}
-                {!isExpanded && (
-                    <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center gap-6">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" title="Call Duration">
-                            <Clock className="w-3.5 h-3.5" />
-                            {formatDuration(conversationDuration)}
+                        <div className="flex flex-col">
+                            <span className="text-lg font-bold text-zinc-900 dark:text-white leading-none">{totalTargets}</span>
+                            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mt-1">Total Targets</span>
                         </div>
-                        {quality_score !== undefined && (
-                            <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" title="AI Quality Score">
-                                <BrainCircuit className="w-3.5 h-3.5 text-orange-500" />
-                                {quality_score}/5
-                            </div>
-                        )}
                     </div>
-                )}
 
+                    {/* Metric 2: Duration */}
+                    <div className="flex items-center gap-4 group/metric">
+                        <div className={cn("p-2.5 rounded-2xl transition-colors shadow-sm", isExpanded ? "bg-purple-50 text-purple-600" : "bg-zinc-50 text-zinc-400 group-hover/metric:bg-purple-50 group-hover/metric:text-purple-600")}>
+                            <Clock className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-lg font-bold text-zinc-900 dark:text-white leading-none">{maxDurationMins}m</span>
+                            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mt-1">Calls</span>
+                        </div>
+                    </div>
+
+                    {/* Metric 3: Windows */}
+                    <div className="flex items-center gap-4 group/metric">
+                        <div className={cn("p-2.5 rounded-2xl transition-colors shadow-sm", isExpanded ? "bg-orange-50 text-orange-600" : "bg-zinc-50 text-zinc-400 group-hover/metric:bg-orange-50 group-hover/metric:text-orange-600")}>
+                            <Calendar className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-lg font-bold text-zinc-900 dark:text-white leading-none">{activeWindows} Slots</span>
+                            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mt-1">Schedule</span>
+                        </div>
+                    </div>
+
+                    {/* Tags (Only collapsed) - Visual Preview of Cohorts */}
+                    {!isExpanded && selected_cohorts.length > 0 && (
+                        <div className="flex items-center gap-1 ml-auto">
+                            {selected_cohorts.slice(0, 3).map((c: string, i: number) => (
+                                <Badge key={i} variant="secondary" className="text-[10px] px-2.5 py-1 bg-zinc-100 text-zinc-500 border-transparent hover:bg-zinc-200">
+                                    {c}
+                                </Badge>
+                            ))}
+                            {selected_cohorts.length > 3 && (
+                                <span className="text-[10px] font-bold text-zinc-300 ml-1">+{selected_cohorts.length - 3}</span>
+                            )}
+                        </div>
+                    )}
+                </div>
             </CardContent>
         </Card>
     );
-}
+};

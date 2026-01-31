@@ -13,7 +13,10 @@ from app.models.calendar_connection import CalendarConnection
 import json
 
 class GoogleCalendarService:
-    SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+    SCOPES = [
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/calendar.events'
+    ]
 
     def __init__(self):
         self.client_id = settings.GOOGLE_CLIENT_ID
@@ -177,65 +180,120 @@ class GoogleCalendarService:
             raise
 
     async def get_availability(self, conn: CalendarConnection) -> List[Dict[str, Any]]:
-        """Fetches free/busy status for the next 7 days across ALL calendars."""
-        creds = google.oauth2.credentials.Credentials(
-            token=conn.credentials.get("token"),
-            refresh_token=conn.credentials.get("refresh_token"),
-            token_uri=conn.credentials.get("token_uri"),
-            client_id=conn.credentials.get("client_id"),
-            client_secret=conn.credentials.get("client_secret"),
-            scopes=conn.credentials.get("scopes"),
-        )
+        """Fetches free/busy status for the next 7 days across ALL calendars in parallel."""
+        # 1. Create Service (Blocking, so run in executor if heavy, but usually fast enough. 
+        # However, for pure async correctness, we'll keep it simple for now as build() is local mostly if not doing discovery)
+        # Actually discovery IS network. So let's wrap the whole interaction in executors.
+        
+        import asyncio
+        
+        loop = asyncio.get_running_loop()
 
-        service = build('calendar', 'v3', credentials=creds)
+        def _build_service():
+            creds = google.oauth2.credentials.Credentials(
+                token=conn.credentials.get("token"),
+                refresh_token=conn.credentials.get("refresh_token"),
+                token_uri=conn.credentials.get("token_uri"),
+                client_id=conn.credentials.get("client_id"),
+                client_secret=conn.credentials.get("client_secret"),
+                scopes=conn.credentials.get("scopes"),
+            )
+            return build('calendar', 'v3', credentials=creds)
+
+        # Offload service creation (discovery)
+        service = await loop.run_in_executor(None, _build_service)
 
         # Ensure ISO format with 'Z'
-        now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
-        one_week_later = (datetime.now(timezone.utc) + timedelta(days=7)).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        time_min = today_start.isoformat().replace('+00:00', 'Z')
+        time_max = (today_start + timedelta(days=7)).isoformat().replace('+00:00', 'Z')
 
         try:
-            # 1. Get List of Calendars
-            calendar_list = service.calendarList().list().execute()
-            # Filter for primary or owned calendars to avoid spamming public ones
-            # but usually for availability we want at least 'primary'. 
-            # We'll take all calendars where accessRole is 'owner' or 'writer'
+            # 2. Get List of Calendars (Blocking Network Call)
+            def _fetch_calendar_list():
+                return service.calendarList().list().execute()
+
+            calendar_list = await loop.run_in_executor(None, _fetch_calendar_list)
+
+            # STRICT FIX: User requested "Shared Team Calendars" (Reader/Writer) as well.
             calendar_ids = [
                 c.get('id') for c in calendar_list.get('items', []) 
                 if c.get('accessRole') in ['owner', 'writer', 'reader']
+                and 'holiday' not in c.get('id', '') 
+                and 'contacts' not in c.get('id', '')
             ]
+
             if not calendar_ids:
                 calendar_ids = ['primary']
             
-            # logger.info(f"Checking availability for calendars: {calendar_ids}")
-            
-            # 2. FreeBusy Query
-            body = {
-                "timeMin": now,
-                "timeMax": one_week_later,
-                "items": [{"id": cid} for cid in calendar_ids]
-            }
+            # 3. Fetch Events in Parallel (Fan-out)
+            def _fetch_events(cal_id):
+                try:
+                    # Create a new service instance for this thread
+                    # This is crucial for thread safety as the googleapiclient service object is not thread-safe
+                    creds = google.oauth2.credentials.Credentials(
+                        token=conn.credentials.get("token"),
+                        refresh_token=conn.credentials.get("refresh_token"),
+                        token_uri=conn.credentials.get("token_uri"),
+                        client_id=conn.credentials.get("client_id"),
+                        client_secret=conn.credentials.get("client_secret"),
+                        scopes=conn.credentials.get("scopes"),
+                    )
+                    service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
+                    
+                    return service.events().list(
+                        calendarId=cal_id,
+                        timeMin=time_min,
+                        timeMax=time_max,
+                        singleEvents=True,
+                        orderBy='startTime'
+                    ).execute()
+                except Exception as cal_err:
+                    logger.warning(f"Error fetching events for calendar {cal_id}: {cal_err}")
+                    return None
 
-            result = service.freebusy().query(body=body).execute()
+            # Create coroutines for each calendar
+            tasks = [
+                loop.run_in_executor(None, _fetch_events, cal_id)
+                for cal_id in calendar_ids
+            ]
             
-            # 3. Aggregate all busy slots
+            # Gather results
+            results = await asyncio.gather(*tasks)
+
             all_busy = []
-            for cal_id, cal_data in result.get('calendars', {}).items():
-                busy = cal_data.get('busy', [])
-                all_busy.extend(busy)
+            for events_result in results:
+                if not events_result:
+                    continue
+
+                for event in events_result.get('items', []):
+                    start = event.get('start')
+                    end = event.get('end')
+                    
+                    # Skip if:
+                    # 1. It's an all-day event (only has 'date', no 'dateTime')
+                    # 2. It's marked as 'transparent' (Free)
+                    if not start or not end or 'dateTime' not in start or event.get('transparency') == 'transparent':
+                        continue
+                    
+                    all_busy.append({
+                        'start': start['dateTime'],
+                        'end': end['dateTime']
+                    })
             
             # Sort by start time
             all_busy.sort(key=lambda x: x.get('start'))
             
-            # logger.info(f"Total busy slots found across {len(calendar_ids)} calendars: {len(all_busy)}")
-            
             # Debug log to file
             diag_info = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "mode": "parallel_async",
                 "calendars": calendar_ids,
-                "busy_slots": all_busy
+                "busy_slots_count": len(all_busy)
             }
-            with open("/Users/param/Documents/Unclutr/backend/calendar_debug.log", "a") as f:
-                f.write(json.dumps(diag_info) + "\n")
+            # Optional: Comment out file logging if performance is critical, but good for verification
+            # with open("/button/backend/calendar_debug.log", "a") as f:
+            #     f.write(json.dumps(diag_info) + "\n")
                 
             return all_busy
 
@@ -243,4 +301,171 @@ class GoogleCalendarService:
             logger.error(f"Error in get_availability: {e}")
             raise
 
+    async def sync_campaign_windows(self, conn: CalendarConnection, campaign: Any) -> int:
+        """
+        Syncs campaign execution windows to the user's primary Google Calendar.
+        Maps day names (Monday, etc.) to the upcoming week's dates.
+        Returns the number of events created.
+        """
+        import asyncio
+        from datetime import time as dt_time
+        
+        loop = asyncio.get_running_loop()
+
+        def _get_service():
+            creds = google.oauth2.credentials.Credentials(
+                token=conn.credentials.get("token"),
+                refresh_token=conn.credentials.get("refresh_token"),
+                token_uri=conn.credentials.get("token_uri"),
+                client_id=conn.credentials.get("client_id"),
+                client_secret=conn.credentials.get("client_secret"),
+                scopes=conn.credentials.get("scopes"),
+            )
+            return build('calendar', 'v3', credentials=creds)
+
+        try:
+            service = await loop.run_in_executor(None, _get_service)
+        except Exception as e:
+            import traceback
+            logger.error(f"Failed to build Google Calendar service: {e}")
+            logger.error(traceback.format_exc())
+            raise
+
+        logger.info(f"Starting sync for campaign {campaign.id} with {len(campaign.execution_windows or [])} windows")
+        execution_windows = campaign.execution_windows or []
+        if not execution_windows:
+            logger.warning(f"No execution windows found for campaign {campaign.id}")
+            return 0
+
+        today = datetime.now(timezone.utc).date()
+        events_created = 0
+
+        for window in execution_windows:
+            day_str = window.get('day')
+            start_time_str = window.get('start')
+            end_time_str = window.get('end')
+            
+            logger.info(f"Processing window: day={day_str}, start={start_time_str}, end={end_time_str}")
+
+            if not day_str or not start_time_str or not end_time_str:
+                logger.warning(f"Missing data for window: {window}")
+                continue
+
+            try:
+                # Direct Date Parsing
+                event_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+            except ValueError:
+                logger.warning(f"Invalid date format in sync: {day_str}")
+                continue
+            
+            try:
+                start_h, start_m = map(int, start_time_str.split(':'))
+                end_h, end_m = map(int, end_time_str.split(':'))
+                
+                start_dt = datetime.combine(event_date, dt_time(hour=start_h, minute=start_m), tzinfo=timezone.utc)
+                end_dt = datetime.combine(event_date, dt_time(hour=end_h, minute=end_m), tzinfo=timezone.utc)
+
+                event_body = {
+                    'summary': f'{campaign.name} powered by SquareUp',
+                    'description': f'Execution window for campaign: {campaign.name}. Expecting customer calls.',
+                    'start': {
+                        'dateTime': start_dt.isoformat(),
+                        'timeZone': 'UTC',
+                    },
+                    'end': {
+                        'dateTime': end_dt.isoformat(),
+                        'timeZone': 'UTC',
+                    },
+                    'reminders': {
+                        'useDefault': True,
+                    },
+                }
+
+                def _insert_event():
+                    return service.events().insert(calendarId='primary', body=event_body).execute()
+
+                await loop.run_in_executor(None, _insert_event)
+                events_created += 1
+            except Exception as e:
+                logger.error(f"Failed to sync window for {day_str} {start_time_str}: {e}")
+
+        return events_created
+
+    async def create_single_execution_event(self, conn: CalendarConnection, campaign: Any, window: Dict[str, Any]):
+        """
+        Creates a single execution window event in Google Calendar.
+        """
+        import asyncio
+        from datetime import time as dt_time
+        
+        loop = asyncio.get_running_loop()
+
+        def _get_service():
+            creds = google.oauth2.credentials.Credentials(
+                token=conn.credentials.get("token"),
+                refresh_token=conn.credentials.get("refresh_token"),
+                token_uri=conn.credentials.get("token_uri"),
+                client_id=conn.credentials.get("client_id"),
+                client_secret=conn.credentials.get("client_secret"),
+                scopes=conn.credentials.get("scopes"),
+            )
+            return build('calendar', 'v3', credentials=creds)
+
+        service = await loop.run_in_executor(None, _get_service)
+
+        today = datetime.now(timezone.utc).date()
+
+        day_str = window.get('day')
+        start_time_str = window.get('start')
+        end_time_str = window.get('end')
+            
+        logger.info(f"Creating single execution event: {day_str}, {start_time_str}-{end_time_str}")
+
+        if not day_str or not start_time_str or not end_time_str:
+             logger.warning(f"Invalid window data: {window}")
+             return
+
+        try:
+            # Parse the date string (YYYY-MM-DD)
+            event_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+        except ValueError:
+            # Fallback for legacy "Day Name" (Monday, etc.) support if needed, or just strict fail
+            # For now, let's just log and fail if format is wrong, assuming frontend sends YYYY-MM-DD
+            logger.warning(f"Invalid date format: {day_str}. Expected YYYY-MM-DD")
+            return
+
+        try:
+            start_h, start_m = map(int, start_time_str.split(':'))
+            end_h, end_m = map(int, end_time_str.split(':'))
+                
+            start_dt = datetime.combine(event_date, dt_time(hour=start_h, minute=start_m), tzinfo=timezone.utc)
+            end_dt = datetime.combine(event_date, dt_time(hour=end_h, minute=end_m), tzinfo=timezone.utc)
+
+            event_body = {
+                'summary': f'{campaign.name} powered by SquareUp',
+                'description': f'Execution window for campaign: {campaign.name}. Expecting customer calls.',
+                'start': {
+                    'dateTime': start_dt.isoformat(),
+                    'timeZone': 'UTC',
+                },
+                'end': {
+                    'dateTime': end_dt.isoformat(),
+                    'timeZone': 'UTC',
+                },
+                'reminders': {
+                    'useDefault': True,
+                },
+            }
+
+            def _insert_event():
+                return service.events().insert(calendarId='primary', body=event_body).execute()
+
+            await loop.run_in_executor(None, _insert_event)
+            logger.info("Event created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create single event: {e}")
+            raise
+
 google_calendar_service = GoogleCalendarService()
+
+

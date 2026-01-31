@@ -77,14 +77,14 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
     );
 
     return (
-        <div className={cn("flex items-center gap-2", className)}>
+        <div className={cn("flex items-center gap-0 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 rounded-md transition-all", className)}>
             <Popover open={isOpen} onOpenChange={setIsOpen}>
                 <PopoverTrigger asChild>
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         role="combobox"
                         aria-expanded={isOpen}
-                        className="w-[100px] justify-between px-3 bg-white/50 dark:bg-white/5 border-gray-200 dark:border-white/10"
+                        className="flex-shrink-0 w-[100px] justify-between px-3 bg-transparent border-r border-gray-200 dark:border-white/10 rounded-l-md rounded-r-none hover:bg-transparent"
                     >
                         <span className="flex items-center gap-2">
                             <span className="text-lg leading-none">{localState.flag}</span>
@@ -132,9 +132,7 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
 
             <input
                 className={cn(
-                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                    "bg-white/50 dark:bg-white/5 border-gray-200 dark:border-white/10 focus:bg-white dark:focus:bg-white/10 transition-all text-gray-900 dark:text-white",
-                    className
+                    "flex h-full w-full rounded-r-md border-none bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 text-gray-900 dark:text-white",
                 )}
                 placeholder={placeholder}
                 value={localState.number}

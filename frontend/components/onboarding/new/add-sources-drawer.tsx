@@ -85,7 +85,7 @@ export function AddSourcesDrawer({
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200, mass: 0.6 }} // Snappy yet smooth
-                        className="fixed inset-y-0 right-0 w-full max-w-[480px] bg-white shadow-2xl z-[100000] flex flex-col border-l border-zinc-100"
+                        className="fixed inset-y-0 right-0 w-full max-w-[480px] bg-white shadow-2xl z-[100000] flex flex-col border-l border-zinc-200 rounded-l-3xl overflow-hidden"
                     >
                         {/* Header */}
                         <div className="p-6 border-b border-zinc-50 flex items-start justify-between bg-white/80 backdrop-blur-xl sticky top-0 z-10">

@@ -30,11 +30,16 @@ import { CampaignCard } from "@/components/customer-intelligence/CampaignCard";
 import { ContactDetailsInline } from "@/components/customer-intelligence/ContactDetailsInline"; // [NEW]
 import { CallAnalysisSummary } from "@/components/customer-intelligence/CallAnalysisSummary"; // [NEW]
 import { ContactDetailsCard } from "@/components/customer-intelligence/ContactDetailsCard";
+import { CsvUploadCard } from "@/components/customer-intelligence/CsvUploadCard";
+import { CampaignComposer } from "@/components/customer-intelligence/CampaignComposer";
+
+import { useAuth } from "@/context/auth-context"; // [NEW]
 
 // Types for Mock State
 type ExtractionStatus = 'IDLE' | 'CALLING' | 'RINGING' | 'IN_PROGRESS' | 'COMPLETED' | 'REVIEW' | 'ERROR';
 
 export default function CustomerIntelligencePage() {
+    const { loading: isAuthLoading, companyId } = useAuth(); // [NEW] Using context to prevent race conditions
     const [status, setStatus] = useState<ExtractionStatus>('IDLE');
     const [detailedStatus, setDetailedStatus] = useState<string | null>(null); // [NEW]
     const [isCalendarConnected, setIsCalendarConnected] = useState(false);
@@ -49,9 +54,13 @@ export default function CustomerIntelligencePage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null); // [NEW]
 
     const [activeCampaign, setActiveCampaign] = useState<any>(null); // [NEW]
-    const [contactDetails, setContactDetails] = useState({ name: '', phone: '' }); // [NEW]
+    const [contactDetails, setContactDetails] = useState({ name: '', phone: '', linkedin: '', designation: '', team: '' }); // [NEW]
     const [isContactSaved, setIsContactSaved] = useState(false); // [NEW]
     const [isLoadingUser, setIsLoadingUser] = useState(true); // [NEW]
+    const [isComposerOpen, setIsComposerOpen] = useState(false);
+    const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+    const [composerView, setComposerView] = useState<'composer' | 'leads'>('composer');
+    const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null); // [NEW] Track expanded card
     const searchParams = useSearchParams();
 
     // Campaign History State
@@ -63,6 +72,9 @@ export default function CustomerIntelligencePage() {
     const CAMPAIGNS_PER_PAGE = 3;
 
     const fetchCampaigns = async (offset = 0, append = false) => {
+        // Guard: Wait for auth to be ready and companyId to be present
+        if (isAuthLoading || !companyId) return;
+
         try {
             setIsLoadingCampaigns(true);
             const data = await api.get(`/intelligence/campaigns?limit=${CAMPAIGNS_PER_PAGE}&offset=${offset}`);
@@ -87,13 +99,31 @@ export default function CustomerIntelligencePage() {
         }
     };
 
+    // Initial load of campaigns - Depends on Auth
     useEffect(() => {
-        fetchCampaigns();
-    }, []);
+        if (!isAuthLoading && companyId) {
+            fetchCampaigns();
+        }
+    }, [isAuthLoading, companyId]);
 
     const handleLoadMore = () => {
         fetchCampaigns(campaignOffset, true);
     };
+
+    const handleDeleteCampaign = async (campaignId: string) => {
+        try {
+            await api.delete(`/intelligence/campaigns/${campaignId}`);
+            // Remove from local state after successful deletion
+            setLatestCampaigns(prev => prev.filter(c => c.id !== campaignId));
+            toast.success("Campaign deleted successfully");
+        } catch (error: any) {
+            console.error("Failed to delete campaign:", error);
+            toast.error(error.message || "Failed to delete campaign");
+            throw error; // Re-throw so CampaignCard can handle loading state
+        }
+    };
+
+
 
     // Refresh campaigns when an interview completes
     useEffect(() => {
@@ -105,6 +135,8 @@ export default function CustomerIntelligencePage() {
 
     // Fetch Calendar Status
     const fetchCalendarStatus = async () => {
+        if (isAuthLoading || !companyId) return;
+
         try {
             const data = await api.get("/intelligence/calendar/status");
             // console.log("Calendar status data:", data);
@@ -118,20 +150,28 @@ export default function CustomerIntelligencePage() {
     };
 
     const fetchUserProfile = async () => {
+        if (isAuthLoading || !companyId) return;
+
         try {
             setIsLoadingUser(true);
             const user = await api.get("/users/me");
             if (user) {
                 setContactDetails({
                     name: user.full_name || '',
-                    phone: user.contact_number || ''
+                    phone: user.contact_number || '',
+                    linkedin: user.linkedin_profile ? user.linkedin_profile.replace(/^(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\//, '') : '',
+                    designation: user.designation || '',
+                    team: user.team || ''
                 });
                 // Mark as saved if both fields are present
-                if (user.full_name && user.contact_number) {
+                if (user.full_name && user.contact_number && user.designation && user.team) {
                     setIsContactSaved(true);
                     setOriginalContactDetails({
                         name: user.full_name,
-                        phone: user.contact_number
+                        phone: user.contact_number,
+                        linkedin: user.linkedin_profile ? user.linkedin_profile.replace(/^(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\//, '') : '',
+                        designation: user.designation || '',
+                        team: user.team || ''
                     });
                 }
             }
@@ -143,18 +183,28 @@ export default function CustomerIntelligencePage() {
     };
 
     useEffect(() => {
-        fetchCalendarStatus();
-        fetchUserProfile();
-        const interval = setInterval(fetchCalendarStatus, 10000); // Poll every 10 seconds
+        if (!isAuthLoading && companyId) {
+            fetchCalendarStatus();
+            fetchUserProfile();
+        }
+    }, [isAuthLoading, companyId]);
+
+    // Polling also needs to respect the guard, but simpler to just let it call the safe function
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!isAuthLoading && companyId) {
+                fetchCalendarStatus();
+            }
+        }, 10000); // Poll every 10 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [isAuthLoading, companyId]);
 
     // If redirected back from Google, refresh status
     useEffect(() => {
-        if (searchParams?.get('calendar_connected') === 'true') {
+        if (searchParams?.get('calendar_connected') === 'true' && !isAuthLoading && companyId) {
             fetchCalendarStatus();
         }
-    }, [searchParams]);
+    }, [searchParams, isAuthLoading, companyId]);
 
     const handleConnectCalendar = async () => {
         try {
@@ -184,13 +234,19 @@ export default function CustomerIntelligencePage() {
         setIsDisconnectDialogOpen(true);
     };
 
-    const handleContactChange = (field: 'name' | 'phone', value: string) => {
+    const handleContactChange = (field: 'name' | 'phone' | 'linkedin' | 'designation' | 'team', value: string) => {
         setContactDetails(prev => ({ ...prev, [field]: value }));
     };
 
-    const [originalContactDetails, setOriginalContactDetails] = useState({ name: '', phone: '' });
+    const [originalContactDetails, setOriginalContactDetails] = useState({ name: '', phone: '', linkedin: '', designation: '', team: '' });
 
-    const handleSaveContact = async () => {
+    const handleSaveContact = async (shouldSave: boolean = true) => {
+        // If switched to edit mode (shouldSave=false), just update state
+        if (shouldSave === false) {
+            setIsContactSaved(false);
+            return;
+        }
+
         // Validate before saving
         if (!contactDetails.name.trim() || contactDetails.name.trim().length < 2) {
             toast.error("Please enter a valid name (at least 2 characters).");
@@ -209,11 +265,24 @@ export default function CustomerIntelligencePage() {
             return;
         }
 
+        if (!contactDetails.designation || contactDetails.designation.length < 2) {
+            toast.error("Designation is required.");
+            return;
+        }
+
+        if (!contactDetails.team || contactDetails.team.length < 2) {
+            toast.error("Team is required.");
+            return;
+        }
+
         try {
             // Save to backend
             await api.patch('/users/me', {
                 full_name: contactDetails.name,
-                contact_number: contactDetails.phone
+                contact_number: contactDetails.phone,
+                linkedin_profile: contactDetails.linkedin ? `https://linkedin.com/in/${contactDetails.linkedin}` : '',
+                designation: contactDetails.designation,
+                team: contactDetails.team
             });
             setIsContactSaved(true);
             setOriginalContactDetails({ ...contactDetails });
@@ -229,7 +298,7 @@ export default function CustomerIntelligencePage() {
         setContactDetails({ ...originalContactDetails });
     };
 
-    const isContactReady = contactDetails.name.length > 0 && contactDetails.phone.length > 0 && isContactSaved;
+    const isContactReady = contactDetails.name.length > 0 && contactDetails.phone.length > 0 && contactDetails.designation.length > 0 && contactDetails.team.length > 0 && isContactSaved;
 
     // Calculate Readiness Score
     const calculateReadinessScore = () => {
@@ -376,19 +445,48 @@ export default function CustomerIntelligencePage() {
     };
 
 
+    const handleSaveWindow = async (window: { day: string; start: string; end: string }) => {
+        // If no active campaign, we can't save. Ideally we should have one active or create one.
+        // For now, let's assume activeCampaign or use latestCampaigns[0] if available?
+        // Or create a new one?
+        // Requirement: "save that slot in campaigns table properly"
+        // Let's rely on activeCampaign state, or find the latest one.
+        let targetId = activeCampaign?.id;
+
+        if (!targetId && latestCampaigns.length > 0) {
+            targetId = latestCampaigns[0].id; // Fallback to latest
+        }
+
+        if (!targetId) {
+            toast.error("No active campaign found. Please start a campaign first.");
+            return;
+        }
+
+        try {
+            await api.post(`/intelligence/campaigns/${targetId}/windows`, window);
+            toast.success("Execution window blocked & synced to calendar!");
+
+            // Refresh campaign to update UI
+            const updated = await api.get(`/intelligence/campaigns/${targetId}`);
+            setActiveCampaign(updated);
+
+            // Optionally refresh calendar availability
+            fetchCalendarStatus();
+        } catch (error: any) {
+            console.error("Failed to save window:", error);
+            toast.error(error.message || "Failed to save execution window");
+        }
+    };
+
     return (
-        <div className="p-6 md:p-8 min-h-screen">
-            <div className="max-w-7xl mx-auto">
+        <div className="p-6 md:p-8 min-h-screen flex flex-col">
+            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 {/* Header Section - Only show when not in blocking state */}
                 {(isLoadingUser || isContactReady) && (
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                        {/* Header content maintained */}
                         <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase tracking-wider border border-orange-500/20">
-                                    Phase 1: Goal Extraction
-                                </span>
-                            </div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-[#E4E4E7] tracking-tight font-display">
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-[#E4E4E7] tracking-tight font-sans">
                                 Customer Intelligence
                             </h1>
                             <p className="text-gray-400 dark:text-[#71717A] text-sm">
@@ -402,7 +500,14 @@ export default function CustomerIntelligencePage() {
                                     <Clock className="w-4 h-4 mr-2 text-gray-400" />
                                     History
                                 </Button>
-                                <Button className="rounded-2xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
+                                <Button
+                                    className="rounded-2xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20"
+                                    onClick={() => {
+                                        setEditingCampaignId(null);
+                                        setComposerView('composer');
+                                        setIsComposerOpen(true);
+                                    }}
+                                >
                                     <Sparkles className="w-4 h-4 mr-2" />
                                     New Campaign
                                 </Button>
@@ -412,30 +517,32 @@ export default function CustomerIntelligencePage() {
                 )}
 
                 {isLoadingUser ? (
-                    <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="flex-1 flex items-center justify-center min-h-[400px]">
                         <MagicLoader text="Loading your profile..." />
                     </div>
                 ) : !isContactReady ? (
                     // BLOCKING STATE: Contact Details Required
-                    <div className="relative flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-700 max-w-lg mx-auto">
+                    <div className="flex-1 relative flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700 max-w-lg mx-auto w-full">
                         {/* Ambient Glow */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-500/10 blur-[100px] rounded-full pointer-events-none" />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-orange-500/10 blur-[80px] rounded-full pointer-events-none" />
 
-                        <div className="relative z-10 text-center mb-8 space-y-3">
+                        <div className="relative z-10 text-center mb-5 space-y-3">
                             <motion.div
                                 initial={{ y: 0 }}
-                                animate={{ y: [0, -10, 0] }}
-                                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                                className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-gradient-to-br from-orange-500/10 to-transparent border border-orange-500/20 shadow-2xl shadow-orange-500/10 mb-2"
+                                animate={{ y: [0, -4, 0] }}
+                                transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+                                className="inline-flex items-center justify-center w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-white/80 to-white/40 dark:from-white/10 dark:to-white/5 border border-white/40 dark:border-white/10 shadow-xl shadow-orange-500/20 mb-2 backdrop-blur-xl ring-1 ring-white/50 dark:ring-white/10"
                             >
-                                <ShieldCheck className="w-10 h-10 text-orange-500 drop-shadow-sm" />
+                                <ShieldCheck className="w-8 h-8 text-orange-500 drop-shadow-sm" />
                             </motion.div>
-                            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-gray-900 via-gray-800 to-gray-500 dark:from-white dark:via-gray-200 dark:to-gray-500 tracking-tight">
-                                Unlock Customer Intelligence
-                            </h2>
-                            <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed max-w-md mx-auto">
-                                Provide your contact details so our AI agent can call you to extract campaign priorities.
-                            </p>
+                            <div>
+                                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-gray-900 via-gray-800 to-gray-600 dark:from-white dark:via-gray-100 dark:to-gray-400 tracking-tight mb-1">
+                                    Unlock Customer Intelligence
+                                </h2>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-lg mx-auto font-medium">
+                                    Our voice agents use this context to establish credibility and improve conversion rates.
+                                </p>
+                            </div>
                         </div>
 
                         <ContactDetailsCard
@@ -451,159 +558,18 @@ export default function CustomerIntelligencePage() {
                         {/* Bento Grid Layout */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                            {/* 1. Goal Extraction Mega-Card (Left 2/3) */}
-                            <Card className="lg:col-span-8 overflow-hidden border-gray-100/50 dark:border-white/[0.03] bg-white/40 dark:bg-white/[0.01] backdrop-blur-md rounded-[2.5rem] relative group min-h-[550px]">
-                                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/[0.03] to-transparent pointer-events-none" />
-
-                                <CardContent className="p-0 flex flex-col h-full relative z-10">
-
-                                    <AnimatePresence mode="wait">
-                                        {status === 'IDLE' || status === 'CALLING' || status === 'RINGING' || status === 'IN_PROGRESS' ? (
-                                            <motion.div
-                                                key="call-logic"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex flex-col items-center justify-center h-full p-8 md:p-12 text-center"
-                                            >
-                                                {/* Siri-style Waveform */}
-                                                <div className="mb-12 relative flex items-center justify-center h-32 w-full">
-                                                    <LiveWaveform isActive={status === 'IN_PROGRESS' || status === 'CALLING' || status === 'RINGING'} />
-                                                </div>
-
-                                                <div className="max-w-md">
-                                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                                                        {status === 'IDLE' ? "Align with AI Researcher" :
-                                                            status === 'CALLING' || status === 'RINGING' ? "Connecting with AI..." : "Extracting Strategic Goals"}
-                                                    </h2>
-                                                    <div className="text-gray-500 dark:text-zinc-400 mb-8 leading-relaxed space-y-3">
-                                                        {status === 'IDLE' ? (
-                                                            <>
-                                                                <p className="text-base">
-                                                                    Our AI agent will call you to extract primary goals and cohorts for your upcoming high-intent customer interviews.
-                                                                </p>
-                                                                <div className="flex items-center justify-center gap-2 py-2">
-                                                                    <span className="font-mono text-lg font-bold text-gray-900 dark:text-white tracking-wide">
-                                                                        {contactDetails.phone}
-                                                                    </span>
-                                                                    <button
-                                                                        onClick={() => setIsContactSaved(false)}
-                                                                        className="inline-flex items-center p-1.5 rounded-lg text-orange-500 hover:text-orange-600 hover:bg-orange-500/10 transition-all"
-                                                                        title="Edit contact details"
-                                                                    >
-                                                                        <Pencil className="w-4 h-4" />
-                                                                    </button>
-                                                                </div>
-                                                            </>
-                                                        ) : (
-                                                            <p className="text-base">
-                                                                Stay on the line. We're capturing your objectives to build the perfect interview script.
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    {status === 'IDLE' ? (
-                                                        <>
-                                                            {/* <Button
-                                                            onClick={handleStartInterview}
-                                                            size="lg"
-                                                            disabled={!isContactReady}
-                                                            className={cn(
-                                                                "rounded-2xl h-14 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 enabled:hover:bg-zinc-800 dark:enabled:hover:bg-gray-100 transition-all font-bold text-lg group",
-                                                                !isContactReady && "opacity-50 cursor-not-allowed"
-                                                            )}
-                                                            title={!isContactReady ? "Please provide contact details first" : "Start Interview"}
-                                                        >
-                                                            Trigger Phone Interview
-                                                            <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                                                        </Button> */}
-                                                        </>
-                                                    ) : (
-                                                        <div className="flex flex-col items-center">
-                                                            <div className="flex items-center gap-3 px-6 py-3 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-500 font-bold animate-pulse mb-4">
-                                                                <span className="relative flex h-3 w-3">
-                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-                                                                </span>
-                                                                {status === 'CALLING' ? "Calling your number..." :
-                                                                    status === 'RINGING' ? "Phone is ringing..." :
-                                                                        detailedStatus ?
-                                                                            <span className="capitalize">{detailedStatus.replace(/_/g, ' ')}...</span> :
-                                                                            "Interview in progress..."}
-                                                            </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                onClick={() => setStatus('IDLE')}
-                                                                className="text-gray-400 text-xs hover:text-red-500"
-                                                            >
-                                                                End Session
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </motion.div>
-
-
-                                        ) : status === 'COMPLETED' && activeCampaign ? (
-                                            <CallAnalysisSummary
-                                                campaign={activeCampaign}
-                                                onClose={() => setStatus('IDLE')}
-                                                onViewCampaign={() => {
-                                                    // Scroll to campaigns list
-                                                    const campaignsList = document.getElementById('latest-campaigns');
-                                                    if (campaignsList) {
-                                                        campaignsList.scrollIntoView({ behavior: 'smooth' });
-                                                    }
-                                                    setStatus('IDLE');
-                                                }}
-                                            />
-                                        ) : status === 'ERROR' ? (
-                                            <motion.div
-                                                key="error-state"
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                className="flex flex-col items-center"
-                                            >
-                                                <div className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
-                                                    <X className="w-16 h-16 text-red-500" />
-                                                </div>
-
-                                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                                                    Interview Failed
-                                                </h2>
-
-                                                <p className="text-gray-500 dark:text-zinc-400 mb-6 max-w-md text-center">
-                                                    {errorMessage || "An error occurred while starting the interview."}
-                                                </p>
-
-                                                <div className="flex gap-3">
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() => setStatus('IDLE')}
-                                                        className="rounded-2xl"
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                    <Button
-                                                        onClick={handleStartInterview}
-                                                        className="rounded-2xl bg-orange-500 hover:bg-orange-600 text-white"
-                                                    >
-                                                        Try Again
-                                                    </Button>
-                                                </div>
-                                            </motion.div>
-                                        ) : null}
-                                    </AnimatePresence>
-
-                                </CardContent>
-                            </Card>
+                            {/* 1. CSV Upload Mega-Card (Left 3/4) */}
+                            <CsvUploadCard
+                                className="lg:col-span-9"
+                                onSuccess={() => fetchCampaigns(0, false)}
+                            />
 
                             {/* 2. Right Column (Calendar & Readiness) */}
-                            <div className="lg:col-span-4 space-y-6 flex flex-col">
+                            <div className="lg:col-span-3 space-y-4 flex flex-col">
 
                                 {/* Calendar Sync Card */}
-                                <Card className="flex-1 border-gray-100/50 dark:border-white/[0.03] bg-white/40 dark:bg-white/[0.01] backdrop-blur-md rounded-[2.5rem] overflow-hidden group">
-                                    <CardContent className="p-8 flex flex-col h-full">
+                                <Card className="border-gray-100/50 dark:border-white/[0.03] bg-white/40 dark:bg-white/[0.01] backdrop-blur-md rounded-[2.5rem] overflow-hidden group">
+                                    <CardContent className="p-5 flex flex-col">
                                         <div className="flex items-center justify-between mb-8">
                                             <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-500">
                                                 <Calendar className="w-6 h-6" />
@@ -617,7 +583,7 @@ export default function CustomerIntelligencePage() {
                                         </div>
 
                                         <h3 className="text-xl font-bold dark:text-white mb-2">Calendar Access</h3>
-                                        <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6 flex-1 italic">
+                                        <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6 italic">
                                             &quot;Schedule interviews with zero friction by letting us know when you&apos;re busy.&quot;
                                         </p>
 
@@ -717,7 +683,7 @@ export default function CustomerIntelligencePage() {
 
                                 {/* Readiness Summary Card */}
                                 <Card className="border-gray-100/50 dark:border-white/[0.03] bg-zinc-900 dark:bg-[#FF8A4C]/10 rounded-[2.5rem] overflow-hidden text-white">
-                                    <CardContent className="p-8">
+                                    <CardContent className="p-5">
                                         <div className="flex items-center gap-3 mb-4">
                                             <ShieldCheck className="w-5 h-5 text-orange-400" />
                                             <span className="text-sm font-bold uppercase tracking-wider text-orange-400">Readiness Score</span>
@@ -781,9 +747,33 @@ export default function CustomerIntelligencePage() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500 ease-in-out">
-                                    {latestCampaigns.map((campaign, i) => (
-                                        <CampaignCard key={campaign.id || i} campaign={campaign} variant="summary" index={i} />
-                                    ))}
+                                    {latestCampaigns.map((campaign, i) => {
+                                        const isExpanded = expandedCampaignId === campaign.id;
+                                        return (
+                                            <div
+                                                key={campaign.id || i}
+                                                className={cn(
+                                                    "transition-all duration-500 ease-in-out",
+                                                    isExpanded ? "col-span-1 md:col-span-2 lg:col-span-3" : "col-span-1"
+                                                )}
+                                            >
+                                                <CampaignCard
+                                                    campaign={campaign}
+                                                    variant="summary"
+                                                    index={i}
+                                                    isExpanded={isExpanded}
+                                                    onToggleExpand={() => setExpandedCampaignId(isExpanded ? null : campaign.id)}
+                                                    onDelete={handleDeleteCampaign}
+                                                    onEditClick={(id) => {
+                                                        setEditingCampaignId(id);
+                                                        setComposerView('composer');
+                                                        setIsComposerOpen(true);
+                                                    }}
+                                                    onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
@@ -792,6 +782,166 @@ export default function CustomerIntelligencePage() {
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Goal Extraction Section (Moved) */}
+                        <div className="mt-20 border-t border-gray-100/50 dark:border-white/[0.03] pt-20">
+                            <div className="flex flex-col gap-0.5 mb-10">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">AI Goal Alignment</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Align with our AI researcher to tune your interview strategy.</p>
+                            </div>
+
+                            <Card className="overflow-hidden border-gray-100/50 dark:border-white/[0.03] bg-white/40 dark:bg-white/[0.01] backdrop-blur-md rounded-[2.5rem] relative group min-h-[550px] max-w-4xl">
+                                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/[0.03] to-transparent pointer-events-none" />
+
+                                <CardContent className="p-0 flex flex-col h-full relative z-10">
+
+                                    <AnimatePresence mode="wait">
+                                        {status === 'IDLE' || status === 'CALLING' || status === 'RINGING' || status === 'IN_PROGRESS' ? (
+                                            <motion.div
+                                                key="call-logic"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="flex flex-col items-center justify-center h-full p-8 md:p-12 text-center"
+                                            >
+                                                {/* Siri-style Waveform */}
+                                                <div className="mb-12 relative flex items-center justify-center h-32 w-full">
+                                                    <LiveWaveform isActive={status === 'IN_PROGRESS' || status === 'CALLING' || status === 'RINGING'} />
+                                                </div>
+
+                                                <div className="max-w-md">
+                                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                                                        {status === 'IDLE' ? "Align with AI Researcher" :
+                                                            status === 'CALLING' || status === 'RINGING' ? "Connecting with AI..." : "Extracting Strategic Goals"}
+                                                    </h2>
+                                                    <div className="text-gray-500 dark:text-zinc-400 mb-8 leading-relaxed space-y-3">
+                                                        {status === 'IDLE' ? (
+                                                            <>
+                                                                <p className="text-base">
+                                                                    Our AI agent will call you to extract primary goals and cohorts for your upcoming high-intent customer interviews.
+                                                                </p>
+                                                                <ContactDetailsInline
+                                                                    contactDetails={contactDetails}
+                                                                    onChange={handleContactChange}
+                                                                    onSave={() => handleSaveContact(true)}
+                                                                    onCancel={handleCancelEdit}
+                                                                    className="justify-center py-2"
+                                                                />
+                                                            </>
+                                                        ) : (
+                                                            <p className="text-base">
+                                                                Stay on the line. We're capturing your objectives to build the perfect interview script.
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {status === 'IDLE' ? (
+                                                        <>
+                                                            <Button
+                                                                onClick={handleStartInterview}
+                                                                size="lg"
+                                                                disabled={!isContactReady}
+                                                                className={cn(
+                                                                    "rounded-2xl h-14 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 enabled:hover:bg-zinc-800 dark:enabled:hover:bg-gray-100 transition-all font-bold text-lg group",
+                                                                    !isContactReady && "opacity-50 cursor-not-allowed"
+                                                                )}
+                                                                title={!isContactReady ? "Please provide contact details first" : "Start Interview"}
+                                                            >
+                                                                Trigger Phone Interview
+                                                                <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                                                            </Button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center">
+                                                            <div className="flex items-center gap-3 px-6 py-3 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-500 font-bold animate-pulse mb-4">
+                                                                <span className="relative flex h-3 w-3">
+                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                                                                </span>
+                                                                {status === 'CALLING' ? "Calling your number..." :
+                                                                    status === 'RINGING' ? "Phone is ringing..." :
+                                                                        detailedStatus ?
+                                                                            <span className="capitalize">{detailedStatus.replace(/_/g, ' ')}...</span> :
+                                                                            "Interview in progress..."}
+                                                            </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                onClick={() => setStatus('IDLE')}
+                                                                className="text-gray-400 text-xs hover:text-red-500"
+                                                            >
+                                                                End Session
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+
+
+                                        ) : status === 'COMPLETED' && activeCampaign ? (
+                                            <CallAnalysisSummary
+                                                campaign={activeCampaign}
+                                                onClose={() => setStatus('IDLE')}
+                                                onViewCampaign={() => {
+                                                    // Scroll to campaigns list with enhanced behavior
+                                                    setStatus('IDLE');
+
+                                                    // Small delay to ensure DOM updates complete
+                                                    setTimeout(() => {
+                                                        const campaignsList = document.getElementById('latest-campaigns');
+                                                        if (campaignsList) {
+                                                            // Scroll with offset for better visibility
+                                                            const yOffset = -80; // Offset from top for better visibility
+                                                            const y = campaignsList.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+                                                            window.scrollTo({
+                                                                top: y,
+                                                                behavior: 'smooth'
+                                                            });
+                                                        }
+                                                    }, 100);
+                                                }}
+                                            />
+                                        ) : status === 'ERROR' ? (
+                                            <motion.div
+                                                key="error-state"
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                className="flex flex-col items-center"
+                                            >
+                                                <div className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                                                    <X className="w-16 h-16 text-red-500" />
+                                                </div>
+
+                                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                                                    Interview Failed
+                                                </h2>
+
+                                                <p className="text-gray-500 dark:text-zinc-400 mb-6 max-w-md text-center">
+                                                    {errorMessage || "An error occurred while starting the interview."}
+                                                </p>
+
+                                                <div className="flex gap-3">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => setStatus('IDLE')}
+                                                        className="rounded-2xl"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        onClick={handleStartInterview}
+                                                        className="rounded-2xl bg-orange-500 hover:bg-orange-600 text-white"
+                                                    >
+                                                        Try Again
+                                                    </Button>
+                                                </div>
+                                            </motion.div>
+                                        ) : null}
+                                    </AnimatePresence>
+
+                                </CardContent>
+                            </Card>
                         </div>
                     </>
                 )}
@@ -808,7 +958,40 @@ export default function CustomerIntelligencePage() {
                 isOpen={isAvailabilityPopupOpen}
                 onClose={() => setIsAvailabilityPopupOpen(false)}
                 busySlots={calendarData?.busy_slots || []}
+                activeCampaign={activeCampaign || (latestCampaigns.length > 0 ? latestCampaigns[0] : null)}
+                onSaveWindow={handleSaveWindow}
             />
+
+            <AnimatePresence>
+                {isComposerOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 md:p-8">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-5xl"
+                        >
+                            {composerView === 'leads' ? (
+                                <CsvUploadCard
+                                    mode="edit"
+                                    campaignId={editingCampaignId!}
+                                    onLeadsUpdated={() => setComposerView('composer')}
+                                    onCancel={() => setIsComposerOpen(false)}
+                                    className="h-full shadow-2xl"
+                                />
+                            ) : (
+                                <CampaignComposer
+                                    campaignId={editingCampaignId!}
+                                    onComplete={() => setIsComposerOpen(false)}
+                                    onBack={() => setIsComposerOpen(false)}
+                                    onEditLeads={() => setComposerView('leads')}
+                                    className="h-full shadow-2xl"
+                                />
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div >
     );
 }

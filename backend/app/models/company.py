@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import UniqueConstraint, Column, JSON
+from sqlalchemy import UniqueConstraint, Column, JSON, Text
 from datetime import datetime
 import uuid
 from enum import Enum
@@ -14,8 +14,8 @@ class CompanyBase(SQLModel):
     legal_name: Optional[str] = Field(default=None)
     founded_year: Optional[str] = Field(default=None)
     tagline: Optional[str] = Field(default=None)
-    tags: List[str] = Field(default=[], sa_column=Column(JSON))
-    presence_links: List[Dict[str, Any]] = Field(default=[], sa_column=Column(JSON)) # {label, url, type, id}
+    tags: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    presence_links: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON)) # {label, url, type, id}
     
     # Region & Settings
     currency: str = Field(default="INR")
@@ -23,6 +23,9 @@ class CompanyBase(SQLModel):
     industry: Optional[str] = Field(default=None) # Primary Category
     country: Optional[str] = Field(default=None)
     hq_city: Optional[str] = Field(default=None)
+    
+    # AI Context
+    brand_context: Optional[str] = Field(default=None, sa_column=Column(Text))
     
     # Support Contact
     support_email: Optional[str] = Field(default=None)
@@ -74,4 +77,6 @@ class Workspace(UserTrackedModel, SQLModel, table=True):
     memberships: List["WorkspaceMembership"] = Relationship(back_populates="workspace")
 
 # Forward references for type hinting (imported here to avoid circularity if split)
-from app.models.iam import CompanyMembership, WorkspaceMembership
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.iam import CompanyMembership, WorkspaceMembership

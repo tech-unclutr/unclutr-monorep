@@ -1201,7 +1201,7 @@ async def seed_datasources():
             "slug": "bigcommerce",
             "category": DataSourceCategory.Storefront,
             "website_url": "https://www.bigcommerce.com",
-            "logo_url": "https://logo.clearbit.com/bigcommerce.com",
+            "logo_url": "https://cdn.brandfetch.io/bigcommerce.com/symbol.svg?c=1id0mlmgxmrC1sPyh2v",
             "is_common": False,
         },
         {

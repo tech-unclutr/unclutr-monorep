@@ -5,12 +5,60 @@ from datetime import datetime
 
 from app.models.iam import CompanyMembership
 
+
 async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
+    # 1. Try to find by ID (Standard Case)
     statement = select(User).where(User.id == user_in.id)
     result = await session.exec(statement)
     user = result.first()
     
     if not user:
+        # 2. Check for Email Collision (Migration Case)
+        # Firebase UID changed but email remains same (e.g. deleted/recreated auth user)
+        email_stmt = select(User).where(User.email == user_in.email)
+        email_result = await session.exec(email_stmt)
+        existing_user_by_email = email_result.first()
+        
+        if existing_user_by_email:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"User Migration Triggered: Email {user_in.email} exists on old UID {existing_user_by_email.id}. Migrating to new UID {user_in.id}")
+            
+            old_uid = existing_user_by_email.id
+            new_uid = user_in.id
+            
+            # --- MIGRATION: Update References ---
+            from textwrap import dedent
+            from sqlalchemy import text
+            
+            # We use raw SQL for efficient bulk updates without loading everything
+            # Note: We rely on the fact that these are string/UUID fields.
+            
+            # 1. Memberships (Foreign Keys)
+            await session.exec(text(f"UPDATE company_membership SET user_id = '{new_uid}' WHERE user_id = '{old_uid}'"))
+            await session.exec(text(f"UPDATE workspace_membership SET user_id = '{new_uid}' WHERE user_id = '{old_uid}'"))
+            
+            # 2. Onboarding State (Foreign Key-ish)
+            await session.exec(text(f"UPDATE onboarding_state SET user_id = '{new_uid}' WHERE user_id = '{old_uid}'"))
+            
+            # 3. Audit / Tracking Fields (Strings)
+            # Update created_by/updated_by on key tables
+            # Only include tables that inherit UserTrackedModel or have these fields
+            tables_to_audit_update = ["company", "brand", "workspace"]
+            for tbl in tables_to_audit_update:
+                try:
+                    await session.exec(text(f"UPDATE {tbl} SET created_by = '{new_uid}' WHERE created_by = '{old_uid}'"))
+                    await session.exec(text(f"UPDATE {tbl} SET updated_by = '{new_uid}' WHERE updated_by = '{old_uid}'"))
+                except Exception:
+                    # Log but continue if table/column missing
+                    pass
+            
+            # 4. Delete Old User (to free email constraint)
+            await session.delete(existing_user_by_email)
+            await session.flush() # Commit intermediate delete
+            
+            logger.info("Migration successful. Creating new user record.")
+            
         # Create new
         user = User(
             id=user_in.id,
@@ -31,21 +79,23 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
         session.add(user)
     
     # Check if onboarding is completed
+    # Note: We must flush user first to ensure it exists for FK queries if needed, 
+    # but here we just query membership.
+    await session.commit()
+    await session.refresh(user) 
+    
     membership_stmt = select(CompanyMembership).where(CompanyMembership.user_id == user.id)
     membership_result = await session.exec(membership_stmt)
     membership = membership_result.first()
     
     is_onboarded = membership is not None
     
-    await session.commit()
-    
-    await session.commit()
-    
     # Attach transient attribute for the response serializer
     # Use UserRead to avoid modifying User SQLModel instance which is strict
     user_read = UserRead.from_orm(user)
     user_read.onboarding_completed = is_onboarded
-    user_read.current_company_id = membership.company_id if membership else None
+    user_read.current_company_id = user.current_company_id or (membership.company_id if membership else None)
     user_read.role = membership.role if membership else None
     
     return user_read
+

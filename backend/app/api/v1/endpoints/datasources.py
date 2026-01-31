@@ -59,6 +59,7 @@ async def list_all_datasources(
             "name": ds.name,
             "slug": ds.slug,
             "logo_url": ds.logo_url,
+            "website_url": ds.website_url,
             "category": ds.category,
             "description": ds.description,
             "is_implemented": ds.is_implemented,

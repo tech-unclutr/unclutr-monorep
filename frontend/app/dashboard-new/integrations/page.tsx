@@ -24,6 +24,7 @@ import { EmptyDashboardState } from '@/components/dashboard-new/empty-dashboard-
 import { useRouter } from "next/navigation";
 import { syncOnboardingState } from "@/lib/api/settings";
 import { useAuth } from '@/hooks/use-auth';
+import { IntegrationsComingSoonState } from '@/components/integrations/IntegrationsComingSoonState';
 
 export default function IntegrationsPage() {
     const router = useRouter();
@@ -104,8 +105,8 @@ export default function IntegrationsPage() {
                     });
                 }
             });
-        } else if (user && !companyId) {
-            // User is authenticated but has no company context (yet or at all).
+        } else {
+            // User is authenticated but has no company context, or not logged in.
             // Stop loading to show Empty State / Setup rather than infinite spinner.
             setLoading(false);
         }
@@ -299,31 +300,7 @@ export default function IntegrationsPage() {
                         </p>
                     </div>
 
-                    <div className="relative group">
-                        {/* Blurred Dashboard Preview */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-zinc-950 via-transparent to-transparent z-20 pointer-events-none" />
-                        <div className="relative rounded-[2.5rem] border border-gray-100 dark:border-white/[0.05] overflow-hidden shadow-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
-                            <div className="p-8 filter blur-[8px] opacity-40 select-none grayscale-[0.5]">
-                                <div className="grid grid-cols-3 gap-6 mb-8">
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="h-32 rounded-2xl bg-gray-100 dark:bg-zinc-800" />
-                                    ))}
-                                </div>
-                                <div className="h-64 rounded-2xl bg-gray-100 dark:bg-zinc-800 w-full" />
-                            </div>
-
-                            {/* Centered CTA */}
-                            <div className="absolute inset-0 flex items-center justify-center z-30">
-                                <Button
-                                    className="bg-[#FF8A4C] hover:bg-[#FF8A4C]/90 text-white font-bold h-14 px-10 rounded-2xl shadow-2xl shadow-orange-500/30 flex items-center gap-3 transition-all hover:scale-105 active:scale-95 group"
-                                    onClick={() => setAddDialogOpen(true)}
-                                >
-                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                                    Define Your Business Stack
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
+                    <IntegrationsComingSoonState />
 
                     <div className="mt-16 flex flex-col items-center gap-6 opacity-60 hover:opacity-100 transition-opacity duration-700">
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
@@ -448,14 +425,7 @@ export default function IntegrationsPage() {
 
             {/* My Datastack Section */}
             <div className="space-y-8">
-                <div className="flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-zinc-800/50">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100">Your Stack</h2>
-                    {myDatastack.length > 0 && (
-                        <span className="text-xs font-medium text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
-                            {myDatastack.length}
-                        </span>
-                    )}
-                </div>
+
 
                 {myDatastack.length === 0 ? (
                     <div className="mt-4">

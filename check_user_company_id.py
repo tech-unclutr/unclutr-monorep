@@ -25,6 +25,30 @@ async def main():
             print(f"User Found.")
             print(f"Current Company ID: {user.current_company_id}")
             
+            if user.current_company_id:
+                # Check membership
+                from app.models.iam import CompanyMembership
+                ms = await session.execute(
+                    select(CompanyMembership).where(
+                        CompanyMembership.user_id == target_user_id,
+                        CompanyMembership.company_id == user.current_company_id
+                    )
+                )
+                membership = ms.scalars().first()
+                if membership:
+                    print(f"Membership Found: ID={membership.id}, Role={membership.role}")
+                else:
+                    print("CRITICAL: Membership MISSING for current_company_id!")
+    
+            target_ghost_id = "017ac5e1-78fc-438f-813f-ffc9acc18c14"
+            print(f"\n--- Checking Ghost Company {target_ghost_id} ---")
+            from app.models.company import Company
+            ghost_company = await session.get(Company, target_ghost_id)
+            if ghost_company:
+                print(f"Ghost Company Found! Name: {ghost_company.brand_name}")
+            else:
+                print("Ghost Company NOT FOUND in DB.")
+
             if not user.current_company_id:
                 print("Confirmed: current_company_id is None/Null")
         else:

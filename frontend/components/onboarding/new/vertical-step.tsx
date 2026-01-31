@@ -34,7 +34,7 @@ export function VerticalStep({
     useEffect(() => {
         if (isActive && contentRef.current) {
             setTimeout(() => {
-                contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 300);
         }
     }, [isActive]);

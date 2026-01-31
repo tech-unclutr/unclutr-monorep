@@ -54,10 +54,10 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Settings</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">Manage your brand profile and preferences.</p>
+        <div className="space-y-8 max-w-[1600px] mx-auto pb-12">
+            <div className="flex flex-col gap-1">
+                <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Settings</h1>
+                <p className="text-zinc-500 dark:text-zinc-400 text-lg">Manage your brand profile and preferences.</p>
             </div>
 
             <BrandHeader

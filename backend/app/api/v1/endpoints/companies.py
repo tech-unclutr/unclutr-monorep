@@ -11,6 +11,7 @@ router = APIRouter()
 from app.schemas.company_extended import CompanyReadWithBrands
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+from app.models.iam import CompanyMembership
 
 @router.get("/{id}", response_model=CompanyReadWithBrands)
 async def read_company(
@@ -29,8 +30,7 @@ async def read_company(
         raise HTTPException(status_code=404, detail="Company not found")
     
     # Security: Verify membership since we bypassed TenantMiddleware
-    from app.models.iam import CompanyMembership
-    user_id = current_user.get("uid")
+    user_id = current_user.get("uid") or current_user.get("user_id")
     
     mem_stmt = select(CompanyMembership).where(
         CompanyMembership.company_id == id,

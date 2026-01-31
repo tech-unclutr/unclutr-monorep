@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Search, Check, Crosshair, Plus } from 'lucide-react';
+import { ChevronDown, Search, Check, Crosshair, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Option {
@@ -19,8 +19,10 @@ export interface SearchableSelectProps {
     value: string;
     options: Option[];
     onChange: (value: string) => void;
+    onClear?: () => void; // New prop for clearing value
     onLocate?: () => void; // New prop for "Locate automatically"
     allowCustomValue?: boolean; // New prop to allow custom values
+    usePortal?: boolean; // New prop to control portal usage
     placeholder?: string;
     className?: string;
 }
@@ -30,8 +32,10 @@ export function SearchableSelect({
     value,
     options,
     onChange,
+    onClear,
     onLocate,
-    allowCustomValue = false,
+    allowCustomValue,
+    usePortal = true, // New prop to control portal usage
     placeholder = "Select...",
     className
 }: SearchableSelectProps) {
@@ -52,7 +56,7 @@ export function SearchableSelect({
     const selectedOption = options.find(opt => opt.value === value);
 
     const updatePosition = () => {
-        if (containerRef.current) {
+        if (usePortal && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
             const viewportHeight = window.innerHeight;
             const DROPDOWN_MAX_HEIGHT = 320;
@@ -90,7 +94,7 @@ export function SearchableSelect({
     };
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && usePortal) {
             updatePosition();
             window.addEventListener('scroll', updatePosition, { passive: true });
             window.addEventListener('resize', updatePosition);
@@ -99,7 +103,7 @@ export function SearchableSelect({
             window.removeEventListener('scroll', updatePosition);
             window.removeEventListener('resize', updatePosition);
         };
-    }, [isOpen]);
+    }, [isOpen, usePortal]);
 
     // Click outside listener that handles the portal
     useEffect(() => {
@@ -128,10 +132,145 @@ export function SearchableSelect({
         }
     }, [isOpen]);
 
+    const dropdownContent = (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    ref={dropdownRef}
+                    initial={{ opacity: 0, scale: 0.95, y: usePortal && dropdownStyle.bottom ? 10 : -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: usePortal && dropdownStyle.bottom ? 10 : -10 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    style={usePortal ? dropdownStyle : {}}
+                    className={cn(
+                        "bg-white dark:bg-zinc-900 rounded-xl shadow-2xl shadow-zinc-500/20 border border-zinc-100 dark:border-zinc-800 overflow-hidden ring-1 ring-black/5 flex flex-col min-w-[200px]",
+                        usePortal ? "searchable-select-dropdown" : "absolute top-[calc(100%+8px)] left-0 w-full z-50 max-h-[320px]"
+                    )}
+                >
+                    {/* Search */}
+                    <div className="p-2 border-b border-zinc-100 dark:border-zinc-800 shrink-0 space-y-2">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                            <input
+                                ref={inputRef}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (filteredOptions.length > 0) {
+                                            onChange(filteredOptions[0].value);
+                                            setIsOpen(false);
+                                            setSearch('');
+                                        } else if (allowCustomValue && search.trim()) {
+                                            onChange(search.trim());
+                                            setIsOpen(false);
+                                            setSearch('');
+                                        }
+                                    } else if (e.key === 'Escape') {
+                                        setIsOpen(false);
+                                    }
+                                }}
+                                placeholder="Type to filter..."
+                                className="w-full pl-9 pr-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent focus:border-orange-500/50 focus:bg-white dark:focus:bg-zinc-900 rounded-lg focus:outline-none transition-all placeholder:text-zinc-400 dark:text-zinc-100"
+                            />
+                        </div>
+
+                        {onLocate && !search && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onLocate();
+                                    setIsOpen(false);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-orange-600 bg-orange-50/50 hover:bg-orange-50 rounded-lg transition-colors group/locate"
+                            >
+                                <span>Locate automatically</span>
+                                <Crosshair size={14} className="group-hover/locate:rotate-45 transition-transform duration-300" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Options */}
+                    <div className="overflow-y-auto p-1.5 custom-scrollbar flex-1">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((opt, i) => (
+                                <motion.button
+                                    key={opt.value}
+                                    initial={{ opacity: 0, x: -5 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.02, duration: 0.2 }}
+                                    onClick={() => {
+                                        onChange(opt.value);
+                                        setIsOpen(false);
+                                        setSearch('');
+                                    }}
+                                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-all group border border-transparent ${value === opt.value
+                                        ? 'bg-orange-50/50 text-zinc-900 border-orange-100'
+                                        : 'hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-lg leading-none transition-transform group-hover:scale-110">
+                                            {opt.icon}
+                                        </span>
+                                        <div>
+                                            <span className={`font-medium ${value === opt.value ? 'text-zinc-900' : 'text-zinc-600 group-hover:text-zinc-900'}`}>
+                                                {opt.label}
+                                            </span>
+                                            {opt.subLabel && (
+                                                <span className="ml-2 text-xs opacity-60 font-normal">{opt.subLabel}</span>
+                                            )}
+                                            {opt.tag && (
+                                                <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider text-orange-600 bg-orange-50 border border-orange-100 rounded-md shadow-sm">
+                                                    {opt.tag}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {value === opt.value && (
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                            <Check size={14} className="text-orange-600" />
+                                        </motion.div>
+                                    )}
+                                </motion.button>
+                            ))
+                        ) : (
+                            <>
+                                {allowCustomValue && search.trim() ? (
+                                    <motion.button
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        onClick={() => {
+                                            onChange(search);
+                                            setIsOpen(false);
+                                            setSearch('');
+                                        }}
+                                        className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-all group hover:bg-orange-50 bg-orange-50/50 text-orange-600 border border-orange-100"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Plus size={14} className="text-orange-600" />
+                                            <span className="font-semibold">Use "{search}"</span>
+                                        </div>
+                                        <span className="text-[10px] uppercase font-bold bg-white px-2 py-0.5 rounded border border-orange-100">Custom</span>
+                                    </motion.button>
+                                ) : (
+                                    <div className="py-6 text-center text-zinc-400 text-xs italic">
+                                        No results found
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+
     return (
         <div className="relative group/select">
             {label && (
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block pl-1 group-focus-within/select:text-indigo-500 transition-colors">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block pl-1 group-focus-within/select:text-orange-500 transition-colors">
                     {label}
                 </label>
             )}
@@ -146,8 +285,8 @@ export function SearchableSelect({
                 className={cn(
                     "w-full text-left transition-all duration-200 rounded-lg px-3 py-2 flex items-center justify-between text-sm cursor-pointer border",
                     // Default styles (can be overridden by className if we merge properly, but cn handles tailwind merge)
-                    "bg-zinc-50/50 border-zinc-200 hover:bg-white hover:border-indigo-300",
-                    isOpen && "bg-white ring-2 ring-indigo-500/10 border-indigo-500 z-10",
+                    "bg-white border-zinc-200 hover:border-zinc-300",
+                    isOpen && "bg-white ring-1 ring-zinc-900 border-zinc-900 z-10",
                     // Allow overriding classes to be passed directly to the button if intended?
                     // The 'className' prop usually goes to the container. 
                     // Let's add a separate 'triggerClassName' or just apply 'className' to the button?
@@ -171,129 +310,32 @@ export function SearchableSelect({
                         <span className="text-zinc-400 text-xs hidden sm:inline-block pl-1">{selectedOption.subLabel}</span>
                     )}
                 </div>
-                <ChevronDown size={16} className={cn(
-                    "text-zinc-400 flex-shrink-0 transition-transform duration-300",
-                    isOpen && "rotate-180 text-indigo-500"
-                )} />
+                <div className="flex items-center gap-1">
+                    {value && onClear && (
+                        <div
+                            role="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClear();
+                                setIsOpen(false);
+                            }}
+                            className="p-1 rounded-full text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                        >
+                            <X size={14} />
+                        </div>
+                    )}
+                    <ChevronDown size={16} className={cn(
+                        "text-zinc-400 flex-shrink-0 transition-transform duration-300",
+                        isOpen && "rotate-180 text-orange-500"
+                    )} />
+                </div>
             </button>
 
-            {/* Portal for the Dropdown */}
-            {typeof document !== 'undefined' && createPortal(
-                <AnimatePresence>
-                    {isOpen && (
-                        <motion.div
-                            ref={dropdownRef}
-                            initial={{ opacity: 0, scale: 0.95, y: dropdownStyle.bottom ? 10 : -10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: dropdownStyle.bottom ? 10 : -10 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                            style={dropdownStyle}
-                            className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden ring-1 ring-black/5 flex flex-col min-w-[200px]"
-                        >
-                            {/* Search */}
-                            <div className="p-2 border-b border-zinc-100 dark:border-zinc-800 shrink-0 space-y-2">
-                                <div className="relative">
-                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                                    <input
-                                        ref={inputRef}
-                                        value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
-                                        placeholder="Type to filter..."
-                                        className="w-full pl-9 pr-3 py-1.5 text-sm bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent focus:border-indigo-500/50 focus:bg-white dark:focus:bg-zinc-900 rounded-md focus:outline-none transition-all placeholder:text-zinc-400 dark:text-zinc-100"
-                                    />
-                                </div>
-
-                                {onLocate && !search && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onLocate();
-                                            setIsOpen(false);
-                                        }}
-                                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50/50 hover:bg-indigo-50 rounded-lg transition-colors group/locate"
-                                    >
-                                        <span>Locate automatically</span>
-                                        <Crosshair size={14} className="group-hover/locate:rotate-45 transition-transform duration-300" />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Options */}
-                            <div className="overflow-y-auto p-1.5 custom-scrollbar flex-1">
-                                {filteredOptions.length > 0 ? (
-                                    filteredOptions.map((opt, i) => (
-                                        <motion.button
-                                            key={opt.value}
-                                            initial={{ opacity: 0, x: -5 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: i * 0.02, duration: 0.2 }}
-                                            onClick={() => {
-                                                onChange(opt.value);
-                                                setIsOpen(false);
-                                                setSearch('');
-                                            }}
-                                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-all group ${value === opt.value
-                                                ? 'bg-zinc-100 text-zinc-900'
-                                                : 'hover:bg-zinc-50 text-zinc-400 hover:text-zinc-900' // Base state is muted/grey, hover becomes dark
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-lg leading-none transition-transform group-hover:scale-110">
-                                                    {opt.icon}
-                                                </span>
-                                                <div>
-                                                    <span className={`font-medium ${value === opt.value ? 'text-zinc-900' : 'text-zinc-500 group-hover:text-zinc-900'}`}>
-                                                        {opt.label}
-                                                    </span>
-                                                    {opt.subLabel && (
-                                                        <span className="ml-2 text-xs opacity-60 font-normal">{opt.subLabel}</span>
-                                                    )}
-                                                    {opt.tag && (
-                                                        <span className="ml-2 px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md shadow-sm">
-                                                            {opt.tag}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {value === opt.value && (
-                                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                                    <Check size={14} className="text-zinc-900" />
-                                                </motion.div>
-                                            )}
-                                        </motion.button>
-                                    ))
-                                ) : (
-                                    <>
-                                        {allowCustomValue && search.trim() ? (
-                                            <motion.button
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                onClick={() => {
-                                                    onChange(search);
-                                                    setIsOpen(false);
-                                                    setSearch('');
-                                                }}
-                                                className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-all group hover:bg-indigo-50 bg-indigo-50/50 text-indigo-600 border border-indigo-100"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <Plus size={14} className="text-indigo-600" />
-                                                    <span className="font-semibold">Use "{search}"</span>
-                                                </div>
-                                                <span className="text-[10px] uppercase font-bold bg-white px-2 py-0.5 rounded border border-indigo-100">Custom</span>
-                                            </motion.button>
-                                        ) : (
-                                            <div className="py-6 text-center text-zinc-400 text-xs italic">
-                                                No results found
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>,
-                document.body
-            )}
+            {/* Portal OR Inline Dropdown */}
+            {usePortal && typeof document !== 'undefined'
+                ? createPortal(dropdownContent, document.body)
+                : dropdownContent
+            }
         </div>
     );
 }

@@ -15,6 +15,7 @@ class Campaign(SQLModel, table=True):
     status: str = Field(default="DRAFT") # INITIATED, RINGING, IN_PROGRESS, COMPLETED, FAILED, DRAFT
     
     # Bolna Execution Data
+    source_file_hash: Optional[str] = Field(default=None, index=True) # SHA256 hash of source CSV data
     bolna_execution_id: Optional[str] = Field(default=None, index=True, unique=True)
     bolna_agent_id: Optional[str] = Field(default=None)
     bolna_call_status: Optional[str] = Field(default=None) # completed, failed, no-answer, busy, etc.
@@ -39,6 +40,25 @@ class Campaign(SQLModel, table=True):
     # Quality Scoring
     quality_score: int = Field(default=0) # 0-5
     quality_gap: Optional[str] = Field(default=None) # Reason for low score
+    
+    # Context Fields (Voice Agent Feed)
+    brand_context: Optional[str] = Field(default=None, sa_column=Column(Text))
+    customer_context: Optional[str] = Field(default=None, sa_column=Column(Text))
+    team_member_context: Optional[str] = Field(default=None, sa_column=Column(Text))
+    preliminary_questions: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB)) # Global Selection
+    question_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
+    incentive_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
+    cohort_questions: Optional[Dict[str, List[str]]] = Field(default={}, sa_column=Column(JSONB)) # Mapping of cohort name to list of question strings
+    cohort_incentives: Optional[Dict[str, str]] = Field(default={}, sa_column=Column(JSONB)) # Mapping of cohort name to incentive string
+    incentive: Optional[str] = Field(default=None, sa_column=Column(Text))
+    
+    # Execution Settings
+    total_call_target: Optional[int] = Field(default=None)
+    call_duration_limit: Optional[int] = Field(default=600) # Default 10 mins in seconds
+    cohort_config: Optional[Dict[str, int]] = Field(default={}, sa_column=Column(JSONB)) # {cohort_name: target_count}
+    selected_cohorts: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB)) # List of selected cohort names
+    execution_windows: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSONB)) # [{start, end}]
+    cohort_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

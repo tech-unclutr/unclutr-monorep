@@ -67,12 +67,12 @@ export const syncUserWithBackend = async (user: User) => {
     } catch (error) {
         logFirebaseError(`${logPrefix} Sync Error`, error);
 
-        // TEMPORARY FIX: If fetch fails (backend down), return mock data to allow frontend work
-        // Using a real valid UUID found in the environment to prevent 400 errors
-        console.warn(`${logPrefix} Backend unavailable, returning fallback data for UI development.`);
+        // TEMPORARY FIX: If fetch fails, do NOT poison state with ghost ID
+        console.warn(`${logPrefix} Backend unavailable/Sync failed. Returning partial session.`);
+        // Return minimal user info so app doesn't crash, but set company_id to null to force selection/onboarding
         return {
-            onboarding_completed: true,
-            current_company_id: "017ac5e1-78fc-438f-813f-ffc9acc18c14", // Valid dev company ID
+            onboarding_completed: false, // Force check
+            current_company_id: null,
             user_id: user.uid,
             email: user.email
         };

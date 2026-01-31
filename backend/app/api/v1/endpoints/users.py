@@ -51,6 +51,12 @@ async def update_user_me(
         
     if user_in.full_name is not None:
         user.full_name = user_in.full_name
+    if user_in.linkedin_profile is not None:
+        user.linkedin_profile = user_in.linkedin_profile
+    if user_in.designation is not None:
+        user.designation = user_in.designation
+    if user_in.team is not None:
+        user.team = user_in.team
     if user_in.picture_url is not None:
         user.picture_url = user_in.picture_url
     if user_in.contact_number is not None:

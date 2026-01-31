@@ -29,11 +29,36 @@ interface Datasource {
     name: string;
     slug: string;
     logo_url: string | null;
+    website_url?: string | null;
     category: string;
     description: string | null;
     is_implemented: boolean;
     is_coming_soon: boolean;
 }
+
+const getSafeLogoUrl = (datasource: Datasource): string | null => {
+    if (!datasource.logo_url) return null;
+
+    // valid local or existing good url
+    if (datasource.logo_url.startsWith('/') || datasource.logo_url.startsWith('logos/')) {
+        return datasource.logo_url;
+    }
+
+    // specific fix for clearbit failing
+    if (datasource.logo_url.includes('logo.clearbit.com')) {
+        // Try to construct a better one if we have a website, or just return it and let onError handle it (but onError is flaky for this specific error sometimes)
+        if (datasource.website_url) {
+            try {
+                const domain = new URL(datasource.website_url).hostname.replace('www.', '');
+                return `https://cdn.brandfetch.io/${domain}/symbol.svg?c=1id0mlmgxmrC1sPyh2v`;
+            } catch (e) {
+                // invalid url, fall through
+            }
+        }
+    }
+
+    return datasource.logo_url;
+};
 
 interface AddSourceDialogProps {
     open: boolean;
@@ -332,22 +357,35 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                                                     >
                                                         <div className="flex items-start justify-between w-full">
                                                             <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 flex items-center justify-center p-2 overflow-hidden">
-                                                                {datasource.logo_url &&
-                                                                    !datasource.logo_url.includes('default.png') &&
-                                                                    !datasource.logo_url.startsWith('logos/') &&
-                                                                    (datasource.logo_url.startsWith('http://') || datasource.logo_url.startsWith('https://')) ? (
-                                                                    <img
-                                                                        src={datasource.logo_url}
-                                                                        alt={datasource.name}
-                                                                        className="w-full h-full object-contain"
-                                                                        onError={(e) => {
-                                                                            e.currentTarget.style.display = 'none';
-                                                                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                                                            if (fallback) fallback.style.display = 'flex';
-                                                                        }}
-                                                                    />
-                                                                ) : null}
-                                                                <div className="text-lg font-bold text-gray-400 hidden w-full h-full items-center justify-center" style={{ display: (datasource.logo_url && !datasource.logo_url.includes('default.png') && !datasource.logo_url.startsWith('logos/') && (datasource.logo_url.startsWith('http://') || datasource.logo_url.startsWith('https://'))) ? 'none' : 'flex' }}>
+                                                                {(() => {
+                                                                    const safeUrl = getSafeLogoUrl(datasource);
+                                                                    const isValidUrl = safeUrl &&
+                                                                        !safeUrl.includes('default.png') &&
+                                                                        (safeUrl.startsWith('/') || safeUrl.startsWith('http'));
+
+                                                                    if (isValidUrl) {
+                                                                        return (
+                                                                            <img
+                                                                                src={safeUrl!}
+                                                                                alt={datasource.name}
+                                                                                className="w-full h-full object-contain"
+                                                                                onError={(e) => {
+                                                                                    e.currentTarget.style.display = 'none';
+                                                                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                    if (fallback) fallback.style.display = 'flex';
+                                                                                }}
+                                                                            />
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
+                                                                <div className="text-lg font-bold text-gray-400 hidden w-full h-full items-center justify-center" style={{
+                                                                    display: (() => {
+                                                                        const safeUrl = getSafeLogoUrl(datasource);
+                                                                        const isValidUrl = safeUrl && !safeUrl.includes('default.png') && (safeUrl.startsWith('/') || safeUrl.startsWith('http'));
+                                                                        return isValidUrl ? 'none' : 'flex';
+                                                                    })()
+                                                                }}>
                                                                     {datasource.name[0]}
                                                                 </div>
                                                             </div>

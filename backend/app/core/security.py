@@ -78,6 +78,9 @@ def get_current_user(
 
     try:
         decoded_token = auth.verify_id_token(token)
+        # Normalize User ID: Firebase uses 'user_id', but our code often expects 'uid'
+        if "user_id" in decoded_token and "uid" not in decoded_token:
+            decoded_token["uid"] = decoded_token["user_id"]
         return decoded_token
     except Exception as e:
         logger.error(f"Auth Verification Failed: {e}", exc_info=True)
@@ -104,6 +107,9 @@ async def get_current_user_no_depends(auth_header: str):
         
     try:
         decoded_token = auth.verify_id_token(token)
+        # Normalize User ID
+        if "user_id" in decoded_token and "uid" not in decoded_token:
+            decoded_token["uid"] = decoded_token["user_id"]
         return decoded_token
     except Exception as e:
         raise HTTPException(

@@ -10,6 +10,7 @@ class CompanyBase(BaseModel):
     founded_year: Optional[str] = None
     tagline: Optional[str] = None
     industry: Optional[str] = None
+    brand_context: Optional[str] = None
     hq_city: Optional[str] = None
     support_email: Optional[str] = None
     support_phone: Optional[str] = None
@@ -28,6 +29,7 @@ class CompanyUpdate(BaseModel):
     founded_year: Optional[str] = None
     tagline: Optional[str] = None
     industry: Optional[str] = None
+    brand_context: Optional[str] = None
     hq_city: Optional[str] = None
     support_email: Optional[str] = None
     support_phone: Optional[str] = None
@@ -49,4 +51,4 @@ class CompanyRead(CompanyBase):
     channels_data: Optional[Dict[str, Any]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

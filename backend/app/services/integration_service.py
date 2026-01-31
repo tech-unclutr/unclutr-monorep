@@ -208,13 +208,16 @@ async def get_integrations_for_company(session: AsyncSession, company_id: uuid.U
                 datasource.slug.lower() in stack_identifiers
             )
         
+        # Prepare metadata safely
+        meta = integration.metadata_info or {}
+        
         formatted.append({
             "id": str(integration.id),
             "status": integration.status,
             "in_stack": is_in_stack,
             "last_sync_at": integration.last_sync_at,
             "error_message": integration.error_message,
-            "metadata_info": integration.metadata_info,
+            "metadata_info": meta,
             "datasource": {
                 "id": str(datasource.id),
                 "name": datasource.name,
@@ -225,8 +228,8 @@ async def get_integrations_for_company(session: AsyncSession, company_id: uuid.U
                 "is_implemented": datasource.is_implemented,
             },
             "stats": {
-                "records_count": integration.metadata_info.get("sync_stats", {}).get("orders_count", integration.metadata_info.get("records_count", 0)),
-                "sync_success_rate": integration.metadata_info.get("sync_success_rate", 100.0),
+                "records_count": meta.get("sync_stats", {}).get("orders_count", meta.get("records_count", 0)),
+                "sync_success_rate": meta.get("sync_success_rate", 100.0),
                 "health": "healthy" if integration.status == IntegrationStatus.ACTIVE else "warning"
             }
         })

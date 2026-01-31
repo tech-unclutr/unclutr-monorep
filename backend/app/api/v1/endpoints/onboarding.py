@@ -78,15 +78,23 @@ async def save_progress(
     # Convert Pydantic model to dict if necessary
     data_payload = request.data.dict() if hasattr(request.data, 'dict') else request.data
     
-    state = await onboarding_service.save_onboarding_progress(
-        session, user_id, request.page, data_payload
-    )
-    
-    return {
-        "status": "saved",
-        "current_page": state.current_page,
-        "last_saved_at": state.last_saved_at.isoformat() if state.last_saved_at else None
-    }
+    try:
+        state = await onboarding_service.save_onboarding_progress(
+            session, user_id, request.page, data_payload
+        )
+        
+        return {
+            "status": "saved",
+            "current_page": state.current_page,
+            "last_saved_at": state.last_saved_at.isoformat() if state.last_saved_at else None
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal Error in save_progress: {str(e)}"
+        )
 
 @router.post("/finish")
 async def finish_onboarding(

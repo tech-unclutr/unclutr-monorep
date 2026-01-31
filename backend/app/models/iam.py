@@ -59,4 +59,6 @@ class CompanyEntitlement(SQLModel, table=True):
     expires_at: Optional[datetime] = None
 
 # Forward references
-from app.models.company import Company, Workspace
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.company import Company, Workspace

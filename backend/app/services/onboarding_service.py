@@ -42,9 +42,9 @@ async def sync_company_to_state(session: AsyncSession, user_id: str) -> Onboardi
     state = await get_or_create_onboarding_state(session, user_id)
     
     # CRITICAL FIX: Always sync if requested (User "Always sync from Company table")
-    # if not state.is_completed and state.basics_data:
-    #     logger.info(f"Skipping sync for user {user_id} - active draft exists.")
-    #     return state
+    if not state.is_completed and state.basics_data:
+        logger.info(f"Skipping sync for user {user_id} - active draft exists.")
+        return state
 
     # 3. Map Data Back
     # Basics
@@ -142,6 +142,57 @@ async def save_onboarding_progress(
         event_data={"page": page, "data_keys": list(data.keys())}
     )
     session.add(audit)
+    
+    # --- REAL-TIME SYNC TO COMPANY TABLE ---
+    # Per user request: "save the data in our db wherever relevant"
+    # If the user ALREADY has a company (e.g. Editing or Resuming), update it immediately.
+    # If they are new (no company), we still wait for Finish (to avoid ghost records).
+    
+    stmt = select(CompanyMembership).where(CompanyMembership.user_id == user_id)
+    result = await session.exec(stmt)
+    membership = result.first()
+    
+    if membership:
+        stmt = select(Company).where(Company.id == membership.company_id)
+        result = await session.exec(stmt)
+        company = result.first()
+        
+        if company:
+            logger.info(f"Real-time syncing onboarding data to Company {company.id}")
+            
+            if page == 'basics':
+                company.legal_name = data.get("companyName", company.legal_name)
+                company.brand_name = data.get("brandName", company.brand_name)
+                company.industry = data.get("category", company.industry)
+                
+                region = data.get("region", {})
+                company.country = region.get("country", company.country)
+                company.currency = region.get("currency", company.currency)
+                company.timezone = region.get("timezone", company.timezone)
+                
+                # Check/Update Brand
+                stmt = select(Brand).where(Brand.company_id == company.id)
+                res = await session.exec(stmt)
+                brand = res.first()
+                if brand:
+                    brand.name = data.get("brandName", brand.name)
+                    session.add(brand)
+                    
+                # Check/Update Workspace (Timezone)
+                stmt = select(Workspace).where(Workspace.company_id == company.id)
+                res = await session.exec(stmt)
+                workspace = res.first()
+                if workspace:
+                    workspace.timezone = region.get("timezone", workspace.timezone)
+                    session.add(workspace)
+
+            elif page == 'channels':
+                company.channels_data = data
+                
+            elif page == 'stack':
+                company.stack_data = data
+                
+            session.add(company)
     
     await session.commit()
     await session.refresh(state)
@@ -458,6 +509,22 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
         logger.error(f"ERROR: complete_onboarding failed for user {user_id}: {str(e)}", exc_info=True)
         raise e
 
+async def save_onboarding_step(
+    session: AsyncSession, 
+    user_id: str, 
+    step: int,
+    data: dict
+) -> OnboardingState:
+    """
+    DEPRECATED: Use save_onboarding_progress instead.
+    Saves data for a specific onboarding step.
+    """
+    step_to_page = {
+        1: 'basics',
+        2: 'channels',
+        3: 'stack',
+        4: 'finish'
+    }
     page = step_to_page.get(step, 'basics')
     logger.warning(f"Using deprecated save_onboarding_step, mapped step {step} to page '{page}'")
     

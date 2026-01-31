@@ -1,11 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { DataSource } from '@/data/datasourceCatalog';
 import { api } from '@/lib/api';
 import { client } from '@/lib/api/client';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 interface OnboardingState {
     companyName: string;
@@ -49,8 +50,9 @@ interface OnboardingContextType {
     updateStack: (updates: Partial<OnboardingState['stack']>) => void;
     addIntegrationRequest: (term: string, context: string) => void;
     saveAndExit: () => Promise<void>;
-    saveCurrentPage: () => Promise<void>;
+    saveCurrentPage: (pageOverride?: 'basics' | 'channels' | 'stack' | 'finish', silent?: boolean) => Promise<void>;
     isSaving: boolean;
+    lastSavedAt: Date | null;
 }
 
 const initialState: OnboardingState = {
@@ -89,6 +91,28 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(undef
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
     const [state, setState] = useState<OnboardingState>(initialState);
     const [isSaving, setIsSaving] = useState(false);
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+    // Debounce state to trigger auto-save
+    // We exclude complex objects that might cause deep equality issues or loop, 
+    // but here we just debounce the whole state reference.
+    // To avoid saving on initial load, we can use a ref or check if dirty.
+    const debouncedState = useDebouncedValue(state, 1000);
+    const isFirstMount = useRef(true);
+    const lastSavedStateStr = useRef(JSON.stringify(initialState));
+
+    useEffect(() => {
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            return;
+        }
+
+        const currentStateStr = JSON.stringify(debouncedState);
+        if (currentStateStr !== lastSavedStateStr.current) {
+            saveCurrentPage(undefined, true).catch(err => console.warn("Auto-save failed", err));
+            lastSavedStateStr.current = currentStateStr;
+        }
+    }, [debouncedState]);
 
     const { user, skipOnboardingSession } = useAuth();
     const router = useRouter();
@@ -179,15 +203,22 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         });
     };
 
-    const saveCurrentPage = async () => {
+    const saveCurrentPage = async (pageOverride?: 'basics' | 'channels' | 'stack' | 'finish', silent: boolean = false) => {
+        if (!silent) setIsSaving(true);
+        // If silent (auto-save), we still want to show "Saving..." indicator usually? 
+        // The requirements say "missing auto saving component", implying visual feedback is desired.
+        // So let's show isSaving even for auto-saves.
         setIsSaving(true);
         try {
-            // Determine current page from router
+            // Determine current page from router or override
             const currentPath = window.location.pathname;
-            let currentPage = 'basics';
-            if (currentPath.includes('/channels')) currentPage = 'channels';
-            else if (currentPath.includes('/stack')) currentPage = 'stack';
-            else if (currentPath.includes('/finish')) currentPage = 'finish';
+            let currentPage: string = pageOverride || 'basics';
+
+            if (!pageOverride) {
+                if (currentPath.includes('/channels')) currentPage = 'channels';
+                else if (currentPath.includes('/stack')) currentPage = 'stack';
+                else if (currentPath.includes('/finish')) currentPage = 'finish';
+            }
 
             console.log('Saving to backend...', { page: currentPage, state });
 
@@ -250,6 +281,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                     data: payloadData
                 }
             });
+            setLastSavedAt(new Date());
             setIsSaving(false);
         } catch (error) {
             console.error("Failed to save state:", error);
@@ -283,6 +315,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                 saveAndExit,
                 saveCurrentPage,
                 isSaving,
+                lastSavedAt
             }}
         >
             {children}

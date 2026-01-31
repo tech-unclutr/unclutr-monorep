@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Company, CompanyUpdate } from "@/types/company";
 import { toast } from "sonner";
-import { auth } from "@/lib/firebase"; // Use Firebase Auth
+import { auth } from "@/lib/firebase";
+import { useAuth } from "@/context/auth-context";
 
 // Simple in-memory cache to avoid refetching on every mount if not needed, 
 // or we could use SWR/React Query. For now, standard fetch.
@@ -14,6 +15,7 @@ export function useCompany() {
     const [company, setCompany] = useState<Company | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { onboardingCompleted } = useAuth();
 
     const fetchCompany = useCallback(async () => {
         try {
@@ -39,9 +41,16 @@ export function useCompany() {
             // Better: use an Observer or just assume the page ensures it.
             // Let's just try to get token.
 
+            if (onboardingCompleted === false) {
+                console.log("useCompany: Skipping fetch because onboarding is not completed");
+                setLoading(false);
+                return;
+            }
+
             const token = await user?.getIdToken();
             if (!token) {
                 console.log("useCompany: No token found for user");
+                setLoading(false);
                 return;
             }
             console.log("useCompany: Fetching with token length:", token.length);

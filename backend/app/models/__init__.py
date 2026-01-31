@@ -37,3 +37,5 @@ from .insight_tracking import InsightGenerationLog, InsightImpression, InsightSu
 from .campaign import Campaign
 from .interview import InterviewSession
 from .campaign_goal_detail import CampaignGoalDetail
+from .campaign_lead import CampaignLead
+from .archived_campaign_lead import ArchivedCampaignLead

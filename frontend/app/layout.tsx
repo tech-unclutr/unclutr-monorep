@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 export const metadata: Metadata = {
-  title: "Unclutr.ai",
+  title: "SquareUp.ai",
   description: "The Decision & Control Layer for D2C Brands",
 };
 

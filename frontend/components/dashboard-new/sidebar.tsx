@@ -102,8 +102,8 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         <Leaf className="w-5 h-5 fill-white" />
                     </div>
                     <div className={cn("flex flex-col transition-opacity duration-200", isCollapsed ? "hidden opacity-0 w-0" : "flex opacity-100")}>
-                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">GrowEase</span>
-                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Analytics Platform</span>
+                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">SquareUp</span>
+                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Your Customer OS</span>
                     </div>
                 </div>
             </div>

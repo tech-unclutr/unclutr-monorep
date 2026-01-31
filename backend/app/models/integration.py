@@ -12,11 +12,11 @@ if TYPE_CHECKING:
     from .company import Company
 
 class IntegrationStatus(str, Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    ERROR = "error"
-    SYNCING = "syncing"
-    DISCONNECT_REQUESTED = "disconnect_requested"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    ERROR = "ERROR"
+    SYNCING = "SYNCING"
+    DISCONNECT_REQUESTED = "DISCONNECT_REQUESTED"
 
 from sqlalchemy import DateTime, String
 

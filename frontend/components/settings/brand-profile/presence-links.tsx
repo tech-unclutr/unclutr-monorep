@@ -46,16 +46,16 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
     }
 
     return (
-        <div className="p-8 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-zinc-700">
+        <div className="p-8 rounded-2xl border border-zinc-200/60 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] hover:border-zinc-300/80 dark:hover:border-zinc-700 group">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 flex-wrap">
                 <div className="flex-1 mr-2 min-w-0">
                     <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Presence Links</h3>
-                        <Badge variant="secondary" className="font-normal text-[10px] tracking-wide uppercase bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400 border border-transparent hover:border-gray-200 dark:hover:border-zinc-700 transition-all h-5 px-1.5 rounded-md">
+                        <h3 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 whitespace-nowrap">Presence Links</h3>
+                        <Badge variant="secondary" className="font-medium text-[10px] tracking-wide uppercase bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border border-transparent transition-all h-5 px-1.5 rounded-md">
                             Optional
                         </Badge>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Connect your digital accounts for unified tracking.</p>
+                    <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">Connect your digital accounts for unified tracking.</p>
                 </div>
 
                 {isEditing ? (
@@ -64,7 +64,7 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
                             variant="ghost"
                             size="sm"
                             onClick={handleCancel}
-                            className="text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800"
+                            className="rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800"
                         >
                             <X className="w-4 h-4 mr-2" />
                             Cancel
@@ -72,7 +72,7 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
                         <Button
                             size="sm"
                             onClick={handleSave}
-                            className="min-w-[80px]"
+                            className="min-w-[80px] rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 shadow-sm"
                         >
                             <Check className="w-4 h-4 mr-2" />
                             Save
@@ -82,7 +82,7 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
                     <Button variant="ghost" size="sm" onClick={() => {
                         setLinks(initialData)
                         setIsEditing(true)
-                    }} className="text-muted-foreground hover:text-foreground hover:bg-transparent my-0 shrink-0 transition-colors">
+                    }} className="rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all opacity-0 group-hover:opacity-100 my-0 shrink-0">
                         <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
                     </Button>
                 )}
@@ -90,18 +90,20 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
 
             <div className="space-y-4">
                 {links.length === 0 && !isEditing && (
-                    <div className="flex flex-col items-center justify-center py-6 text-center border-2 border-dashed border-gray-100 dark:border-zinc-800 rounded-xl space-y-2">
-                        <div className="p-2 bg-gray-50 dark:bg-zinc-800 rounded-full">
-                            <Globe className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                    <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-3 bg-zinc-50/50 dark:bg-zinc-900/50">
+                        <div className="p-3 bg-white dark:bg-zinc-800 rounded-full shadow-sm">
+                            <Globe className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
                         </div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No links added</p>
-                        <p className="text-xs text-gray-400 max-w-[200px]">Add your website, Instagram, and other profiles.</p>
+                        <div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-300">No links added</p>
+                            <p className="text-xs text-zinc-400 max-w-[200px] mt-1">Add your website, Instagram, and other profiles.</p>
+                        </div>
                     </div>
                 )}
 
                 {links.map((link, index) => (
-                    <div key={link.id} className="flex items-center gap-4 group py-1">
-                        <div className="p-2.5 bg-gray-50 dark:bg-zinc-800/50 rounded-xl group-hover:bg-gray-100 dark:group-hover:bg-zinc-800 transition-colors shrink-0">
+                    <div key={link.id} className="flex items-center gap-4 group/item py-2">
+                        <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800 group-hover/item:border-zinc-200 dark:group-hover/item:border-zinc-700 transition-colors shrink-0">
                             {getIcon(link.type)}
                         </div>
                         {isEditing ? (
@@ -113,7 +115,7 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
                                         newLinks[index].label = e.target.value
                                         setLinks(newLinks)
                                     }}
-                                    className="sm:w-1/3 h-10 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-2 focus-visible:ring-indigo-500 font-medium text-gray-900"
+                                    className="sm:w-1/3 h-11 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-zinc-900 rounded-xl font-medium text-zinc-900"
                                     placeholder="Label"
                                 />
                                 <div className="flex-1 flex gap-2 w-full">
@@ -130,13 +132,13 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
 
                                             setLinks(newLinks)
                                         }}
-                                        className="flex-1 h-10 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-2 focus-visible:ring-indigo-500 text-sm text-gray-600"
+                                        className="flex-1 h-11 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-zinc-900 rounded-xl text-sm text-zinc-600"
                                         placeholder="https://example.com/profile"
                                     />
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-10 w-10 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+                                        className="h-11 w-11 rounded-xl text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
                                         onClick={() => removeLink(link.id)}
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -145,8 +147,8 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
                             </div>
                         ) : (
                             <div className="flex-1 min-w-0">
-                                <p className="text-base font-medium text-gray-900 dark:text-gray-200 truncate">{link.label || "Untitled"}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-500 truncate mt-0.5">{link.url || "No URL"}</p>
+                                <p className="text-base font-medium text-zinc-900 dark:text-zinc-200 truncate">{link.label || "Untitled"}</p>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-500 truncate mt-0.5 font-mono">{link.url || "No URL"}</p>
                             </div>
                         )}
                     </div>
@@ -156,7 +158,7 @@ export function PresenceLinks({ data: initialData, onUpdate }: PresenceLinksProp
                     <Button
                         variant="outline"
                         onClick={addNewLink}
-                        className="w-full border-dashed border-gray-200 dark:border-zinc-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-gray-200 h-11 mt-4 transition-all"
+                        className="w-full border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-200 h-12 rounded-xl mt-4 transition-all"
                     >
                         + Add Another Link
                     </Button>

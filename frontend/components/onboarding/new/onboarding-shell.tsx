@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/store/onboarding-context';
+import { AutoSaveIndicator } from '../auto-save-indicator';
 
 interface OnboardingShellProps {
     children: React.ReactNode;
@@ -18,14 +19,11 @@ interface OnboardingShellProps {
     nextLabel?: string;
     showSkip?: boolean;
     onSkip?: () => void;
+    maxWidth?: string;
+    titleAlign?: 'left' | 'center' | 'right';
+    tightHeader?: boolean;
 }
 
-const steps = [
-    { id: 'basics', label: 'Basics', path: '/onboarding/basics' },
-    { id: 'channels', label: 'Channels', path: '/onboarding/channels' },
-    { id: 'stack', label: 'Stack', path: '/onboarding/stack' },
-    { id: 'finish', label: 'Finish', path: '/onboarding/finish' },
-];
 
 export function OnboardingShell({
     children,
@@ -38,15 +36,15 @@ export function OnboardingShell({
     nextLabel = "Continue",
     showSkip = false,
     onSkip,
+    maxWidth = "max-w-3xl",
+    titleAlign = "left",
+    tightHeader = false,
 }: OnboardingShellProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { saveAndExit, isSaving } = useOnboarding();
+    const { isSaving, saveAndExit, lastSavedAt } = useOnboarding();
 
-    const currentStepIndex = steps.findIndex(step =>
-        pathname.startsWith(step.path) ||
-        (step.id === 'stack' && pathname.includes('/onboarding/stack'))
-    );
+    const currentStepIndex = 0; // Fixed as we are moving to one-page
 
     const handleBack = () => {
         if (currentStepIndex > 0) {
@@ -54,26 +52,18 @@ export function OnboardingShell({
         }
     };
 
-    const handleSaveAndExit = async () => {
-        await saveAndExit();
-    };
 
     return (
-        <div className="min-h-screen bg-white text-zinc-900 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden relative">
+        <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-orange-50/20 text-zinc-900 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-900 overflow-x-hidden relative">
 
-            {/* Premium Ambient Background Elements */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-                {/* Top Right Glow - Very Subtle Indigo */}
-                <div className="absolute -top-[20%] -right-[10%] w-[70vw] h-[70vw] rounded-full bg-indigo-50/40 blur-[120px] opacity-60 mix-blend-multiply" />
-
-                {/* Bottom Left Glow - Very Subtle Emerald/Teal */}
-                <div className="absolute -bottom-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full bg-emerald-50/40 blur-[120px] opacity-50 mix-blend-multiply" />
-
-                {/* Moving element example (optional, kept static for performance/uncluttered feel) */}
+            {/* Subtle Background Pattern */}
+            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-30">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-orange-100 to-transparent rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-orange-50 to-transparent rounded-full blur-3xl" />
             </div>
 
-            {/* Top Bar - Minimalist Glass */}
-            <nav className="h-20 px-6 md:px-12 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-xl z-50 border-b border-zinc-50/50">
+            {/* Top Bar - Clean & Simple */}
+            <nav className="h-16 px-6 md:px-12 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-xl z-50 border-b border-zinc-100">
                 <div className="flex items-center gap-6">
                     {currentStepIndex > 0 && (
                         <Button
@@ -85,93 +75,59 @@ export function OnboardingShell({
                             <ArrowLeft size={20} />
                         </Button>
                     )}
-                    <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 to-zinc-600">
-                        Unclutr.ai
-                    </span>
-
-                    {/* Central Progress - Vertical Separator Style */}
-                    <div className="hidden md:flex items-center gap-1.5 ml-8 pl-8 border-l border-zinc-100 h-8">
-                        {steps.map((step, idx) => {
-                            const isActive = idx === currentStepIndex;
-                            const isCompleted = idx < currentStepIndex;
-                            return (
-                                <React.Fragment key={step.id}>
-                                    <button
-                                        onClick={() => router.push(step.path)}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 cursor-pointer hover:bg-zinc-50 ${isActive ? 'bg-zinc-100' : ''
-                                            }`}
-                                    >
-                                        <div
-                                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isActive ? 'bg-black scale-100' : isCompleted ? 'bg-zinc-300' : 'bg-zinc-100'
-                                                }`}
-                                        />
-                                        <span className={`text-xs font-medium transition-colors ${isActive ? 'text-zinc-900' : 'text-zinc-400'
-                                            }`}>
-                                            {step.label}
-                                        </span>
-                                    </button>
-                                </React.Fragment>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    {/* Auto-save Indicator */}
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="hidden sm:flex items-center gap-2"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-2.5"
                     >
-                        <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">Auto-saving</span>
+                        <div className="relative w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg shadow-orange-500/20 flex items-center justify-center border border-white/20">
+                            <div className="w-3.5 h-3.5 bg-white rounded-[2px] shadow-sm" />
+                        </div>
+                        <span className="font-bold text-xl tracking-tighter text-zinc-900">
+                            Square<span className="text-zinc-500 font-medium">Up.ai</span>
+                        </span>
                     </motion.div>
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSaveAndExit}
-                        disabled={isSaving}
-                        className="text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-full px-5 h-9 text-xs font-medium border border-zinc-100 hover:border-zinc-200 transition-all bg-white shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-wait"
-                    >
-                        {isSaving ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-                                <span>Saving...</span>
-                            </div>
-                        ) : (
-                            "Save & exit"
-                        )}
-                    </Button>
                 </div>
+
+                <AutoSaveIndicator isSaving={isSaving} lastSavedAt={lastSavedAt} />
             </nav>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col items-center w-full relative z-10 pb-32">
-                <div className="w-full max-w-3xl px-6 py-6 md:py-10 flex flex-col">
+            <main className="flex-1 flex flex-col items-center w-full relative z-10 pb-0">
+                <div className={`w-full ${maxWidth} px-6 py-4 md:py-6 flex flex-col`}>
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={pathname}
-                            initial={{ opacity: 0, y: 15, filter: 'blur(5px)' }}
+                            initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
                             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                            exit={{ opacity: 0, y: -15, filter: 'blur(5px)' }}
-                            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                            exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                             className="flex flex-col"
                         >
                             {(title || subtitle) && (
-                                <div className="mb-12 text-center md:text-left">
+                                <div className={`${tightHeader ? 'mb-2' : 'mb-6'} text-center md:text-${titleAlign}`}>
                                     {title && (
-                                        <h1 className="text-4xl md:text-5xl font-semibold tracking-tighter mb-4 text-zinc-900 bg-clip-text">
+                                        <motion.h1
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.1, duration: 0.8 }}
+                                            className="text-3xl md:text-4xl font-semibold tracking-tighter mb-2 text-zinc-900"
+                                        >
                                             {title}
-                                        </h1>
+                                        </motion.h1>
                                     )}
                                     {subtitle && (
-                                        <div className="text-xl text-zinc-500 leading-relaxed max-w-xl font-light">
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.2, duration: 0.8 }}
+                                            className={`text-base md:text-lg text-zinc-500 leading-relaxed max-w-xl font-light ${titleAlign === 'center' ? 'mx-auto' : ''}`}
+                                        >
                                             {subtitle}
-                                        </div>
+                                        </motion.div>
                                     )}
                                     {privacyNote && (
-                                        <p className="text-xs text-zinc-400 mt-4 font-medium bg-zinc-50 inline-block px-3 py-1.5 rounded-lg border border-zinc-100">
+                                        <p className="text-xs text-zinc-400 mt-2 font-medium bg-zinc-50/50 backdrop-blur-sm inline-block px-3 py-1 rounded-lg border border-zinc-100">
                                             {privacyNote}
                                         </p>
                                     )}
@@ -185,10 +141,13 @@ export function OnboardingShell({
 
             {/* Typeform-style Fixed Footer */}
             {showFooter && onNext && (
-                <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-zinc-100 py-6 px-6 md:px-12 z-40 flex items-center justify-between md:justify-end">
-                    <div className="hidden md:flex items-center gap-2 text-xs text-zinc-400 font-medium mr-6">
-                        <span className="bg-zinc-100 border border-zinc-200 rounded px-1.5 py-0.5">Enter ↵</span>
-                        to continue
+                <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-100 py-5 px-6 md:px-12 z-40 flex items-center justify-between md:justify-end">
+                    <div className="hidden md:flex items-center gap-3 text-xs text-zinc-400 font-medium mr-8">
+                        <span className="bg-zinc-100/80 border border-zinc-200 rounded-md px-2 py-1 flex items-center shadow-sm">
+                            <span className="text-[10px] mr-1">Enter</span>
+                            <span className="text-sm">↵</span>
+                        </span>
+                        <span>to continue</span>
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto">
@@ -197,19 +156,26 @@ export function OnboardingShell({
                                 variant="ghost"
                                 onClick={onSkip}
                                 disabled={isSaving}
-                                className="text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+                                className="text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50/50 transition-all disabled:opacity-50"
                             >
                                 {isSaving ? "Saving..." : "Skip for now"}
                             </Button>
                         )}
-                        <Button
-                            onClick={onNext}
-                            disabled={nextDisabled}
-                            size="lg"
-                            className="flex-1 md:flex-none text-lg px-8 h-12 rounded-xl bg-black hover:bg-zinc-800 text-white shadow-xl shadow-black/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex-1 md:flex-none"
                         >
-                            {nextLabel}
-                        </Button>
+                            <Button
+                                onClick={onNext}
+                                disabled={nextDisabled}
+                                size="lg"
+                                className="w-full md:w-auto text-base px-8 h-12 rounded-lg bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300 disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed group relative overflow-hidden"
+                            >
+                                <span className="relative z-10">{nextLabel}</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            </Button>
+                        </motion.div>
                     </div>
                 </div>
             )

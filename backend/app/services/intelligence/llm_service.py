@@ -213,13 +213,32 @@ class LLMService:
 
     async def _generate(self, prompt: str, model_type: str = "flash") -> str:
         """
-        Internal wrapper for Gemini generation.
+        Internal wrapper for Gemini generation with timeout.
         """
         try:
             model = self.pro_model if model_type == "pro" else self.model
-            response = await model.generate_content_async(prompt)
+            
+            # Set timeout based on model type
+            timeout = 90.0 if model_type == "pro" else 60.0
+            
+            logger.info(f"LLM Generation starting (model: {model_type}, timeout: {timeout}s)")
+            start_time = time.time()
+            
+            response = await asyncio.wait_for(
+                model.generate_content_async(prompt),
+                timeout=timeout
+            )
+            
+            duration = time.time() - start_time
+            logger.info(f"LLM Generation completed in {duration:.2f}s")
+            
             return response.text.strip()
+        except asyncio.TimeoutError:
+            logger.error(f"LLM Generation timed out after {timeout}s ({model_type})")
+            # Return a clear error or fallback instead of just raising generic RuntimeError
+            raise TimeoutError(f"LLM generation timed out after {timeout}s")
         except Exception as e:
+            logger.error(f"LLM Generation failed: {e}")
             raise e
 
     async def extract_campaign_context(self, transcript: str) -> Dict[str, Any]:

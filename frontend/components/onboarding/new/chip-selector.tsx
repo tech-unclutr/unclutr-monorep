@@ -71,8 +71,9 @@ export function ChipSelector({
     // Stable List Logic: Prevents grid from jumping when selecting/deselecting
 
     // 1. Identify items currently selected but NOT in the common list (e.g. added via drawer)
+    const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
     const extraSelectedItems = (allSources || []).filter(s =>
-        selectedIds.includes(s.id) &&
+        safeSelectedIds.includes(s.id) &&
         !commonSources.find(c => c.id === s.id)
     );
 
@@ -96,7 +97,7 @@ export function ChipSelector({
 
     // Toggle handler
     const handleToggle = (id: string) => {
-        if (maxItems && !selectedIds.includes(id) && selectedIds.length >= maxItems) {
+        if (maxItems && !safeSelectedIds.includes(id) && safeSelectedIds.length >= maxItems) {
             return;
         }
         onToggle(id, singleSelect);
@@ -132,7 +133,7 @@ export function ChipSelector({
                                 id={source.id}
                                 name={source.name.includes("Not Applicable") ? "Not Applicable" : (source.display_name || source.name)}
                                 logoUrl={source.logo_url}
-                                selected={selectedIds.includes(source.id)}
+                                selected={safeSelectedIds.includes(source.id)}
                                 onToggle={handleToggle}
                             />
                         </motion.div>

@@ -125,6 +125,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
     const [calendarStatus, setCalendarStatus] = useState<{ connected: boolean; provider?: string; busy_slots?: any[] }>({ connected: false });
     const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
     const [isAvailabilityPopupOpen, setIsAvailabilityPopupOpen] = useState(false);
+    const hasInitializedRef = React.useRef(false);
 
     const checkCalendarStatus = async () => {
         try {
@@ -138,6 +139,8 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
     useEffect(() => {
         // Fetch initial suggestions, cohorts, and complete campaign data
         const initData = async () => {
+            if (hasInitializedRef.current) return;
+
             try {
                 setIsLoading(true);
                 const [suggestions, cohortData, campaignData] = await Promise.all([
@@ -150,12 +153,22 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                     const newState = { ...prev };
 
                     // Prefill campaign name
-                    if (!newState.campaignName) newState.campaignName = campaignData.name || '';
+                    if (!newState.campaignName || newState.campaignName === '') {
+                        newState.campaignName = campaignData.name || '';
+                    }
 
-                    // Prefill context fields (only if not already set locally)
-                    if (!newState.brandContext) newState.brandContext = campaignData.brand_context || suggestions.brand_context || '';
-                    if (!newState.teamMemberContext) newState.teamMemberContext = campaignData.team_member_context || suggestions.team_member_context || '';
-                    if (!newState.customerContext) newState.customerContext = campaignData.customer_context || '';
+                    // Prefill context fields (only if not already set locally or if we are loading existing campaign)
+                    const isNewCampaign = campaignData.status === 'DRAFT' && !campaignData.brand_context;
+
+                    if (!newState.brandContext || newState.brandContext === '') {
+                        newState.brandContext = campaignData.brand_context || suggestions.brand_context || '';
+                    }
+                    if (!newState.teamMemberContext || newState.teamMemberContext === '') {
+                        newState.teamMemberContext = campaignData.team_member_context || suggestions.team_member_context || '';
+                    }
+                    if (!newState.customerContext || newState.customerContext === '') {
+                        newState.customerContext = campaignData.customer_context || '';
+                    }
 
                     // Prefill questions and banks
                     if (!newState.preliminaryQuestions || newState.preliminaryQuestions.length === 0) {
@@ -164,79 +177,70 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                     if (!newState.questionBank || newState.questionBank.length === 0) {
                         newState.questionBank = campaignData.question_bank || [];
                     }
-                    if (!newState.incentiveBank || newState.incentiveBank.length === 0) {
-                        newState.incentiveBank = campaignData.incentive_bank || ["₹500 Amazon Voucher", "₹200 UPI", "Swiggy Coupon", "Zomato Gold"];
+
+                    // Critical Fix: Overwrite default incentive bank if backend has something else
+                    const defaultIncentives = ["₹500 Amazon Voucher", "₹200 UPI", "Swiggy Coupon", "Zomato Gold"];
+                    const hasDefaultIncentives = JSON.stringify(newState.incentiveBank) === JSON.stringify(defaultIncentives);
+                    if (!newState.incentiveBank || newState.incentiveBank.length === 0 || hasDefaultIncentives) {
+                        if (campaignData.incentive_bank && campaignData.incentive_bank.length > 0) {
+                            newState.incentiveBank = campaignData.incentive_bank;
+                        } else if (!hasDefaultIncentives) {
+                            newState.incentiveBank = defaultIncentives;
+                        }
                     }
 
                     // Prefill incentive
-                    if (!newState.incentive) newState.incentive = campaignData.incentive || '';
+                    if (!newState.incentive || newState.incentive === '') {
+                        newState.incentive = campaignData.incentive || '';
+                    }
 
                     // Prefill call duration (convert from seconds to minutes)
                     if (campaignData.call_duration_limit && (!newState.callDuration || newState.callDuration === 10)) {
                         newState.callDuration = Math.floor(campaignData.call_duration_limit / 60);
                     }
 
-                    // Prefill execution windows
-                    const isDefaultWindow = newState.executionWindows.length === 1 &&
+                    // Prefill execution windows - Overwrite if only default is present
+                    const isDefaultWindow = newState.executionWindows?.length === 1 &&
                         newState.executionWindows[0].start === '09:00' &&
                         newState.executionWindows[0].end === '11:00';
 
                     if (!newState.executionWindows || newState.executionWindows.length === 0 || isDefaultWindow) {
                         if (campaignData.execution_windows && campaignData.execution_windows.length > 0) {
                             newState.executionWindows = campaignData.execution_windows;
-                        } else {
-                            newState.executionWindows = [{ day: new Date().toISOString().split('T')[0], start: '09:00', end: '11:00' }];
                         }
                     }
 
                     // Handle Cohorts & Counts - ALWAYS update counts to keep them fresh
-                    if (newState.cohorts.length === 0 || cohortData.cohorts?.length > 0) {
+                    if (newState.cohorts.length === 0 || (cohortData.cohorts?.length > 0 && JSON.stringify(newState.cohorts) !== JSON.stringify(cohortData.cohorts))) {
                         newState.cohorts = cohortData.cohorts || [];
                     }
 
                     // Initialize selectedCohorts based on backend data
-                    newState.selectedCohorts = campaignData.selected_cohorts || cohortData.selected_cohorts || newState.cohorts;
+                    if (!newState.selectedCohorts || newState.selectedCohorts.length === 0) {
+                        newState.selectedCohorts = campaignData.selected_cohorts || cohortData.selected_cohorts || newState.cohorts;
+                    }
 
                     // Always update counts
                     newState.cohortCounts = cohortData.cohort_counts || {};
 
                     // Prefill cohort configuration
-                    if (Object.keys(newState.cohortConfig).length === 0) {
-                        if (campaignData.cohort_config && Object.keys(campaignData.cohort_config).length > 0) {
-                            newState.cohortConfig = campaignData.cohort_config;
-                        } else {
-                            const config: any = {};
-                            (cohortData.cohorts || []).forEach((c: string) => {
-                                config[c] = 0;
-                            });
-                            newState.cohortConfig = config;
-                        }
+                    if (Object.keys(newState.cohortConfig).length === 0 && campaignData.cohort_config) {
+                        newState.cohortConfig = campaignData.cohort_config;
                     }
 
                     // Prefill cohort questions
-                    if (Object.keys(newState.cohortQuestions).length === 0) {
-                        if (campaignData.cohort_questions && Object.keys(campaignData.cohort_questions).length > 0) {
-                            newState.cohortQuestions = campaignData.cohort_questions;
-                        } else {
-                            newState.cohortQuestions = {};
-                        }
+                    if (Object.keys(newState.cohortQuestions).length === 0 && campaignData.cohort_questions) {
+                        newState.cohortQuestions = campaignData.cohort_questions;
                     }
 
                     // Prefill cohort incentives
-                    if (Object.keys(newState.cohortIncentives).length === 0) {
-                        if (campaignData.cohort_incentives && Object.keys(campaignData.cohort_incentives).length > 0) {
-                            newState.cohortIncentives = campaignData.cohort_incentives;
-                        } else {
-                            const incentives: any = {};
-                            (cohortData.cohorts || []).forEach((c: string) => {
-                                incentives[c] = '';
-                            });
-                            newState.cohortIncentives = incentives;
-                        }
+                    if (Object.keys(newState.cohortIncentives).length === 0 && campaignData.cohort_incentives) {
+                        newState.cohortIncentives = campaignData.cohort_incentives;
                     }
 
                     return newState;
                 });
+                hasInitializedRef.current = true;
             } catch (error) {
                 console.error("Failed to fetch campaign init data:", error);
                 toast.error("Failed to load campaign data");

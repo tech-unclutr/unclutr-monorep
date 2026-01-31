@@ -746,35 +746,6 @@ async def add_execution_window(
     return {"status": "success", "execution_windows": campaign.execution_windows}
 
 
-@router.post("/campaigns/{campaign_id}/calendar-sync")
-async def sync_campaign_calendar(
-    campaign_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-    x_company_id: str = Header(..., alias="X-Company-ID"),
-    session: AsyncSession = Depends(get_session)
-):
-    """
-    Manually triggers sync of campaign execution windows to Google Calendar.
-    """
-    try:
-        company_id = UUID(x_company_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid Company ID format")
-
-    try:
-        events_count = await campaign_service.sync_campaign_to_calendar(session, campaign_id)
-        return {"status": "success", "message": f"Synced {events_count} events to calendar", "events_created": events_count}
-    except ValueError as e:
-        # Campaign not found or No active connection
-        logger.warning(f"Calendar sync validation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        import traceback
-        logger.error(f"Calendar sync failed: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to sync calendar: {str(e)}")
-
-
 @router.get("/campaigns/{campaign_id}")
 async def get_campaign_by_id(
     campaign_id: UUID,

@@ -1,7 +1,6 @@
-
 import asyncio
 from uuid import UUID
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from decimal import Decimal
 from sqlmodel import select
 from app.core.db import async_session_factory
@@ -23,22 +22,54 @@ async def seed_phase2_data():
             session.add(item)
         
         # 2. Seed Recent Orders to trigger Velocity
-        # We need more sales in last 7 days than the 30d baseline avg
         print("Seeding recent orders for velocity boost...")
-        for day_offset in range(3):
+        from app.models.company import Brand
+        brand = (await session.execute(select(Brand).where(Brand.id == BRAND_ID))).scalars().first()
+        
+        for day_offset in range(5):
             target_date = date.today() - timedelta(days=day_offset)
-            # Create a daily metric with high sales
+            target_datetime = datetime.combine(target_date, datetime.min.time())
+            
+            # Create a real order
+            order = ShopifyOrder(
+                integration_id=INTEGRATION_ID,
+                company_id=brand.company_id,
+                shopify_order_id=1000 + day_offset,
+                shopify_order_number=1000 + day_offset,
+                shopify_name=f"#100{day_offset}",
+                financial_status="paid",
+                total_price=Decimal("1500.00"),
+                subtotal_price=Decimal("1500.00"),
+                currency="INR",
+                shopify_created_at=target_datetime,
+                shopify_updated_at=target_datetime,
+                created_by="SeedScript",
+                updated_by="SeedScript"
+            )
+            session.add(order)
+
+            # Create/Update daily metric
             stmt_m = select(ShopifyDailyMetric).where(
                 ShopifyDailyMetric.integration_id == INTEGRATION_ID,
                 ShopifyDailyMetric.snapshot_date == target_date
             )
             metric = (await session.execute(stmt_m)).scalars().first()
-            if metric:
-                metric.total_sales = Decimal("5500.00") # High velocity
-                session.add(metric)
+            if not metric:
+                metric = ShopifyDailyMetric(
+                    integration_id=INTEGRATION_ID,
+                    company_id=brand.company_id,
+                    snapshot_date=target_date,
+                    total_sales=Decimal("1500.00"),
+                    order_count=1,
+                    created_by="SeedScript",
+                    updated_by="SeedScript"
+                )
+            else:
+                metric.total_sales = Decimal("1500.00")
+            session.add(metric)
         
         await session.commit()
-        print("🎉 Phase 2 Seed Data Applied.")
+        print("🎉 Phase 2 Seed Data Applied (Orders & Metrics).")
 
 if __name__ == "__main__":
     asyncio.run(seed_phase2_data())

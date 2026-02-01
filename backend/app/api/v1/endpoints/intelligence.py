@@ -29,6 +29,7 @@ from app.models.user import User
 from fastapi.responses import RedirectResponse
 from app.services.intelligence.campaign_service import campaign_service
 from app.models.campaign import Campaign
+from app.models.archived_campaign import ArchivedCampaign
 from app.models.campaign_lead import CampaignLead
 from sqlalchemy import desc
 from app.schemas.campaign import CampaignSettingsUpdate, CampaignContextSuggestions
@@ -406,181 +407,285 @@ async def disconnect_google_calendar(
     return {"status": "success", "message": "Calendar disconnected"}
 
 
-class PhoneInterviewTriggerRequest(BaseModel):
+class OnboardingRequest(BaseModel):
+    name: str  # User's full name (to sync back to profile if needed, or just for context)
     phone_number: str
-    campaign_id: Optional[UUID] = None
+    team_member_role: str
+    team_member_department: str
+    linkedin: Optional[str] = None
 
-
-@router.post("/interview/trigger")
-async def trigger_phone_interview(
-    request: PhoneInterviewTriggerRequest,
+@router.post("/campaigns/onboarding")
+async def save_onboarding_details(
+    request: OnboardingRequest,
     current_user: User = Depends(get_current_active_user),
     x_company_id: str = Header(..., alias="X-Company-ID"),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Triggers a REAL phone call via Bolna API.
-    Creates initial campaign record with status INITIATED.
+    Saves the user's contact details to the latest DRAFT campaign or creates a new one.
+    This serves as the "Unlocking" step for Customer Intelligence.
     """
     try:
         company_id = UUID(x_company_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid Company ID format")
 
-    # Validate phone number format (basic E.164 check)
+    # Validate phone number (basic check)
     import re
-    if not re.match(r'^\+[1-9]\d{1,14}$', request.phone_number):
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid phone number format. Use E.164 format (e.g., +14155551234)"
-        )
+    if not re.match(r'^\+?[1-9]\d{1,14}$', request.phone_number.replace(" ", "").replace("-", "")):
+         raise HTTPException(status_code=400, detail="Invalid phone number format")
 
-
-
-    campaign = None
+    # 1. Check for existing DRAFT campaign for this user
+    # We want the MOST RECENT one that hasn't started yet.
+    stmt = select(Campaign).where(
+        Campaign.company_id == company_id,
+        Campaign.user_id == current_user.id,
+        Campaign.status == "DRAFT"
+    ).order_by(desc(Campaign.created_at))
     
-    try:
-        from app.services.intelligence.bolna_service import bolna_service
-        import httpx
+    result = await session.execute(stmt)
+    campaign = result.scalars().first()
+    
+    if campaign:
+        # Update existing draft
+        campaign.phone_number = request.phone_number
+        campaign.team_member_role = request.team_member_role
+        campaign.team_member_department = request.team_member_department
+        campaign.updated_at = datetime.utcnow()
+        # Optionally update name on user profile if needed, but for now let's keep it scoped to campaign
+        # actually, the UI sends name as well.
         
-        # 1. Get or Create Campaign
-        if request.campaign_id:
-            # Fetch existing campaign
-            stmt = select(Campaign).where(
-                Campaign.id == request.campaign_id,
-                Campaign.company_id == company_id,
-                Campaign.user_id == current_user.id
-            )
-            result = await session.execute(stmt)
-            campaign = result.scalars().first()
-            
-            if not campaign:
-                raise HTTPException(status_code=404, detail="Campaign not found for retry")
+        session.add(campaign)
+        logger.info(f"Updated existing DRAFT campaign {campaign.id} with onboarding details")
+    else:
+        # Create NEW Campaign
+        campaign = Campaign(
+            company_id=company_id,
+            user_id=current_user.id,
+            name=f"Campaign - {datetime.utcnow().strftime('%B %d, %Y')}", # Default name
+            status="DRAFT",
+            phone_number=request.phone_number,
+            team_member_role=request.team_member_role,
+            team_member_department=request.team_member_department,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        session.add(campaign)
+        logger.info(f"Created NEW DRAFT campaign with onboarding details")
+
+    # 2. Sync Onboarding Details to User Profile (Holistic Update)
+    try:
+        # We already have current_user from Dependency Injection, but ensure it's tracked by session
+        user_stmt = select(User).where(User.id == current_user.id)
+        user_res = await session.execute(user_stmt)
+        user_db = user_res.scalars().first()
+        
+        if user_db:
+            logger.info(f"Syncing onboarding details to user profile for {user_db.id}")
+            if request.name: 
+                user_db.full_name = request.name
+            if request.phone_number: 
+                user_db.contact_number = request.phone_number
+            if request.team_member_role: 
+                user_db.designation = request.team_member_role
+            if request.team_member_department: 
+                user_db.team = request.team_member_department
+            if request.linkedin: 
+                user_db.linkedin_profile = request.linkedin
                 
-            logger.info(f"Retrying existing campaign: {campaign.id}")
-        else:
-            # Create new initial campaign
-            campaign = await campaign_service.create_initial_campaign(
-                session=session,
-                company_id=company_id,
-                user_id=current_user.id,
-                phone_number=request.phone_number
-            )
-            logger.info(f"Created new campaign: {campaign.id} to DB. Status: {campaign.status}")
-        
-        # 2. Trigger Bolna Call (Passing Campaign ID)
-        try:
-            bolna_response = await bolna_service.trigger_phone_call(
-                phone_number=request.phone_number,
-                user_full_name=current_user.full_name,
-                company_id=str(company_id),
-                user_id=current_user.id,
-                campaign_id=str(campaign.id) 
-            )
-        except httpx.HTTPStatusError as e:
-            # If call fails, mark campaign as FAILED immediately if newly created?
-            # Actually, let's keep it basic for now, handled by exceptions below.
+            # persistent unlock state
+            if not user_db.settings:
+                user_db.settings = {}
+            user_db.settings["intelligence_unlocked"] = True
             
-            # Re-raise to handle with specific status codes
-            raise e
+            session.add(user_db)
+            logger.info(f"User profile staged for update: {user_db.full_name}, {user_db.designation}, {user_db.team}, intelligence_unlocked=True")
             
-        # Extract execution ID
-        execution_id = bolna_response.get("id") or bolna_response.get("execution_id") or bolna_response.get("call_id")
-        
-        if not execution_id:
-            logger.error(f"Bolna response missing execution ID. Full response: {bolna_response}")
-            raise HTTPException(
-                status_code=500, 
-                detail="Bolna API did not return execution ID. Please check the logs or contact support."
-            )
-        
-        # 3. Update Campaign with Execution ID
-        campaign = await campaign_service.update_campaign_execution_id(
-            session=session,
-            campaign_id=campaign.id,
-            new_execution_id=execution_id
-        )
-        
-        return {
-            "status": "success",
-            "execution_id": execution_id,
-            "campaign_id": str(campaign.id),
-            "message": f"Phone call initiated to {request.phone_number}"
-        }
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except ValueError as e:
-        # Configuration errors (missing API keys, etc.)
-        logger.error(f"Bolna configuration error: {e}")
-        raise HTTPException(
-            status_code=500, 
-            detail="Phone interview service is not properly configured. Please contact support."
-        )
-    except httpx.TimeoutException:
-        logger.error("Bolna API timeout")
-        raise HTTPException(
-            status_code=504, 
-            detail="Request to phone service timed out. Please try again."
-        )
     except Exception as e:
-        import traceback
-        logger.error(f"Failed to trigger phone interview: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=500, 
-            detail=f"An unexpected error occurred: {str(e)}"
-        )
+        logger.error(f"Failed to sync onboarding details to User profile: {e}", exc_info=True)
+        # We keep this non-blocking for the campaign creation, but logged as error now
+
+    await session.commit()
+    await session.refresh(campaign)
+    
+    return campaign
+
+
+class PhoneInterviewTriggerRequest(BaseModel):
+    phone_number: str
+    campaign_id: Optional[UUID] = None
+
+
+# @router.post("/interview/trigger")
+# async def trigger_phone_interview(
+#     request: PhoneInterviewTriggerRequest,
+#     current_user: User = Depends(get_current_active_user),
+#     x_company_id: str = Header(..., alias="X-Company-ID"),
+#     session: AsyncSession = Depends(get_session)
+# ):
+#     """
+#     Triggers a REAL phone call via Bolna API.
+#     Creates initial campaign record with status INITIATED.
+#     """
+#     try:
+#         company_id = UUID(x_company_id)
+#     except ValueError:
+#         raise HTTPException(status_code=400, detail="Invalid Company ID format")
+# 
+#     # Validate phone number format (basic E.164 check)
+#     import re
+#     if not re.match(r'^\+[1-9]\d{1,14}$', request.phone_number):
+#         raise HTTPException(
+#             status_code=400, 
+#             detail="Invalid phone number format. Use E.164 format (e.g., +14155551234)"
+#         )
+# 
+# 
+# 
+#     campaign = None
+#     
+#     try:
+#         # from app.services.intelligence.bolna_service import bolna_service
+#         import httpx
+#         
+#         # 1. Get or Create Campaign
+#         if request.campaign_id:
+#             # Fetch existing campaign
+#             stmt = select(Campaign).where(
+#                 Campaign.id == request.campaign_id,
+#                 Campaign.company_id == company_id,
+#                 Campaign.user_id == current_user.id
+#             )
+#             result = await session.execute(stmt)
+#             campaign = result.scalars().first()
+#             
+#             if not campaign:
+#                 raise HTTPException(status_code=404, detail="Campaign not found for retry")
+#                 
+#             logger.info(f"Retrying existing campaign: {campaign.id}")
+#         else:
+#             # Create new initial campaign
+#             campaign = await campaign_service.create_initial_campaign(
+#                 session=session,
+#                 company_id=company_id,
+#                 user_id=current_user.id,
+#                 phone_number=request.phone_number
+#             )
+#             logger.info(f"Created new campaign: {campaign.id} to DB. Status: {campaign.status}")
+#         
+#         # 2. Trigger Bolna Call (Passing Campaign ID)
+#         # try:
+#         #     bolna_response = await bolna_service.trigger_phone_call(
+#         #         phone_number=request.phone_number,
+#         #         user_full_name=current_user.full_name,
+#         #         company_id=str(company_id),
+#         #         user_id=current_user.id,
+#         #         campaign_id=str(campaign.id) 
+#         #     )
+#         # except httpx.HTTPStatusError as e:
+#         #     # If call fails, mark campaign as FAILED immediately if newly created?
+#         #     # Actually, let's keep it basic for now, handled by exceptions below.
+#         #     
+#         #     # Re-raise to handle with specific status codes
+#         #     raise e
+#             
+#         # Extract execution ID
+#         # execution_id = bolna_response.get("id") or bolna_response.get("execution_id") or bolna_response.get("call_id")
+#         
+#         # if not execution_id:
+#         #     logger.error(f"Bolna response missing execution ID. Full response: {bolna_response}")
+#         #     raise HTTPException(
+#         #         status_code=500, 
+#         #         detail="Bolna API did not return execution ID. Please check the logs or contact support."
+#         #     )
+#         
+#         # 3. Update Campaign with Execution ID
+#         # campaign = await campaign_service.update_campaign_execution_id(
+#         #     session=session,
+#         #     campaign_id=campaign.id,
+#         #     new_execution_id=execution_id
+#         # )
+#         
+#         return {
+#             "status": "success",
+#             "execution_id": "mock_execution_id", # execution_id,
+#             "campaign_id": str(campaign.id),
+#             "message": f"Phone call initiated to {request.phone_number}"
+#         }
+#         
+#     except HTTPException:
+#         # Re-raise HTTP exceptions as-is
+#         raise
+#     except ValueError as e:
+#         # Configuration errors (missing API keys, etc.)
+#         logger.error(f"Bolna configuration error: {e}")
+#         raise HTTPException(
+#             status_code=500, 
+#             detail="Phone interview service is not properly configured. Please contact support."
+#         )
+#     # except httpx.TimeoutException:
+#     #     logger.error("Bolna API timeout")
+#     #     raise HTTPException(
+#     #         status_code=504, 
+#     #         detail="Request to phone service timed out. Please try again."
+#     #     )
+#     except Exception as e:
+#         import traceback
+#         logger.error(f"Failed to trigger phone interview: {str(e)}")
+#         logger.error(traceback.format_exc())
+#         raise HTTPException(
+#             status_code=500, 
+#             detail=f"An unexpected error occurred: {str(e)}"
+#         )
 
 
 
-@router.post("/interview/bolna-webhook")
-async def bolna_webhook(
-    request: Request,
-    session: AsyncSession = Depends(get_session)
-):
-    """
-    Receives webhook from Bolna when call completes.
-    Updates campaign with all execution data and generates campaign name.
-    """
-    try:
-        # Parse webhook payload
-        payload = await request.json()
-        logger.info(f"Received Bolna webhook: {payload.get('id')}")
-        
-        from app.services.intelligence.bolna_service import bolna_service
-        
-        # Parse and validate payload
-        parsed_payload = bolna_service.parse_webhook_payload(payload)
-        execution_id = parsed_payload.get("execution_id")
-        
-        if not execution_id:
-            logger.error("Webhook payload missing execution ID")
-            return {"status": "error", "message": "Missing execution ID"}
-        
-        # Update campaign from webhook data
-        campaign = await campaign_service.update_campaign_from_bolna_webhook(
-            session=session,
-            execution_id=execution_id,
-            bolna_payload=parsed_payload
-        )
-        
-        logger.info(f"Campaign {campaign.id} updated from webhook. Status: {campaign.status}")
-        
-        return {
-            "status": "success",
-            "campaign_id": str(campaign.id),
-            "campaign_name": campaign.name,
-            "call_status": campaign.bolna_call_status
-        }
-        
-    except ValueError as e:
-        logger.error(f"Campaign not found for webhook: {e}")
-        return {"status": "error", "message": str(e)}
-    except Exception as e:
-        logger.error(f"Failed to process Bolna webhook: {e}")
-        return {"status": "error", "message": str(e)}
+# @router.post("/interview/bolna-webhook")
+# async def bolna_webhook(
+#     request: Request,
+#     session: AsyncSession = Depends(get_session)
+# ):
+#     """
+#     Receives webhook from Bolna when call completes.
+#     Updates campaign with all execution data and generates campaign name.
+#     """
+#     try:
+#         # Parse webhook payload
+#         payload = await request.json()
+#         logger.info(f"Received Bolna webhook: {payload.get('id')}")
+#         
+#         from app.services.intelligence.bolna_service import bolna_service
+#         
+#         # Parse and validate payload
+#         parsed_payload = bolna_service.parse_webhook_payload(payload)
+#         execution_id = parsed_payload.get("execution_id")
+#         
+#         if not execution_id:
+#             logger.error("Webhook payload missing execution ID")
+#             return {"status": "error", "message": "Missing execution ID"}
+#         
+#         # Update campaign from webhook data
+#         campaign = await campaign_service.update_campaign_from_bolna_webhook(
+#             session=session,
+#             execution_id=execution_id,
+#             bolna_payload=parsed_payload
+#         )
+#         
+#         logger.info(f"Campaign {campaign.id} updated from webhook. Status: {campaign.status}")
+#         
+#         return {
+#             "status": "success",
+#             "campaign_id": str(campaign.id),
+#             "campaign_name": campaign.name,
+#             "call_status": campaign.bolna_call_status
+#         }
+#         
+#     except ValueError as e:
+#         logger.error(f"Campaign not found for webhook: {e}")
+#         return {"status": "error", "message": str(e)}
+#     except Exception as e:
+#         logger.error(f"Failed to process Bolna webhook: {e}")
+#         return {"status": "error", "message": str(e)}
 
 
 @router.post("/interview/simulate")
@@ -618,45 +723,45 @@ class ExtractedDataUpdate(BaseModel):
     extracted_data: Dict[str, Any]
 
 
-@router.patch("/campaigns/{campaign_id}/extracted-data")
-async def update_campaign_extracted_data(
-    campaign_id: UUID,
-    update_data: ExtractedDataUpdate,
-    current_user: User = Depends(get_current_active_user),
-    x_company_id: str = Header(..., alias="X-Company-ID"),
-    session: AsyncSession = Depends(get_session)
-):
-    """
-    Manually update the extracted data for a campaign.
-    Useful for correcting or refining the AI's extraction.
-    """
-    try:
-        company_id = UUID(x_company_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid Company ID format")
-
-    # Verify ownership
-    stmt = select(Campaign).where(
-        Campaign.id == campaign_id,
-        Campaign.company_id == company_id, 
-        Campaign.user_id == current_user.id
-    )
-    result = await session.execute(stmt)
-    campaign = result.scalars().first()
-
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-
-    try:
-        updated_campaign = await campaign_service.update_campaign_extracted_data(
-            session=session,
-            campaign_id=campaign_id,
-            new_extracted_data=update_data.extracted_data
-        )
-        return updated_campaign
-    except Exception as e:
-        logger.error(f"Failed to update extracted data: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}")
+# @router.patch("/campaigns/{campaign_id}/extracted-data")
+# async def update_campaign_extracted_data(
+#     campaign_id: UUID,
+#     update_data: ExtractedDataUpdate,
+#     current_user: User = Depends(get_current_active_user),
+#     x_company_id: str = Header(..., alias="X-Company-ID"),
+#     session: AsyncSession = Depends(get_session)
+# ):
+#     """
+#     Manually update the extracted data for a campaign.
+#     Useful for correcting or refining the AI's extraction.
+#     """
+#     try:
+#         company_id = UUID(x_company_id)
+#     except ValueError:
+#         raise HTTPException(status_code=400, detail="Invalid Company ID format")
+# 
+#     # Verify ownership
+#     stmt = select(Campaign).where(
+#         Campaign.id == campaign_id,
+#         Campaign.company_id == company_id, 
+#         Campaign.user_id == current_user.id
+#     )
+#     result = await session.execute(stmt)
+#     campaign = result.scalars().first()
+# 
+#     if not campaign:
+#         raise HTTPException(status_code=404, detail="Campaign not found")
+# 
+#     try:
+#         updated_campaign = await campaign_service.update_campaign_extracted_data(
+#             session=session,
+#             campaign_id=campaign_id,
+#             new_extracted_data=update_data.extracted_data
+#         )
+#         return updated_campaign
+#     except Exception as e:
+#         logger.error(f"Failed to update extracted data: {e}")
+#         raise HTTPException(status_code=500, detail=f"Failed to update data: {str(e)}")
 
 
 
@@ -772,15 +877,22 @@ async def get_campaign_by_id(
     campaign = result.scalars().first()
 
     if not campaign:
+        # Check if it was archived/deleted recently
+        archived = await session.get(ArchivedCampaign, campaign_id)
+        if archived:
+            logger.warning(f"Campaign {campaign_id} NOT FOUND in active table but EXISTS in ArchivedCampaign.")
+            raise HTTPException(status_code=404, detail="Campaign was recently deleted and archived")
+            
         logger.warning(f"Campaign not found in DB. Search params: ID={campaign_id}, Company={company_id}, User={current_user.id}")
         raise HTTPException(status_code=404, detail="Campaign not found")
         
     # Active Sync: Check with Bolna if the campaign is stuck in a non-terminal state
     # This acts as a fallback if webhooks fail (e.g. local dev, ngrok issues)
     # MOVED TO BACKGROUND TASK to prevent blocking API response
-    if campaign.status not in ["COMPLETED", "FAILED"] and campaign.bolna_execution_id:
-        # Fire and forget background sync
-        background_tasks.add_task(campaign_service.sync_campaign_background, campaign.id)
+        if campaign.status not in ["COMPLETED", "FAILED"]: # and campaign.bolna_execution_id:
+            # Fire and forget background sync
+            # background_tasks.add_task(campaign_service.sync_campaign_background, campaign.id)
+            pass
 
     # Calculate stats
     from sqlalchemy import func, case
@@ -847,33 +959,35 @@ async def list_campaigns(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid company ID")
         
-    stmt = select(Campaign).where(
-        Campaign.company_id == company_id
-    ).order_by(desc(Campaign.created_at)).offset(offset).limit(limit)
-    
-    result = await session.execute(stmt)
-    campaigns = result.scalars().all()
-    
-    # Enrich with progress stats
-    enriched_campaigns = []
-    
-    for campaign in campaigns:
-        # Count total leads
-        stats_stmt = select(
+    stmt = (
+        select(
+            Campaign,
             func.count(CampaignLead.id).label("total"),
             func.sum(case((CampaignLead.status == "COMPLETED", 1), else_=0)).label("completed"),
             func.sum(case((CampaignLead.status.in_(["INITIATED", "RINGING", "IN_PROGRESS"]), 1), else_=0)).label("in_progress")
-        ).where(CampaignLead.campaign_id == campaign.id)
-        
-        stats_result = await session.execute(stats_stmt)
-        stats = stats_result.one()
+        )
+        .outerjoin(CampaignLead, CampaignLead.campaign_id == Campaign.id)
+        .where(Campaign.company_id == company_id)
+        .group_by(Campaign.id)
+        .order_by(desc(Campaign.created_at))
+        .offset(offset)
+        .limit(limit)
+    )
+    
+    result = await session.execute(stmt)
+    rows = result.all()
+    
+    enriched_campaigns = []
+    
+    for row in rows:
+        campaign, total, completed, in_progress = row
         
         # Convert SQLModel to dict
         campaign_dict = campaign.dict()
         campaign_dict["stats"] = {
-            "total_leads": stats.total or 0,
-            "completed_leads": stats.completed or 0,
-            "in_progress_leads": stats.in_progress or 0
+            "total_leads": total or 0,
+            "completed_leads": completed or 0,
+            "in_progress_leads": in_progress or 0
         }
         enriched_campaigns.append(campaign_dict)
 
@@ -1002,31 +1116,32 @@ async def create_campaign_from_csv(
     source_hash = hashlib.sha256(leads_json.encode()).hexdigest()
     
     # Check for duplicates (Relaxed: Check last 24 hours)
-    if not request.force_create:
-        one_day_ago = datetime.utcnow() - timedelta(days=1)
-        stmt = select(Campaign).where(
-            Campaign.company_id == company_id,
-            Campaign.source_file_hash == source_hash,
-            Campaign.created_at >= one_day_ago
-        ).order_by(desc(Campaign.created_at)).limit(1)
+    # NOTE: source_file_hash column was dropped, so disabling this check.
+    # if not request.force_create:
+    #     one_day_ago = datetime.utcnow() - timedelta(days=1)
+    #     stmt = select(Campaign).where(
+    #         Campaign.company_id == company_id,
+    #         Campaign.source_file_hash == source_hash,
+    #         Campaign.created_at >= one_day_ago
+    #     ).order_by(desc(Campaign.created_at)).limit(1)
         
-        result = await session.execute(stmt)
-        existing_campaign = result.scalars().first()
+    #     result = await session.execute(stmt)
+    #     existing_campaign = result.scalars().first()
         
-        if existing_campaign:
-            # Return 409 Conflict with details
-            # We must use JSONResponse to return custom content with 409
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                status_code=409,
-                content={
-                    "detail": "Duplicate upload detected",
-                    "code": "DUPLICATE_UPLOAD",
-                    "campaign_id": str(existing_campaign.id),
-                    "campaign_name": existing_campaign.name,
-                    "created_at": existing_campaign.created_at.isoformat()
-                }
-            )
+    #     if existing_campaign:
+    #         # Return 409 Conflict with details
+    #         # We must use JSONResponse to return custom content with 409
+    #         from fastapi.responses import JSONResponse
+    #         return JSONResponse(
+    #             status_code=409,
+    #             content={
+    #                 "detail": "Duplicate upload detected",
+    #                 "code": "DUPLICATE_UPLOAD",
+    #                 "campaign_id": str(existing_campaign.id),
+    #                 "campaign_name": existing_campaign.name,
+    #                 "created_at": existing_campaign.created_at.isoformat()
+    #             }
+    #         )
 
     try:
         # 1. Create Parent Campaign
@@ -1037,8 +1152,8 @@ async def create_campaign_from_csv(
             user_id=current_user.id,
             name=campaign_name,
             status="DRAFT", # Batch/Dataset Campaigns start as DRAFT
-            phone_number="", # Not applicable for batch container
-            source_file_hash=source_hash
+            phone_number="" # Not applicable for batch container
+            # source_file_hash=source_hash # REMOVED: Column dropped
         )
         session.add(campaign)
         await session.flush() # flush to get campaign.id
@@ -1135,8 +1250,17 @@ async def update_campaign_settings(
     """
     Update campaign context and execution settings.
     """
+    logger.info(f"PATCH /campaigns/{campaign_id}/settings - User: {current_user.id}")
+    
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
+        # Check if it was archived/deleted recently
+        archived = await session.get(ArchivedCampaign, campaign_id)
+        if archived:
+            logger.warning(f"Campaign {campaign_id} NOT FOUND in active table but EXISTS in ArchivedCampaign. Deletion likely occurred.")
+            raise HTTPException(status_code=404, detail="Campaign was recently deleted and archived")
+        
+        logger.error(f"Campaign {campaign_id} NOT FOUND in DB. User: {current_user.id}")
         raise HTTPException(status_code=404, detail="Campaign not found")
 
     # Update fields if provided
@@ -1156,7 +1280,15 @@ async def update_campaign_settings(
         setattr(campaign, key, value)
 
     # Sync cohort_data if older fields or cohort_data itself was updated
-    if any(k in update_data for k in ["cohort_config", "cohort_questions", "cohort_incentives", "cohort_data"]):
+    
+    # Fallback: If global incentive is empty but cohort incentives exist, set one as default
+    # This must happen BEFORE cohort_data logic so it propagates correctly
+    if not campaign.incentive and campaign.cohort_incentives:
+        first_incentive = next(iter(campaign.cohort_incentives.values()), None)
+        if first_incentive:
+             campaign.incentive = first_incentive
+
+    if any(k in update_data for k in ["cohort_config", "cohort_questions", "cohort_incentives", "cohort_data", "selected_cohorts", "incentive", "preliminary_questions"]):
         # Use existing or newly set values
         config = campaign.cohort_config or {}
         questions = campaign.cohort_questions or {}
@@ -1172,10 +1304,11 @@ async def update_campaign_settings(
             selected_list = campaign.selected_cohorts or []
             new_cohort_data = {}
             for name in cohort_names:
+                # Effective values with fallback
                 new_cohort_data[name] = {
                     "target": config.get(name, 0),
-                    "questions": questions.get(name, []),
-                    "incentive": incentives.get(name, ""),
+                    "questions": questions.get(name) if questions.get(name) else (campaign.preliminary_questions or []),
+                    "incentive": incentives.get(name) if incentives.get(name) else (campaign.incentive or ""),
                     "isSelected": name in selected_list
                 }
             campaign.cohort_data = new_cohort_data
@@ -1216,6 +1349,7 @@ async def update_campaign_settings(
     session.add(campaign)
     await session.commit()
     await session.refresh(campaign)
+
     
     return campaign
 

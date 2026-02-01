@@ -4,6 +4,8 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel, Column, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
+# Updated schema - removed deprecated Bolna columns
+
 class Campaign(SQLModel, table=True):
     __tablename__ = "campaigns"
 
@@ -15,19 +17,19 @@ class Campaign(SQLModel, table=True):
     status: str = Field(default="DRAFT") # INITIATED, RINGING, IN_PROGRESS, COMPLETED, FAILED, DRAFT
     
     # Bolna Execution Data
-    source_file_hash: Optional[str] = Field(default=None, index=True) # SHA256 hash of source CSV data
-    bolna_execution_id: Optional[str] = Field(default=None, index=True, unique=True)
-    bolna_agent_id: Optional[str] = Field(default=None)
-    bolna_call_status: Optional[str] = Field(default=None) # completed, failed, no-answer, busy, etc.
-    bolna_conversation_time: Optional[int] = Field(default=None) # Duration in seconds
-    bolna_total_cost: Optional[int] = Field(default=None) # Cost in cents
-    bolna_error_message: Optional[str] = Field(default=None)
-    bolna_transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
-    bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB)) # Full raw webhook payload
-    bolna_created_at: Optional[datetime] = Field(default=None)
-    bolna_updated_at: Optional[datetime] = Field(default=None)
+    # source_file_hash: Optional[str] = Field(default=None, index=True) # SHA256 hash of source CSV data
+    # bolna_execution_id: Optional[str] = Field(default=None, index=True, unique=True)
+    # bolna_agent_id: Optional[str] = Field(default=None)
+    # bolna_call_status: Optional[str] = Field(default=None) # completed, failed, no-answer, busy, etc.
+    # bolna_conversation_time: Optional[int] = Field(default=None) # Duration in seconds
+    # bolna_total_cost: Optional[int] = Field(default=None) # Cost in cents
+    # bolna_error_message: Optional[str] = Field(default=None)
+    # bolna_transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
+    # bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    # bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB)) # Full raw webhook payload
+    # bolna_created_at: Optional[datetime] = Field(default=None)
+    # bolna_updated_at: Optional[datetime] = Field(default=None)
     
     # Team Member Info
     phone_number: Optional[str] = Field(default=None)
@@ -54,7 +56,7 @@ class Campaign(SQLModel, table=True):
     
     # Execution Settings
     total_call_target: Optional[int] = Field(default=None)
-    call_duration_limit: Optional[int] = Field(default=600) # Default 10 mins in seconds
+    call_duration: Optional[int] = Field(default=600) # Default 10 mins in seconds
     cohort_config: Optional[Dict[str, int]] = Field(default={}, sa_column=Column(JSONB)) # {cohort_name: target_count}
     selected_cohorts: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB)) # List of selected cohort names
     execution_windows: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSONB)) # [{start, end}]

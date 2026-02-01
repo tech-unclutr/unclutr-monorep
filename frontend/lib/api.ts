@@ -15,7 +15,7 @@ const getBaseUrl = () => {
         }
     }
 
-    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    if (process.env.NEXT_PUBLIC_API_URL) return `${process.env.NEXT_PUBLIC_API_URL}/api/v1`;
     if (typeof window !== 'undefined') {
         const { hostname } = window.location;
         if (hostname !== 'localhost' && hostname !== '127.0.0.1') {

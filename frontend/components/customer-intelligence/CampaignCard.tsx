@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Check, ChevronDown, ChevronUp, Calendar, Clock, Target, Users, Sparkles, BrainCircuit, ShieldAlert, AlignLeft, Mic, FileText, Pencil, Trash2, Briefcase, User, MessageSquare, Gift, Layers } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, Calendar, Clock, Target, Users, Sparkles, BrainCircuit, ShieldAlert, AlignLeft, Mic, FileText, Pencil, Trash2, Briefcase, User, MessageSquare, Gift, Layers, ArrowUpRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -20,6 +20,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getUniqueCohortAvatars } from "@/lib/avatar-utils";
+
 
 interface CampaignCardProps {
     campaign: any;
@@ -40,8 +42,9 @@ export const CampaignCard = ({
     onDelete,
     className,
     isExpanded: propIsExpanded,
-    onToggleExpand
-}: CampaignCardProps & { isExpanded?: boolean; onToggleExpand?: () => void }) => {
+    onToggleExpand,
+    onStartCampaign // [NEW] Prop for "Start Campaign"
+}: CampaignCardProps & { isExpanded?: boolean; onToggleExpand?: () => void; onStartCampaign?: () => void }) => {
     const [internalIsExpanded, setInternalIsExpanded] = useState(variant === 'default');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -53,7 +56,7 @@ export const CampaignCard = ({
 
     // Form State
     const [primaryGoal, setPrimaryGoal] = useState(campaign?.campaign_overview?.primary_goal || campaign?.name || "Untitled Campaign");
-    const [editedData, setEditedData] = useState(campaign?.bolna_extracted_data || {});
+    const [editedData, setEditedData] = useState({}); // campaign?.bolna_extracted_data || {});
 
     // Destructure Config Data (The "Plan")
     const {
@@ -70,26 +73,27 @@ export const CampaignCard = ({
         preliminary_questions = [], // Fallback for cohorts without specific questions
         incentive, // Fallback incentive
         execution_windows = [],
-        call_duration_limit,
+        call_duration,
         total_call_target
     } = campaign;
 
     // Derived Metrics
     const totalTargets = Object.values(cohort_config as Record<string, number>).reduce((a, b) => a + b, 0) || total_call_target || 0;
     const activeCohortCount = selected_cohorts?.length || Object.keys(cohort_config).length || 0;
-    const maxDurationMins = call_duration_limit ? Math.floor(call_duration_limit / 60) : 10;
+    const maxDurationMins = call_duration ? Math.floor(call_duration / 60) : 10;
     const activeWindows = execution_windows?.length || 0;
 
     // Status Config
-    const statusConfig: Record<string, { label: string, color: string, bg: string, border: string }> = {
-        'COMPLETED': { label: 'Completed', color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-        'IN_PROGRESS': { label: 'Active', color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-        'FAILED': { label: 'Attention', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
-        'DRAFT': { label: 'Draft', color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' },
-        'SCHEDULED': { label: 'Scheduled', color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' }
+    const statusConfig: Record<string, { label: string, color: string, bg: string, border: string, icon: any }> = {
+        'COMPLETED': { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Check },
+        'IN_PROGRESS': { label: 'Active', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Clock },
+        'FAILED': { label: 'Attention', color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: ShieldAlert },
+        'DRAFT': { label: 'Draft', color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: Pencil },
+        'SCHEDULED': { label: 'Scheduled', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: Calendar }
     };
 
     const currentStatus = statusConfig[status] || statusConfig['DRAFT'];
+    const StatusIcon = currentStatus.icon;
 
     // Handlers
     const handleSave = async (e: React.MouseEvent) => {
@@ -99,7 +103,7 @@ export const CampaignCard = ({
         try {
             await onEdit(campaign.id, {
                 campaign_overview: { ...campaign.campaign_overview, primary_goal: primaryGoal },
-                bolna_extracted_data: editedData
+                // bolna_extracted_data: editedData
             });
             setIsEditing(false);
         } catch (error) {
@@ -125,6 +129,13 @@ export const CampaignCard = ({
         }
     };
 
+    const handleStartCampaign = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onStartCampaign) {
+            onStartCampaign();
+        }
+    };
+
 
     const toggleExpand = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -137,13 +148,18 @@ export const CampaignCard = ({
         }
     };
 
+
+
+    const allCohorts = selected_cohorts.length > 0 ? selected_cohorts : Object.keys(cohort_config);
+    const assignedAvatars = getUniqueCohortAvatars(allCohorts);
+
     return (
         <Card
             className={cn(
-                "group relative overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-white/70 dark:bg-zinc-950/40 backdrop-blur-xl",
+                "group relative overflow-hidden transition-all duration-500 ease-out bg-white dark:bg-zinc-950",
                 isExpanded
-                    ? "rounded-[40px] border border-indigo-500/30 shadow-[0_32px_64px_-16px_rgba(79,70,229,0.2)] z-20 my-6 ring-1 ring-indigo-500/20 scale-[1.01]"
-                    : "rounded-[28px] border border-zinc-100 dark:border-zinc-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:scale-[1.005] cursor-pointer",
+                    ? "rounded-[40px] border border-indigo-500/30 shadow-[0_32px_64px_-12px_rgba(79,70,229,0.15)] z-20 my-6 ring-4 ring-indigo-500/5"
+                    : "rounded-[32px] border border-zinc-100 dark:border-zinc-800/60 hover:border-indigo-200 dark:hover:border-indigo-500/30 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_40px_-12px_rgba(79,70,229,0.1)] hover:-translate-y-1 cursor-pointer",
                 className
             )}
             onClick={(e) => {
@@ -151,122 +167,153 @@ export const CampaignCard = ({
                 else if (!isEditing) toggleExpand(e);
             }}
         >
-            {/* Ambient Grading Glow - More dramatic in expanded mode */}
-            <div className={cn(
-                "absolute inset-0 bg-gradient-to-br from-indigo-500/[0.08] via-fuchsia-500/[0.05] to-purple-500/[0.08] pointer-events-none transition-opacity duration-1000",
-                isExpanded ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            )} />
+            {/* 1. Header Section: Identity & Status */}
+            <CardContent className={cn("relative transition-all duration-500", isExpanded ? "p-10 md:p-14" : "p-8")}>
 
-            {/* Mesh Gradient Background (Expanded Only) */}
-            <AnimatePresence>
-                {isExpanded && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 pointer-events-none overflow-hidden"
-                    >
-                        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[120px] rounded-full" />
-                        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Top Indicator Strip */}
-            <div className={cn(
-                "absolute top-0 left-0 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-700",
-                isExpanded ? "h-2 opacity-100" : "h-1 opacity-0 group-hover:opacity-100"
-            )} />
-
-            <CardContent className={cn("relative transition-all duration-700", isExpanded ? "p-10 md:p-14" : "p-8")}>
-                {/* 1. Header Section: Identity & Status */}
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10">
-                    <div className="space-y-6 flex-1">
-                        <div className="flex items-center gap-4">
-                            <Badge
-                                variant="outline"
-                                className={cn(
-                                    "text-[10px] font-black px-4 py-1.5 uppercase tracking-[0.2em] rounded-full transition-all duration-500",
-                                    currentStatus.color, currentStatus.bg, currentStatus.border,
-                                    isExpanded && "scale-110 shadow-sm"
-                                )}
-                            >
-                                {currentStatus.label}
-                            </Badge>
-                            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
-                                {created_at ? format(new Date(created_at), 'MMMM do, yyyy') : 'New Campaign'}
-                            </span>
+                {/* Header Row: Status Badge & Date */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className={cn(
+                        "flex items-center gap-2 pl-1 pr-3 py-1 rounded-full transition-all duration-300 border backdrop-blur-md",
+                        currentStatus.bg, currentStatus.border
+                    )}>
+                        <div className={cn("p-1.5 rounded-full bg-white dark:bg-black/20", currentStatus.color)}>
+                            <StatusIcon className="w-3.5 h-3.5" strokeWidth={3} />
                         </div>
-                        {isEditing ? (
-                            <Textarea
-                                value={primaryGoal}
-                                onChange={(e) => setPrimaryGoal(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-4xl font-black bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 min-h-[120px] resize-none rounded-3xl p-6"
-                            />
-                        ) : (
-                            <h3 className={cn(
-                                "font-black text-zinc-900 dark:text-zinc-50 leading-[1.1] transition-all duration-700 tracking-[-0.03em]",
-                                isExpanded
-                                    ? "text-5xl md:text-6xl bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-500 dark:from-white dark:via-zinc-200 dark:to-zinc-500"
-                                    : "text-2xl group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                            )}>
-                                {name || primaryGoal}
-                            </h3>
-                        )}
+                        <span className={cn("text-[11px] font-black uppercase tracking-[0.15em] pr-1", currentStatus.color)}>
+                            {currentStatus.label}
+                        </span>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-3 self-start mt-2">
-                        <AnimatePresence>
-                            {isExpanded && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    className="flex items-center gap-2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-2 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl"
-                                >
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-10 w-10 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-all"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (onEditClick) onEditClick(campaign.id);
-                                            else setIsEditing(!isEditing);
-                                        }}
-                                    >
-                                        <Pencil className="w-5 h-5" />
-                                    </Button>
-                                    <Separator orientation="vertical" className="h-5" />
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-10 w-10 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
-                                        onClick={handleDeleteClick}
-                                        disabled={isDeleting}
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </Button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={toggleExpand}
+                    <div className="flex items-center gap-3">
+                        {/* Date */}
+                        <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-full">
+                            <Calendar className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600" />
+                            {created_at ? format(new Date(created_at), 'MMMM do, yyyy') : 'New Campaign'}
+                        </span>
+
+                        {/* Expand Toggle Button (Visible on Hover/Expanded) */}
+                        <div
                             className={cn(
-                                "h-12 w-12 rounded-2xl transition-all duration-500 shadow-sm",
-                                isExpanded
-                                    ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-500/20"
-                                    : "bg-zinc-50 dark:bg-zinc-900 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer",
+                                isExpanded ? "bg-zinc-100 dark:bg-zinc-800 rotate-180" : "bg-transparent group-hover:bg-zinc-50 dark:group-hover:bg-zinc-900 opacity-0 group-hover:opacity-100"
                             )}
+                            onClick={toggleExpand}
                         >
-                            {isExpanded ? <ChevronUp className="w-7 h-7" /> : <ChevronDown className="w-6 h-6" />}
-                        </Button>
+                            <ChevronDown className="w-4 h-4 text-zinc-400" />
+                        </div>
                     </div>
                 </div>
+
+                {/* Title Section */}
+                <div className="mb-10 pr-12">
+                    {isEditing ? (
+                        <Textarea
+                            value={primaryGoal}
+                            onChange={(e) => setPrimaryGoal(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-4xl font-black bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 min-h-[120px] resize-none rounded-3xl p-6"
+                        />
+                    ) : (
+                        <h3 className={cn(
+                            "font-black text-zinc-900 dark:text-zinc-50 leading-[1.05] transition-all duration-500 tracking-[-0.04em]",
+                            isExpanded
+                                ? "text-5xl md:text-6xl bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-500"
+                                : "text-3xl group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                        )}>
+                            {name || primaryGoal}
+                        </h3>
+                    )}
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-2">
+                    {/* Metric 1: Targets */}
+                    <div className="flex items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/30 p-4 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-100">
+                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-indigo-500 transition-colors">
+                            <Target className="w-6 h-6" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
+                                {totalTargets}
+                            </div>
+                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                Total Targets
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Metric 2: Calls Duration */}
+                    <div className="flex items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/30 p-4 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-orange-500/5 hover:border-orange-100">
+                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-orange-500 transition-colors">
+                            <Clock className="w-6 h-6" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
+                                {maxDurationMins}m
+                            </div>
+                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                Calls
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Metric 3: Active Slots */}
+                    <div className="flex items-center gap-4 bg-zinc-50/50 dark:bg-zinc-900/30 p-4 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-emerald-500/5 hover:border-emerald-100">
+                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-emerald-500 transition-colors">
+                            <Calendar className="w-6 h-6" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
+                                {activeWindows} Slots
+                            </div>
+                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                Schedule
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* New Button: Start Campaign (Only visible when collapsed and not expanded) - Taking 4th slot */}
+                    {!isExpanded && (
+                        <div
+                            className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 p-4 rounded-[24px] text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all duration-300 cursor-pointer group/btn"
+                            onClick={handleStartCampaign}
+                        >
+                            <span className="text-sm font-bold tracking-wide mr-2">Start Campaign</span>
+                            <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Tags (Bottom Row): Cohort Avatars */}
+                <div className="flex items-center justify-between mt-6">
+                    <div className="flex items-center pl-3">
+                        {allCohorts.slice(0, 5).map((cohortName: string, i: number) => {
+                            const avatarIndex = assignedAvatars[cohortName] || 1;
+                            return (
+                                <div
+                                    key={cohortName}
+                                    className="w-10 h-10 rounded-full border-[3px] border-white/40 dark:border-white/10 -ml-4 first:ml-0 relative z-0 hover:z-10 transition-all duration-300 hover:scale-110 hover:-translate-y-1 shadow-sm bg-transparent cursor-help group/avatar overflow-hidden"
+                                    title={cohortName}
+                                >
+                                    <img
+                                        src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`}
+                                        alt={cohortName}
+                                        className="w-full h-full object-cover scale-150 translate-y-1.5 drop-shadow-md"
+                                    />
+                                </div>
+                            );
+                        })}
+                        {allCohorts.length > 5 && (
+                            <div className="w-10 h-10 rounded-full border-[3px] border-white dark:border-zinc-950 -ml-4 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-500 z-0 shadow-sm">
+                                +{allCohorts.length - 5}
+                            </div>
+                        )}
+                        <div className="ml-4 text-xs font-bold text-zinc-400 dark:text-zinc-500">
+                            Active Cohorts
+                        </div>
+                    </div>
+                </div>
+
 
                 <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
                     <AlertDialogContent className="rounded-[2rem] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
@@ -309,7 +356,7 @@ export const CampaignCard = ({
                             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                             className="overflow-hidden"
                         >
-                            <div className="pt-12 border-t border-zinc-100 dark:border-zinc-800/50 space-y-16">
+                            <div className="pt-12 border-t border-zinc-100 dark:border-zinc-800/50 space-y-16 mt-8">
                                 {/* A. Context Matrix */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     {[
@@ -360,7 +407,7 @@ export const CampaignCard = ({
                                             const target = cohort_config[cohortName] || 0;
                                             const questions = cohort_questions[cohortName] || preliminary_questions;
                                             const activeIncentive = cohort_incentives[cohortName] || incentive;
-                                            const avatarIndex = (cohortName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 12) + 1;
+                                            const avatarIndex = assignedAvatars[cohortName] || 1;
 
                                             return (
                                                 <motion.div
@@ -374,8 +421,8 @@ export const CampaignCard = ({
 
                                                     {/* Header */}
                                                     <div className="flex items-center gap-5 mb-8">
-                                                        <div className="w-16 h-16 rounded-[20px] overflow-hidden border-2 border-white dark:border-zinc-800 shadow-xl group-hover/cohort:scale-105 transition-transform duration-500">
-                                                            <img src={`/images/avatars/avatar_${avatarIndex}.png`} alt={cohortName} className="w-full h-full object-cover" />
+                                                        <div className="w-16 h-16 rounded-[20px] overflow-hidden border-2 border-white dark:border-zinc-800 shadow-xl group-hover/cohort:scale-105 transition-transform duration-500 bg-transparent">
+                                                            <img src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`} alt={cohortName} className="w-full h-full object-contain scale-110 drop-shadow-md" />
                                                         </div>
                                                         <div className="space-y-1">
                                                             <h5 className="font-black text-xl text-zinc-900 dark:text-zinc-50 tracking-tight">{cohortName}</h5>
@@ -419,63 +466,34 @@ export const CampaignCard = ({
                                         })}
                                     </div>
                                 </div>
+
+                                {/* Action Footer for Expanded Mode */}
+                                <div className="flex items-center justify-end gap-3 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
+                                    <Button
+                                        variant="outline"
+                                        className="rounded-xl h-11 border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:bg-zinc-50"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (onEditClick) onEditClick(campaign.id);
+                                            else setIsEditing(!isEditing);
+                                        }}
+                                    >
+                                        <Pencil className="w-4 h-4 mr-2" />
+                                        Edit Campaign
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className="rounded-xl h-11 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10"
+                                        onClick={handleDeleteClick}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {/* 3. Footer: Config Summary (Always Visible) */}
-                <div className={cn(
-                    "flex flex-wrap items-center gap-x-12 gap-y-6 transition-all duration-500",
-                    isExpanded ? "mt-10 pt-6 border-t border-zinc-100 dark:border-zinc-800/50" : "mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800/50"
-                )}>
-                    {/* Metric 1: Targets */}
-                    <div className="flex items-center gap-4 group/metric">
-                        <div className={cn("p-2.5 rounded-2xl transition-colors shadow-sm", isExpanded ? "bg-indigo-50 text-indigo-600" : "bg-zinc-50 text-zinc-400 group-hover/metric:bg-indigo-50 group-hover/metric:text-indigo-600")}>
-                            <Target className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-bold text-zinc-900 dark:text-white leading-none">{totalTargets}</span>
-                            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mt-1">Total Targets</span>
-                        </div>
-                    </div>
-
-                    {/* Metric 2: Duration */}
-                    <div className="flex items-center gap-4 group/metric">
-                        <div className={cn("p-2.5 rounded-2xl transition-colors shadow-sm", isExpanded ? "bg-purple-50 text-purple-600" : "bg-zinc-50 text-zinc-400 group-hover/metric:bg-purple-50 group-hover/metric:text-purple-600")}>
-                            <Clock className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-bold text-zinc-900 dark:text-white leading-none">{maxDurationMins}m</span>
-                            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mt-1">Calls</span>
-                        </div>
-                    </div>
-
-                    {/* Metric 3: Windows */}
-                    <div className="flex items-center gap-4 group/metric">
-                        <div className={cn("p-2.5 rounded-2xl transition-colors shadow-sm", isExpanded ? "bg-orange-50 text-orange-600" : "bg-zinc-50 text-zinc-400 group-hover/metric:bg-orange-50 group-hover/metric:text-orange-600")}>
-                            <Calendar className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-bold text-zinc-900 dark:text-white leading-none">{activeWindows} Slots</span>
-                            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mt-1">Schedule</span>
-                        </div>
-                    </div>
-
-                    {/* Tags (Only collapsed) - Visual Preview of Cohorts */}
-                    {!isExpanded && selected_cohorts.length > 0 && (
-                        <div className="flex items-center gap-1 ml-auto">
-                            {selected_cohorts.slice(0, 3).map((c: string, i: number) => (
-                                <Badge key={i} variant="secondary" className="text-[10px] px-2.5 py-1 bg-zinc-100 text-zinc-500 border-transparent hover:bg-zinc-200">
-                                    {c}
-                                </Badge>
-                            ))}
-                            {selected_cohorts.length > 3 && (
-                                <span className="text-[10px] font-bold text-zinc-300 ml-1">+{selected_cohorts.length - 3}</span>
-                            )}
-                        </div>
-                    )}
-                </div>
             </CardContent>
         </Card>
     );

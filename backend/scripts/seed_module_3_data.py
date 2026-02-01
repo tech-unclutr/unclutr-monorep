@@ -32,7 +32,9 @@ async def seed_module_3_data():
             shopify_location_id=loc_id,
             name="Seed Warehouse",
             active=True,
-            is_primary=True
+            is_primary=True,
+            shopify_created_at=datetime.utcnow(),
+            shopify_updated_at=datetime.utcnow()
         )
         session.add(location)
 
@@ -48,7 +50,9 @@ async def seed_module_3_data():
             status="active",
             handle="seeded-audit-product",
             created_by="SeedScript",
-            updated_by="SeedScript"
+            updated_by="SeedScript",
+            shopify_created_at=datetime.utcnow(),
+            shopify_updated_at=datetime.utcnow()
         )
         session.add(product)
         await session.flush() # Need ID
@@ -67,7 +71,9 @@ async def seed_module_3_data():
             price=19.99,
             weight=1.5,
             created_by="SeedScript",
-            updated_by="SeedScript"
+            updated_by="SeedScript",
+            shopify_created_at=datetime.utcnow(),
+            shopify_updated_at=datetime.utcnow()
         )
         session.add(variant)
 

@@ -12,6 +12,8 @@ from app.services.shopify.oauth_service import shopify_oauth_service
 
 from app.core.version import APP_VERSION
 
+# Force reload to clear SQLAlchemy metadata cache
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -282,7 +284,13 @@ if not settings.is_production:
 if settings.is_production:
     origins = settings.allowed_origins_list
 else:
-    origins = list(set(base_origins + settings.allowed_origins_list))
+    # Explicitly include both localhost and 127.0.0.1 for both 3000 and 8000
+    origins = list(set(base_origins + settings.allowed_origins_list + [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]))
 
 logger.info(f"CORS origins (static): {origins}")
 

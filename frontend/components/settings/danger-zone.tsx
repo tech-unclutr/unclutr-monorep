@@ -149,50 +149,57 @@ export function DangerZone() {
             </div>
 
             <div className="space-y-4">
-                <div className="flex items-center justify-between p-5 bg-white/80 dark:bg-zinc-900/80 rounded-xl border border-red-100 dark:border-red-900/30 backdrop-blur-sm transition-all hover:border-red-200 dark:hover:border-red-900/50">
-                    <div>
+                <div className="flex items-center justify-between gap-6 p-5 bg-white/80 dark:bg-zinc-900/80 rounded-xl border border-red-100 dark:border-red-900/30 backdrop-blur-sm transition-all hover:border-red-200 dark:hover:border-red-900/50">
+                    <div className="flex-1 max-w-[400px]">
                         <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Delete Workspace</h4>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Permanently remove all data and access.</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5">Permanently remove all data and access.</p>
                     </div>
 
                     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20 transition-all rounded-lg h-9">
+                            <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20 transition-all rounded-lg h-9 shrink-0">
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
                             </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="border-red-200 dark:border-red-900/30 rounded-2xl p-8">
-                            <AlertDialogHeader>
-                                <AlertDialogTitle className="text-red-600 dark:text-red-400 flex items-center gap-2 text-xl">
-                                    <AlertTriangle className="w-5 h-5" />
-                                    Request Workspace Deletion?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription className="text-base mt-2">
-                                    This action cannot be undone. Our team will review your request and get back to you
-                                    shortly to finalize the deletion of your workspace.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="mt-4">
-                                <AlertDialogCancel disabled={isLoading} className="rounded-xl">Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        handleDeleteRequest()
-                                    }}
-                                    disabled={isLoading}
-                                    className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/10 dark:hover:bg-red-900/20 dark:text-red-400 dark:border-red-900/30 transition-colors shadow-none rounded-xl"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Sending Request...
-                                        </>
-                                    ) : (
-                                        "Submit Deletion Request"
-                                    )}
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
+                        <AlertDialogContent className="border-red-200 dark:border-red-900/40 rounded-2xl p-0 overflow-hidden bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl shadow-2xl">
+                            <div className="p-8">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-red-600 dark:text-red-400 flex items-center gap-2.5 text-xl font-bold">
+                                        <AlertTriangle className="w-5 h-5" />
+                                        Request Workspace Deletion?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription className="text-base mt-3 text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                        This action cannot be undone. Our team will review your request and get back to you
+                                        shortly to finalize the deletion of your workspace.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="mt-8 gap-3">
+                                    <AlertDialogCancel
+                                        disabled={isLoading}
+                                        className="rounded-xl border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                                    >
+                                        Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            handleDeleteRequest()
+                                        }}
+                                        disabled={isLoading}
+                                        className="bg-red-600 hover:bg-red-700 text-white border-0 dark:bg-red-600 dark:hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 rounded-xl font-medium"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Sending Request...
+                                            </>
+                                        ) : (
+                                            "Submit Deletion Request"
+                                        )}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </div>
                         </AlertDialogContent>
                     </AlertDialog>
                 </div>

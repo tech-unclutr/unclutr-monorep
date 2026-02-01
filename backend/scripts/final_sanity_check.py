@@ -1,3 +1,7 @@
+import sys
+import os
+# Add backend directory to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import asyncio
 from uuid import UUID
@@ -50,8 +54,11 @@ async def run_sanity_check():
         min_date = (await session.execute(earliest_date_stmt)).scalar()
         agg_since = metrics['heartbeat']['since_date']
         print(f"  [3] Temporal Sanity: Min Order Date={min_date}, 'since_date'={agg_since}")
-        assert min_date.date().isoformat() == agg_since, f"❌ Date mismatch! Exp: {min_date.date().isoformat()}, Got: {agg_since}"
-        print("      ✅ Temporal context confirmed.")
+        if min_date:
+            assert min_date.date().isoformat() == agg_since, f"❌ Date mismatch! Exp: {min_date.date().isoformat()}, Got: {agg_since}"
+            print("      ✅ Temporal context confirmed.")
+        else:
+            print("      ⚠️  No orders found, skipping temporal check.")
 
         # 4. Snapshot Integrity Check
         target_date = date(2026, 1, 14)

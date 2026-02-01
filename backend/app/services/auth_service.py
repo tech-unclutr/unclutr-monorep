@@ -86,16 +86,41 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
     
     membership_stmt = select(CompanyMembership).where(CompanyMembership.user_id == user.id)
     membership_result = await session.exec(membership_stmt)
-    membership = membership_result.first()
+    memberships = membership_result.all()
+    
+    membership = next((m for m in memberships if m.company_id == user.current_company_id), None)
+    if not membership and memberships:
+        membership = memberships[0]
+        user.current_company_id = membership.company_id
+    
+    if membership:
+        user.role = membership.role
+        
+    # Auto-populate designation from most recent campaign if not set
+    if not user.designation:
+        from app.models.campaign import Campaign
+        from sqlmodel import desc
+        
+        campaign_stmt = select(Campaign).where(
+            Campaign.user_id == user.id
+        ).order_by(desc(Campaign.created_at)).limit(1)
+        
+        campaign_result = await session.exec(campaign_stmt)
+        latest_campaign = campaign_result.first()
+        
+        if latest_campaign and latest_campaign.team_member_role:
+            user.designation = latest_campaign.team_member_role
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
     
     is_onboarded = membership is not None
     
     # Attach transient attribute for the response serializer
-    # Use UserRead to avoid modifying User SQLModel instance which is strict
     user_read = UserRead.from_orm(user)
     user_read.onboarding_completed = is_onboarded
-    user_read.current_company_id = user.current_company_id or (membership.company_id if membership else None)
-    user_read.role = membership.role if membership else None
+    user_read.current_company_id = user.current_company_id
+    user_read.role = user.role # Now using the persistent field
     
     return user_read
 

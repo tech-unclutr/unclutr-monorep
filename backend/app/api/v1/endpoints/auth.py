@@ -79,6 +79,7 @@ async def sync_user_endpoint(
     """
     Syncs Firebase User to Local DB. 
     Call this after Firebase Login on Frontend.
+    Auto-populates designation from campaigns if not set.
     """
     uid = current_user_token.get("uid")
     email = current_user_token.get("email")
@@ -94,3 +95,4 @@ async def sync_user_endpoint(
     
     user = await auth_service.sync_user(session, user_in)
     return user
+

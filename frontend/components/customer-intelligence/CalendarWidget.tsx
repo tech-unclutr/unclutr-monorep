@@ -1,191 +1,159 @@
-import React, { useMemo, useCallback } from 'react';
-import { Calendar, momentLocalizer, Views, SlotInfo } from 'react-big-calendar';
+import React, { useMemo } from 'react';
 import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { cn } from "@/lib/utils";
 import { useTheme } from 'next-themes';
-import { Button } from "@/components/ui/button";
-import { ShieldAlert, Sparkles, Clock, Calendar as CalendarIcon } from 'lucide-react';
-import { toast } from 'sonner';
-
-const localizer = momentLocalizer(moment);
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CalendarWidgetProps {
-    busySlots: Array<{ start: string; end: string }>;
+    busySlots: Array<{ start: string; end: string }>; // Unused but kept for interface
     executionWindows: Array<{ day: string; start: string; end: string }>;
-    onSaveWindow: (window: { day: string; start: string; end: string }) => Promise<void>;
+    onSaveWindow: (window: { day: string; start: string; end: string }) => Promise<void>; // Unused
 }
 
-export function CalendarWidget({ busySlots, executionWindows, onSaveWindow }: CalendarWidgetProps) {
+export function CalendarWidget({ executionWindows, busySlots = [] }: CalendarWidgetProps) {
     const { theme } = useTheme();
 
-    // Transform slots to events
-    const events = useMemo(() => {
+    const next7Days = useMemo(() => {
+        const days = [];
         const today = moment().startOf('day');
-        const startOfWeek = moment().startOf('week').add(1, 'days'); // Monday
+        for (let i = 0; i < 7; i++) {
+            days.push(moment(today).add(i, 'days'));
+        }
+        return days;
+    }, []);
 
-        const allEvents = [];
+    const hours = Array.from({ length: 24 }, (_, i) => i);
 
-        // 1. Busy Slots (Red Glassmorphism)
-        busySlots.forEach((slot, i) => {
-            allEvents.push({
-                id: `busy-${i}`,
-                title: 'GCal Busy',
-                start: new Date(slot.start),
-                end: new Date(slot.end),
-                resource: 'busy',
-            });
+    // Helper to check status of a specific hour on a specific date
+    const getSlotStatus = (date: moment.Moment, hour: number) => {
+        const slotStart = date.clone().hour(hour).minute(0);
+        const slotEnd = date.clone().hour(hour + 1).minute(0);
+        const slotStartMs = slotStart.valueOf();
+        const slotEndMs = slotEnd.valueOf();
+
+        // 1. Check Busy Slots (GCal)
+        const isBusy = busySlots.some(slot => {
+            const s = new Date(slot.start).getTime();
+            const e = new Date(slot.end).getTime();
+            // Check for overlap
+            return (s < slotEndMs && e > slotStartMs);
         });
 
-        // 2. Execution Windows (Green Glow)
-        const daysMap: { [key: string]: number } = { 'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6 };
+        // 2. Check Execution Windows
+        const isExecution = executionWindows.some(win => {
+            let winStart: moment.Moment;
+            let winEnd: moment.Moment;
 
-        executionWindows.forEach((win, i) => {
-            const dayIndex = daysMap[win.day];
-            if (dayIndex === undefined) return;
+            if (win.day && win.day.includes('-')) {
+                // YYYY-MM-DD
+                const winDate = moment(win.day);
+                if (!winDate.isSame(date, 'day')) return false;
 
-            // Project to THIS week
-            const targetDate = moment().startOf('week').add(dayIndex, 'days');
-            const [sH, sM] = win.start.split(':').map(Number);
-            const [eH, eM] = win.end.split(':').map(Number);
+                const [sH, sM] = win.start.split(':').map(Number);
+                const [eH, eM] = win.end.split(':').map(Number);
 
-            const start = targetDate.clone().hours(sH).minutes(sM).seconds(0).toDate();
-            const end = targetDate.clone().hours(eH).minutes(eM).seconds(0).toDate();
+                winStart = winDate.clone().hour(sH).minute(sM);
+                winEnd = winDate.clone().hour(eH).minute(eM);
+            } else {
+                // Day name (e.g., "Monday")
+                const dayName = date.format('dddd');
+                if (win.day !== dayName) return false;
 
-            allEvents.push({
-                id: `campaign-${i}`,
-                title: 'AI Execution Window',
-                start: start,
-                end: end,
-                resource: 'campaign',
-            });
+                const [sH, sM] = win.start.split(':').map(Number);
+                const [eH, eM] = win.end.split(':').map(Number);
+
+                winStart = date.clone().hour(sH).minute(sM);
+                winEnd = date.clone().hour(eH).minute(eM);
+            }
+
+            // Check overlap
+            return (slotStart.isBefore(winEnd) && slotEnd.isAfter(winStart));
         });
 
-        return allEvents;
-    }, [busySlots, executionWindows]);
-
-    const handleSelectSlot = useCallback(async (slotInfo: SlotInfo) => {
-        const start = moment(slotInfo.start);
-        const end = moment(slotInfo.end);
-
-        const dayName = start.format('Sunday'); // Wait, format('dddd') is better
-        const dayNameFixed = start.format('Regular'); // No, let's use toLocaleDateString for safety
-        const finalDayName = slotInfo.start.toLocaleDateString('en-US', { weekday: 'long' });
-
-        const startTime = start.format('HH:mm');
-        const endTime = end.format('HH:mm');
-
-        try {
-            await onSaveWindow({
-                day: finalDayName,
-                start: startTime,
-                end: endTime
-            });
-            toast.success(`Window added for ${finalDayName}`, {
-                icon: <Sparkles className="w-4 h-4 text-indigo-500" />,
-            });
-        } catch (error) {
-            toast.error("Failed to save window");
-        }
-    }, [onSaveWindow]);
-
-    const CustomEvent = ({ event }: any) => {
-        const isBusy = event.resource === 'busy';
-        return (
-            <div className="flex flex-col h-full p-2 overflow-hidden">
-                <div className="flex items-center gap-1.5 mb-1">
-                    {isBusy ? (
-                        <ShieldAlert className="w-3 h-3 text-red-500 shrink-0" />
-                    ) : (
-                        <Sparkles className="w-3 h-3 text-emerald-500 shrink-0" />
-                    )}
-                    <span className="text-[10px] font-black uppercase tracking-wider truncate">
-                        {event.title}
-                    </span>
-                </div>
-                <div className="flex items-center gap-1 text-[9px] font-bold opacity-70">
-                    <Clock className="w-2.5 h-2.5" />
-                    {moment(event.start).format('h:mm A')} - {moment(event.end).format('h:mm A')}
-                </div>
-            </div>
-        );
-    };
-
-    const eventStyleGetter = (event: any) => {
-        const isBusy = event.resource === 'busy';
-        if (isBusy) {
-            return {
-                className: "busy-event-glass",
-                style: {
-                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                    borderLeft: '4px solid #EF4444',
-                    color: '#EF4444',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.12)',
-                }
-            };
-        } else {
-            return {
-                className: "campaign-event-glow",
-                style: {
-                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                    borderLeft: '4px solid #10B981',
-                    color: '#10B981',
-                    borderRadius: '8px',
-                    boxShadow: '0 8px 16px -4px rgba(16, 185, 129, 0.2)',
-                }
-            };
-        }
+        if (isBusy && isExecution) return 'conflict';
+        if (isBusy) return 'busy';
+        if (isExecution) return 'execution';
+        return 'free';
     };
 
     return (
-        <div className="h-full min-h-[650px] bg-white/50 dark:bg-black/40 backdrop-blur-xl rounded-[2rem] border border-zinc-200/50 dark:border-white/5 overflow-hidden p-6 shadow-2xl relative">
-            <style jsx global>{`
-                .rbc-calendar { font-family: inherit; font-weight: 600; }
-                .rbc-time-view { border: none !important; }
-                .rbc-time-header { border-bottom: 1px solid rgba(0,0,0,0.05) !important; margin-bottom: 20px; }
-                .dark .rbc-time-header { border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
-                .rbc-time-header-content { border-left: none !important; }
-                .rbc-header { border-bottom: none !important; padding: 12px 0 !important; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: #71717a; }
-                
-                .rbc-time-content { border-top: none !important; }
-                .rbc-timeslot-group { border-bottom: 1px solid rgba(0,0,0,0.02) !important; min-height: 50px !important; }
-                .dark .rbc-timeslot-group { border-bottom: 1px solid rgba(255,255,255,0.02) !important; }
-                
-                .rbc-day-slot .rbc-time-slot { border-top: none !important; }
-                .rbc-time-gutter .rbc-timeslot-group { border-right: none !important; padding-right: 12px; }
-                .rbc-label { font-size: 10px; font-weight: 800; color: #a1a1aa; }
-                
-                .rbc-events-container { margin-right: 8px !important; }
-                .rbc-event { padding: 0 !important; border: none !important; transition: all 0.3s ease; }
-                .rbc-event:hover { transform: scale(1.02); z-index: 10 !important; filter: brightness(1.1); }
-                
-                .rbc-today { background-color: rgba(79, 70, 229, 0.03) !important; }
-                .dark .rbc-today { background-color: rgba(79, 70, 229, 0.05) !important; }
-                
-                .rbc-time-view .rbc-allday-cell { display: none; }
-                
-                /* Selection Highlight */
-                .rbc-slot-selection { background-color: rgba(79, 70, 229, 0.1) !important; border: 2px dashed #4f46e5 !important; border-radius: 8px; }
-            `}</style>
+        <div className="h-full flex flex-col bg-white/50 dark:bg-black/40 backdrop-blur-xl rounded-[1.5rem] border border-zinc-200/50 dark:border-white/5 overflow-hidden shadow-sm relative">
+            {/* Legend */}
+            <div className="absolute top-4 right-6 flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-zinc-900/90 p-1.5 rounded-full border border-zinc-100 dark:border-white/5 backdrop-blur-md z-10 shadow-sm">
+                <div className="flex items-center gap-1.5 px-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                    <span className="text-zinc-500 dark:text-zinc-400">Busy (GCal)</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 border-l border-zinc-200 dark:border-zinc-800">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <span className="text-zinc-500 dark:text-zinc-400">Free Slot</span>
+                </div>
+            </div>
 
-            <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                style={{ height: '100%' }}
-                defaultView={Views.WEEK}
-                views={['week']}
-                selectable
-                onSelectSlot={handleSelectSlot}
-                eventPropGetter={eventStyleGetter}
-                components={{
-                    event: CustomEvent
-                }}
-                min={moment().hours(8).minutes(0).toDate()}
-                max={moment().hours(22).minutes(0).toDate()}
-            />
+            {/* Header Grid */}
+            <div className="grid grid-cols-8 gap-2 p-4 border-b border-zinc-100 dark:border-white/5 bg-white/40 dark:bg-white/[0.02] pt-10">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center justify-center">
+                    Time
+                </div>
+                {next7Days.map((day, i) => (
+                    <div key={i} className="flex flex-col items-center justify-center gap-1">
+                        <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+                            {day.format('ddd')}
+                        </span>
+                        <span className={cn(
+                            "text-xs font-black",
+                            i === 0 ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md" : "text-zinc-900 dark:text-white"
+                        )}>
+                            {day.format('DD')}
+                        </span>
+                    </div>
+                ))}
+            </div>
+
+            {/* Scrollable Content */}
+            <ScrollArea className="flex-1">
+                <div className="grid grid-cols-8 gap-x-2 gap-y-1 p-4">
+                    {hours.map((hour) => (
+                        <React.Fragment key={hour}>
+                            {/* Time Label */}
+                            <div className="flex items-center justify-center text-[10px] font-medium text-zinc-400 font-mono">
+                                {moment().hour(hour).format('h A')}
+                            </div>
+
+                            {/* Slot for each day */}
+                            {next7Days.map((day, dayIdx) => {
+                                const status = getSlotStatus(day, hour);
+                                return (
+                                    <div
+                                        key={`${dayIdx}-${hour}`}
+                                        className={cn(
+                                            "h-8 rounded-lg border transition-all duration-300 flex items-center justify-center group relative",
+                                            status === 'busy' && "bg-red-500/10 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.1)]",
+                                            status === 'execution' && "bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]",
+                                            status === 'conflict' && "bg-amber-500/10 border-amber-500/30",
+                                            status === 'free' && "bg-zinc-50/50 dark:bg-white/[0.02] border-zinc-100 dark:border-white/[0.02]"
+                                        )}
+                                        title={`${day.format('MMM DD')} @ ${moment().hour(hour).format('h A')}: ${status.toUpperCase()}`}
+                                    >
+                                        {status === 'busy' && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 opacity-60" />
+                                        )}
+                                        {status === 'execution' && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)] animate-pulse" />
+                                        )}
+                                        {status === 'conflict' && (
+                                            <div className="flex gap-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </React.Fragment>
+                    ))}
+                </div>
+            </ScrollArea>
         </div>
     );
 }

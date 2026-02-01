@@ -63,7 +63,7 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                     "Updating search index..."
                 ];
                 newLog = {
-                    id: `sys-${Date.now()}`,
+                    id: `sys-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     text: sysMsgs[Math.floor(Math.random() * sysMsgs.length)],
                     type: 'system',
                     icon: ShieldCheck
@@ -74,7 +74,7 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                 const name = row[mapping.customer_name];
                 if (name) {
                     newLog = {
-                        id: `rec-${currentIdx}`,
+                        id: `rec-${currentIdx}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                         text: `Importing customer: ${name}`,
                         type: 'record',
                         icon: User

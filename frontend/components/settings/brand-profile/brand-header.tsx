@@ -32,9 +32,9 @@ export function BrandHeader({ data: initialData, onUpdate }: BrandHeaderProps) {
 
         <div className="group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 rounded-2xl border border-zinc-200/60 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all duration-300 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] hover:border-zinc-300/80 dark:hover:border-zinc-700">
             <div className="flex items-center gap-8 w-full">
-                <div className="relative h-28 w-28 rounded-3xl bg-zinc-50 dark:bg-zinc-800 shrink-0 border border-zinc-100 dark:border-zinc-700 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
+                <div className="relative h-28 w-28 rounded-3xl shrink-0 border border-zinc-100 dark:border-zinc-700 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
                     <img
-                        src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(isEditing ? data.brand_name : initialData.brand_name)}&backgroundColor=ffdfbf,c0aede,d1d4f9,b6e3f4&backgroundType=solid,gradientLinear`}
+                        src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(isEditing ? data.brand_name : initialData.brand_name)}`}
                         alt={isEditing ? data.brand_name : initialData.brand_name}
                         className="w-full h-full object-cover"
                     />

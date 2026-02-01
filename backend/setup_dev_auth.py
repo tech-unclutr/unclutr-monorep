@@ -5,7 +5,9 @@ from app.core.db import engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.user import User
 from app.models.iam import CompanyMembership
-from app.models.company import Company
+from app.models.company import Company, Brand, Workspace
+from app.models.integration import Integration, IntegrationStatus
+from uuid import UUID
 
 async def setup_dev_user():
     async with AsyncSession(engine) as session:
@@ -51,11 +53,67 @@ async def setup_dev_user():
                 print(f"Fallback to first company: {target_company_id}")
             else:
                 print("No company found! Creating one...")
-                new_company = Company(name="Dev Company", slug="dev-company")
+                new_company = Company(
+                    name="Dev Company", 
+                    slug="dev-company",
+                    brand_name="Dev Brand"
+                )
                 session.add(new_company)
                 await session.commit()
                 await session.refresh(new_company)
                 target_company_id = new_company.id
+                
+        # 2a. Setup Stable Brand & Integration (CRITICAL for accuracy tests)
+        STABLE_BRAND_ID = UUID('bf69769d-d1fc-4d7a-9930-3b92f20500d9')
+        STABLE_INT_ID = UUID('66d3876c-b0f4-40b1-a2fc-693533a9a852')
+        STABLE_WS_ID = UUID('a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5') # Generated
+        
+        # Ensure Brand exists
+        brand_stmt = select(Brand).where(Brand.id == STABLE_BRAND_ID)
+        brand = (await session.exec(brand_stmt)).first()
+        if not brand:
+            brand = Brand(
+                id=STABLE_BRAND_ID,
+                name="Stable Dev Brand",
+                company_id=target_company_id
+            )
+            session.add(brand)
+            print("Created Stable Brand.")
+            
+        # Ensure Workspace exists
+        ws_stmt = select(Workspace).where(Workspace.id == STABLE_WS_ID)
+        workspace = (await session.exec(ws_stmt)).first()
+        if not workspace:
+            workspace = Workspace(
+                id=STABLE_WS_ID,
+                name="Stable Workspace",
+                brand_id=STABLE_BRAND_ID,
+                company_id=target_company_id
+            )
+            session.add(workspace)
+            print("Created Stable Workspace.")
+
+        # Ensure Integration exists
+        from app.models.datasource import DataSource
+        ds_stmt = select(DataSource).where(DataSource.slug == "shopify").limit(1)
+        datasource = (await session.exec(ds_stmt)).first()
+        
+        int_stmt = select(Integration).where(Integration.id == STABLE_INT_ID)
+        integration = (await session.exec(int_stmt)).first()
+        if not integration:
+            integration = Integration(
+                id=STABLE_INT_ID,
+                name="Stable Shopify Integration",
+                status=IntegrationStatus.ACTIVE,
+                company_id=target_company_id,
+                workspace_id=STABLE_WS_ID,
+                datasource_id=datasource.id if datasource else None,
+                metadata_info={"shop": "unclutr-dev.myshopify.com"}
+            )
+            session.add(integration)
+            print("Created Stable Integration.")
+            
+        await session.commit()
                 
         # 3. Create Membership
         mem_stmt = select(CompanyMembership).where(

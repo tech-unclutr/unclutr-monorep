@@ -106,7 +106,9 @@ export function SupportContact({ data: initialData, onUpdate }: SupportContactPr
                             className="bg-zinc-50/50 border-zinc-200 focus:bg-white transition-all text-gray-900 h-11 rounded-xl"
                         />
                     ) : (
-                        <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                        <p
+                            className="text-sm sm:text-base md:text-lg font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap"
+                        >
                             {data.support_phone || <span className="text-zinc-400 italic font-normal">Not set</span>}
                         </p>
                     )}

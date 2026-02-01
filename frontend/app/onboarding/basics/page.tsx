@@ -41,6 +41,8 @@ export default function BasicsPage() {
     const runAutoDetect = () => {
         try {
             const rawTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            console.log("Detecting region for timezone:", rawTimezone);
+
             const normalizeTimezone = (tz: string) => {
                 if (tz.includes("Calcutta")) return "Asia/Kolkata";
                 if (tz.includes("Kyiv")) return "Europe/Kiev";
@@ -63,31 +65,38 @@ export default function BasicsPage() {
                     matchedRegion = regions.find(r => r.country === "United Kingdom");
                 }
             }
-            matchedRegion = matchedRegion || regions[0];
 
-            const isValidTimezone = allTimezones.some(tz => tz.value === detectedTimezone);
-            const finalTimezone = isValidTimezone ? detectedTimezone : matchedRegion.timezone;
-            const safeTimezone = allTimezones.some(tz => tz.value === finalTimezone)
-                ? finalTimezone
-                : (allTimezones.some(tz => tz.value === matchedRegion.timezone) ? matchedRegion.timezone : allTimezones[0].value);
+            if (matchedRegion) {
+                const isValidTimezone = allTimezones.some(tz => tz.value === detectedTimezone);
+                const finalTimezone = isValidTimezone ? detectedTimezone : matchedRegion.timezone;
+                const safeTimezone = allTimezones.some(tz => tz.value === finalTimezone)
+                    ? finalTimezone
+                    : (allTimezones.some(tz => tz.value === matchedRegion.timezone) ? matchedRegion.timezone : allTimezones[0].value);
 
-            updateState({
-                region: {
+                const newRegion = {
                     country: matchedRegion.country,
                     currency: matchedRegion.currency,
                     timezone: safeTimezone
+                };
+
+                if (newRegion.country !== state.region.country || newRegion.timezone !== state.region.timezone) {
+                    updateState({ region: newRegion });
+                    console.log("Auto-detected region:", matchedRegion.country, "Timezone:", safeTimezone);
                 }
-            });
+            } else {
+                console.warn("No matching region found for timezone:", detectedTimezone);
+            }
         } catch (e) {
             console.warn("Auto-detect failed", e);
         }
     };
 
     useEffect(() => {
-        if (!state.region.country && !state.region.timezone) {
+        // Trigger if country is missing OR if timezone is UTC (default) or missing
+        if (!state.region.country || state.region.timezone === 'UTC' || !state.region.timezone) {
             runAutoDetect();
         }
-    }, []);
+    }, [state.region.country, state.region.timezone]);
 
     const handleNext = async () => {
         if (!state.companyName || !state.brandName || !state.category) return;
@@ -291,14 +300,14 @@ export default function BasicsPage() {
             {/* Region Editing Modal */}
             <Dialog open={isEditingRegion} onOpenChange={setIsEditingRegion}>
                 <DialogContent
-                    className="sm:max-w-md p-0 bg-white border-0 shadow-2xl shadow-zinc-900/20 rounded-3xl overflow-hidden gap-0"
+                    className="sm:max-w-md p-0 bg-white border-0 shadow-2xl shadow-zinc-900/20 rounded-3xl gap-0" // Removed overflow-hidden to allow dropdowns to pop out
                     onPointerDownOutside={(e) => {
                         if ((e.target as HTMLElement).closest('.searchable-select-dropdown')) {
                             e.preventDefault();
                         }
                     }}
                 >
-                    <div className="px-6 py-5 border-b border-zinc-100 bg-zinc-50/50">
+                    <div className="px-6 py-5 border-b border-zinc-100 bg-zinc-50/50 rounded-t-3xl">
                         <DialogTitle className="text-lg font-bold tracking-tight text-zinc-900">
                             Regional Settings
                         </DialogTitle>
@@ -313,6 +322,7 @@ export default function BasicsPage() {
                                 <Globe size={12} /> Country
                             </label>
                             <SearchableSelect
+                                usePortal={false}
                                 value={state.region.country}
                                 onChange={(country) => {
                                     const region = regions.find(r => r.country === country);
@@ -337,6 +347,7 @@ export default function BasicsPage() {
                                 <Coins size={12} /> Currency
                             </label>
                             <SearchableSelect
+                                usePortal={false}
                                 value={state.region.currency}
                                 onChange={(currency) => updateState({ region: { ...state.region, currency } })}
                                 options={allCurrencies.map(c => ({ label: `${c.code} - ${c.name} (${c.symbol})`, value: c.code }))}
@@ -350,6 +361,7 @@ export default function BasicsPage() {
                                 <Clock size={12} /> Timezone
                             </label>
                             <SearchableSelect
+                                usePortal={false}
                                 value={state.region.timezone}
                                 onChange={(timezone) => updateState({ region: { ...state.region, timezone } })}
                                 options={allTimezones}

@@ -189,10 +189,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         try {
             await firebaseLogout();
-            await firebaseLogout();
+
+            // Clear Customer Intelligence persistent states to ensure a fresh session
+            if (typeof window !== 'undefined') {
+                // Clear localStorage patterns
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('csv_upload_') || key.startsWith('campaign_composer_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                // Clear sessionStorage patterns
+                Object.keys(sessionStorage).forEach(key => {
+                    if (key.startsWith('csv_upload_') || key.startsWith('campaign_composer_')) {
+                        sessionStorage.removeItem(key);
+                    }
+                });
+
+                // Also clear onboarding related session flags
+                sessionStorage.removeItem('unclutr_skip_onboarding');
+            }
+
             setUser(null);
             setOnboardingCompleted(null);
-            setCompanyId(null);
             setCompanyId(null);
             setRole(null);
             setDbUser(null);

@@ -156,20 +156,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Bird's Eye View</span>}
                         </Link> */}
 
-                        <Link
-                            href="/dashboard-new"
-                            className={cn(
-                                "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
-                                isActive("/dashboard-new") && pathname === "/dashboard-new"
-                                    ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
-                                    : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
-                                isCollapsed ? "justify-center" : ""
-                            )}
-                            title={isCollapsed ? "Cash Compass" : ""}
-                        >
-                            <Compass className="w-4 h-4 shrink-0" />
-                            {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Cash Compass</span>}
-                        </Link>
+
 
                         <Link
                             href="/dashboard-new/customer-intelligence"
@@ -197,7 +184,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                     )}>
                         <div className="flex items-center gap-3">
                             <GitCompare className="w-5 h-5 shrink-0" />
-                            {!isCollapsed && <span className="font-medium text-[15px] decoration-slice whitespace-nowrap transition-opacity duration-200">Reconciliation</span>}
+                            {!isCollapsed && <span className="font-medium text-[15px] decoration-slice whitespace-nowrap transition-opacity duration-200">Social Listener</span>}
                         </div>
                         {!isCollapsed && (
                             <span className="text-[10px] font-medium bg-gray-50 dark:bg-[#27272A] text-gray-400 dark:text-[#71717A] px-2 py-0.5 rounded border border-gray-100 dark:border-[#3F3F46] whitespace-nowrap">
@@ -292,9 +279,9 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                                     ? "justify-center rounded-full w-8 h-8 p-0"
                                     : "gap-2 px-2 py-1.5 w-full text-left rounded-lg"
                             )}>
-                                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
+                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
                                     <img
-                                        src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(companyName)}&backgroundColor=ffdfbf,c0aede,d1d4f9,b6e3f4&backgroundType=solid,gradientLinear`}
+                                        src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(companyName)}`}
                                         alt="Avatar"
                                         className="w-full h-full object-cover"
                                     />
@@ -346,9 +333,9 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             ? "justify-center rounded-full w-10 h-10 p-0"
                             : "gap-3 px-2 py-2 w-full text-left rounded-lg"
                     )}>
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
+                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
                             <img
-                                src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(companyName)}&backgroundColor=ffdfbf,c0aede,d1d4f9,b6e3f4&backgroundType=solid,gradientLinear`}
+                                src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(companyName)}`}
                                 alt="Avatar"
                                 className="w-full h-full object-cover"
                             />

@@ -26,6 +26,7 @@ class User(UserBase, table=True):
     otp_verified: bool = Field(default=False)
     designation: Optional[str] = Field(default=None)
     team: Optional[str] = Field(default=None)
+    role: Optional[str] = Field(default=None)
 
     # Phase 5: User Preferences (Bird's Eye Goal, etc.)
     settings: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
@@ -44,7 +45,7 @@ class UserUpdate(SQLModel):
     otp_verified: Optional[bool] = None
     designation: Optional[str] = None
     team: Optional[str] = None
-    role: Optional[str] = None # Logic to handle role update if needed (usually handled via specialized endpoint)
+    role: Optional[str] = None # Added for explicit role management
 
 
 class UserRead(UserBase):

@@ -22,6 +22,8 @@ import {
     isSameMonth,
     isSameDay,
     isToday,
+    isBefore,
+    startOfDay,
     parseISO,
     parse
 } from 'date-fns';
@@ -33,12 +35,20 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 
+interface ExecutionWindow {
+    day: string;
+    start: string;
+    end: string;
+}
+
 interface TimeWindowSelectorProps {
     day: string;
     start: string;
     end: string;
     onChange: (updates: { day?: string; start?: string; end?: string }) => void;
     onDelete: () => void;
+    allWindows?: ExecutionWindow[];
+    currentIndex?: number;
 }
 
 // --- Magical Date Picker Component ---
@@ -96,19 +106,22 @@ function MagicalDatePicker({ value, onChange }: { value: string, onChange: (date
                 {calendarDays.map((day, i) => {
                     const isSelected = isSameDay(day, date);
                     const isCurrentMonth = isSameMonth(day, monthStart);
+                    const isPast = isBefore(startOfDay(day), startOfDay(new Date()));
 
                     return (
                         <motion.button
                             key={i}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => onChange(format(day, 'yyyy-MM-dd'))}
+                            whileHover={!isPast ? { scale: 1.1 } : {}}
+                            whileTap={!isPast ? { scale: 0.95 } : {}}
+                            onClick={() => !isPast && onChange(format(day, 'yyyy-MM-dd'))}
+                            disabled={isPast}
                             className={cn(
                                 "h-8 w-8 rounded-xl text-xs font-bold transition-all relative flex items-center justify-center",
-                                isSelected ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" :
-                                    isCurrentMonth ? "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800" :
-                                        "text-zinc-300 dark:text-zinc-600",
-                                isToday(day) && !isSelected && "border border-indigo-200 dark:border-indigo-900/50"
+                                isPast ? "text-zinc-200 dark:text-zinc-800 cursor-not-allowed opacity-40" :
+                                    isSelected ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" :
+                                        isCurrentMonth ? "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800" :
+                                            "text-zinc-300 dark:text-zinc-600",
+                                isToday(day) && !isSelected && !isPast && "border border-indigo-200 dark:border-indigo-900/50"
                             )}
                         >
                             {format(day, 'd')}
@@ -121,11 +134,28 @@ function MagicalDatePicker({ value, onChange }: { value: string, onChange: (date
 }
 
 // --- Magical Time Picker Component ---
-function MagicalTimePicker({ value, onChange, label }: { value: string, onChange: (time: string) => void, label: string }) {
+function MagicalTimePicker({ value, onChange, label, selectedDate }: { value: string, onChange: (time: string) => void, label: string, selectedDate?: string }) {
     // value is "HH:mm"
     const [h, m] = value.split(':');
     const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
     const minutes = ['00', '15', '30', '45'];
+
+    // Check if selected date is today
+    const isSelectedDateToday = selectedDate ? isToday(parseISO(selectedDate)) : false;
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Helper to check if a time is in the past
+    const isTimePast = (hour: string, minute: string) => {
+        if (!isSelectedDateToday) return false;
+        const hourNum = parseInt(hour);
+        const minuteNum = parseInt(minute);
+
+        if (hourNum < currentHour) return true;
+        if (hourNum === currentHour && minuteNum <= currentMinute) return true;
+        return false;
+    };
 
     return (
         <div className="w-48 p-1">
@@ -135,41 +165,119 @@ function MagicalTimePicker({ value, onChange, label }: { value: string, onChange
             <div className="flex gap-4">
                 {/* Hours */}
                 <div className="flex-1 space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-hide">
-                    {hours.map(hour => (
-                        <button
-                            key={hour}
-                            onClick={() => onChange(`${hour}:${m}`)}
-                            className={cn(
-                                "w-full py-2 px-3 rounded-lg text-sm font-bold transition-all text-left flex items-center justify-between",
-                                hour === h ? "bg-indigo-600 text-white" : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                            )}
-                        >
-                            {hour}
-                            {hour === h && <Check className="w-3 h-3" />}
-                        </button>
-                    ))}
+                    {hours.map(hour => {
+                        const isPast = isTimePast(hour, m);
+                        return (
+                            <button
+                                key={hour}
+                                onClick={() => !isPast && onChange(`${hour}:${m}`)}
+                                disabled={isPast}
+                                className={cn(
+                                    "w-full py-2 px-3 rounded-lg text-sm font-bold transition-all text-left flex items-center justify-between",
+                                    isPast ? "opacity-40 cursor-not-allowed text-zinc-300 dark:text-zinc-700" :
+                                        hour === h ? "bg-indigo-600 text-white" : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                )}
+                            >
+                                {hour}
+                                {hour === h && !isPast && <Check className="w-3 h-3" />}
+                            </button>
+                        );
+                    })}
                 </div>
                 {/* Minutes */}
                 <div className="w-16 space-y-1">
-                    {minutes.map(min => (
-                        <button
-                            key={min}
-                            onClick={() => onChange(`${h}:${min}`)}
-                            className={cn(
-                                "w-full py-2 px-3 rounded-lg text-sm font-bold transition-all text-center",
-                                min === m ? "bg-orange-500 text-white" : "hover:bg-orange-50 dark:hover:bg-orange-950/20 text-orange-600 dark:text-orange-400"
-                            )}
-                        >
-                            {min}
-                        </button>
-                    ))}
+                    {minutes.map(min => {
+                        const isPast = isTimePast(h, min);
+                        return (
+                            <button
+                                key={min}
+                                onClick={() => !isPast && onChange(`${h}:${min}`)}
+                                disabled={isPast}
+                                className={cn(
+                                    "w-full py-2 px-3 rounded-lg text-sm font-bold transition-all text-center",
+                                    isPast ? "opacity-40 cursor-not-allowed text-zinc-300 dark:text-zinc-700" :
+                                        min === m ? "bg-orange-500 text-white" : "hover:bg-orange-50 dark:hover:bg-orange-950/20 text-orange-600 dark:text-orange-400"
+                                )}
+                            >
+                                {min}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 }
 
-export function TimeWindowSelector({ day, start, end, onChange, onDelete }: TimeWindowSelectorProps) {
+// --- Time Helpers ---
+const timeToMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+};
+
+const minutesToTime = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+export function TimeWindowSelector({ day, start, end, onChange, onDelete, allWindows = [], currentIndex }: TimeWindowSelectorProps) {
+    // Check for overlaps with other windows
+    const checkOverlap = (checkDay: string, checkStart: string, checkEnd: string): boolean => {
+        if (!allWindows || currentIndex === undefined) return false;
+
+        const checkStartMins = timeToMinutes(checkStart);
+        const checkEndMins = timeToMinutes(checkEnd);
+
+        return allWindows.some((window, idx) => {
+            // Skip self
+            if (idx === currentIndex) return false;
+
+            // Only check windows on the same day
+            if (window.day !== checkDay) return false;
+
+            const windowStartMins = timeToMinutes(window.start);
+            const windowEndMins = timeToMinutes(window.end);
+
+            // Check if time ranges overlap
+            // Two ranges overlap if: start1 < end2 AND start2 < end1
+            return checkStartMins < windowEndMins && windowStartMins < checkEndMins;
+        });
+    };
+
+    const hasOverlap = checkOverlap(day, start, end);
+    const handleStartChange = (newStart: string) => {
+        const startMins = timeToMinutes(newStart);
+        const endMins = timeToMinutes(end);
+
+        if (startMins >= endMins) {
+            // Push end time forward by 1 hour, capped at 23:45
+            const newEndMins = Math.min(startMins + 60, 23 * 60 + 45);
+            // If we're already at the end of the day and can't push 1h, try 15 mins
+            const finalEndMins = newEndMins <= startMins ? Math.min(startMins + 15, 23 * 60 + 45) : newEndMins;
+
+            onChange({ start: newStart, end: minutesToTime(finalEndMins) });
+        } else {
+            onChange({ start: newStart });
+        }
+    };
+
+    const handleEndChange = (newEnd: string) => {
+        const endMins = timeToMinutes(newEnd);
+        const startMins = timeToMinutes(start);
+
+        if (endMins <= startMins) {
+            // Pull start time backward by 1 hour, floored at 00:00
+            const newStartMins = Math.max(endMins - 60, 0);
+            // If we're already at the start of the day and can't pull 1h, try 15 mins
+            const finalStartMins = newStartMins >= endMins ? Math.max(endMins - 15, 0) : newStartMins;
+
+            onChange({ end: newEnd, start: minutesToTime(finalStartMins) });
+        } else {
+            onChange({ end: newEnd });
+        }
+    };
+
     // Safely parse and format the date, handling invalid or empty values
     const formattedDate = (() => {
         if (!day || day.trim() === '') return 'Pick a date';
@@ -201,8 +309,18 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete }: Time
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="group relative p-4 rounded-[1.5rem] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all duration-300"
+            className={cn(
+                "group relative p-4 rounded-[1.5rem] bg-white dark:bg-zinc-900 border shadow-sm hover:shadow-md transition-all duration-300",
+                hasOverlap
+                    ? "border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20"
+                    : "border-zinc-200 dark:border-zinc-800"
+            )}
         >
+            {hasOverlap && (
+                <div className="absolute -top-2 left-4 px-2 py-0.5 bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider rounded-full shadow-sm">
+                    ⚠️ Overlaps with another slot
+                </div>
+            )}
             <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-3">
                     {/* Date Selection */}
@@ -240,11 +358,11 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete }: Time
                                         </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-3 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 opacity-100" align="start">
-                                        <MagicalTimePicker label="Start Time" value={start} onChange={(newStart) => onChange({ start: newStart })} />
+                                        <MagicalTimePicker label="Start Time" value={start} onChange={handleStartChange} selectedDate={day} />
                                     </PopoverContent>
                                 </Popover>
 
-                                <span className="text-zinc-300 dark:text-zinc-600 text-[10px] uppercase font-bold">To</span>
+                                <span className="text-zinc-300 dark:text-zinc-600 text-[10px] uppercase font-bold">TO</span>
 
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -253,7 +371,7 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete }: Time
                                         </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-3 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 opacity-100" align="start">
-                                        <MagicalTimePicker label="End Time" value={end} onChange={(newEnd) => onChange({ end: newEnd })} />
+                                        <MagicalTimePicker label="End Time" value={end} onChange={handleEndChange} selectedDate={day} />
                                     </PopoverContent>
                                 </Popover>
                             </div>

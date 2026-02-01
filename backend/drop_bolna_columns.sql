@@ -1,0 +1,14 @@
+-- Drop Bolna related columns from campaigns table
+ALTER TABLE campaigns DROP COLUMN IF EXISTS source_file_hash;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_execution_id;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_agent_id;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_call_status;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_conversation_time;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_total_cost;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_error_message;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_transcript;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_extracted_data;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_telephony_data;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_raw_data;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_created_at;
+ALTER TABLE campaigns DROP COLUMN IF EXISTS bolna_updated_at;

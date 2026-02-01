@@ -16,7 +16,7 @@ class CampaignContextUpdate(BaseModel):
 
 class CampaignExecutionUpdate(BaseModel):
     total_call_target: Optional[int] = None
-    call_duration_limit: Optional[int] = None
+    call_duration: Optional[int] = None
     cohort_config: Optional[Dict[str, int]] = None
     selected_cohorts: Optional[List[str]] = None
     execution_windows: Optional[List[Dict[str, Any]]] = None

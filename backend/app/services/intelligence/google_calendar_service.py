@@ -1,7 +1,7 @@
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time as dt_time
 from typing import Dict, Any, Optional, List
 from uuid import UUID
 from sqlmodel import select
@@ -11,6 +11,7 @@ from loguru import logger
 from app.core.config import settings
 from app.models.calendar_connection import CalendarConnection
 import json
+import pytz
 
 class GoogleCalendarService:
     SCOPES = [
@@ -301,7 +302,7 @@ class GoogleCalendarService:
             logger.error(f"Error in get_availability: {e}")
             raise
 
-    async def sync_campaign_windows(self, conn: CalendarConnection, campaign: Any) -> int:
+    async def sync_campaign_windows(self, conn: CalendarConnection, campaign: Any, timezone_str: str = "UTC") -> int:
         """
         Syncs campaign execution windows to the user's primary Google Calendar.
         Maps day names (Monday, etc.) to the upcoming week's dates.
@@ -337,10 +338,64 @@ class GoogleCalendarService:
             logger.warning(f"No execution windows found for campaign {campaign.id}")
             return 0
 
+        # Check for write permissions
+        required_scope = 'https://www.googleapis.com/auth/calendar.events'
+        stored_scopes = conn.credentials.get("scopes", [])
+        # Also check for the catch-all 'calendar' scope just in case
+        has_write_permission = any(s in stored_scopes for s in [required_scope, 'https://www.googleapis.com/auth/calendar'])
+        
+        if not has_write_permission:
+            logger.error(f"Insufficient permissions for connection {conn.id}. Scopes found: {stored_scopes}")
+            raise ValueError("Insufficient permissions. Please disconnect and reconnect your Google Calendar to grant write access.")
+
         today = datetime.now(timezone.utc).date()
+        execution_windows = campaign.execution_windows or []
+        logger.info(f"Syncing campaign {campaign.id}. Total windows found in campaign object: {len(execution_windows)}")
+        logger.info(f"Full windows data: {execution_windows}")
+        
+        # STEP 1: Delete all existing events for this campaign
+        # This ensures Google Calendar matches the current database state exactly
+        event_summary_prefix = f'{campaign.name} powered by SquareUp'
+        
+        def _delete_existing_campaign_events():
+            # Search for all events with this campaign's summary
+            # Look 30 days back and 90 days forward to catch all possible events
+            time_min = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            time_max = (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()
+            
+            events_result = service.events().list(
+                calendarId='primary',
+                timeMin=time_min,
+                timeMax=time_max,
+                q=event_summary_prefix,
+                singleEvents=True
+            ).execute()
+            
+            events = events_result.get('items', [])
+            deleted_count = 0
+            
+            for event in events:
+                if event.get('summary', '').startswith(event_summary_prefix):
+                    try:
+                        service.events().delete(
+                            calendarId='primary',
+                            eventId=event['id']
+                        ).execute()
+                        deleted_count += 1
+                        logger.debug(f"Deleted event: {event.get('summary')} (ID: {event['id']})")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete event {event['id']}: {e}")
+            
+            return deleted_count
+        
+        deleted_count = await loop.run_in_executor(None, _delete_existing_campaign_events)
+        logger.info(f"Deleted {deleted_count} existing events for campaign {campaign.id}")
+        
+        # STEP 2: Create fresh events from current execution windows
         events_created = 0
 
-        for window in execution_windows:
+        for i, window in enumerate(execution_windows):
+            logger.info(f"--- Processing slot {i+1}/{len(execution_windows)} ---")
             day_str = window.get('day')
             start_time_str = window.get('start')
             end_time_str = window.get('end')
@@ -351,22 +406,47 @@ class GoogleCalendarService:
                 logger.warning(f"Missing data for window: {window}")
                 continue
 
+            # Direct Date Parsing
+            if 'T' in day_str:
+                day_str = day_str.split('T')[0]
+            
             try:
-                # Direct Date Parsing
                 event_date = datetime.strptime(day_str, "%Y-%m-%d").date()
             except ValueError:
-                logger.warning(f"Invalid date format in sync: {day_str}")
-                continue
+                # FALLBACK: Handle day names (e.g., "Monday")
+                day_map = {
+                    'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                    'friday': 4, 'saturday': 5, 'sunday': 6
+                }
+                target_day = day_map.get(day_str.lower())
+                if target_day is not None:
+                    current_day = today.weekday()
+                    # Calculate days until next occurrence
+                    days_ahead = target_day - current_day
+                    if days_ahead < 0:
+                        days_ahead += 7
+                    event_date = today + timedelta(days=days_ahead)
+                    logger.info(f"Mapped day name '{day_str}' to {event_date}")
+                else:
+                    logger.warning(f"Invalid date/day format in sync: {day_str}. Skipping.")
+                    continue
             
             try:
                 start_h, start_m = map(int, start_time_str.split(':'))
                 end_h, end_m = map(int, end_time_str.split(':'))
-                
-                start_dt = datetime.combine(event_date, dt_time(hour=start_h, minute=start_m), tzinfo=timezone.utc)
-                end_dt = datetime.combine(event_date, dt_time(hour=end_h, minute=end_m), tzinfo=timezone.utc)
 
+                # Use the provided timezone for localization
+                tz = pytz.timezone(timezone_str or "UTC")
+                start_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=start_h, minute=start_m)))
+                end_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=end_h, minute=end_m)))
+                
+                # Convert to UTC for consistency in API calls
+                start_dt = start_dt_local.astimezone(pytz.utc)
+                end_dt = end_dt_local.astimezone(pytz.utc)
+
+                event_summary = f'{campaign.name} powered by SquareUp'
                 event_body = {
-                    'summary': f'{campaign.name} powered by SquareUp',
+                    'summary': event_summary,
                     'description': f'Execution window for campaign: {campaign.name}. Expecting customer calls.',
                     'start': {
                         'dateTime': start_dt.isoformat(),
@@ -386,12 +466,14 @@ class GoogleCalendarService:
 
                 await loop.run_in_executor(None, _insert_event)
                 events_created += 1
+                logger.info(f"Created event for {day_str} {start_time_str}")
+                
             except Exception as e:
                 logger.error(f"Failed to sync window for {day_str} {start_time_str}: {e}")
 
         return events_created
 
-    async def create_single_execution_event(self, conn: CalendarConnection, campaign: Any, window: Dict[str, Any]):
+    async def create_single_execution_event(self, conn: CalendarConnection, campaign: Any, window: Dict[str, Any], timezone_str: str = "UTC"):
         """
         Creates a single execution window event in Google Calendar.
         """
@@ -437,9 +519,15 @@ class GoogleCalendarService:
         try:
             start_h, start_m = map(int, start_time_str.split(':'))
             end_h, end_m = map(int, end_time_str.split(':'))
-                
-            start_dt = datetime.combine(event_date, dt_time(hour=start_h, minute=start_m), tzinfo=timezone.utc)
-            end_dt = datetime.combine(event_date, dt_time(hour=end_h, minute=end_m), tzinfo=timezone.utc)
+
+            # Use the provided timezone for localization
+            tz = pytz.timezone(timezone_str or "UTC")
+            start_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=start_h, minute=start_m)))
+            end_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=end_h, minute=end_m)))
+            
+            # Convert to UTC for consistency in API calls
+            start_dt = start_dt_local.astimezone(pytz.utc)
+            end_dt = end_dt_local.astimezone(pytz.utc)
 
             event_body = {
                 'summary': f'{campaign.name} powered by SquareUp',

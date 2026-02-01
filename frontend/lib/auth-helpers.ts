@@ -44,10 +44,17 @@ export const syncUserWithBackend = async (user: User) => {
 
     try {
         const token = await user.getIdToken(); // Use cached token by default for speed
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        // Remove trailing slash if present
+        if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
 
-        console.log(`${logPrefix} Fetching ${apiUrl}/api/v1/auth/sync`);
-        const res = await fetch(`${apiUrl}/api/v1/auth/sync`, {
+        // Handle case where apiUrl already includes /api/v1 (common in NEXT_PUBLIC_API_URL)
+        const fullUrl = apiUrl.endsWith('/api/v1')
+            ? `${apiUrl}/auth/sync`
+            : `${apiUrl}/api/v1/auth/sync`;
+
+        console.log(`${logPrefix} Fetching ${fullUrl}`);
+        const res = await fetch(fullUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

@@ -46,8 +46,7 @@ class CampaignService:
             company_id=company_id,
             user_id=user_id,
             name="Campaign Planning Call",  # Temporary name
-            status="INITIATED",
-            phone_number=phone_number
+            status="INITIATED"
         )
         
         session.add(campaign)
@@ -291,11 +290,21 @@ class CampaignService:
     #         except Exception as e:
     #             logger.warning(f"Failed to parse updated_at: {e}")
     #     
-    #     # Extract team member info from extracted_data
-    #     if extracted_data:
-    #         team_member = extracted_data.get("team_member", {})
-    #         campaign.team_member_role = team_member.get("role")
-    #         campaign.team_member_department = team_member.get("department")
+         # Update team member info in User profile from extracted_data
+        if extracted_data:
+            from app.models.user import User
+            user_stmt = select(User).where(User.id == campaign.user_id)
+            user_res = await session.execute(user_stmt)
+            user_db = user_res.scalars().first()
+            
+            if user_db:
+                team_member = extracted_data.get("team_member", {})
+                if team_member.get("role"):
+                    user_db.designation = team_member.get("role")
+                if team_member.get("department"):
+                    user_db.team = team_member.get("department")
+                session.add(user_db)
+                logger.info(f"Updated user profile from extracted data for {user_db.id}")
     #     
     #     # Update status based on call status
     #     bolna_status = str(bolna_payload.get("call_status", "")).lower()
@@ -834,9 +843,6 @@ class CampaignService:
                 # bolna_raw_data=campaign.bolna_raw_data,
                 # bolna_created_at=campaign.bolna_created_at,
                 # bolna_updated_at=campaign.bolna_updated_at,
-                phone_number=campaign.phone_number,
-                team_member_role=campaign.team_member_role,
-                team_member_department=campaign.team_member_department,
                 decision_context=campaign.decision_context,
                 quality_score=campaign.quality_score,
                 quality_gap=campaign.quality_gap,
@@ -899,7 +905,13 @@ class CampaignService:
                 {"campaign_id": campaign_id}
             )
 
-            # 3. Delete leads
+            # 3. Delete call logs (references leads & campaigns)
+            await session.execute(
+                text("DELETE FROM call_logs WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
+            # 4. Delete leads
             logger.info("DEBUG: Executing RAW SQL DELETE for Leads")
             await session.execute(
                 text("DELETE FROM campaign_leads WHERE campaign_id = :campaign_id"),
@@ -1115,69 +1127,154 @@ class CampaignService:
         leads_data: List[dict]
     ) -> bool:
         """
-        Replaces all leads in a campaign with new ones.
-        Destructive operation: deletes existing leads and goal details.
+        Replaces leads in a campaign while preserving those already called.
+        Handles cohort updates for existing leads.
         """
-        logger.info(f"Replacing leads for campaign {campaign_id}. New count: {len(leads_data)}")
+        from sqlalchemy import delete, select, insert
+        from app.models.call_log import CallLog
+        from app.models.bolna_execution_map import BolnaExecutionMap
+        from app.models.queue_item import QueueItem
+        from app.models.archived_campaign_lead import ArchivedCampaignLead
         
-        # 0. Delete Execution Maps (references queue_items)
-        await session.execute(
-            text("DELETE FROM bolna_execution_maps WHERE campaign_id = :campaign_id"),
-            {"campaign_id": campaign_id}
-        )
+        logger.info(f"Refined lead replacement for campaign {campaign_id}. New input count: {len(leads_data)}")
+        
+        # Get all leads for this campaign
+        stmt_leads = select(CampaignLead).where(CampaignLead.campaign_id == campaign_id)
+        result_leads = await session.execute(stmt_leads)
+        existing_leads = result_leads.scalars().all()
+        
+        # Get IDs of leads that have call logs
+        stmt_called = select(CallLog.lead_id).where(CallLog.campaign_id == campaign_id)
+        result_called = await session.execute(stmt_called)
+        called_lead_ids = set(result_called.scalars().all())
+        
+        # Split leads into called (preserved) and uncalled (removable)
+        called_leads = [l for l in existing_leads if l.id in called_lead_ids]
+        uncalled_lead_ids = [l.id for l in existing_leads if l.id not in called_lead_ids]
+        
+        logger.info(f"Found {len(called_leads)} called leads (preserved) and {len(uncalled_lead_ids)} uncalled leads (to be removed)")
 
-        # 1. Delete Queue Items (references leads)
-        await session.execute(
-            text("DELETE FROM queue_items WHERE campaign_id = :campaign_id"),
-            {"campaign_id": campaign_id}
-        )
-
-        # 2. Delete existing leads
-        await session.execute(
-            text("DELETE FROM campaign_leads WHERE campaign_id = :campaign_id"),
-            {"campaign_id": campaign_id}
-        )
-        
-        # 3. Delete Goal Details (Analytics) - Start fresh
-        await session.execute(
-            text("DELETE FROM campaigns_goals_details WHERE campaign_id = :campaign_id"),
-            {"campaign_id": campaign_id}
-        )
-        
-        # 3. Clear strategy state data on the campaign to force a re-update
-        # Note: preserving brand_context, customer_context, team_member_context, and execution_windows
-        stmt_campaign = select(Campaign).where(Campaign.id == campaign_id)
-        result_campaign = await session.execute(stmt_campaign)
-        campaign = result_campaign.scalars().first()
-        
-        if campaign:
-            campaign.preliminary_questions = []
-            campaign.cohort_questions = {}
-            campaign.cohort_incentives = {}
-            campaign.incentive = None
-            campaign.cohort_config = {}
-            campaign.selected_cohorts = []
-            campaign.cohort_data = {}
-            campaign.updated_at = datetime.utcnow()
-            session.add(campaign)
-
-        # 4. Insert New Leads
-        if leads_data:
-            from sqlalchemy import insert
-            from app.models.campaign_lead import CampaignLead
+        # 2. Archiving and Deletion of uncalled data
+        if uncalled_lead_ids:
+            # Fetch uncalled leads for archiving
+            stmt_uncalled = select(CampaignLead).where(CampaignLead.id.in_(uncalled_lead_ids))
+            result_uncalled = await session.execute(stmt_uncalled)
+            uncalled_leads_rows = result_uncalled.scalars().all()
             
-            # Ensure campaign_id is set
-            for lead in leads_data:
-                lead["campaign_id"] = campaign_id
-                if "id" not in lead:
-                    lead["id"] = uuid4()
-                if "created_at" not in lead:
-                    lead["created_at"] = datetime.utcnow()
-                    
-            stmt = insert(CampaignLead).values(leads_data)
+            if uncalled_leads_rows:
+                # Fetch campaign name for archiving
+                stmt_camp = select(Campaign.name).where(Campaign.id == campaign_id)
+                res_camp = await session.execute(stmt_camp)
+                campaign_name = res_camp.scalar() or "Unknown Campaign"
+                
+                archived_leads = [
+                    ArchivedCampaignLead(
+                        original_campaign_id=campaign_id,
+                        campaign_name=campaign_name,
+                        customer_name=lead.customer_name,
+                        contact_number=lead.contact_number,
+                        cohort=lead.cohort,
+                        meta_data=lead.meta_data,
+                        created_at=lead.created_at
+                    )
+                    for lead in uncalled_leads_rows
+                ]
+                session.add_all(archived_leads)
+                await session.flush() # Ensure archival is registered before deletion
+
+            # Clean up related execution maps and queue items first
+            # 1. Delete execution maps for uncalled leads (linked via QueueItem)
+            # Find queue item IDs for these leads
+            stmt_qi_ids = select(QueueItem.id).where(
+                QueueItem.campaign_id == campaign_id,
+                QueueItem.lead_id.in_(uncalled_lead_ids)
+            )
+            # Delete BolnaExecutionMap records referencing these QueueItems
+            await session.execute(
+                delete(BolnaExecutionMap).where(
+                    BolnaExecutionMap.queue_item_id.in_(stmt_qi_ids)
+                )
+            )
+
+            # 2. Delete queue items for uncalled leads
+            await session.execute(
+                delete(QueueItem).where(
+                    QueueItem.campaign_id == campaign_id,
+                    QueueItem.lead_id.in_(uncalled_lead_ids)
+                )
+            )
+            
+            # 3. Delete uncalled leads themselves
+            await session.execute(
+                delete(CampaignLead).where(CampaignLead.id.in_(uncalled_lead_ids))
+            )
+        
+        # Note: We do NOT delete Goal Details (Analytics) here anymore because some might belong to called leads.
+        # However, we might want to clear them for UNCALLED leads if they exist? Typically goal_details are linked to calls.
+        # Let's keep them for now to avoid complexity unless user asks.
+
+        # 3. Reconciliation and Insertion
+        # Key for preservation: (contact_number, cohort)
+        called_map = {(l.contact_number, l.cohort): l for l in called_leads}
+        
+        final_leads_to_insert = []
+        counts = {"inserted": 0, "skipped": 0, "cohort_updates": 0}
+        
+        for lead_dict in leads_data:
+            number = lead_dict.get("contact_number")
+            new_cohort = lead_dict.get("cohort") or "Default"
+            
+            # Check if this exact number/cohort combo was already called
+            if (number, new_cohort) in called_map:
+                # Exact skip - historical record exists
+                counts["skipped"] += 1
+                continue
+            
+            # Check if the number exists in DIFFERENT cohorts that were called
+            # (If so, we still insert this as a NEW lead for the NEW cohort, 
+            # as per user's "allow cohort updates" vs "preserve if called as part of old cohort" logic)
+            # Actually, the user said "preserve the cohort as well if before updating that user has been called as a part of old cohort"
+            # This means: 
+            # - Old Cohort A (called) -> STAYS.
+            # - New CSV has Cohort B -> ADDED as new record.
+            
+            # Ensure required fields
+            lead_dict["campaign_id"] = campaign_id
+            if "id" not in lead_dict:
+                lead_dict["id"] = uuid4()
+            if "created_at" not in lead_dict:
+                lead_dict["created_at"] = datetime.utcnow()
+            if "status" not in lead_dict:
+                lead_dict["status"] = "PENDING"
+                
+            final_leads_to_insert.append(lead_dict)
+            counts["inserted"] += 1
+
+        # 4. Perform Insertion
+        if final_leads_to_insert:
+            stmt = insert(CampaignLead).values(final_leads_to_insert)
             await session.execute(stmt)
             
+        # 5. Clear strategy state on the campaign (DRAFT refinement)
+        # We only do this if we actually modified leads to force re-planning
+        if uncalled_lead_ids or final_leads_to_insert:
+            stmt_campaign = select(Campaign).where(Campaign.id == campaign_id)
+            result_campaign = await session.execute(stmt_campaign)
+            campaign = result_campaign.scalars().first()
+            
+            if campaign:
+                campaign.preliminary_questions = []
+                campaign.cohort_questions = {}
+                campaign.cohort_incentives = {}
+                campaign.incentive = None
+                campaign.cohort_config = {}
+                campaign.selected_cohorts = []
+                campaign.cohort_data = {}
+                campaign.updated_at = datetime.utcnow()
+                session.add(campaign)
+
         await session.commit()
+        logger.info(f"Lead replacement complete: {counts}")
         return True
 
 campaign_service = CampaignService()

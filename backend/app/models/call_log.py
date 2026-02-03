@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Optional, Dict
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column, Text
+from sqlmodel import Field, SQLModel, Column as SMColumn, Text
+from sqlalchemy import Column, ForeignKey, UUID as SAUUID
 from sqlalchemy.dialects.postgresql import JSONB
 
 class CallLog(SQLModel, table=True):
@@ -10,8 +11,8 @@ class CallLog(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     
     # Linkages
-    campaign_id: UUID = Field(foreign_key="campaigns.id", index=True)
-    lead_id: UUID = Field(foreign_key="campaign_leads.id", index=True)
+    campaign_id: UUID = Field(sa_column=Column(SAUUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), index=True))
+    lead_id: UUID = Field(sa_column=Column(SAUUID(as_uuid=True), ForeignKey("campaign_leads.id", ondelete="CASCADE"), index=True))
     
     # External Identifiers
     bolna_call_id: str = Field(index=True, unique=True)

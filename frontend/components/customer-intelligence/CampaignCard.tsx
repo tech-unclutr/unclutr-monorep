@@ -6,10 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Copy, Check, ChevronDown, ChevronUp, Calendar, Clock, Target, Users, Sparkles, BrainCircuit, ShieldAlert, AlignLeft, Mic, FileText, Pencil, Trash2, Briefcase, User, MessageSquare, Gift, Layers, ArrowUpRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { formatMinimalTime } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -33,7 +40,7 @@ interface CampaignCardProps {
     className?: string;
 }
 
-export const CampaignCard = ({
+const CampaignCardBase = ({
     campaign,
     variant = 'default',
     onClick,
@@ -62,6 +69,7 @@ export const CampaignCard = ({
     const {
         name,
         created_at,
+        updated_at,
         status,
         brand_context,
         customer_context,
@@ -154,7 +162,7 @@ export const CampaignCard = ({
 
 
     const allCohorts = selected_cohorts.length > 0 ? selected_cohorts : Object.keys(cohort_config);
-    const assignedAvatars = getUniqueCohortAvatars(allCohorts);
+    const assignedAvatars = React.useMemo(() => getUniqueCohortAvatars(allCohorts), [allCohorts]);
 
     return (
         <Card
@@ -188,11 +196,36 @@ export const CampaignCard = ({
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Date */}
-                        <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-full">
-                            <Calendar className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600" />
-                            {created_at ? format(new Date(created_at), 'MMMM do, yyyy') : 'New Campaign'}
-                        </span>
+                        {/* Dates */}
+                        {/* Dates */}
+                        <div className="flex items-center gap-3 ml-2">
+                            {/* Created At */}
+                            <TooltipProvider delayDuration={300}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-1.5 cursor-help group/date opacity-60 hover:opacity-100 transition-opacity">
+                                            <Calendar className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
+                                            <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                                {created_at ? formatMinimalTime(new Date(created_at)) : 'New'}
+                                            </span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs bg-zinc-900 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 px-3 py-1.5 rounded-lg shadow-xl">
+                                        <p className="font-medium">Created on {created_at ? format(new Date(created_at), "MMM d, yyyy 'at' h:mm a") : 'N/A'}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
+                            {/* Updated At - Always show clearly */}
+                            {updated_at && (
+                                <div className="flex items-center gap-1.5 border-l border-zinc-200 dark:border-zinc-800 pl-3 opacity-80 hover:opacity-100 transition-opacity">
+                                    <Clock className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
+                                    <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                        Last Updated: {format(new Date(updated_at), "MMM d, h:mm a")} <span className="text-zinc-400 dark:text-zinc-600 font-normal">({formatDistanceToNow(new Date(updated_at), { addSuffix: true })})</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Expand Toggle Button (Visible on Hover/Expanded) */}
                         <div
@@ -296,11 +329,11 @@ export const CampaignCard = ({
                                 <div
                                     key={cohortName}
                                     className="w-10 h-10 rounded-full border-[3px] border-white/40 dark:border-white/10 -ml-4 first:ml-0 relative z-0 hover:z-10 transition-all duration-300 hover:scale-110 hover:-translate-y-1 shadow-sm bg-transparent cursor-help group/avatar overflow-hidden"
-                                    title={cohortName}
+                                    title={cohortName === 'Default' ? 'General Audience' : cohortName}
                                 >
                                     <img
                                         src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`}
-                                        alt={cohortName}
+                                        alt={cohortName === 'Default' ? 'General Audience' : cohortName}
                                         className="w-full h-full object-cover scale-150 translate-y-2 drop-shadow-md"
                                     />
                                 </div>
@@ -425,10 +458,10 @@ export const CampaignCard = ({
                                                     {/* Header */}
                                                     <div className="flex items-center gap-5 mb-8">
                                                         <div className="w-16 h-16 rounded-[20px] overflow-hidden border-2 border-white dark:border-zinc-800 shadow-xl group-hover/cohort:scale-105 transition-transform duration-500 bg-transparent">
-                                                            <img src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`} alt={cohortName} className="w-full h-full object-contain scale-110 drop-shadow-md" />
+                                                            <img src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`} alt={cohortName === 'Default' ? 'General Audience' : cohortName} className="w-full h-full object-contain scale-110 drop-shadow-md" />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <h5 className="font-black text-xl text-zinc-900 dark:text-zinc-50 tracking-tight">{cohortName}</h5>
+                                                            <h5 className="font-black text-xl text-zinc-900 dark:text-zinc-50 tracking-tight">{cohortName === 'Default' ? 'General Audience' : cohortName}</h5>
                                                             <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-0.5 text-[10px] font-bold tracking-wider">
                                                                 <Target className="w-3 h-3 mr-1.5" /> {target} TARGETS
                                                             </Badge>
@@ -519,3 +552,7 @@ export const CampaignCard = ({
         </Card>
     );
 };
+
+export const CampaignCard = React.memo(CampaignCardBase, (prev, next) => {
+    return prev.campaign.id === next.campaign.id && prev.isExpanded === next.isExpanded && prev.campaign === next.campaign;
+});

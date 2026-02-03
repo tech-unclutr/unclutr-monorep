@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel, Column, Text, Relationship
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import event
 
 # Updated schema - removed deprecated Bolna columns
 
@@ -30,11 +31,6 @@ class Campaign(SQLModel, table=True):
     # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB)) # Full raw webhook payload
     # bolna_created_at: Optional[datetime] = Field(default=None)
     # bolna_updated_at: Optional[datetime] = Field(default=None)
-    
-    # Team Member Info
-    phone_number: Optional[str] = Field(default=None)
-    team_member_role: Optional[str] = Field(default=None)
-    team_member_department: Optional[str] = Field(default=None)
     
     # Legacy fields (for backward compatibility with simulation)
     decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
@@ -80,4 +76,14 @@ class Campaign(SQLModel, table=True):
     # Metadata
     meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow}
+    )
+
+
+# Event listener to automatically update updated_at timestamp on any modification
+@event.listens_for(Campaign, 'before_update')
+def receive_before_update(mapper, connection, target):
+    """Automatically update the updated_at timestamp whenever a Campaign is modified."""
+    target.updated_at = datetime.utcnow()

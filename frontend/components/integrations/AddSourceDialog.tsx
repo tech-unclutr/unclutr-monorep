@@ -306,20 +306,25 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
             <Dialog open={open} onOpenChange={(open) => {
                 if (!open) handleClose();
             }}>
-                <DialogContent className="sm:max-w-[900px] h-[85vh] border-0 bg-zinc-50 dark:bg-zinc-950 p-0 overflow-hidden flex flex-col shadow-2xl">
-                    <DialogHeader className="p-6 pb-4 border-b border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 z-10 shrink-0">
-                        <DialogTitle className="text-2xl font-bold font-display tracking-tight">Manage Toolkit</DialogTitle>
-                        <DialogDescription className="text-zinc-500 dark:text-zinc-400">
+                <DialogContent className="sm:max-w-[900px] h-[85vh] border-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-0 overflow-hidden flex flex-col shadow-2xl">
+                    <DialogHeader className="relative p-6 pb-4 border-b border-gray-100 dark:border-zinc-800 bg-gradient-to-r from-white via-orange-50/30 to-white dark:from-zinc-900 dark:via-orange-950/20 dark:to-zinc-900 z-10 shrink-0">
+                        {/* Decorative gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+
+                        <DialogTitle className="relative text-2xl font-bold font-display tracking-tight bg-gradient-to-r from-zinc-900 via-orange-600 to-zinc-900 dark:from-zinc-50 dark:via-orange-400 dark:to-zinc-50 bg-clip-text text-transparent">
+                            Manage Toolkit
+                        </DialogTitle>
+                        <DialogDescription className="relative text-zinc-600 dark:text-zinc-400 font-medium">
                             Select the operational tools that power your business.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="px-6 py-4 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 shrink-0">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="px-6 py-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 shrink-0">
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#FF8A4C] transition-colors duration-300" />
                             <Input
                                 placeholder="Search apps (e.g. Shopify, Razorpay)..."
-                                className="pl-10 h-11 bg-gray-50 dark:bg-zinc-800 border-transparent focus:bg-white dark:focus:bg-zinc-950 border-gray-200 dark:border-zinc-700 rounded-xl focus:ring-[#FF8A4C]/20 focus:border-[#FF8A4C] transition-all"
+                                className="pl-10 h-11 bg-gray-50/80 dark:bg-zinc-800/80 backdrop-blur-sm border-gray-200/50 dark:border-zinc-700/50 focus:bg-white dark:focus:bg-zinc-950 rounded-xl focus:ring-2 focus:ring-[#FF8A4C]/30 focus:border-[#FF8A4C] transition-all duration-300 shadow-sm focus:shadow-lg focus:shadow-orange-500/10"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -335,9 +340,9 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                             <div className="space-y-10 pb-10">
                                 {Object.entries(filteredDatasources).map(([category, items]) => (
                                     <div key={category} className="space-y-4">
-                                        <div className="flex items-center gap-3 sticky top-0 bg-gray-50/95 dark:bg-zinc-950/95 backdrop-blur-sm py-2 z-10">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500/50" />
-                                            <h3 className="text-xs font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+                                        <div className="flex items-center gap-3 sticky top-0 bg-gradient-to-r from-gray-50/95 via-white/95 to-gray-50/95 dark:from-zinc-950/95 dark:via-zinc-900/95 dark:to-zinc-950/95 backdrop-blur-md py-3 z-10 border-b border-orange-100/30 dark:border-orange-900/20">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-purple-500 shadow-lg shadow-orange-500/50" />
+                                            <h3 className="text-xs font-bold text-transparent bg-gradient-to-r from-gray-700 to-gray-500 dark:from-zinc-300 dark:to-zinc-500 bg-clip-text uppercase tracking-widest">
                                                 {CATEGORY_LABELS[category] || category}
                                             </h3>
                                         </div>
@@ -349,14 +354,25 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                                                         key={datasource.id}
                                                         onClick={() => toggleDatasource(datasource)}
                                                         className={cn(
-                                                            "group relative flex flex-col items-start gap-4 p-4 rounded-2xl border transition-all duration-200 text-left h-full",
+                                                            "group relative flex flex-col items-start gap-4 p-4 rounded-2xl border transition-all duration-300 text-left h-full overflow-hidden",
                                                             isSelected
-                                                                ? "border-[#FF8A4C] bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_#FF8A4C]"
-                                                                : "border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-lg hover:shadow-gray-200/40 dark:hover:shadow-zinc-900/40 hover:-translate-y-0.5"
+                                                                ? "border-transparent bg-gradient-to-br from-white via-orange-50/50 to-white dark:from-zinc-900 dark:via-orange-950/30 dark:to-zinc-900 shadow-[0_0_0_2px_#FF8A4C,0_8px_24px_-4px_rgba(255,138,76,0.3)] scale-[1.02]"
+                                                                : "border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-orange-200 dark:hover:border-orange-900/50 hover:shadow-[0_8px_32px_-8px_rgba(255,138,76,0.2)] hover:-translate-y-1 hover:scale-[1.01]"
                                                         )}
                                                     >
-                                                        <div className="flex items-start justify-between w-full">
-                                                            <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 flex items-center justify-center p-2 overflow-hidden">
+                                                        {/* Gradient overlay on hover */}
+                                                        <div className={cn(
+                                                            "absolute inset-0 bg-gradient-to-br from-orange-500/0 via-purple-500/0 to-orange-500/0 opacity-0 transition-opacity duration-500 pointer-events-none",
+                                                            isSelected ? "from-orange-500/5 via-purple-500/5 to-orange-500/5 opacity-100" : "group-hover:opacity-100 group-hover:from-orange-500/3 group-hover:via-purple-500/3 group-hover:to-orange-500/3"
+                                                        )} />
+
+                                                        <div className="flex items-start justify-between w-full relative z-10">
+                                                            <div className={cn(
+                                                                "w-12 h-12 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 border flex items-center justify-center p-2 overflow-hidden transition-all duration-300",
+                                                                isSelected
+                                                                    ? "border-orange-200 dark:border-orange-900/50 shadow-lg shadow-orange-500/20"
+                                                                    : "border-gray-100 dark:border-zinc-700 group-hover:border-orange-100 dark:group-hover:border-orange-900/30 group-hover:shadow-md"
+                                                            )}>
                                                                 {(() => {
                                                                     const safeUrl = getSafeLogoUrl(datasource);
                                                                     const isValidUrl = safeUrl &&
@@ -368,7 +384,7 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                                                                             <img
                                                                                 src={safeUrl!}
                                                                                 alt={datasource.name}
-                                                                                className="w-full h-full object-contain"
+                                                                                className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
                                                                                 onError={(e) => {
                                                                                     e.currentTarget.style.display = 'none';
                                                                                     const fallback = e.currentTarget.nextElementSibling as HTMLElement;
@@ -390,17 +406,22 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                                                                 </div>
                                                             </div>
                                                             <div className={cn(
-                                                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300",
                                                                 isSelected
-                                                                    ? "border-[#FF8A4C] bg-[#FF8A4C] scale-100"
+                                                                    ? "border-[#FF8A4C] bg-gradient-to-br from-[#FF8A4C] to-orange-600 scale-100 shadow-lg shadow-orange-500/30"
                                                                     : "border-gray-200 dark:border-zinc-700 opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
                                                             )}>
-                                                                {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                                                                {isSelected && <Check className="w-3.5 h-3.5 text-white animate-in zoom-in duration-200" strokeWidth={3} />}
                                                             </div>
                                                         </div>
 
-                                                        <div className="w-full">
-                                                            <div className="font-bold text-gray-900 dark:text-zinc-100 mb-0.5 group-hover:text-[#FF8A4C] dark:group-hover:text-orange-400 transition-colors">
+                                                        <div className="w-full relative z-10">
+                                                            <div className={cn(
+                                                                "font-bold text-gray-900 dark:text-zinc-100 mb-0.5 transition-all duration-300",
+                                                                isSelected
+                                                                    ? "text-[#FF8A4C] dark:text-orange-400"
+                                                                    : "group-hover:text-[#FF8A4C] dark:group-hover:text-orange-400"
+                                                            )}>
                                                                 {datasource.name}
                                                             </div>
                                                             {datasource.is_coming_soon ? (
@@ -435,24 +456,24 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                         )}
                     </div>
 
-                    <div className="p-6 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between shrink-0 z-20 shadow-[0_-8px_20px_rgba(0,0,0,0.02)]">
+                    <div className="p-6 bg-gradient-to-r from-white via-orange-50/20 to-white dark:from-zinc-900 dark:via-orange-950/10 dark:to-zinc-900 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between shrink-0 z-20 shadow-[0_-8px_32px_rgba(0,0,0,0.04)] backdrop-blur-xl">
                         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-zinc-400">
-                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 text-[#FF8A4C] text-xs font-bold">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/40 dark:to-orange-900/20 text-[#FF8A4C] text-sm font-bold shadow-lg shadow-orange-500/20 animate-pulse">
                                 {selectedIds.size}
                             </div>
-                            <span className="font-medium">apps selected</span>
+                            <span className="font-semibold">apps selected</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => onOpenChange(false)}
-                                className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                                className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="px-8 py-2.5 bg-[#FF8A4C] hover:bg-[#FF8A4C]/90 text-white font-bold text-sm rounded-xl shadow-lg shadow-orange-500/20 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="px-8 py-2.5 bg-gradient-to-r from-[#FF8A4C] to-orange-600 hover:from-[#FF8A4C]/90 hover:to-orange-600/90 text-white font-bold text-sm rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 active:translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 hover:scale-105 active:scale-95"
                             >
                                 {saving ? (
                                     <>

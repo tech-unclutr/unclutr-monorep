@@ -307,7 +307,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                 <td className="px-6 py-3 whitespace-nowrap">
                                     <div className="flex flex-col">
                                         <span className="text-sm text-white font-medium">{log.lead.name}</span>
-                                        <span className="text-xs text-gray-500">{log.lead.cohort || 'General'}</span>
+                                        <span className="text-xs text-gray-500">{log.lead.cohort === 'Default' ? 'General Audience' : (log.lead.cohort || 'General Audience')}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap">

@@ -979,12 +979,12 @@ export function CampaignComposer({ campaignId, initialName, onComplete, onBack, 
                                                         <div className="flex flex-col items-start text-left gap-0.5">
                                                             <span className={cn(
                                                                 "text-xs font-bold transition-colors duration-300 flex items-center gap-1.5",
-                                                                isActive ? "text-white" :
+                                                                isActive ? (isSelected ? "text-white" : "text-indigo-600 dark:text-indigo-400") :
                                                                     isSelected ? "text-indigo-100" :
                                                                         "text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white"
                                                             )}>
                                                                 {isSelected && <CheckIcon className="w-3 h-3 text-white transition-all animate-in fade-in zoom-in duration-300" />}
-                                                                {cohort}
+                                                                {cohort === 'Default' ? 'General Audience' : cohort}
                                                             </span>
                                                             <div className={cn(
                                                                 "flex items-center gap-1.5 text-[10px] font-medium transition-colors duration-300",
@@ -1034,7 +1034,7 @@ export function CampaignComposer({ campaignId, initialName, onComplete, onBack, 
                                                                     </div>
                                                                     <div className="flex-1">
                                                                         <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-4 tracking-tight">
-                                                                            {currentCohort}
+                                                                            {currentCohort === 'Default' ? 'General Audience' : currentCohort}
                                                                         </h3>
                                                                         <div className="flex items-center justify-between mb-0.5">
                                                                             <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Target Volume</label>
@@ -1475,8 +1475,7 @@ export function CampaignComposer({ campaignId, initialName, onComplete, onBack, 
 
                                                 <Button
                                                     size="sm"
-                                                    variant="ghost"
-                                                    className="flex-1 h-12 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 font-bold text-xs gap-2 transition-all duration-300"
+                                                    className="flex-1 h-12 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 text-white hover:from-indigo-700 hover:to-purple-700 dark:hover:from-indigo-600 dark:hover:to-purple-600 font-bold text-sm gap-2 transition-all duration-300 shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98]"
                                                     onClick={() => setPersistedState(prev => ({
                                                         ...prev,
                                                         executionWindows: [...(prev.executionWindows || []), getNextTimeSlot()]

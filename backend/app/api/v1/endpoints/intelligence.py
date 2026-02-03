@@ -142,57 +142,16 @@ async def update_campaign(
     return campaign
 
 
-@router.patch("/campaigns/{campaign_id}/settings")
-async def update_campaign_settings(
-    campaign_id: UUID,
-    settings_in: CampaignSettingsUpdate,
-    current_user: User = Depends(get_current_active_user),
-    session: AsyncSession = Depends(get_session),
-    x_company_id: str = Header(..., alias="X-Company-ID")
-):
-    """
-    Updates campaign settings including execution windows.
-    """
-    try:
-        company_id = UUID(x_company_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid Company ID format")
 
-    stmt = select(Campaign).where(
-        Campaign.id == campaign_id, 
-        Campaign.company_id == company_id
-    )
-    result = await session.execute(stmt)
-    campaign = result.scalars().first()
 
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-        
-    update_data = settings_in.dict(exclude_unset=True)
-    
-    # Update fields dynamically
-    for key, value in update_data.items():
-        if hasattr(campaign, key):
-            setattr(campaign, key, value)
-            
-    # Clear window_expired flag if windows are updated
-    if "execution_windows" in update_data:
-        meta = dict(campaign.meta_data or {})
-        if "window_expired" in meta:
-            del meta["window_expired"]
-            campaign.meta_data = meta
 
-    campaign.updated_at = datetime.utcnow()
-    session.add(campaign)
-    await session.commit()
-    await session.refresh(campaign)
-    
-    return campaign
-
+class CalendarSyncRequest(BaseModel):
+    timezone: Optional[str] = "UTC"
 
 @router.post("/campaigns/{campaign_id}/calendar-sync")
 async def sync_campaign_calendar(
-    campaign_id: UUID, 
+    campaign_id: UUID,
+    request: CalendarSyncRequest = None,
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_session),
     x_company_id: str = Header(..., alias="X-Company-ID")
@@ -227,7 +186,8 @@ async def sync_campaign_calendar(
         raise HTTPException(status_code=400, detail="No active calendar connection found")
         
     try:
-        count = await google_calendar_service.sync_campaign_windows(conn, campaign)
+        timezone = request.timezone if request else "UTC"
+        count = await google_calendar_service.sync_campaign_windows(conn, campaign, timezone_str=timezone)
         return {"status": "success", "events_created": count}
     except Exception as e:
         logger.error(f"Calendar sync failed: {e}")
@@ -592,9 +552,6 @@ async def save_onboarding_details(
     
     if campaign:
         # Update existing draft
-        campaign.phone_number = request.phone_number
-        campaign.team_member_role = request.team_member_role
-        campaign.team_member_department = request.team_member_department
         campaign.updated_at = datetime.utcnow()
         # Optionally update name on user profile if needed, but for now let's keep it scoped to campaign
         # actually, the UI sends name as well.
@@ -607,12 +564,7 @@ async def save_onboarding_details(
             company_id=company_id,
             user_id=current_user.id,
             name=f"Campaign - {datetime.utcnow().strftime('%B %d, %Y')}", # Default name
-            status="DRAFT",
-            phone_number=request.phone_number,
-            team_member_role=request.team_member_role,
-            team_member_department=request.team_member_department,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            status="DRAFT"
         )
         session.add(campaign)
         logger.info(f"Created NEW DRAFT campaign with onboarding details")
@@ -1214,7 +1166,7 @@ async def update_campaign_leads(
             {
                 "customer_name": lead.customer_name,
                 "contact_number": lead.contact_number,
-                "cohort": lead.cohort,
+                "cohort": lead.cohort or "Default",
                 "meta_data": lead.meta_data,
                 "status": "PENDING"
             }
@@ -1301,7 +1253,7 @@ async def create_campaign_from_csv(
             name=campaign_name,
             status="DRAFT", # Batch/Dataset Campaigns start as DRAFT
             phone_number="", # Not applicable for batch container
-            source_file_hash=source_hash 
+            source_file_hash=source_hash
         )
         session.add(campaign)
         await session.flush() # flush to get campaign.id
@@ -1320,7 +1272,7 @@ async def create_campaign_from_csv(
                 "campaign_id": campaign.id,
                 "customer_name": lead.customer_name,
                 "contact_number": lead.contact_number,
-                "cohort": lead.cohort,
+                "cohort": lead.cohort or "Default",
                 "meta_data": lead.meta_data,
                 "status": "PENDING",
                 "created_at": datetime.utcnow()
@@ -1426,6 +1378,13 @@ async def update_campaign_settings(
 
     for key, value in update_data.items():
         setattr(campaign, key, value)
+
+    # Clear window_expired flag if windows are updated
+    if "execution_windows" in update_data:
+        meta = dict(campaign.meta_data or {})
+        if "window_expired" in meta:
+            del meta["window_expired"]
+            campaign.meta_data = meta
 
     # Sync cohort_data if older fields or cohort_data itself was updated
     

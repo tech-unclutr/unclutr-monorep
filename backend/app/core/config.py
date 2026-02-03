@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     BOLNA_API_BASE_URL: str = "https://api.bolna.ai"
 
     class Config:
-        env_file = "env.config"
+        env_file = ".env"
         extra = "ignore"
         
     @property

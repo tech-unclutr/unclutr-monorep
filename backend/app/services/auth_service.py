@@ -96,24 +96,6 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
     if membership:
         user.role = membership.role
         
-    # Auto-populate designation from most recent campaign if not set
-    if not user.designation:
-        from app.models.campaign import Campaign
-        from sqlmodel import desc
-        
-        campaign_stmt = select(Campaign).where(
-            Campaign.user_id == user.id
-        ).order_by(desc(Campaign.created_at)).limit(1)
-        
-        campaign_result = await session.exec(campaign_stmt)
-        latest_campaign = campaign_result.first()
-        
-        if latest_campaign and latest_campaign.team_member_role:
-            user.designation = latest_campaign.team_member_role
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-    
     is_onboarded = membership is not None
     
     # Attach transient attribute for the response serializer

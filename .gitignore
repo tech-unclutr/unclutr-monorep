@@ -64,3 +64,9 @@ backend/.pytest_cache/
 backend/cover/
 backend/firebase-credentials.json
 frontend/*.log
+
+
+# Ignore temp venvs and logs
+backend/venv_lite/
+backend/venv_repair/
+backend.log

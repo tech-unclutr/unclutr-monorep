@@ -30,11 +30,6 @@ class ArchivedCampaign(SQLModel, table=True):
     # bolna_created_at: Optional[datetime] = Field(default=None)
     # bolna_updated_at: Optional[datetime] = Field(default=None)
     
-    # Team Member Info
-    phone_number: Optional[str] = Field(default=None)
-    team_member_role: Optional[str] = Field(default=None)
-    team_member_department: Optional[str] = Field(default=None)
-    
     # Legacy fields
     decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
     

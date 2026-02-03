@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import {
@@ -44,6 +46,7 @@ interface CsvUploadCardProps {
     mode?: 'create' | 'edit';
     campaignId?: string;
     onLeadsUpdated?: () => void;
+    onDirtyChange?: (isDirty: boolean) => void;
 }
 
 type Stage = 'UPLOAD' | 'MAPPING' | 'PREVIEW' | 'UPLOADING' | 'DONE' | 'ORCHESTRATION' | 'ERROR';
@@ -54,10 +57,10 @@ import { ProcessingLog } from './ProcessingLog';
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useAuth } from "@/context/auth-context";
 
-export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create', campaignId: propCampaignId, onLeadsUpdated }: CsvUploadCardProps) {
+export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create', campaignId: propCampaignId, onLeadsUpdated, onDirtyChange }: CsvUploadCardProps) {
     const { companyId: authCompanyId, user } = useAuth();
 
-    // Dynamic storage key to avoid collisions between create and edit flows
+    // Dynamic storage key to avoid collisions between creating and edit flows
     const storageKey = mode === 'edit' && propCampaignId
         ? `csv_upload_edit_${propCampaignId}`
         : `csv_upload_state_${authCompanyId || 'default'}`;
@@ -74,6 +77,16 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         campaignName: '',
         campaignId: null as string | null
     });
+
+    // Notify parent about dirty state changes
+    useEffect(() => {
+        if (!onDirtyChange) return;
+
+        // We consider it dirty if we are in MAPPING or UPLOADING stage
+        // OR if we have parsed data but haven't finished
+        const isDirty = persistedState.stage === 'MAPPING' || persistedState.stage === 'UPLOADING';
+        onDirtyChange(isDirty);
+    }, [persistedState.stage, onDirtyChange]);
 
     // Force reset to UPLOAD stage when mode or campaignId changes to ensure fresh start
     // This is critical for edit mode to work on first attempt
@@ -134,51 +147,93 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     const [duplicateCampaignInfo, setDuplicateCampaignInfo] = useState<{ id: string, name: string, date: string } | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+    const handleExcelParse = useCallback((file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData && jsonData.length > 0) {
+                const detectedHeaders = Object.keys(jsonData[0] as object);
+
+                // Auto-mapping logic
+                const newMapping = { ...persistedState.mapping };
+                detectedHeaders.forEach(h => {
+                    const low = h.toLowerCase();
+                    if (low.includes('name')) newMapping.customer_name = h;
+                    if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
+                    if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
+                });
+
+                setPersistedState(prev => ({
+                    ...prev,
+                    headers: detectedHeaders,
+                    data: jsonData,
+                    mapping: newMapping,
+                    stage: 'MAPPING'
+                }));
+            } else {
+                toast.error("The Excel file appears to be empty");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }, [persistedState.mapping, setPersistedState]);
+
     const handleFileSelect = useCallback((file: File) => {
         console.log("CsvUpload: Handling file selection", file.name);
         setFile(file);
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                console.log("CsvUpload: Parse complete", { rows: results.data.length, fields: results.meta.fields });
-                if (results.data && results.data.length > 0) {
-                    const detectedHeaders = Object.keys(results.data[0] as object);
 
-                    // Auto-mapping logic
-                    const newMapping = { ...persistedState.mapping };
-                    detectedHeaders.forEach(h => {
-                        const low = h.toLowerCase();
-                        if (low.includes('name')) newMapping.customer_name = h;
-                        if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
-                        if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
-                    });
+        if (file.name.endsWith('.csv')) {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    console.log("CsvUpload: Parse complete", { rows: results.data.length, fields: results.meta.fields });
+                    if (results.data && results.data.length > 0) {
+                        const detectedHeaders = Object.keys(results.data[0] as object);
 
-                    setPersistedState(prev => ({
-                        ...prev,
-                        headers: detectedHeaders,
-                        data: results.data,
-                        mapping: newMapping,
-                        stage: 'MAPPING'
-                    }));
-                } else {
-                    toast.error("The CSV file appears to be empty");
+                        // Auto-mapping logic
+                        const newMapping = { ...persistedState.mapping };
+                        detectedHeaders.forEach(h => {
+                            const low = h.toLowerCase();
+                            if (low.includes('name')) newMapping.customer_name = h;
+                            if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
+                            if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
+                        });
+
+                        setPersistedState(prev => ({
+                            ...prev,
+                            headers: detectedHeaders,
+                            data: results.data,
+                            mapping: newMapping,
+                            stage: 'MAPPING'
+                        }));
+                    } else {
+                        toast.error("The CSV file appears to be empty");
+                    }
+                },
+                error: (error) => {
+                    console.error("CsvUpload: Parse error", error);
+                    toast.error(`Error parsing CSV: ${error.message}`);
                 }
-            },
-            error: (error) => {
-                console.error("CsvUpload: Parse error", error);
-                toast.error(`Error parsing CSV: ${error.message}`);
-            }
-        });
-    }, [persistedState.mapping, setPersistedState]);
+            });
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            handleExcelParse(file);
+        } else {
+            toast.error("Please upload a valid CSV or Excel file");
+        }
+    }, [persistedState.mapping, setPersistedState, handleExcelParse]);
 
     const onDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         const droppedFile = e.dataTransfer.files[0];
-        if (droppedFile && droppedFile.name.endsWith('.csv')) {
+        if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
             handleFileSelect(droppedFile);
         } else {
-            toast.error("Please upload a valid CSV file");
+            toast.error("Please upload a valid CSV or Excel file");
         }
     }, [handleFileSelect]); // Fix stale closure: add handleFileSelect to dependencies
 
@@ -249,11 +304,16 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 return lead;
             });
 
-            if (mode === 'edit' && propCampaignId) {
-                // EDIT MODE: Update leads directly
-                console.log(`CsvUpload: Updating leads for campaign ${propCampaignId}`);
+            // [FIX] Consolidate campaign ID logic to handle both direct edit (propCampaignId)
+            // and resumed create (persistedState.campaignId). 
+            // If forceCreate is true, we skip update and POST a new one.
+            const targetCampaignId = propCampaignId || campaignId;
+
+            if (targetCampaignId && !forceCreate) {
+                // UPDATE MODE: Update leads directly
+                console.log(`CsvUpload: Updating leads for campaign ${targetCampaignId}`);
                 const payload = { leads };
-                const response = await api.put(`/intelligence/campaigns/${propCampaignId}/leads`, payload);
+                const response = await api.put(`/intelligence/campaigns/${targetCampaignId}/leads`, payload);
                 console.log("CsvUpload: Update response", response);
 
                 if (response.status === 'success') {
@@ -295,14 +355,17 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 }
             }
         } catch (error: any) {
-            // Check for duplicate upload (409 Conflict) PRIOR to logging error
-            // Only relevant for create mode usually
-            if (mode === 'create' && error.status === 409 && error.data?.code === 'DUPLICATE_UPLOAD') {
-                console.log("Duplicate upload detected (handled gracefully)");
+            // Check for duplicate upload (409 Conflict) - this is an expected flow, not an error
+            // Handle both standard error objects and custom API wrappers
+            const status = error.status || error.response?.status;
+            const errorData = error.data || error.response?.data;
+
+            // Handle duplicate detection gracefully (expected flow)
+            if (mode === 'create' && status === 409 && errorData?.code === 'DUPLICATE_UPLOAD') {
                 setDuplicateCampaignInfo({
-                    id: error.data.campaign_id,
-                    name: error.data.campaign_name,
-                    date: new Date(error.data.created_at).toLocaleDateString()
+                    id: errorData.campaign_id,
+                    name: errorData.campaign_name,
+                    date: errorData.created_at
                 });
 
                 setIsDuplicateAlertOpen(true);
@@ -311,6 +374,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 return;
             }
 
+            // Only log actual errors
             console.error("Failed to process campaign:", error);
 
             // Set error state for UI display
@@ -485,7 +549,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                 type="file"
                                 ref={fileInputRef}
                                 className="hidden"
-                                accept=".csv"
+                                accept=".csv,.xlsx,.xls"
                                 onChange={(e) => {
                                     const selectedFile = e.target.files?.[0];
                                     if (selectedFile) {
@@ -522,7 +586,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                                         className="absolute -top-2 -right-2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-xl shadow-indigo-500/50 border-2 border-white dark:border-zinc-900"
                                     >
-                                        CSV
+                                        DATA
                                     </motion.div>
                                 </motion.div>
 
@@ -716,7 +780,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                                             Team is analyzing your list...
                                         </>
-                                    ) : (mode === 'edit' ? "Update Campaign Leads" : "Create Intelligence Batch")}
+                                    ) : ((mode === 'edit' || !!campaignId) ? "Update Campaign Leads" : "Create Intelligence Batch")}
                                     {!isProcessing && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}
                                 </span>
                             </Button>
@@ -745,7 +809,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                 {errorResult?.title || "Upload Failed"}
                             </h3>
                             <p className="text-gray-500 dark:text-gray-400">
-                                {errorResult?.message || "Something went wrong while uploading your CSV. Please try again."}
+                                {errorResult?.message || "Something went wrong while uploading your file. Please try again."}
                             </p>
                         </div>
 
@@ -833,20 +897,42 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
 
                 <AlertDialog open={isDuplicateAlertOpen} onOpenChange={setIsDuplicateAlertOpen}>
-                    <AlertDialogContent className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-gray-100 dark:border-white/10 rounded-[2rem] shadow-2xl">
+                    <AlertDialogContent
+                        className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-gray-100 dark:border-white/10 rounded-[2rem] shadow-2xl"
+                    >
                         <AlertDialogHeader>
                             <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 mb-4">
                                 <AlertCircle className="w-6 h-6" />
                             </div>
                             <AlertDialogTitle className="text-xl font-extrabold dark:text-white">Duplicate Data Detected</AlertDialogTitle>
-                            <AlertDialogDescription className="text-gray-500 dark:text-gray-400 font-medium">
-                                This customer data looks identical to a previous upload
-                                {duplicateCampaignInfo && <span className="font-bold text-gray-900 dark:text-gray-200"> ({duplicateCampaignInfo.name}) </span>}
-                                from {duplicateCampaignInfo?.date}.
-                                <br /><br />
-                                Would you like to edit the existing campaign or create a new one?
+                            <AlertDialogDescription className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                This customer data looks identical to a previous upload.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
+
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 border border-gray-100 dark:border-white/10 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                                    <span className="font-bold text-gray-900 dark:text-white">
+                                        {duplicateCampaignInfo?.name || "Unknown Campaign"}
+                                    </span>
+                                </div>
+                                <div className="pl-4 text-sm flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                    <span className="text-gray-900 dark:text-gray-100 font-semibold italic">
+                                        {duplicateCampaignInfo?.date && formatDistanceToNow(new Date(duplicateCampaignInfo.date), { addSuffix: true })}
+                                    </span>
+                                    <span className="hidden sm:inline text-gray-300 dark:text-gray-600">•</span>
+                                    <span className="text-gray-400">
+                                        {duplicateCampaignInfo?.date && format(new Date(duplicateCampaignInfo.date), 'MMM do, yyyy • h:mm a')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                Would you like to edit the existing campaign or create a new one?
+                            </p>
+                        </div>
                         <AlertDialogFooter className="mt-6 gap-3">
                             <AlertDialogCancel onClick={() => setIsDuplicateAlertOpen(false)} className="rounded-xl border-none bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10">Cancel</AlertDialogCancel>
                             <Button variant="outline" onClick={handleForceCreate} className="rounded-xl border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 font-semibold">

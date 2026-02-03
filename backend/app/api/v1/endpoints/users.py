@@ -28,34 +28,6 @@ async def read_user_me(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Auto-populate designation from most recent campaign if not set
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"User designation check: '{user.designation}', is_empty: {not user.designation}")
-    
-    if not user.designation:
-        from app.models.campaign import Campaign
-        from sqlmodel import desc
-        
-        logger.info(f"Attempting to populate designation from campaigns for user {uid}")
-        
-        campaign_stmt = select(Campaign).where(
-            Campaign.user_id == uid
-        ).order_by(desc(Campaign.created_at)).limit(1)
-        
-        campaign_result = await session.exec(campaign_stmt)
-        latest_campaign = campaign_result.first()
-        
-        logger.info(f"Latest campaign found: {latest_campaign is not None}, role: {latest_campaign.team_member_role if latest_campaign else 'N/A'}")
-        
-        if latest_campaign and latest_campaign.team_member_role:
-            logger.info(f"Setting designation to: {latest_campaign.team_member_role}")
-            user.designation = latest_campaign.team_member_role
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-            logger.info(f"Designation updated successfully")
-        
     return user
 
 @router.patch("/me", response_model=UserRead)

@@ -21,7 +21,8 @@ import {
     Check,
 
     ShieldAlert,
-    Pause
+    Pause,
+    AlertTriangle
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +40,15 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { formatMinimalTime } from "@/lib/utils";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 import { CsvUploadCard } from "@/components/customer-intelligence/CsvUploadCard";
 import { CampaignComposer } from "@/components/customer-intelligence/CampaignComposer";
 import { ExecutionPanel } from "@/components/customer-intelligence/ExecutionPanel";
@@ -63,6 +72,12 @@ export default function CampaignPage() {
     const [isPauseConfirmOpen, setIsPauseConfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isPausing, setIsPausing] = useState(false);
+
+    // Dirty state tracking for leads management
+    const [isLeadsDirty, setIsLeadsDirty] = useState(false);
+    const [wasLeadsUpdated, setWasLeadsUpdated] = useState(false);
+    const [isLeadsExitConfirmOpen, setIsLeadsExitConfirmOpen] = useState(false);
+
     // Removed isScheduleModalOpen as polling is no longer used
 
     // NEW: Use WebSocket for campaign data
@@ -229,6 +244,7 @@ export default function CampaignPage() {
     const {
         name,
         created_at,
+        updated_at,
         status,
         brand_context,
         customer_context,
@@ -303,10 +319,40 @@ export default function CampaignPage() {
                                     </span>
                                 </div>
 
-                                <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-full">
-                                    <Calendar className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600" />
-                                    {created_at ? format(new Date(created_at), 'MMMM do, yyyy') : 'New Campaign'}
-                                </span>
+                                {/* Dates */}
+                                <div className="flex items-center gap-2">
+                                    {/* Created At */}
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-full cursor-help hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                                    <Calendar className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600" />
+                                                    {created_at ? formatDistanceToNow(new Date(created_at), { addSuffix: true }) : 'New'}
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Created: {created_at ? format(new Date(created_at), "MMM do, yyyy 'at' h:mm a") : 'N/A'}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+
+                                    {/* Updated At */}
+                                    {updated_at && updated_at !== created_at && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-full cursor-help hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                                        <Clock className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600" />
+                                                        Updated {formatDistanceToNow(new Date(updated_at), { addSuffix: true })}
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Last Updated: {format(new Date(updated_at), "MMM do, yyyy 'at' h:mm a")}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
+                                </div>
                             </div>
 
                             <h1 className="text-5xl md:text-6xl font-black text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-[-0.04em] mb-6 bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-500 dark:from-white dark:via-zinc-100 dark:to-zinc-400">
@@ -559,7 +605,13 @@ export default function CampaignPage() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => {
+                            if (wasLeadsUpdated) {
+                                setIsLeadsExitConfirmOpen(true);
+                            } else {
+                                setIsEditing(false);
+                            }
+                        }}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
@@ -574,10 +626,17 @@ export default function CampaignPage() {
                                 campaignId={campaignId}
                                 onComplete={() => {
                                     setIsEditing(false);
+                                    setWasLeadsUpdated(false);
                                     fetchCampaign();
                                     toast.success("Campaign updated successfully");
                                 }}
-                                onBack={() => setIsEditing(false)}
+                                onBack={() => {
+                                    if (wasLeadsUpdated) {
+                                        setIsLeadsExitConfirmOpen(true);
+                                    } else {
+                                        setIsEditing(false);
+                                    }
+                                }}
                                 onEditLeads={() => setIsManagingLeads(true)}
                                 onError={(error) => {
                                     console.error("Campaign update error:", error);
@@ -599,7 +658,13 @@ export default function CampaignPage() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                         className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                        onClick={() => setIsManagingLeads(false)}
+                        onClick={() => {
+                            if (isLeadsDirty) {
+                                setIsLeadsExitConfirmOpen(true);
+                            } else {
+                                setIsManagingLeads(false);
+                            }
+                        }}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
@@ -614,12 +679,22 @@ export default function CampaignPage() {
                                 campaignId={campaignId}
                                 onSuccess={() => {
                                     setIsManagingLeads(false);
+                                    setIsLeadsDirty(false); // Reset dirty state on success
+                                    setWasLeadsUpdated(true); // Flag as updated
                                     fetchCampaign();
                                     toast.success("Leads updated successfully");
                                 }}
-                                onCancel={() => setIsManagingLeads(false)}
+                                onCancel={() => {
+                                    if (isLeadsDirty) {
+                                        setIsLeadsExitConfirmOpen(true);
+                                    } else {
+                                        setIsManagingLeads(false);
+                                    }
+                                }}
                                 onLeadsUpdated={() => {
                                     setIsManagingLeads(false);
+                                    setIsLeadsDirty(false); // Reset dirty state
+                                    setWasLeadsUpdated(true); // Flag as updated
                                     setComposerKey(k => k + 1);
                                     // Move back to strategy step in local state too
                                     setCampaign((prev: any) => ({
@@ -629,6 +704,7 @@ export default function CampaignPage() {
                                     }));
                                     fetchCampaign();
                                 }}
+                                onDirtyChange={(isDirty) => setIsLeadsDirty(isDirty)}
                                 className="h-full"
                             />
                         </motion.div>
@@ -704,6 +780,42 @@ export default function CampaignPage() {
                         >
                             {isPausing ? "Pausing..." : "Pause & Exit"}
                         </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Unsaved Leads Exit Confirmation */}
+            <AlertDialog open={isLeadsExitConfirmOpen} onOpenChange={setIsLeadsExitConfirmOpen}>
+                <AlertDialogContent className="rounded-[2rem] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400">
+                                <AlertTriangle className="w-5 h-5" />
+                            </div>
+                            Unsaved Changes
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 text-base py-2">
+                            You have unsaved changes to your leads list. If you exit now, these changes will be lost.<br /><br />
+                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">Are you sure you want to discard your changes?</span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3 sm:gap-0">
+                        <AlertDialogCancel className="rounded-2xl border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-900 h-12 px-6">
+                            Keep Editing
+                        </AlertDialogCancel>
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                setIsLeadsExitConfirmOpen(false);
+                                setIsManagingLeads(false);
+                                setIsEditing(false);
+                                setIsLeadsDirty(false);
+                                setWasLeadsUpdated(false);
+                            }}
+                            className="rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold h-12 px-8 shadow-lg shadow-red-500/20 border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            Exit without Saving
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

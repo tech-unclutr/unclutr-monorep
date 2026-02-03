@@ -46,13 +46,6 @@ export const api = {
         const user = auth.currentUser;
         const token = user ? await user.getIdToken() : null;
 
-        console.log(`DEBUG: api.ts request to ${endpoint}`);
-        console.log(`DEBUG: auth.currentUser exists? ${!!user}`);
-        console.log(`DEBUG: token retrieved: ${token ? token.slice(0, 10) + '...' : 'null'}`);
-        if ((options.headers as any)?.Authorization) {
-            console.log(`DEBUG: explicit Authorization header present`);
-        }
-
         const companyId = typeof window !== 'undefined' ? localStorage.getItem('unclutr_company_id') : null;
         const combinedHeaders: any = {
             "Content-Type": "application/json",
@@ -61,18 +54,7 @@ export const api = {
             ...((options.headers as any) || {}),
         };
 
-        // If explicit header overrides auto-token, it's fine, but let's log it.
-        console.log(`DEBUG: Final Authorization Header: ${(combinedHeaders.Authorization || '').slice(0, 20)}...`);
-
-        console.log(`DEBUG: API Request [${options.method || 'GET'} ${endpoint}] Headers:`, JSON.stringify(combinedHeaders));
-
-        // Ensure we don't send "Bearer null" or "Bearer undefined" if logic somehow failed upstream
-        if (combinedHeaders.Authorization && (combinedHeaders.Authorization.includes("undefined") || combinedHeaders.Authorization === "Bearer null")) {
-            console.warn("WARNING: Sending 'Bearer undefined' or 'Bearer null' in headers!");
-        }
-
         const fullUrl = `${API_BASE_URL}${endpoint}`;
-        console.log(`DEBUG: API fetching FULL URL: ${fullUrl}`);
 
         const response = await fetch(fullUrl, {
             ...options,

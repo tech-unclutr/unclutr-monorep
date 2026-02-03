@@ -104,7 +104,7 @@ class BolnaCaller:
                 print(f"[BolnaCaller] Error parsing execution windows: {e}")
 
         # 1.3 Team Member First Name
-        team_first_name = campaign.team_member_role or "Aditi"
+        team_first_name = (user.designation if user else None) or "Aditi"
         if user and user.full_name:
             team_first_name = user.full_name.split()[0]
         elif campaign.team_member_context and "conducted by" in campaign.team_member_context.lower():

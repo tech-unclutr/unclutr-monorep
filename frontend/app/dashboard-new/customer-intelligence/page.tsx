@@ -79,7 +79,7 @@ export default function CustomerIntelligencePage() {
     // Derived state for readiness - Single Source of Truth is now the LATEST CAMPAIGN or User Settings
     const latestCampaign = latestCampaigns.length > 0 ? latestCampaigns[0] : null;
     const isContactReady = !!(
-        (latestCampaign && latestCampaign.phone_number && latestCampaign.team_member_role && latestCampaign.team_member_department) ||
+        (dbUser?.contact_number && dbUser?.designation && dbUser?.team) ||
         (dbUser?.settings?.intelligence_unlocked)
     );
 
@@ -102,13 +102,13 @@ export default function CustomerIntelligencePage() {
 
     const CAMPAIGNS_PER_PAGE = 3;
 
-    const fetchCampaigns = async (offset = 0, append = false) => {
+    const fetchCampaigns = async (offset = 0, append = false, limit = CAMPAIGNS_PER_PAGE) => {
         // Guard: Wait for auth to be ready and companyId to be present
         if (isAuthLoading || !companyId) return;
 
         try {
             setIsLoadingCampaigns(true);
-            const data = await api.get(`/intelligence/campaigns?limit=${CAMPAIGNS_PER_PAGE}&offset=${offset}`);
+            const data = await api.get(`/intelligence/campaigns?limit=${limit}&offset=${offset}`);
 
             if (append) {
                 setLatestCampaigns(prev => [...prev, ...data.campaigns]);
@@ -128,31 +128,33 @@ export default function CustomerIntelligencePage() {
                     linkedin: dbUser?.linkedin_profile || ''
                 };
 
-                // Override with latest campaign if available
-                if (latest) {
-                    setContactDetails({
-                        name: baseline.name, // Usually name is better from user profile
-                        phone: latest.phone_number || baseline.phone,
-                        role: latest.team_member_role || baseline.role,
-                        department: latest.team_member_department || baseline.department,
-                        linkedin: baseline.linkedin
-                    });
+                // Override with latest user profile state
+                setContactDetails({
+                    name: baseline.name,
+                    phone: baseline.phone,
+                    role: baseline.role,
+                    department: baseline.department,
+                    linkedin: baseline.linkedin
+                });
 
-                    if (latest.phone_number && latest.team_member_role && latest.team_member_department) {
-                        setIsContactSaved(true);
-                    }
-                } else {
-                    setContactDetails(baseline);
-                    // If no campaigns but user profile is complete (e.g. from onboarding), mark as saved?
-                    // Actually, dbUser?.settings?.intelligence_unlocked handles the dashboard access itself
+                if (baseline.phone && baseline.role && baseline.department) {
+                    setIsContactSaved(true);
                 }
             }
 
-            if (data.campaigns.length < CAMPAIGNS_PER_PAGE) {
+            if (data.campaigns.length < limit) {
                 setHasMoreCampaigns(false);
             }
 
-            setCampaignOffset(offset + CAMPAIGNS_PER_PAGE);
+            // Update offset based on the actual number of items fetched or the limit requested
+            // If we are appending, we move the offset forward by the number of new items
+            // If we are refreshing (offset 0), we set the offset to the total count
+            const newCount = data.campaigns.length;
+            if (append) {
+                setCampaignOffset(prev => prev + newCount);
+            } else {
+                setCampaignOffset(newCount);
+            }
 
         } catch (error) {
             console.error("Failed to fetch campaigns:", error);
@@ -167,18 +169,25 @@ export default function CustomerIntelligencePage() {
     useEffect(() => {
         if (!isAuthLoading && companyId) {
             fetchCampaigns();
+        }
+    }, [isAuthLoading, companyId]);
 
-            // [NEW] Polling for fresh campaign data
+    // Polling for fresh campaign data
+    useEffect(() => {
+        if (!isAuthLoading && companyId) {
             const pollInterval = setInterval(() => {
                 // Only poll if window is visible to save resources
                 if (document.visibilityState === 'visible') {
-                    fetchCampaigns(0, false);
+                    // Fetch all currently visible campaigns to maintain "Load More" state
+                    const currentCount = latestCampaigns.length;
+                    const limit = currentCount > 0 ? currentCount : CAMPAIGNS_PER_PAGE;
+                    fetchCampaigns(0, false, limit);
                 }
             }, 15000); // 15 seconds
 
             return () => clearInterval(pollInterval);
         }
-    }, [isAuthLoading, companyId]);
+    }, [isAuthLoading, companyId, latestCampaigns.length]);
 
     const handleLoadMore = () => {
         fetchCampaigns(campaignOffset, true);
@@ -202,9 +211,30 @@ export default function CustomerIntelligencePage() {
     // Refresh campaigns when an interview completes
     useEffect(() => {
         if (status === 'COMPLETED' && activeCampaign) {
-            fetchCampaigns(0, false);
+            fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
         }
     }, [status, activeCampaign]);
+
+    // [NEW] Auto-scroll to expanded campaign
+    useEffect(() => {
+        if (expandedCampaignId) {
+            setTimeout(() => {
+                const element = document.getElementById(`campaign-card-${expandedCampaignId}`);
+                const container = document.getElementById('customer-intelligence-scroll-container');
+
+                if (element && container) {
+                    const elementTop = element.getBoundingClientRect().top;
+                    const containerTop = container.getBoundingClientRect().top;
+                    const scrollTop = container.scrollTop;
+                    const yOffset = -20; // Top padding offset
+
+                    container.scrollTo({ top: scrollTop + (elementTop - containerTop) + yOffset, behavior: 'smooth' });
+                } else if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
+    }, [expandedCampaignId]);
 
 
     // Fetch Calendar Status
@@ -325,7 +355,7 @@ export default function CustomerIntelligencePage() {
             // Refresh campaigns to update the view immediately
             // Small delay to allow animation to play out?
             setTimeout(() => {
-                fetchCampaigns(0, false);
+                fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
             }, 1000);
 
         } catch (error: any) {
@@ -526,7 +556,7 @@ export default function CustomerIntelligencePage() {
             if (error.response?.status === 404 || error.status === 404 || (error.message && error.message.includes("not found"))) {
                 toast.error("Campaign not found. Refreshing your list...");
                 // Refresh list and clear stale state
-                await fetchCampaigns(0, false);
+                await fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
                 if (activeCampaign?.id === targetId) {
                     setActiveCampaign(null);
                 }
@@ -537,7 +567,7 @@ export default function CustomerIntelligencePage() {
     };
 
     return (
-        <div className="p-6 md:p-8 h-[calc(100vh-4rem)] flex flex-col overflow-y-auto scrollbar-hide">
+        <div id="customer-intelligence-scroll-container" className="p-6 md:p-8 h-[calc(100vh-4rem)] flex flex-col overflow-y-auto scrollbar-hide">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 {/* Header Section - Only show when not in blocking state and NOT in success glance */}
                 {(isLoadingUser || (isContactReady && !showGlance)) && (
@@ -637,7 +667,7 @@ export default function CustomerIntelligencePage() {
                                     isOpen={showSuccessPopup}
                                     onClose={() => setShowSuccessPopup(false)}
                                     onComplete={() => {
-                                        fetchCampaigns(0, false);
+                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
                                     }}
                                 />
 
@@ -931,40 +961,48 @@ export default function CustomerIntelligencePage() {
                                         <p className="text-gray-500 text-sm">Start an interview simulation to generate your first campaign.</p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500 ease-in-out">
-                                        {latestCampaigns.map((campaign, i) => {
-                                            const isExpanded = expandedCampaignId === campaign.id;
-                                            return (
-                                                <div
-                                                    key={campaign.id || i}
-                                                    className={cn(
-                                                        "transition-all duration-500 ease-in-out",
-                                                        isExpanded ? "col-span-1 md:col-span-2 lg:col-span-3" : "col-span-1"
-                                                    )}
-                                                >
-                                                    <CampaignCard
-                                                        campaign={campaign}
-                                                        variant="summary"
-                                                        isExpanded={isExpanded}
-                                                        onToggleExpand={() => setExpandedCampaignId(isExpanded ? null : campaign.id)}
-                                                        onDelete={handleDeleteCampaign}
-                                                        onEditClick={(id) => {
-                                                            setEditingCampaignId(id);
-                                                            setComposerView('composer');
-                                                            setIsComposerOpen(true);
-                                                        }}
-                                                        onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
-                                                        onStartCampaign={() => {
-                                                            console.log("[CI] Force navigating to campaign:", campaign.id);
-                                                            toast.loading("Starting campaign session...");
-                                                            // Force hard navigation to ensure clean state
-                                                            window.location.href = `/dashboard-new/customer-intelligence/campaign/${campaign.id}`;
-                                                        }}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                    <motion.div
+                                        layout
+                                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                    >
+                                        <AnimatePresence>
+                                            {/* Deduplicate campaigns to prevent key errors */}
+                                            {Array.from(new Map(latestCampaigns.map(c => [c.id, c])).values()).map((campaign, i) => {
+                                                const isExpanded = expandedCampaignId === campaign.id;
+                                                return (
+                                                    <motion.div
+                                                        layout
+                                                        transition={{ layout: { duration: 0.5, type: "spring", stiffness: 100, damping: 20 } }}
+                                                        id={`campaign-card-${campaign.id}`}
+                                                        key={campaign.id || i}
+                                                        className={cn(
+                                                            isExpanded ? "col-span-1 md:col-span-2 lg:col-span-3 order-first" : "col-span-1"
+                                                        )}
+                                                    >
+                                                        <CampaignCard
+                                                            campaign={campaign}
+                                                            variant="summary"
+                                                            isExpanded={isExpanded}
+                                                            onToggleExpand={() => setExpandedCampaignId(isExpanded ? null : campaign.id)}
+                                                            onDelete={handleDeleteCampaign}
+                                                            onEditClick={(id) => {
+                                                                setEditingCampaignId(id);
+                                                                setComposerView('composer');
+                                                                setIsComposerOpen(true);
+                                                            }}
+                                                            onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
+                                                            onStartCampaign={() => {
+                                                                console.log("[CI] Force navigating to campaign:", campaign.id);
+                                                                toast.loading("Starting campaign session...");
+                                                                // Force hard navigation to ensure clean state
+                                                                window.location.href = `/dashboard-new/customer-intelligence/campaign/${campaign.id}`;
+                                                            }}
+                                                        />
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </AnimatePresence>
+                                    </motion.div>
                                 )}
 
                                 {isLoadingCampaigns && (
@@ -1169,7 +1207,7 @@ export default function CustomerIntelligencePage() {
                                     mode="edit"
                                     campaignId={editingCampaignId!}
                                     onLeadsUpdated={() => {
-                                        fetchCampaigns(0, false);
+                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
                                         setComposerView('composer');
                                     }}
                                     onCancel={() => setIsComposerOpen(false)}
@@ -1179,10 +1217,13 @@ export default function CustomerIntelligencePage() {
                                 <CampaignComposer
                                     campaignId={editingCampaignId!}
                                     onComplete={() => {
-                                        fetchCampaigns(0, false);
+                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
                                         setIsComposerOpen(false);
                                     }}
-                                    onBack={() => setIsComposerOpen(false)}
+                                    onBack={() => {
+                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
+                                        setIsComposerOpen(false);
+                                    }}
                                     onEditLeads={() => setComposerView('leads')}
                                     className="h-full shadow-2xl"
                                 />

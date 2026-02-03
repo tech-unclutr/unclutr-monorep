@@ -11,6 +11,10 @@ This is a Monorepo containing both the Next.js Frontend and Python FastAPI Backe
 
 ## Getting Started
 
+For a comprehensive guide on setting up your local environment, see [docs/setup_guide.md](docs/setup_guide.md).
+
+### Quick Start
+
 ### Backend
 1. `cd backend`
 2. Create virtual env: `python3 -m venv venv`

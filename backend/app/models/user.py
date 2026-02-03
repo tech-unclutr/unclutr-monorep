@@ -46,6 +46,7 @@ class UserUpdate(SQLModel):
     designation: Optional[str] = None
     team: Optional[str] = None
     role: Optional[str] = None # Added for explicit role management
+    settings: Optional[Dict[str, Any]] = None # Added for flexibility
 
 
 class UserRead(UserBase):
@@ -60,3 +61,4 @@ class UserRead(UserBase):
     team: Optional[str] = None
     linkedin_profile: Optional[str] = None
     otp_verified: bool = False
+    settings: Dict[str, Any] = {} # Added for persistence of flags

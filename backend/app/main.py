@@ -249,15 +249,37 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
 
+import traceback
+
 if settings.RATE_LIMIT_ENABLED:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     logger.info(f"Rate limiting enabled: {settings.RATE_LIMIT_PER_MINUTE} requests/minute")
 else:
-    # If disabled, we can either not register or register with no-op.
-    # SlowAPI uses decorators, so if enabled is False, we might want to configure limiter to be enabled=False
     limiter.enabled = False
     logger.warning("Rate limiting is DISABLED")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler to ensure all errors return a JSON response.
+    This is CRITICAL for CORS, as generic server crashes often omit CORS headers,
+    leading to confusing 'CORS policy' errors in the browser.
+    """
+    logger.error(f"🔥 Global Exception caught: {str(exc)}")
+    logger.error(traceback.format_exc())
+    
+    # In development, return the actual error. In production, be generic.
+    error_detail = str(exc) if not settings.is_production else "An unexpected internal error occurred."
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": error_detail,
+            "type": exc.__class__.__name__,
+            "path": request.url.path
+        }
+    )
 
 # CORS Configuration
 # Base origins for exact matching

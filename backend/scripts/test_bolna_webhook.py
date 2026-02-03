@@ -59,8 +59,9 @@ async def test_bolna_webhook():
     
     async with httpx.AsyncClient() as client:
         try:
+            # Correct Endpoint from bolna_webhook.py router
             response = await client.post(
-                f"{API_URL}/api/v1/intelligence/interview/bolna-webhook",
+                f"{API_URL}/api/v1/integrations/webhook/bolna",
                 json=payload,
                 timeout=10.0
             )

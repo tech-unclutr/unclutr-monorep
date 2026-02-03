@@ -34,9 +34,44 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { TimeWindowSelector } from "./TimeWindowSelector";
 import { AvailabilityMagicPopup } from "./AvailabilityMagicPopup";
 import { getUniqueCohortAvatars } from "@/lib/avatar-utils";
+import { addMinutes, format, setMinutes, startOfHour } from 'date-fns';
+
+const getNextTimeSlot = () => {
+    const now = new Date();
+    // Round up to next 15 min slot
+    const minutes = now.getMinutes();
+    const remainder = minutes % 15;
+    const minutesToAdd = 15 - remainder;
+
+    // If it's exactly on the hour/15/30/45, start from NEXT slot (so +15 is correct, assuming "next available")
+    // If user said "it can be now, if slot is free", but also "start from next full number slot".
+    // "start from next full number slot" -> implication is clear 00/15/30/45.
+    // If now is 12:00, "next" 15 min slot could be 12:15 or 12:00 if we consider "available now"?
+    // "always in 00, 15, 30, 45"
+    // "it can be now". So if it is 12:00, start at 12:00?
+    // Let's being safe: always round UP to the next 15m block to give user time.
+    // Actually, "it can be now" implies if it's 14:00, we can start at 14:00.
+    // But usually software takes a moment. Let's stick to rounding up to next realistic slot. 
+    // If 14:01 -> 14:15. If 14:14 -> 14:15. If 14:15 -> 14:30? Or 14:15?
+    // Let's go with: current time -> ceil to nearest 15.
+
+    let nextSlot = addMinutes(now, minutesToAdd);
+
+    // Ensure we are at least "now" or future. (addMinutes handles rollover)
+
+    const startStr = format(nextSlot, 'HH:mm');
+    const endStr = format(addMinutes(nextSlot, 60), 'HH:mm'); // Default 1 hour duration
+
+    return {
+        day: format(now, 'yyyy-MM-dd'),
+        start: startStr,
+        end: endStr
+    };
+};
 
 interface CampaignComposerProps {
     campaignId: string;
+    initialName?: string;
     onComplete: () => void;
     onBack?: () => void;
     onEditLeads?: () => void;
@@ -52,10 +87,10 @@ const SAMPLE_BRAND_CONTEXT = "Faasos is a delivery-first food brand known primar
 const SAMPLE_TEAM_CONTEXT = "The interview will be conducted by a Customer Experience team member from Faasos, focused on understanding the customer’s real ordering experience, satisfaction drivers, and improvement areas.";
 const SAMPLE_CUSTOMER_CONTEXT = "To understand why the customer orders Faasos repeatedly, what they like most (items, taste, convenience), and what 1–2 improvements would increase order frequency (quality consistency, portioning, delivery, packaging, pricing).";
 
-export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, onError, className }: CampaignComposerProps) {
+export function CampaignComposer({ campaignId, initialName, onComplete, onBack, onEditLeads, onError, className }: CampaignComposerProps) {
     const [persistedState, setPersistedState, removePersistedState] = useSessionStorage(`campaign_composer_${campaignId}`, {
         step: 'IDENTITY' as Step,
-        campaignName: '',
+        campaignName: initialName || '',
         brandContext: '',
         teamMemberContext: '',
         customerContext: '',
@@ -71,7 +106,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
         activeCohort: null as string | null, // Currently selected cohort for overrides
         incentive: '',
         callDuration: 10,
-        executionWindows: [{ day: new Date().toISOString().split('T')[0], start: '09:00', end: '11:00' }]
+        executionWindows: [getNextTimeSlot()]
     });
 
     const {
@@ -99,6 +134,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
 
 
     const sortedCohorts = React.useMemo(() => {
+        // Grouping selected cohorts at the front while maintaining original relative order.
         return [...cohorts].sort((a, b) => {
             const aSelected = selectedCohorts.includes(a);
             const bSelected = selectedCohorts.includes(b);
@@ -141,7 +177,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
             teamMemberContext: SAMPLE_TEAM_CONTEXT,
             customerContext: SAMPLE_CUSTOMER_CONTEXT
         }));
-        toast.success("Pasted sample context for Faasos");
+        toast.success("Sarah: Sample context for Faasos is ready for you to customize.");
     };
 
     const [isLoading, setIsLoading] = useState(false);
@@ -182,60 +218,81 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                 setPersistedState(prev => {
                     const newState = { ...prev };
 
-                    // Prefill campaign name
+                    // Determine if the server has actual context data already
+                    // If it does, we should prioritize server data as the source of truth
+                    const hasServerContext = !!campaignData.brand_context || !!campaignData.customer_context;
+
+                    // Prefill campaign name - ONLY if not already set locally
                     if (!newState.campaignName || newState.campaignName === '') {
-                        newState.campaignName = campaignData.name || '';
+                        newState.campaignName = initialName || campaignData.name || '';
                     }
 
-                    // Prefill context fields (only if not already set locally or if we are loading existing campaign)
-                    const isNewCampaign = campaignData.status === 'DRAFT' && !campaignData.brand_context;
-
-                    if (!newState.brandContext || newState.brandContext === '') {
-                        newState.brandContext = campaignData.brand_context || suggestions.brand_context || '';
+                    // Prefill context fields
+                    if (!newState.brandContext || newState.brandContext === '' || hasServerContext) {
+                        newState.brandContext = campaignData.brand_context || (!newState.brandContext ? suggestions.brand_context : newState.brandContext) || '';
                     }
-                    if (!newState.teamMemberContext || newState.teamMemberContext === '') {
-                        newState.teamMemberContext = campaignData.team_member_context || suggestions.team_member_context || '';
+                    if (!newState.teamMemberContext || newState.teamMemberContext === '' || hasServerContext) {
+                        newState.teamMemberContext = campaignData.team_member_context || (!newState.teamMemberContext ? suggestions.team_member_context : newState.teamMemberContext) || '';
                     }
-                    if (!newState.customerContext || newState.customerContext === '') {
-                        newState.customerContext = campaignData.customer_context || '';
+                    if (!newState.customerContext || newState.customerContext === '' || hasServerContext) {
+                        newState.customerContext = campaignData.customer_context || newState.customerContext || '';
                     }
 
                     // Prefill questions and banks
-                    if (!newState.preliminaryQuestions || newState.preliminaryQuestions.length === 0) {
-                        newState.preliminaryQuestions = campaignData.preliminary_questions || [];
+                    if (!newState.preliminaryQuestions || newState.preliminaryQuestions.length === 0 || hasServerContext) {
+                        newState.preliminaryQuestions = (campaignData.preliminary_questions && campaignData.preliminary_questions.length > 0)
+                            ? campaignData.preliminary_questions
+                            : newState.preliminaryQuestions;
                     }
-                    if (!newState.questionBank || newState.questionBank.length === 0) {
-                        newState.questionBank = campaignData.question_bank || [];
+                    if (!newState.questionBank || newState.questionBank.length === 0 || hasServerContext) {
+                        newState.questionBank = (campaignData.question_bank && campaignData.question_bank.length > 0)
+                            ? campaignData.question_bank
+                            : newState.questionBank;
                     }
 
                     // Critical Fix: Overwrite default incentive bank if backend has something else
                     const defaultIncentives = ["₹500 Amazon Voucher", "₹200 UPI", "Swiggy Coupon", "Zomato Gold"];
                     const hasDefaultIncentives = JSON.stringify(newState.incentiveBank) === JSON.stringify(defaultIncentives);
-                    if (!newState.incentiveBank || newState.incentiveBank.length === 0 || hasDefaultIncentives) {
+
+                    if (!newState.incentiveBank || newState.incentiveBank.length === 0 || hasDefaultIncentives || hasServerContext) {
                         if (campaignData.incentive_bank && campaignData.incentive_bank.length > 0) {
                             newState.incentiveBank = campaignData.incentive_bank;
-                        } else if (!hasDefaultIncentives) {
+                        } else if (!newState.incentiveBank || newState.incentiveBank.length === 0) {
                             newState.incentiveBank = defaultIncentives;
                         }
                     }
 
-                    if (!newState.incentive || newState.incentive === '') {
-                        newState.incentive = campaignData.incentive || '';
+                    if (!newState.incentive || newState.incentive === '' || hasServerContext) {
+                        newState.incentive = campaignData.incentive || newState.incentive || '';
                     }
 
                     // Prefill call duration (convert from seconds to minutes)
-                    if (campaignData.call_duration && (!newState.callDuration || newState.callDuration === 10)) {
+                    if (campaignData.call_duration && (!newState.callDuration || newState.callDuration === 10 || hasServerContext)) {
                         newState.callDuration = Math.floor(campaignData.call_duration / 60);
                     }
 
-                    // Prefill execution windows - Overwrite if only default is present
+                    // Prefill execution windows - Overwrite if only default is present or if server has windows
                     const isDefaultWindow = newState.executionWindows?.length === 1 &&
                         newState.executionWindows[0].start === '09:00' &&
                         newState.executionWindows[0].end === '11:00';
 
-                    if (!newState.executionWindows || newState.executionWindows.length === 0 || isDefaultWindow) {
+                    if (!newState.executionWindows || newState.executionWindows.length === 0 || isDefaultWindow || hasServerContext || (campaignData.execution_windows && campaignData.execution_windows.length > 0)) {
                         if (campaignData.execution_windows && campaignData.execution_windows.length > 0) {
                             newState.executionWindows = campaignData.execution_windows;
+                        } else if (isDefaultWindow) {
+                            // Only override if it looks like our default "09-11" stub, which we just replaced with dynamic.
+                            // Accessing the dynamic default we just set in initial state is tricky inside this callback if we don't carry it.
+                            // But actually, we initialized state with `getNextTimeSlot()`.
+                            // If persistedState came from storage, it might have old 09:00 data or user data.
+                            // If it came from default in `useSessionStorage`, it has `getNextTimeSlot()`.
+
+                            // If this runs, it means we MIGHT want to use server data.
+                            // The logic here says: if (no windows OR isDefaultWindow OR hasServerContext) -> try campaignData.
+                            // We need to define "isDefaultWindow" more loosely now, or just trust campaignData if available.
+                            // If campaignData has windows, USE THEM.
+                            if (campaignData.execution_windows && campaignData.execution_windows.length > 0) {
+                                newState.executionWindows = campaignData.execution_windows;
+                            }
                         }
                     }
 
@@ -245,25 +302,25 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                     }
 
                     // Initialize selectedCohorts based on backend data
-                    if (!newState.selectedCohorts || newState.selectedCohorts.length === 0) {
-                        newState.selectedCohorts = campaignData.selected_cohorts || cohortData.selected_cohorts || newState.cohorts;
+                    if (!newState.selectedCohorts || newState.selectedCohorts.length === 0 || hasServerContext) {
+                        newState.selectedCohorts = campaignData.selected_cohorts || cohortData.selected_cohorts || newState.selectedCohorts || newState.cohorts;
                     }
 
                     // Always update counts
                     newState.cohortCounts = cohortData.cohort_counts || {};
 
                     // Prefill cohort configuration
-                    if (Object.keys(newState.cohortConfig).length === 0 && campaignData.cohort_config) {
+                    if ((!newState.cohortConfig || Object.keys(newState.cohortConfig).length === 0 || hasServerContext) && campaignData.cohort_config) {
                         newState.cohortConfig = campaignData.cohort_config;
                     }
 
                     // Prefill cohort questions
-                    if (Object.keys(newState.cohortQuestions).length === 0 && campaignData.cohort_questions) {
+                    if ((!newState.cohortQuestions || Object.keys(newState.cohortQuestions).length === 0 || hasServerContext) && campaignData.cohort_questions) {
                         newState.cohortQuestions = campaignData.cohort_questions;
                     }
 
                     // Prefill cohort incentives
-                    if (Object.keys(newState.cohortIncentives).length === 0 && campaignData.cohort_incentives) {
+                    if ((!newState.cohortIncentives || Object.keys(newState.cohortIncentives).length === 0 || hasServerContext) && campaignData.cohort_incentives) {
                         newState.cohortIncentives = campaignData.cohort_incentives;
                     }
 
@@ -320,7 +377,9 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
     useEffect(() => {
         // Skip initial render or empty states if desirable, but we want to save if user clears it too.
         // We skip if campaignId is missing, invalid, incomplete, or if we are still loading initial data
-        if (!campaignId || campaignId === 'null' || campaignId === 'undefined' || isLoading || isNotFound) return;
+        // Prevent auto-save from running before we have successfully initialized data from the backend
+        // This fixes the race condition where default empty state overwrites existing campaign data
+        if (!campaignId || campaignId === 'null' || campaignId === 'undefined' || isLoading || isNotFound || !hasInitializedRef.current) return;
 
         const autoSave = async () => {
             setIsSaving(true);
@@ -386,8 +445,13 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
 
 
     const handleSaveAndNext = async () => {
+        console.log("DEBUG: handleSaveAndNext clicked", { step, customerContext });
+        // toast.info("Debug: Button Clicked"); // Temporary debug
+
+
         if (step === 'IDENTITY') {
             if (!customerContext) {
+                console.log("DEBUG: Validation Failed - Missing customerContext");
                 toast.error("Customer context is mandatory");
                 return;
             }
@@ -397,8 +461,23 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
             const isSampleTeam = teamMemberContext?.trim() === SAMPLE_TEAM_CONTEXT.trim();
             const isSampleCustomer = customerContext?.trim() === SAMPLE_CUSTOMER_CONTEXT.trim();
 
+            console.log("DEBUG: Sample Checks", { isSampleBrand, isSampleTeam, isSampleCustomer });
+
             if (isSampleBrand || isSampleTeam || isSampleCustomer) {
                 toast.error("Please customize the sample context for your brand. It cannot be exactly the same as the Faasos example.");
+                return;
+            }
+        }
+
+        if (step === 'STRATEGY') {
+            const invalidCohorts = selectedCohorts.filter(c => (cohortConfig[c] || 0) > (cohortCounts[c] || 0));
+            if (invalidCohorts.length > 0) {
+                toast.error(`Please adjust target volumes. Some exceed the total customer count in: ${invalidCohorts.join(', ')}`);
+                return;
+            }
+
+            if (selectedCohorts.length === 0) {
+                toast.error("Please select at least one cohort segment");
                 return;
             }
         }
@@ -444,18 +523,20 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
             if (calendarStatus?.connected) {
                 try {
                     await api.post(`/intelligence/campaigns/${campaignId}/calendar-sync`);
-                    toast.success("Calendar windows blocked successfully!");
+                    toast.success("Maya: Great news! We've successfully blocked the time on your calendar.");
                 } catch (syncError) {
                     console.error("Auto-sync to calendar failed:", syncError);
-                    toast.error("Failed to auto-sync to calendar, but campaign was saved.");
+                    toast.error("Maya: We hit a small snag syncing to your calendar, but the campaign is saved.");
                 }
             }
 
-            toast.success("Campaign successfully created & launched!");
+            toast.success("Alex: Mission initiated! Your campaign is now live and the team is ready.");
             removePersistedState();
             onComplete();
         } catch (error) {
+            console.error("Failed to save campaign:", error);
             toast.error("Failed to save campaign settings");
+            if (onError) onError(error);
         } finally {
             setIsLoading(false);
         }
@@ -513,7 +594,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
             });
 
             const response = await api.post(`/intelligence/campaigns/${campaignId}/calendar-sync`);
-            toast.success(response.message || "Calendar synced successfully!");
+            toast.success("Maya: All synced up! Your calendar is now in lockstep with the success team.");
         } catch (error) {
             console.error("Calendar sync failed:", error);
             toast.error("Failed to sync calendar");
@@ -536,7 +617,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                 cohortQuestions: newCohortQuestions
             };
         });
-        toast.success(`Applied questions from ${currentCohort} to all selected cohorts`);
+        toast.success(`Rohan: Applied questions from ${currentCohort} to all selected cohorts`);
     };
 
     const handleApplyIncentiveToSelected = (currentCohort: string) => {
@@ -553,7 +634,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                 cohortIncentives: newCohortIncentives
             };
         });
-        toast.success(`Applied incentive from ${currentCohort} to all selected cohorts`);
+        toast.success(`Rohan: Applied incentive from ${currentCohort} to all selected cohorts`);
     };
 
     const steps = ['IDENTITY', 'STRATEGY', 'EXECUTION'];
@@ -623,7 +704,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
         <Card
             onMouseMove={handleMouseMove}
             className={cn(
-                "overflow-hidden border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-[2rem] relative group min-h-[600px] flex flex-col transition-all duration-500 shadow-2xl",
+                "overflow-hidden border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-[2rem] relative group min-h-[500px] flex flex-col transition-all duration-500 shadow-2xl",
                 className
             )}
         >
@@ -638,6 +719,31 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.03] via-transparent to-emerald-500/[0.01] pointer-events-none" />
 
             <CardContent className="p-6 md:p-8 flex flex-col h-full relative z-10 flex-1">
+                {/* Loading State Overlay */}
+                <AnimatePresence>
+                    {isLoading && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md rounded-[2rem]"
+                        >
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full animate-pulse" />
+                                    <div className="relative p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500">
+                                        <Loader2 className="w-8 h-8 animate-spin" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1 text-center">
+                                    <p className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-indigo-400">The team is syncing...</p>
+                                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest">Applying your campaign context...</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Progress Header */}
                 <div className="flex items-center gap-4 mb-6">
                     {steps.map((s, i) => (
@@ -862,7 +968,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                                                             isSelected ? "scale-105 ring-2 ring-white/20" : "group-hover:scale-110"
                                                         )}>
                                                             <img
-                                                                src={`/images/avatars/avatar_${avatarIndex}.png`}
+                                                                src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`}
                                                                 alt={cohort}
                                                                 className={cn("w-full h-full object-cover transition-opacity duration-300",
                                                                     !isSelected && "opacity-50 grayscale",
@@ -872,12 +978,12 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                                                         </div>
                                                         <div className="flex flex-col items-start text-left gap-0.5">
                                                             <span className={cn(
-                                                                "text-xs font-bold transition-colors duration-300",
-                                                                isActive && isSelected ? "text-yellow-200" :
-                                                                    isActive && !isSelected ? "text-indigo-600 dark:text-indigo-400" :
-                                                                        isSelected ? "text-white" :
-                                                                            "text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white"
+                                                                "text-xs font-bold transition-colors duration-300 flex items-center gap-1.5",
+                                                                isActive ? "text-white" :
+                                                                    isSelected ? "text-indigo-100" :
+                                                                        "text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white"
                                                             )}>
+                                                                {isSelected && <CheckIcon className="w-3 h-3 text-white transition-all animate-in fade-in zoom-in duration-300" />}
                                                                 {cohort}
                                                             </span>
                                                             <div className={cn(
@@ -921,24 +1027,52 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                                                                 <div className="flex items-center gap-4 p-3 rounded-2xl bg-zinc-50 dark:bg-black/20 border border-zinc-100 dark:border-white/5">
                                                                     <div className="relative w-20 h-28 bg-gradient-to-b from-transparent to-transparent dark:from-transparent dark:to-transparent rounded-2xl shadow-lg border border-zinc-100 dark:border-zinc-700/50 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-all duration-500 flex items-center justify-center p-1.5">
                                                                         <img
-                                                                            src={`/images/avatars/notionists/full_body/avatar_${(currentCohort.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 5) + 1}.png`}
+                                                                            src={`/images/avatars/notionists/full_body/avatar_${assignedAvatars[currentCohort] || 1}.png`}
                                                                             alt={`${currentCohort} Avatar`}
                                                                             className="w-full h-full object-contain drop-shadow-2xl"
                                                                         />
                                                                     </div>
                                                                     <div className="flex-1">
-                                                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Target Volume</label>
+                                                                        <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-4 tracking-tight">
+                                                                            {currentCohort}
+                                                                        </h3>
+                                                                        <div className="flex items-center justify-between mb-0.5">
+                                                                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Target Volume</label>
+                                                                            <button
+                                                                                onClick={() => setPersistedState(prev => ({
+                                                                                    ...prev,
+                                                                                    cohortConfig: { ...prev.cohortConfig, [currentCohort]: cohortCounts[currentCohort] || 0 }
+                                                                                }))}
+                                                                                className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                                                            >
+                                                                                MAX
+                                                                            </button>
+                                                                        </div>
                                                                         <div className="flex items-baseline gap-2">
                                                                             <span className="text-sm font-semibold text-zinc-900 dark:text-white">Conduct</span>
-                                                                            <Input
-                                                                                type="number"
-                                                                                value={cohortConfig[currentCohort] || 0}
-                                                                                onChange={(e) => setPersistedState(prev => ({
-                                                                                    ...prev,
-                                                                                    cohortConfig: { ...prev.cohortConfig, [currentCohort]: parseInt(e.target.value) || 0 }
-                                                                                }))}
-                                                                                className="w-16 h-8 text-center font-bold border-none bg-transparent p-0 text-lg focus-visible:ring-0 border-b border-zinc-200 rounded-none px-1"
-                                                                            />
+                                                                            <div className="relative">
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    value={cohortConfig[currentCohort] || 0}
+                                                                                    onChange={(e) => {
+                                                                                        const val = parseInt(e.target.value) || 0;
+                                                                                        const maxSize = cohortCounts[currentCohort] || 0;
+                                                                                        if (val > maxSize) {
+                                                                                            toast.error(`Rohan: Target volume for ${currentCohort} cannot exceed ${maxSize} (cohort size)`);
+                                                                                        }
+                                                                                        setPersistedState(prev => ({
+                                                                                            ...prev,
+                                                                                            cohortConfig: { ...prev.cohortConfig, [currentCohort]: Math.min(val, maxSize) }
+                                                                                        }));
+                                                                                    }}
+                                                                                    className={cn(
+                                                                                        "w-16 h-8 text-center font-bold border-none bg-transparent p-0 text-lg focus-visible:ring-0 border-b rounded-none px-1 transition-colors",
+                                                                                        (cohortConfig[currentCohort] || 0) > (cohortCounts[currentCohort] || 0)
+                                                                                            ? "border-red-500 text-red-500"
+                                                                                            : "border-zinc-200"
+                                                                                    )}
+                                                                                />
+                                                                            </div>
                                                                             <span className="text-sm font-semibold text-zinc-900 dark:text-white">interviews</span>
                                                                         </div>
                                                                     </div>
@@ -1345,11 +1479,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                                                     className="flex-1 h-12 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 font-bold text-xs gap-2 transition-all duration-300"
                                                     onClick={() => setPersistedState(prev => ({
                                                         ...prev,
-                                                        executionWindows: [...(prev.executionWindows || []), {
-                                                            day: new Date().toISOString().split('T')[0],
-                                                            start: '09:00',
-                                                            end: '11:00'
-                                                        }]
+                                                        executionWindows: [...(prev.executionWindows || []), getNextTimeSlot()]
                                                     }))}
                                                 >
                                                     <PlusIcon className="w-4 h-4" />
@@ -1365,7 +1495,7 @@ export function CampaignComposer({ campaignId, onComplete, onBack, onEditLeads, 
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between pt-10 mt-auto border-t border-zinc-100 dark:border-zinc-800">
+                <div className="relative z-[100] flex items-center justify-between mt-auto border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-8 py-6">
                     <div className="flex items-center gap-8">
                         <Button
                             variant="ghost"

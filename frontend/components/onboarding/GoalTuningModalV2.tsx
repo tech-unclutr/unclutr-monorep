@@ -7,6 +7,8 @@ import { Check, TrendingUp, DollarSign, ShieldAlert, Rocket } from "lucide-react
 import { cn } from "@/lib/utils"
 // import { updateUserSettings } from "@/lib/api" // Mocking for now
 
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
+
 interface GoalTuningModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -60,11 +62,17 @@ export function GoalTuningModalV2({ open, onOpenChange, onSave }: GoalTuningModa
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl bg-[#09090B] border-white/10 text-white">
-                <DialogHeader className="mb-4">
-                    <DialogTitle className="text-2xl text-center">What is your North Star this month?</DialogTitle>
-                    <DialogDescription className="text-center text-muted-foreground text-lg">
-                        Unclutr will re-calibrate its AI to find the insights that matter most to you.
+                <VisuallyHidden>
+                    <DialogTitle>Goal Tuning</DialogTitle>
+                    <DialogDescription>
+                        Select your primary objective for the month to calibrate our AI insights.
                     </DialogDescription>
+                </VisuallyHidden>
+                <DialogHeader className="mb-4">
+                    <h2 className="text-2xl text-center font-bold">What is your North Star this month?</h2>
+                    <p className="text-center text-muted-foreground text-lg">
+                        Unclutr will re-calibrate its AI to find the insights that matter most to you.
+                    </p>
                 </DialogHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">

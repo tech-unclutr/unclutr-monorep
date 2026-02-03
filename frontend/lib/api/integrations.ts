@@ -45,28 +45,61 @@ const getAuthToken = async () => {
     return await user.getIdToken();
 };
 
+const validateCompanyId = (companyId: string | null | undefined): string => {
+    if (!companyId) {
+        throw new Error("Missing Company ID. Please select a company first.");
+    }
+    // Handle edge case where "null" or "undefined" string is passed from state
+    if (companyId === "null" || companyId === "undefined") {
+        throw new Error("Invalid Company ID format. Session may be corrupted.");
+    }
+    return companyId;
+};
+
 export const listIntegrations = async (companyId: string): Promise<Integration[]> => {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api/v1/integrations/`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-            "X-Company-ID": companyId
+    try {
+        const validatedId = validateCompanyId(companyId);
+        const token = await getAuthToken();
+        const response = await fetch(`${API_URL}/api/v1/integrations/`, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "X-Company-ID": validatedId
+            }
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Failed to fetch integrations: ${response.status}`);
         }
-    });
-    if (!response.ok) throw new Error("Failed to fetch integrations");
-    return response.json();
+        return response.json();
+    } catch (error: any) {
+        console.error(`[API:listIntegrations] Failure:`, {
+            url: `${API_URL}/api/v1/integrations/`,
+            companyId,
+            error: error.message
+        });
+        throw error;
+    }
 };
 
 export const getIntegration = async (companyId: string, id: string): Promise<Integration> => {
-    const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api/v1/integrations/${id}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-            "X-Company-ID": companyId
+    try {
+        const validatedId = validateCompanyId(companyId);
+        const token = await getAuthToken();
+        const response = await fetch(`${API_URL}/api/v1/integrations/${id}`, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "X-Company-ID": validatedId
+            }
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Failed to fetch integration: ${response.status}`);
         }
-    });
-    if (!response.ok) throw new Error("Failed to fetch integration");
-    return response.json();
+        return response.json();
+    } catch (error: any) {
+        console.error(`[API:getIntegration] Failure:`, { id, companyId, error: error.message });
+        throw error;
+    }
 };
 
 export const connectIntegration = async (companyId: string, slug: string): Promise<{ status: string; integration_id: string }> => {

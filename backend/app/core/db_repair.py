@@ -31,6 +31,16 @@ async def ensure_column_exists(conn, table_name, column_name, column_type, defau
     """
     Checks if a column exists in a table and adds it if not.
     """
+    # Systemic Fix: Check if table even exists first
+    table_exists_query = f"""
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = '{table_name}';
+    """
+    table_exists = (await conn.execute(text(table_exists_query))).first()
+    if not table_exists:
+        logger.warning(f"Skipping column check: Table {table_name} does not exist.")
+        return
+
     check_query = f"""
     SELECT 1 
     FROM information_schema.columns 
@@ -52,60 +62,65 @@ async def heal_integration_constraints(engine):
     2. order_id -> shopify_order(id)
     3. Missing columns (inventory_quantity, etc)
     """
-    async with engine.begin() as conn:
-        logger.info("Scanning for foreign key constraints to heal...")
-        # Check if we are on Postgres
-        if not engine.url.drivername.startswith("postgresql"):
-            logger.warning("Healing skip: Not a PostgreSQL database.")
-            return
+    logger.info("Scanning for foreign key constraints to heal...")
+    # Check if we are on Postgres
+    if not engine.url.drivername.startswith("postgresql"):
+        logger.warning("Healing skip: Not a PostgreSQL database.")
+        return
 
-        # --- 1. Schema Hardening (Columns) ---
-        try:
+    # --- 1. Schema Hardening (Columns) ---
+    try:
+        async with engine.begin() as conn:
             await ensure_column_exists(conn, 'shopify_product_variant', 'inventory_quantity', 'INTEGER', '0')
-        except Exception as e:
-            logger.error(f"Failed to ensure shopify_product_variant.inventory_quantity: {e}")
+    except Exception as e:
+        logger.error(f"Failed to ensure shopify_product_variant.inventory_quantity: {e}")
 
-        # --- 2. Foreign Key Cascades ---
-        # 1. Integration ID Cascades
-        integ_constraints = await get_foreign_key_constraints(conn, 'integration_id', 'integration')
-        
-        # 2. Shopify Order ID Cascades
-        order_constraints = await get_foreign_key_constraints(conn, 'order_id', 'shopify_order')
-        
-        all_constraints = []
-        for t, c in integ_constraints: all_constraints.append((t, c, 'integration_id', 'integration(id)'))
-        for t, c in order_constraints: all_constraints.append((t, c, 'order_id', 'shopify_order(id)'))
+    # --- 2. Foreign Key Cascades ---
+    try:
+        async with engine.begin() as conn:
+            # 1. Integration ID Cascades
+            integ_constraints = await get_foreign_key_constraints(conn, 'integration_id', 'integration')
+            
+            # 2. Shopify Order ID Cascades
+            order_constraints = await get_foreign_key_constraints(conn, 'order_id', 'shopify_order')
+            
+            all_constraints = []
+            for t, c in integ_constraints: all_constraints.append((t, c, 'integration_id', 'integration(id)'))
+            for t, c in order_constraints: all_constraints.append((t, c, 'order_id', 'shopify_order(id)'))
 
-        if not all_constraints:
-            logger.info("No foreign key constraints found to heal.")
-            return
+            if not all_constraints:
+                logger.info("No foreign key constraints found to heal.")
+                return
 
-        for table, constraint, column, reference in all_constraints:
-            try:
-                # Check if it already has CASCADE (Postgres specific check)
-                check_query = f"""
-                SELECT confdeltype 
-                FROM pg_constraint 
-                WHERE conname = '{constraint}';
-                """
-                res = await conn.execute(text(check_query))
-                row = res.first()
-                if row and row[0] == 'c':
-                    # 'c' means CASCADE
+            for table, constraint, column, reference in all_constraints:
+                try:
+                    # Check if it already has CASCADE (Postgres specific check)
+                    check_query = f"""
+                    SELECT confdeltype 
+                    FROM pg_constraint 
+                    WHERE conname = '{constraint}';
+                    """
+                    res = await conn.execute(text(check_query))
+                    row = res.first()
+                    if row and row[0] == 'c':
+                        # 'c' means CASCADE
+                        continue
+
+                    logger.info(f"Repairing constraint {constraint} on {table} to ON DELETE CASCADE...")
+                    
+                    # 1. Drop existing constraint
+                    await conn.execute(text(f"ALTER TABLE {table} DROP CONSTRAINT {constraint}"))
+                    
+                    # 2. Add it back with ON DELETE CASCADE
+                    await conn.execute(text(
+                        f"ALTER TABLE {table} ADD CONSTRAINT {constraint} "
+                        f"FOREIGN KEY ({column}) REFERENCES {reference} ON DELETE CASCADE"
+                    ))
+                    logger.info(f"Successfully healed {table}.{constraint}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to heal constraint {constraint} on {table}: {e}")
+                    # Continue with next constraint instead of failing entire operation
                     continue
-
-                logger.info(f"Repairing constraint {constraint} on {table} to ON DELETE CASCADE...")
-                
-                # 1. Drop existing constraint
-                await conn.execute(text(f"ALTER TABLE {table} DROP CONSTRAINT {constraint}"))
-                
-                # 2. Add it back with ON DELETE CASCADE
-                await conn.execute(text(
-                    f"ALTER TABLE {table} ADD CONSTRAINT {constraint} "
-                    f"FOREIGN KEY ({column}) REFERENCES {reference} ON DELETE CASCADE"
-                ))
-                logger.info(f"Successfully healed {table}.{constraint}")
-                
-            except Exception as e:
-                logger.error(f"Failed to heal constraint {constraint} on {table}: {e}")
-
+    except Exception as e:
+        logger.error(f"Failed to scan/heal foreign key constraints: {e}")

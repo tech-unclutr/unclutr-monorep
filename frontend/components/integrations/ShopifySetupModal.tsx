@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
+
 interface ShopifySetupModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -77,7 +79,13 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[440px] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-0 overflow-hidden rounded-3xl shadow-2xl transition-all duration-500">
-                <AnimatePresence>
+                <VisuallyHidden>
+                    <DialogTitle>Connect Shopify Store</DialogTitle>
+                    <DialogDescription>
+                        Step: {step}. {step === 'input' ? 'Enter your shop domain to begin.' : 'Connecting to your store.'}
+                    </DialogDescription>
+                </VisuallyHidden>
+                <AnimatePresence mode="wait">
                     {step === "input" ? (
                         <motion.div
                             key="input"
@@ -90,12 +98,12 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-400 to-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
                                     <Store className="w-8 h-8 text-white" />
                                 </div>
-                                <DialogTitle className="text-2xl font-bold tracking-tight">
+                                <h2 className="text-2xl font-bold tracking-tight">
                                     Connect Shopify
-                                </DialogTitle>
-                                <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-base">
+                                </h2>
+                                <p className="text-zinc-500 dark:text-zinc-400 text-base">
                                     Sync your orders, products, and insights securely.
-                                </DialogDescription>
+                                </p>
                             </DialogHeader>
 
                             <div className="space-y-6">

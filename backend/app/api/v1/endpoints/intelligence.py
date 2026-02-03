@@ -32,7 +32,7 @@ from app.models.campaign import Campaign
 from app.models.archived_campaign import ArchivedCampaign
 from app.models.campaign_lead import CampaignLead
 from sqlalchemy import desc
-from app.schemas.campaign import CampaignSettingsUpdate, CampaignContextSuggestions
+from app.schemas.campaign import CampaignSettingsUpdate, CampaignContextSuggestions, CampaignUpdate
 from fastapi.responses import Response
 
 
@@ -88,6 +88,150 @@ async def track_impression(
 
 
 
+
+
+@router.patch("/campaigns/{campaign_id}", response_model=Campaign)
+async def update_campaign(
+    campaign_id: UUID,
+    campaign_in: CampaignUpdate,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+    x_company_id: str = Header(..., alias="X-Company-ID")
+):
+    """
+    Update a campaign (e.g. Status).
+    """
+    try:
+        company_id = UUID(x_company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Company ID format")
+
+    stmt = select(Campaign).where(
+        Campaign.id == campaign_id, 
+        Campaign.company_id == company_id,
+        Campaign.user_id == current_user.id
+    )
+    result = await session.execute(stmt)
+    campaign = result.scalars().first()
+
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    update_data = campaign_in.dict(exclude_unset=True)
+    
+    # 1. Status Update Validation
+    if "status" in update_data:
+        new_status = update_data["status"]
+        allowed_statuses = ["DRAFT", "SCHEDULED", "INITIATED", "RINGING", "IN_PROGRESS", "COMPLETED", "FAILED", "PAUSED"]
+        if new_status not in allowed_statuses:
+             raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}")
+             
+        # Optional: Add logic for status transitions (e.g. DRAFT -> SCHEDULED)
+        # For now, we trust the frontend/user to set it correctly.
+        campaign.status = new_status
+        
+    # 2. Name Update
+    if "name" in update_data:
+        campaign.name = update_data["name"]
+
+    campaign.updated_at = datetime.utcnow()
+    session.add(campaign)
+    await session.commit()
+    await session.refresh(campaign)
+
+    return campaign
+
+
+@router.patch("/campaigns/{campaign_id}/settings")
+async def update_campaign_settings(
+    campaign_id: UUID,
+    settings_in: CampaignSettingsUpdate,
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+    x_company_id: str = Header(..., alias="X-Company-ID")
+):
+    """
+    Updates campaign settings including execution windows.
+    """
+    try:
+        company_id = UUID(x_company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Company ID format")
+
+    stmt = select(Campaign).where(
+        Campaign.id == campaign_id, 
+        Campaign.company_id == company_id
+    )
+    result = await session.execute(stmt)
+    campaign = result.scalars().first()
+
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+        
+    update_data = settings_in.dict(exclude_unset=True)
+    
+    # Update fields dynamically
+    for key, value in update_data.items():
+        if hasattr(campaign, key):
+            setattr(campaign, key, value)
+            
+    # Clear window_expired flag if windows are updated
+    if "execution_windows" in update_data:
+        meta = dict(campaign.meta_data or {})
+        if "window_expired" in meta:
+            del meta["window_expired"]
+            campaign.meta_data = meta
+
+    campaign.updated_at = datetime.utcnow()
+    session.add(campaign)
+    await session.commit()
+    await session.refresh(campaign)
+    
+    return campaign
+
+
+@router.post("/campaigns/{campaign_id}/calendar-sync")
+async def sync_campaign_calendar(
+    campaign_id: UUID, 
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+    x_company_id: str = Header(..., alias="X-Company-ID")
+):
+    """
+    Manually triggers a sync of the campaign's execution windows to Google Calendar.
+    """
+    try:
+        company_id = UUID(x_company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Company ID format")
+        
+    stmt = select(Campaign).where(
+        Campaign.id == campaign_id, 
+        Campaign.company_id == company_id
+    )
+    result = await session.execute(stmt)
+    campaign = result.scalars().first()
+
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+        
+    # Find active calendar connection
+    conn_stmt = select(CalendarConnection).where(
+        CalendarConnection.company_id == company_id,
+        CalendarConnection.status == "active"
+    )
+    conn_result = await session.execute(conn_stmt)
+    conn = conn_result.scalars().first()
+    
+    if not conn:
+        raise HTTPException(status_code=400, detail="No active calendar connection found")
+        
+    try:
+        count = await google_calendar_service.sync_campaign_windows(conn, campaign)
+        return {"status": "success", "events_created": count}
+    except Exception as e:
+        logger.error(f"Calendar sync failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/deck/{brand_id}")
@@ -1114,46 +1258,50 @@ async def create_campaign_from_csv(
     leads_dicts = [l.dict() for l in request.leads]
     leads_json = json.dumps(leads_dicts, sort_keys=True)
     source_hash = hashlib.sha256(leads_json.encode()).hexdigest()
+    logger.info(f"Duplicate check: company_id={company_id}, hash={source_hash}, force_create={request.force_create}")
     
     # Check for duplicates (Relaxed: Check last 24 hours)
-    # NOTE: source_file_hash column was dropped, so disabling this check.
-    # if not request.force_create:
-    #     one_day_ago = datetime.utcnow() - timedelta(days=1)
-    #     stmt = select(Campaign).where(
-    #         Campaign.company_id == company_id,
-    #         Campaign.source_file_hash == source_hash,
-    #         Campaign.created_at >= one_day_ago
-    #     ).order_by(desc(Campaign.created_at)).limit(1)
+    if not request.force_create:
+        one_day_ago = datetime.utcnow() - timedelta(days=1)
+        stmt = select(Campaign).where(
+            Campaign.company_id == company_id,
+            Campaign.source_file_hash == source_hash,
+            Campaign.created_at >= one_day_ago
+        ).order_by(desc(Campaign.created_at)).limit(1)
         
-    #     result = await session.execute(stmt)
-    #     existing_campaign = result.scalars().first()
+        result = await session.execute(stmt)
+        existing_campaign = result.scalars().first()
         
-    #     if existing_campaign:
-    #         # Return 409 Conflict with details
-    #         # We must use JSONResponse to return custom content with 409
-    #         from fastapi.responses import JSONResponse
-    #         return JSONResponse(
-    #             status_code=409,
-    #             content={
-    #                 "detail": "Duplicate upload detected",
-    #                 "code": "DUPLICATE_UPLOAD",
-    #                 "campaign_id": str(existing_campaign.id),
-    #                 "campaign_name": existing_campaign.name,
-    #                 "created_at": existing_campaign.created_at.isoformat()
-    #             }
-    #         )
+        if existing_campaign:
+            logger.info(f"Found duplicate campaign: {existing_campaign.id} ({existing_campaign.name})")
+            # Return 409 Conflict with details
+            # We must use JSONResponse to return custom content with 409
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "detail": "Duplicate upload detected",
+                    "code": "DUPLICATE_UPLOAD",
+                    "campaign_id": str(existing_campaign.id),
+                    "campaign_name": existing_campaign.name,
+                    "created_at": existing_campaign.created_at.isoformat()
+                }
+            )
 
     try:
         # 1. Create Parent Campaign
-        campaign_name = request.campaign_name or f"Campaign - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+        # If blank, use a more descriptive placeholder
+        campaign_name = request.campaign_name
+        if not campaign_name or campaign_name.strip() == "":
+            campaign_name = f"Intelligence Batch - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
         
         campaign = Campaign(
             company_id=company_id,
             user_id=current_user.id,
             name=campaign_name,
             status="DRAFT", # Batch/Dataset Campaigns start as DRAFT
-            phone_number="" # Not applicable for batch container
-            # source_file_hash=source_hash # REMOVED: Column dropped
+            phone_number="", # Not applicable for batch container
+            source_file_hash=source_hash 
         )
         session.add(campaign)
         await session.flush() # flush to get campaign.id

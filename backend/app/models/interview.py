@@ -5,7 +5,7 @@ from sqlmodel import Field, SQLModel, Column
 from sqlalchemy.dialects.postgresql import JSONB
 
 class InterviewSession(SQLModel, table=True):
-    __tablename__ = "interview_session"
+    __tablename__ = "interview_sessions"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     company_id: UUID = Field(index=True)

@@ -77,28 +77,38 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
     // Force reset to UPLOAD stage when mode or campaignId changes to ensure fresh start
     // This is critical for edit mode to work on first attempt
+    // In edit mode: Fetch campaign details if we don't have them yet or if campaignId changed
     useEffect(() => {
-        console.log("CsvUpload: Init Effect triggered", { mode, propCampaignId, currentStage: persistedState.stage, hasFile: !!file });
-
-        // In edit mode: ALWAYS reset if the campaign ID changes or if we are mounting fresh.
-        // This ensures that clicking "Edit Campaign" always starts at the Upload screen.
         if (mode === 'edit' && propCampaignId) {
-            console.log("CsvUpload: Enforcing fresh start for edit mode");
-            // Clear ALL data for this campaign's edit session to ensure clean slate
-            setPersistedState({
-                stage: 'UPLOAD',
-                headers: [],
-                data: [],
-                mapping: { customer_name: '', contact_number: '', cohort: '' },
-                campaignName: '',
-                campaignId: null
-            });
-            setFile(null);
-            setIsProcessing(false);
-            setErrorResult(null);
+            const fetchDetails = async () => {
+                try {
+                    const campaign = await api.get(`/intelligence/campaigns/${propCampaignId}`);
+                    setPersistedState(prev => ({
+                        ...prev,
+                        campaignName: campaign.name || prev.campaignName,
+                        campaignId: propCampaignId,
+                        // Reset to UPLOAD stage if it's a new edit session or if we were in DONE
+                        stage: (prev.campaignId !== propCampaignId || prev.stage === 'DONE') ? 'UPLOAD' : prev.stage
+                    }));
+                    // Also clear local file state if it's a new campaign
+                    if (persistedState.campaignId !== propCampaignId) {
+                        setFile(null);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch campaign details for edit mode:", error);
+                }
+            };
+
+            // Only fetch if name is missing OR if we just switched to this campaign
+            if (!persistedState.campaignName || persistedState.campaignId !== propCampaignId) {
+                fetchDetails();
+            }
         }
-        // In create mode, only reset if we're not in UPLOAD stage and have no file
-        else if (mode === 'create' && !file && persistedState.stage !== 'UPLOAD') {
+    }, [mode, propCampaignId]);
+
+    useEffect(() => {
+        // In create mode, if we are in a stale mapping/orchestration state but have no file (e.g. fresh mount), reset to UPLOAD
+        if (mode === 'create' && !file && persistedState.stage !== 'UPLOAD' && persistedState.stage !== 'DONE') {
             console.log("CsvUpload: Resetting stale create state");
             setPersistedState(prev => ({
                 ...prev,
@@ -108,7 +118,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 mapping: { customer_name: '', contact_number: '', cohort: '' }
             }));
         }
-    }, [mode, propCampaignId]);
+    }, [mode]);
 
 
     // Cleanup on unmount removed to prevents accidental state loss during re-renders.
@@ -122,16 +132,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     // Duplicate Detection State
     const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
     const [duplicateCampaignInfo, setDuplicateCampaignInfo] = useState<{ id: string, name: string, date: string } | null>(null);
-
-    const onDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        const droppedFile = e.dataTransfer.files[0];
-        if (droppedFile && droppedFile.name.endsWith('.csv')) {
-            handleFileSelect(droppedFile);
-        } else {
-            toast.error("Please upload a valid CSV file");
-        }
-    }, [mode]); // Dependencies will be updated via handleFileSelect
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleFileSelect = useCallback((file: File) => {
         console.log("CsvUpload: Handling file selection", file.name);
@@ -170,6 +171,16 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
             }
         });
     }, [persistedState.mapping, setPersistedState]);
+
+    const onDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile && droppedFile.name.endsWith('.csv')) {
+            handleFileSelect(droppedFile);
+        } else {
+            toast.error("Please upload a valid CSV file");
+        }
+    }, [handleFileSelect]); // Fix stale closure: add handleFileSelect to dependencies
 
     /**
      * Pre-flight check to ensure auth and company ID are ready.
@@ -246,7 +257,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 console.log("CsvUpload: Update response", response);
 
                 if (response.status === 'success') {
-                    toast.success("Leads replaced successfully");
+                    toast.success("The Success Team has updated your leads. We're ready when you are.");
                     // Go directly to DONE, skip orchestration
                     setPersistedState(prev => ({
                         ...prev,
@@ -346,12 +357,19 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     useEffect(() => {
         if (stage === 'DONE') {
             const timer = setTimeout(() => {
-                reset();
-            }, 3000);
+                if (mode === 'edit' && onLeadsUpdated) {
+                    console.log("CsvUpload: Auto-returning to composer after edit");
+                    onLeadsUpdated();
+                    reset();
+                } else if (mode === 'create') {
+                    // Create mode still resets to the blank upload screen behind the popup
+                    reset();
+                }
+            }, 2000);
 
             return () => clearTimeout(timer);
         }
-    }, [stage, reset]);
+    }, [stage, reset, mode, onLeadsUpdated]);
 
     // Safety check: If we mount in UPLOADING stage but isProcessing is false, 
     // it means the session was interrupted. Revert to MAPPING to avoid being stuck.
@@ -378,18 +396,34 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         return (
             <CampaignComposer
                 campaignId={campaignId}
+                initialName={campaignName}
                 onBack={() => setPersistedState(prev => ({ ...prev, stage: 'MAPPING' }))}
                 onComplete={() => {
-                    setPersistedState(prev => ({ ...prev, stage: 'DONE' }));
-                    if (onSuccess && campaignId) onSuccess(campaignId);
+                    if (mode === 'create' && onSuccess && campaignId) {
+                        // Critical: Reset state first to return to "Upload" screen behind the popup
+                        reset();
+                        onSuccess(campaignId);
+                    } else {
+                        // Edit mode: Show internal success state
+                        setPersistedState(prev => ({ ...prev, stage: 'DONE' }));
+                        if (onSuccess && campaignId) onSuccess(campaignId);
+                    }
                 }}
                 onError={(error) => {
-                    if (error.status === 404) {
+                    console.error("Composer Error:", error);
+                    if (error?.status === 404) {
                         toast.error("Session expired: Campaign not found. Starting fresh.");
                         removePersistedState();
                         setFile(null);
-                        // Optional: Reset parent if needed, but removePersistedState handles the internal state
                         if (onCancel) onCancel();
+                    } else {
+                        // Handle generic errors by showing the error state
+                        setErrorResult({
+                            title: "Campaign Finalization Failed",
+                            message: error?.message || "Failed to save campaign details. Please try again.",
+                            canRetry: true
+                        });
+                        setPersistedState(prev => ({ ...prev, stage: 'ERROR' }));
                     }
                 }}
                 className={className}
@@ -397,11 +431,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         );
     }
 
+
     return (
         <Card className={cn(
             "relative overflow-hidden transition-all duration-700 ease-out",
-            "border-white/10 dark:border-white/5 backdrop-blur-2xl shadow-2xl",
-            "bg-white/80 dark:bg-zinc-900/60 border-zinc-200 dark:border-white/10 rounded-[2.5rem]",
+            "backdrop-blur-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)]",
+            "bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800/60 rounded-[40px]",
             className
         )}>
             {/* Ambient Background Effects */}
@@ -428,50 +463,56 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 </div>
             )}
 
-            <CardContent className="p-8 md:p-12 flex flex-col h-full relative z-10 flex-1">
+            <CardContent className="p-6 md:p-8 flex flex-col h-full relative z-10 flex-1">
                 {stage === 'UPLOAD' && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="flex-1 flex flex-col items-center justify-center p-8 md:p-12"
+                        className="flex-1 flex flex-col items-center justify-center p-4 md:p-6"
                     >
                         <div
                             className={cn(
-                                "relative w-full max-w-2xl aspect-[1.8/1] flex flex-col items-center justify-center",
+                                "relative w-full max-w-2xl aspect-[2.4/1] flex flex-col items-center justify-center",
                                 "rounded-[3rem] overflow-hidden transition-all duration-500",
                                 "group/upload cursor-pointer"
                             )}
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={onDrop}
-                            onClick={() => document.getElementById('csv-upload')?.click()}
+                            onClick={() => fileInputRef.current?.click()}
                         >
                             <input
                                 type="file"
-                                id="csv-upload"
+                                ref={fileInputRef}
                                 className="hidden"
                                 accept=".csv"
-                                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                                onChange={(e) => {
+                                    const selectedFile = e.target.files?.[0];
+                                    if (selectedFile) {
+                                        handleFileSelect(selectedFile);
+                                    }
+                                    e.target.value = ''; // Clear to allow re-selection
+                                }}
                             />
 
                             {/* Organic Portal Background */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-white/50 to-indigo-100/30 dark:from-indigo-900/10 dark:via-zinc-900/40 dark:to-zinc-800/20 backdrop-blur-md transition-all duration-700 group-hover/upload:scale-105" />
+                            <div className="absolute inset-0 bg-white dark:bg-zinc-900/40 transition-all duration-700 group-hover/upload:bg-zinc-50 dark:group-hover/upload:bg-zinc-900/60" />
 
                             {/* Glowing Orbs - Portal Effect */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[80px] opacity-60 group-hover/upload:opacity-100 transition-all duration-1000 group-hover/upload:scale-110" />
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[60px] opacity-40 group-hover/upload:opacity-80 transition-all duration-1000 delay-100 animate-pulse" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[100px] opacity-50 group-hover/upload:opacity-100 transition-all duration-1000 group-hover/upload:scale-110" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-[80px] opacity-30 group-hover/upload:opacity-70 transition-all duration-1000 delay-100 animate-pulse" />
 
                             {/* Border Glow (Instead of Dashed Line) */}
-                            <div className="absolute inset-0 border border-indigo-500/10 dark:border-white/10 rounded-[3rem] transition-all duration-500 group-hover/upload:border-indigo-500/30 group-hover/upload:shadow-[0_0_40px_-10px_rgba(99,102,241,0.15)]" />
+                            <div className="absolute inset-0 border-2 border-zinc-200 dark:border-zinc-800 rounded-[3rem] transition-all duration-500 group-hover/upload:border-indigo-500/50 dark:group-hover/upload:border-indigo-500/50 group-hover/upload:shadow-[0_0_60px_-10px_rgba(99,102,241,0.3)]" />
 
                             <div className="relative z-10 flex flex-col items-center text-center space-y-6">
                                 <motion.div
                                     whileHover={{ y: -5, scale: 1.05 }}
-                                    className="relative w-28 h-28 mb-2"
+                                    className="relative w-24 h-24 mb-1"
                                 >
                                     {/* Icon Background */}
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-[2rem] opacity-10 dark:opacity-20 blur-xl group-hover/upload:blur-2xl transition-all duration-500" />
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-white to-indigo-50 dark:from-zinc-800 dark:to-zinc-900 rounded-[2rem] border border-white/40 dark:border-white/10 shadow-xl shadow-indigo-500/10 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-[2rem] opacity-20 dark:opacity-30 blur-2xl group-hover/upload:blur-3xl group-hover/upload:opacity-30 transition-all duration-500" />
+                                    <div className="absolute inset-0 bg-white dark:from-zinc-800 dark:to-zinc-900 dark:bg-gradient-to-tr rounded-[2rem] border-2 border-zinc-100 dark:border-zinc-700 shadow-2xl shadow-indigo-500/20 flex items-center justify-center group-hover/upload:shadow-indigo-500/30 transition-all duration-500">
                                         <Upload className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
                                     </div>
 
@@ -479,35 +520,35 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                     <motion.div
                                         animate={{ y: [0, -4, 0] }}
                                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                                        className="absolute -top-2 -right-2 bg-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg border border-white/20"
+                                        className="absolute -top-2 -right-2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-xl shadow-indigo-500/50 border-2 border-white dark:border-zinc-900"
                                     >
                                         CSV
                                     </motion.div>
                                 </motion.div>
 
                                 <div className="space-y-3 max-w-md">
-                                    <h3 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-zinc-800 to-indigo-600 dark:from-white dark:via-indigo-200 dark:to-indigo-400 tracking-tight">
+                                    <h3 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-zinc-900 via-indigo-600 to-zinc-900 dark:from-white dark:via-indigo-300 dark:to-white tracking-tight">
                                         Upload Dataset
                                     </h3>
-                                    <p className="text-base text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-400 font-semibold leading-relaxed">
                                         Drag & drop your customer file to begin <br />
-                                        <span className="text-indigo-500 dark:text-indigo-400 opacity-80">Automatic Column Mapping Active</span>
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">Automatic Column Mapping Active</span>
                                     </p>
                                 </div>
                             </div>
 
                             {/* Bottom Indicators */}
-                            <div className="absolute bottom-8 flex items-center gap-6 opacity-60 group-hover/upload:opacity-100 transition-opacity duration-500">
-                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                            <div className="absolute bottom-4 flex items-center gap-6 opacity-80 group-hover/upload:opacity-100 transition-opacity duration-500">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                                    <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50" />
                                     Name
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                                    <div className="w-2 h-2 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50" />
                                     Phone
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-pink-500" />
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                                    <div className="w-2 h-2 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50" />
                                     Cohort
                                 </div>
                             </div>
@@ -542,7 +583,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                             placeholder="Enter campaign name (e.g., Q1 Retention)"
                                             value={campaignName}
                                             onChange={(e) => setPersistedState(prev => ({ ...prev, campaignName: e.target.value }))}
-                                            className="rounded-2xl h-14 bg-white/50 dark:bg-white/[0.02] border-gray-100 dark:border-white/10 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium text-lg px-6"
+                                            className="rounded-2xl h-12 bg-white/50 dark:bg-white/[0.02] border-gray-100 dark:border-white/10 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium text-lg px-6"
                                         />
                                     </div>
                                 )}
@@ -563,7 +604,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                                 <SelectTrigger className="w-[180px] h-11 rounded-xl border-gray-100 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500/20">
                                                     <SelectValue placeholder="Select column" />
                                                 </SelectTrigger>
-                                                <SelectContent className="rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
+                                                <SelectContent className="z-[100] rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
                                                     {headers.map(h => <SelectItem key={h} value={h} className="rounded-lg">{h}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
@@ -581,7 +622,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                                 <SelectTrigger className="w-[180px] h-11 rounded-xl border-gray-100 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500/20">
                                                     <SelectValue placeholder="Select column" />
                                                 </SelectTrigger>
-                                                <SelectContent className="rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
+                                                <SelectContent className="z-[100] rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
                                                     {headers.map(h => <SelectItem key={h} value={h} className="rounded-lg">{h}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
@@ -592,17 +633,14 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cohort (Optional)</span>
                                                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold opacity-60">Segmentation</p>
                                             </div>
-                                            <Select value={mapping.cohort} onValueValue={(val) => setPersistedState(prev => ({
-                                                ...prev,
-                                                mapping: { ...prev.mapping, cohort: val }
-                                            }))} onValueChange={(val) => setPersistedState(prev => ({
+                                            <Select value={mapping.cohort} onValueChange={(val) => setPersistedState(prev => ({
                                                 ...prev,
                                                 mapping: { ...prev.mapping, cohort: val }
                                             }))}>
                                                 <SelectTrigger className="w-[180px] h-11 rounded-xl border-gray-100 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500/20">
                                                     <SelectValue placeholder="Select column" />
                                                 </SelectTrigger>
-                                                <SelectContent className="rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
+                                                <SelectContent className="z-[100] rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
                                                     <SelectItem value="none" className="rounded-lg">None</SelectItem>
                                                     {headers.map(h => <SelectItem key={h} value={h} className="rounded-lg">{h}</SelectItem>)}
                                                 </SelectContent>
@@ -669,14 +707,14 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                 onClick={() => handleCreateCampaign(false)}
                                 disabled={isProcessing}
                                 size="lg"
-                                className="relative group overflow-hidden rounded-2xl h-14 px-10 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-gray-100 font-bold transition-all shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/20"
+                                className="relative group overflow-hidden rounded-2xl h-12 px-10 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-gray-100 font-bold transition-all shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/20"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 <span className="relative flex items-center">
                                     {isProcessing ? (
                                         <>
                                             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                            Processing Analysis...
+                                            Team is analyzing your list...
                                         </>
                                     ) : (mode === 'edit' ? "Update Campaign Leads" : "Create Intelligence Batch")}
                                     {!isProcessing && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}

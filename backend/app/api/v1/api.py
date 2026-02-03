@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, health, onboarding, dev, datasources, metrics, companies, settings, company, users, integrations, analytics, brand, monitoring, intelligence, dashboard
+from app.api.v1.endpoints import auth, health, onboarding, dev, datasources, metrics, companies, settings, company, users, integrations, analytics, brand, monitoring, intelligence, dashboard, execution, bolna_webhook, logs
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -18,3 +18,8 @@ api_router.include_router(brand.router, prefix="/metrics/brand", tags=["Brand Me
 api_router.include_router(intelligence.router, prefix="/intelligence", tags=["Intelligence"])
 api_router.include_router(monitoring.router, tags=["Monitoring"])  # Prometheus metrics at /metrics endpoint
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(execution.router, prefix="/execution", tags=["Execution Layer"])
+api_router.include_router(bolna_webhook.router, prefix="/integrations", tags=["Bolna Webhook"])
+api_router.include_router(logs.router, prefix="/execution", tags=["Execution Logs"])
+
+

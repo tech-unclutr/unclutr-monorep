@@ -29,13 +29,17 @@ async def test_duplicate_csv_upload(db_session: AsyncSession):
     
     # 1. Create User (if doesn't exist from other tests, or just create unique one)
     # Using firebase UID matching dev token
-    user = User(
-        id=user_id,
-        email=f"dev_{uuid4()}@unclutr.ai",
-        full_name="Developer User",
-        is_active=True
-    )
-    db_session.add(user)
+    existing_user = await db_session.get(User, user_id)
+    if not existing_user:
+        user = User(
+            id=user_id,
+            email=f"dev_{uuid4()}@unclutr.ai",
+            full_name="Developer User",
+            is_active=True
+        )
+        db_session.add(user)
+    else:
+        user = existing_user
     
     # 2. Create Company with required brand_name
     company = Company(

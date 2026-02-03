@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
+
 interface ShopifySuccessModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -38,10 +40,12 @@ export function ShopifySuccessModal({ isOpen, onClose, shopName }: ShopifySucces
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[440px] border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-zinc-950 p-0 overflow-hidden rounded-3xl shadow-2xl">
-                <DialogTitle className="sr-only">Store Connected Successfully</DialogTitle>
-                <DialogDescription className="sr-only">
-                    Your Shopify store has been successfully connected and data synchronization has started.
-                </DialogDescription>
+                <VisuallyHidden>
+                    <DialogTitle>Store Connected Successfully</DialogTitle>
+                    <DialogDescription>
+                        Your Shopify store has been successfully connected and data synchronization has started.
+                    </DialogDescription>
+                </VisuallyHidden>
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div

@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"  # development | staging | production
     
     # Firebase Configuration
-    FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"
+    # Validate path relative to backend root to be safe
+    # backend/app/core/config.py -> backend/
+    _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    FIREBASE_CREDENTIALS_PATH: str = os.path.join(_BACKEND_DIR, "firebase-credentials.json")
     FIREBASE_CREDENTIALS_JSON: Optional[str] = None
     FIREBASE_API_KEY: Optional[str] = None
     
@@ -52,10 +55,10 @@ class Settings(BaseSettings):
     # Bolna Voice AI Integration
     BOLNA_API_KEY: Optional[str] = None
     BOLNA_AGENT_ID: Optional[str] = None
-    BOLNA_API_BASE_URL: str = "https://api.bolna.dev"
+    BOLNA_API_BASE_URL: str = "https://api.bolna.ai"
 
     class Config:
-        env_file = ".env"
+        env_file = "env.config"
         extra = "ignore"
         
     @property

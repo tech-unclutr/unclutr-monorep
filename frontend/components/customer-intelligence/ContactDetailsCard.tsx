@@ -22,6 +22,7 @@ interface ContactDetailsCardProps {
     isSaved: boolean;
     onSave: (isValid: boolean) => void;
     className?: string;
+    isLoading?: boolean;
 }
 
 type ViewState = 'EDIT' | 'VIEW' | 'Unlocking';

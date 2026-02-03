@@ -103,18 +103,50 @@ async def prune_old_raw_payloads():
     finally:
         await session.close()
 
+async def run_campaign_replenishment_job():
+    """
+    Runs every minute.
+    Iterates through all ACTIVE campaigns and triggers QueueWarmer.
+    """
+    from app.models.campaign import Campaign
+    from app.services.queue_warmer import QueueWarmer
+    
+    logger.info("Scheduler: Running campaign replenishment job...")
+    
+    session_gen = get_session()
+    session = await session_gen.__anext__()
+    
+    try:
+        stmt = select(Campaign).where(Campaign.status.in_(["ACTIVE", "IN_PROGRESS"]))
+        result = await session.execute(stmt)
+        active_campaigns = result.scalars().all()
+        
+        for campaign in active_campaigns:
+            try:
+                # Trigger warmer sequentially to avoid session conflicts
+                await QueueWarmer.check_and_replenish(campaign.id, session)
+            except Exception as e:
+                logger.error(f"Scheduler: Replenishment failed for campaign {campaign.id}: {e}")
+                
+    finally:
+        await session.close()
+
 def start_scheduler():
     if not scheduler.running:
         # Run at the top of every hour
         trigger = CronTrigger(minute=0)
         scheduler.add_job(check_and_trigger_nightly_sweeps, trigger, id="nightly_sweep", replace_existing=True)
         
+        # Run replenishment every minute
+        replenish_trigger = CronTrigger(second=0) # Every minute at 00s
+        scheduler.add_job(run_campaign_replenishment_job, replenish_trigger, id="campaign_replenishment", replace_existing=True)
+        
         # Run pruning every day at 04:30 AM UTC
         prune_trigger = CronTrigger(hour=4, minute=30)
         scheduler.add_job(prune_old_raw_payloads, prune_trigger, id="prune_payloads", replace_existing=True)
         
         scheduler.start()
-        logger.info("Scheduler started. Jobs registered: 'nightly_sweep' (Hourly), 'prune_payloads' (Daily).")
+        logger.info("Scheduler started. Jobs: 'nightly_sweep' (Hourly), 'campaign_replenishment' (Minute), 'prune_payloads' (Daily).")
 
 def shutdown_scheduler():
     if scheduler.running:

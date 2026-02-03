@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LiveWaveform } from "@/components/customer-intelligence/LiveWaveform";
 import { api } from "@/lib/api";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { DisconnectConfirmDialog } from "@/components/customer-intelligence/DisconnectConfirmDialog";
 import { AvailabilityMagicPopup } from "@/components/customer-intelligence/AvailabilityMagicPopup"; // [NEW]
 import { MagicLoader } from "@/components/ui/magic-loader";
@@ -34,6 +34,7 @@ import { CallAnalysisSummary } from "@/components/customer-intelligence/CallAnal
 import { ContactDetailsCard } from "@/components/customer-intelligence/ContactDetailsCard";
 import { CsvUploadCard } from "@/components/customer-intelligence/CsvUploadCard";
 import { CampaignComposer } from "@/components/customer-intelligence/CampaignComposer";
+import { CampaignSuccessPopup } from "@/components/customer-intelligence/CampaignSuccessPopup"; // [NEW]
 
 import { useAuth } from "@/context/auth-context"; // [NEW]
 
@@ -63,10 +64,12 @@ export default function CustomerIntelligencePage() {
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
     const [composerView, setComposerView] = useState<'composer' | 'leads'>('composer');
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false); // [NEW]
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null); // [NEW] Track expanded card
     const [showGlance, setShowGlance] = useState(true); // [NEW] Start true to prevent flash
     const [glanceStarted, setGlanceStarted] = useState(false); // [NEW] Prevent re-triggering glance
     const searchParams = useSearchParams();
+    const router = useRouter();
 
     // Campaign History State
     const [latestCampaigns, setLatestCampaigns] = useState<any[]>([]);
@@ -111,29 +114,37 @@ export default function CustomerIntelligencePage() {
                 setLatestCampaigns(prev => [...prev, ...data.campaigns]);
             } else {
                 setLatestCampaigns(data.campaigns);
-                // Sync local contact state with latest campaign if available
-                if (data.campaigns.length > 0) {
-                    const latest = data.campaigns[0];
+
+                // [NEW] Robust Prefilling Logic
+                // 1. Determine Initial Contact state
+                const latest = data.campaigns.length > 0 ? data.campaigns[0] : null;
+
+                // Prefill from user profile as baseline
+                const baseline = {
+                    name: dbUser?.full_name || '',
+                    phone: dbUser?.contact_number || '',
+                    role: dbUser?.designation || '',
+                    department: dbUser?.team || '',
+                    linkedin: dbUser?.linkedin_profile || ''
+                };
+
+                // Override with latest campaign if available
+                if (latest) {
                     setContactDetails({
-                        name: dbUser?.full_name || '', // Always use user's full_name from dbUser
-                        phone: latest.phone_number || '',
-                        role: latest.team_member_role || '',
-                        department: latest.team_member_department || '',
-                        linkedin: dbUser?.linkedin_profile || '' // Also prefill linkedin from user profile
+                        name: baseline.name, // Usually name is better from user profile
+                        phone: latest.phone_number || baseline.phone,
+                        role: latest.team_member_role || baseline.role,
+                        department: latest.team_member_department || baseline.department,
+                        linkedin: baseline.linkedin
                     });
 
                     if (latest.phone_number && latest.team_member_role && latest.team_member_department) {
                         setIsContactSaved(true);
                     }
-                } else if (dbUser) {
-                    // Prefill from User Profile if no campaigns exist
-                    setContactDetails({
-                        name: dbUser.full_name || '',
-                        phone: dbUser.contact_number || '',
-                        role: dbUser.designation || '',
-                        department: dbUser.team || '',
-                        linkedin: dbUser.linkedin_profile || ''
-                    });
+                } else {
+                    setContactDetails(baseline);
+                    // If no campaigns but user profile is complete (e.g. from onboarding), mark as saved?
+                    // Actually, dbUser?.settings?.intelligence_unlocked handles the dashboard access itself
                 }
             }
 
@@ -156,6 +167,16 @@ export default function CustomerIntelligencePage() {
     useEffect(() => {
         if (!isAuthLoading && companyId) {
             fetchCampaigns();
+
+            // [NEW] Polling for fresh campaign data
+            const pollInterval = setInterval(() => {
+                // Only poll if window is visible to save resources
+                if (document.visibilityState === 'visible') {
+                    fetchCampaigns(0, false);
+                }
+            }, 15000); // 15 seconds
+
+            return () => clearInterval(pollInterval);
         }
     }, [isAuthLoading, companyId]);
 
@@ -518,14 +539,12 @@ export default function CustomerIntelligencePage() {
     return (
         <div className="p-6 md:p-8 h-[calc(100vh-4rem)] flex flex-col overflow-y-auto scrollbar-hide">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
-                {/* Header Section - Only show when not in blocking state */}
-                {(isLoadingUser || isContactReady) && (
-                    <div className="flex flex-col gap-3 mb-12">
-                        <div className="flex flex-col gap-2">
-                            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-[#E4E4E7] tracking-tight font-sans">
-                                Customer Intelligence Lab
-                            </h1>
-                            <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
+                {/* Header Section - Only show when not in blocking state and NOT in success glance */}
+                {(isLoadingUser || (isContactReady && !showGlance)) && (
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-col gap-0.5">
+                            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Customer Intelligence Lab</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium max-w-2xl">
                                 Transform your outreach with AI-powered customer insights. Upload your leads, let our AI conduct discovery calls, and receive personalized campaign strategies tailored to each prospect.
                             </p>
                         </div>
@@ -611,7 +630,15 @@ export default function CustomerIntelligencePage() {
                                 {/* 1. CSV Upload Mega-Card (Left 3/4) */}
                                 <CsvUploadCard
                                     className="lg:col-span-9"
-                                    onSuccess={() => fetchCampaigns(0, false)}
+                                    onSuccess={() => setShowSuccessPopup(true)}
+                                />
+
+                                <CampaignSuccessPopup
+                                    isOpen={showSuccessPopup}
+                                    onClose={() => setShowSuccessPopup(false)}
+                                    onComplete={() => {
+                                        fetchCampaigns(0, false);
+                                    }}
                                 />
 
                                 {/* 2. Right Column (Calendar & Readiness) */}
@@ -621,10 +648,10 @@ export default function CustomerIntelligencePage() {
                                     <div className="relative group rounded-[2.5rem] overflow-hidden">
                                         <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 transition-all duration-300 group-hover:bg-white/70 dark:group-hover:bg-black/50" />
 
-                                        <div className="relative p-6 flex flex-col h-full z-10">
-                                            <div className="flex items-center justify-between mb-8">
-                                                <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/10">
-                                                    <Calendar className="w-5 h-5" />
+                                        <div className="relative p-5 flex flex-col h-full z-10">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="p-2.5 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/10">
+                                                    <Calendar className="w-4 h-4" />
                                                 </div>
                                                 <div className={cn(
                                                     "px-3 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1.5",
@@ -638,7 +665,7 @@ export default function CustomerIntelligencePage() {
                                             </div>
 
                                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">Calendar Access</h3>
-                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium leading-relaxed">
+                                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-4 font-medium leading-relaxed">
                                                 Sync your schedule to automatically block execution windows.
                                             </p>
 
@@ -720,7 +747,7 @@ export default function CustomerIntelligencePage() {
                                     </div>
 
                                     {/* Minimalist Animation Card */}
-                                    <div className="relative group rounded-[2.5rem] overflow-hidden min-h-[400px]">
+                                    <div className="relative group rounded-[2.5rem] overflow-hidden min-h-[300px]">
                                         {/* Transparent Background */}
                                         <div className="absolute inset-0 bg-transparent transition-all duration-300" />
 
@@ -879,8 +906,8 @@ export default function CustomerIntelligencePage() {
                             </div>
 
                             {/* Latest Campaigns Section */}
-                            <div id="latest-campaigns" className="mb-20 mt-12">
-                                <div className="flex items-center justify-between mb-12">
+                            <div id="latest-campaigns" className="mb-12 mt-6">
+                                <div className="flex items-center justify-between mb-8">
                                     <div>
                                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Latest Campaigns</h2>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Review your past interview strategies and generated contexts.</p>
@@ -928,9 +955,10 @@ export default function CustomerIntelligencePage() {
                                                         }}
                                                         onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
                                                         onStartCampaign={() => {
-                                                            setEditingCampaignId(null);
-                                                            setComposerView('composer');
-                                                            setIsComposerOpen(true);
+                                                            console.log("[CI] Force navigating to campaign:", campaign.id);
+                                                            toast.loading("Starting campaign session...");
+                                                            // Force hard navigation to ensure clean state
+                                                            window.location.href = `/dashboard-new/customer-intelligence/campaign/${campaign.id}`;
                                                         }}
                                                     />
                                                 </div>
@@ -1025,7 +1053,7 @@ export default function CustomerIntelligencePage() {
                                                                         {status === 'CALLING' ? "Calling your number..." :
                                                                             status === 'RINGING' ? "Phone is ringing..." :
                                                                                 detailedStatus ?
-                                                                                    <span className="capitalize">{detailedStatus.replace(/_/g, ' ')}...</span> :
+                                                                                    <span className="capitalize">{detailedStatus?.replace(/_/g, ' ')}...</span> :
                                                                                     "Interview in progress..."}
                                                                     </div>
                                                                     <Button
@@ -1134,7 +1162,7 @@ export default function CustomerIntelligencePage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-5xl"
+                            className="w-full max-w-4xl"
                         >
                             {composerView === 'leads' ? (
                                 <CsvUploadCard
@@ -1150,7 +1178,10 @@ export default function CustomerIntelligencePage() {
                             ) : (
                                 <CampaignComposer
                                     campaignId={editingCampaignId!}
-                                    onComplete={() => setIsComposerOpen(false)}
+                                    onComplete={() => {
+                                        fetchCampaigns(0, false);
+                                        setIsComposerOpen(false);
+                                    }}
                                     onBack={() => setIsComposerOpen(false)}
                                     onEditLeads={() => setComposerView('leads')}
                                     className="h-full shadow-2xl"

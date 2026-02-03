@@ -14,16 +14,25 @@ if not firebase_admin._apps:
     if settings.FIREBASE_CREDENTIALS_JSON:
         # Best Practice for Prod (Render/Railway/Vercel)
         import json
-        cred_dict = json.loads(settings.FIREBASE_CREDENTIALS_JSON)
-        cred = credentials.Certificate(cred_dict)
-        firebase_admin.initialize_app(cred)
+        try:
+            cred_dict = json.loads(settings.FIREBASE_CREDENTIALS_JSON)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            logger.info("Firebase initialized from JSON env var.")
+        except Exception as e:
+            logger.error(f"Failed to initialize Firebase from JSON: {e}")
     elif os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
         # Fallback for Local Dev
-        cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-        firebase_admin.initialize_app(cred)
+        logger.info(f"Loading Firebase credentials from: {settings.FIREBASE_CREDENTIALS_PATH}")
+        try:
+            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+            firebase_admin.initialize_app(cred)
+            logger.info("Firebase initialized from local file.")
+        except Exception as e:
+            logger.error(f"Failed to initialize Firebase from file: {e}")
     else:
         # Fallback or initialization without creds (e.g. on GCP)
-        logger.warning("Firebase Credentials not found. Auth will fail.")
+        logger.warning(f"Firebase Credentials not found at {settings.FIREBASE_CREDENTIALS_PATH}. Auth will fail.")
 
 security = HTTPBearer(auto_error=False)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)

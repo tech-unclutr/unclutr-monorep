@@ -14,12 +14,13 @@ import { Button } from '@/components/ui/button';
 
 interface PhoneInputProps {
     value: string;
-    onChange: (value: string) => void;
+    onChange?: (value: string) => void;
     className?: string;
+    disabled?: boolean;
     placeholder?: string;
 }
 
-export function PhoneInput({ value, onChange, className, placeholder = "12345 67890" }: PhoneInputProps) {
+export function PhoneInput({ value, onChange, className, placeholder = "12345 67890", disabled }: PhoneInputProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
 
@@ -60,7 +61,7 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
     const handleCountrySelect = (region: typeof regions[0]) => {
         const newState = { ...localState, countryCode: region.dialCode, flag: region.flag };
         setLocalState(newState);
-        onChange(`${newState.countryCode} ${newState.number}`);
+        onChange?.(`${newState.countryCode} ${newState.number}`);
         setIsOpen(false);
     };
 
@@ -68,7 +69,7 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
         const newNumber = e.target.value.replace(/[^0-9\s]/g, ''); // Allow digits and spaces
         const newState = { ...localState, number: newNumber };
         setLocalState(newState);
-        onChange(`${newState.countryCode} ${newNumber}`);
+        onChange?.(`${newState.countryCode} ${newNumber}`);
     };
 
     const filteredRegions = regions.filter(r =>
@@ -78,13 +79,14 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
 
     return (
         <div className={cn("flex items-center gap-0 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 rounded-md transition-all", className)}>
-            <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <Popover open={isOpen} onOpenChange={disabled ? undefined : setIsOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="ghost"
                         role="combobox"
+                        disabled={disabled}
                         aria-expanded={isOpen}
-                        className="flex-shrink-0 w-[100px] justify-between px-3 bg-transparent border-r border-gray-200 dark:border-white/10 rounded-l-md rounded-r-none hover:bg-transparent"
+                        className="flex-shrink-0 w-[100px] justify-between px-3 bg-transparent border-r border-gray-200 dark:border-white/10 rounded-l-md rounded-r-none hover:bg-transparent disabled:opacity-50"
                     >
                         <span className="flex items-center gap-2">
                             <span className="text-lg leading-none">{localState.flag}</span>
@@ -137,6 +139,7 @@ export function PhoneInput({ value, onChange, className, placeholder = "12345 67
                 placeholder={placeholder}
                 value={localState.number}
                 onChange={handleNumberChange}
+                disabled={disabled}
             />
         </div>
     );

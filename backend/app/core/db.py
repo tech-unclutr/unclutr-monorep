@@ -39,7 +39,9 @@ async_session_factory = sessionmaker(
 async def init_db():
     """Initialize database tables and repair constraints"""
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        # Tables should be created via Alembic migrations, not automatically.
+        # await conn.run_sync(SQLModel.metadata.create_all)
+        pass
     
     # Automated healing of integration constraints (Once For All fix)
     from app.core.db_repair import heal_integration_constraints

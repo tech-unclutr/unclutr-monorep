@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ShieldCheck, Sparkles, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 
 interface IntegritySuccessModalProps {
     isOpen: boolean;
@@ -16,10 +17,12 @@ export function IntegritySuccessModal({ isOpen, onClose, reconciledCount = 0 }: 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[440px] border-emerald-200 dark:border-emerald-900/30 bg-white dark:bg-zinc-950 p-0 overflow-hidden rounded-3xl shadow-2xl">
-                <DialogTitle className="sr-only">Integrity Verification Complete</DialogTitle>
-                <DialogDescription className="sr-only">
-                    Your data integrity has been verified and zero-drift confirmed.
-                </DialogDescription>
+                <VisuallyHidden>
+                    <DialogTitle>Integrity Verification Complete</DialogTitle>
+                    <DialogDescription>
+                        Your data integrity has been verified and zero-drift confirmed.
+                    </DialogDescription>
+                </VisuallyHidden>
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div

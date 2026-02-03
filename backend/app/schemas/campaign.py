@@ -21,6 +21,10 @@ class CampaignExecutionUpdate(BaseModel):
     selected_cohorts: Optional[List[str]] = None
     execution_windows: Optional[List[Dict[str, Any]]] = None
 
+class CampaignUpdate(BaseModel):
+    name: Optional[str] = None
+    status: Optional[str] = None
+    
 class CampaignSettingsUpdate(CampaignContextUpdate, CampaignExecutionUpdate):
     name: Optional[str] = None
 

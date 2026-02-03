@@ -344,9 +344,13 @@ class GoogleCalendarService:
         # Also check for the catch-all 'calendar' scope just in case
         has_write_permission = any(s in stored_scopes for s in [required_scope, 'https://www.googleapis.com/auth/calendar'])
         
+        logger.info(f"[CALENDAR_SYNC] Connection {conn.id} - Stored scopes: {stored_scopes}")
+        logger.info(f"[CALENDAR_SYNC] Has write permission: {has_write_permission}")
+        
         if not has_write_permission:
             logger.error(f"Insufficient permissions for connection {conn.id}. Scopes found: {stored_scopes}")
             raise ValueError("Insufficient permissions. Please disconnect and reconnect your Google Calendar to grant write access.")
+
 
         today = datetime.now(timezone.utc).date()
         execution_windows = campaign.execution_windows or []

@@ -36,8 +36,10 @@ class TenantMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 pass
 
-        # 2. Bypass check for public endpoints
+        # 2. Bypass check for public endpoints or WebSocket upgrade requests
         path = request.url.path
+        is_websocket = request.headers.get("upgrade") == "websocket"
+        
         public_paths = [
             "/health", "/docs", "/openapi.json", 
             "/auth/login", "/auth/sync", 
@@ -50,11 +52,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/integrations/shopify/validate-shop",
             "/integrations/shopify/auth/url",
             "/intelligence/calendar/google/callback",
-            "/intelligence/interview/bolna-webhook"
+            "/intelligence/interview/bolna-webhook",
+            "/integrations/webhook/bolna"
         ]
         
-        # Check if path starts with any public path OR contains /webhooks/ OR is exactly /
-        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path
+        # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR is a websocket
+        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path or is_websocket
         
         if is_public:
             return await call_next(request)
@@ -67,6 +70,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
         workspace_id_str = request.headers.get("X-Workspace-ID")
 
         if not company_id_str:
+            logger.warning(f"TenantMiddleware: Missing X-Company-ID header for path {path} from user {user_id}")
             return JSONResponse(content={"detail": "Forbidden: Missing X-Company-ID"}, status_code=403)
 
         try:
@@ -82,6 +86,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 request.state.workspace_id = None
                 
         except ValueError:
+            logger.error(f"TenantMiddleware: Invalid UUID format in X-Company-ID header: {company_id_str} (Path: {path}, User: {user_id})")
             return JSONResponse(content={"detail": f"Bad Request: Invalid UUID format in headers ({company_id_str})"}, status_code=400)
 
         # 4. Membership Check
@@ -97,10 +102,24 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 result = await session.execute(stmt)
                 membership = result.scalars().first()
                 
-                if not membership:
-                    return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
-                
-                request.state.role = membership.role
+                if membership:
+                    request.state.role = membership.role
+                else:
+                    # Final attempt: RAW SQL to bypass potential ORM/Session synchronization issues
+                    try:
+                        from sqlalchemy import text
+                        raw_stmt = text("SELECT role FROM company_membership WHERE company_id = :cid AND user_id = :uid")
+                        raw_result = await session.execute(raw_stmt, {"cid": company_id, "uid": user_id})
+                        raw_membership = raw_result.first()
+                        
+                        if raw_membership:
+                            logger.warning(f"TenantMiddleware: SQLAlchemy lookup failed but Raw SQL found membership for {user_id}. Self-healing active.")
+                            request.state.role = raw_membership.role
+                        else:
+                            return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
+                    except Exception as raw_e:
+                        logger.error(f"TenantMiddleware: Raw SQL fallback failed: {raw_e}")
+                        return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
         except Exception as e:
             import traceback
             logger.error(f"TenantMiddleware Error: {str(e)}\n{traceback.format_exc()}")

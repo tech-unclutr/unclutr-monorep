@@ -61,17 +61,24 @@ export default function IntegrationsPage() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchIntegrations = async (silent = false): Promise<Integration[] | undefined> => {
-        if (!companyId) return;
+        if (!companyId || companyId === 'null' || companyId === 'undefined') {
+            console.warn("[Integrations] Skipping fetch: No valid companyId in context.", { companyId });
+            if (!silent) setLoading(false);
+            return;
+        }
         try {
             if (!silent) setLoading(true);
             const data = await listIntegrations(companyId);
             setIntegrations(data);
             return data;
-        } catch (error) {
-            console.error("Error fetching integrations:", error);
+        } catch (error: any) {
+            console.error("[Integrations] Error fetching integrations:", error);
             if (!silent) {
-                toast.error("Integration Hub Unavailable", {
-                    description: "We couldn't reach the command center. Try refreshing?"
+                const isAuthError = error.message?.toLowerCase().includes('auth') || error.message?.toLowerCase().includes('authorized');
+                toast.error(isAuthError ? "Authentication Session Expired" : "Integration Hub Unavailable", {
+                    description: isAuthError
+                        ? "Please try logging in again to restore your session."
+                        : "We couldn't reach the command center. Try refreshing?"
                 });
             }
         } finally {

@@ -37,9 +37,9 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
     // Initial system checks
     useEffect(() => {
         const initialLogs: LogEntry[] = [
-            { id: 'init-1', text: 'Initializing batch processor...', type: 'system', icon: Server },
-            { id: 'init-2', text: 'Validating CSV schema...', type: 'info', icon: FileText },
-            { id: 'init-3', text: 'Checking for duplicates...', type: 'info', icon: Database },
+            { id: 'init-1', text: 'Alex: Success Team is ready. Getting your leads onboarded...', type: 'system', icon: Server },
+            { id: 'init-2', text: 'Sarah: Checking the list for any missing details...', type: 'info', icon: FileText },
+            { id: 'init-3', text: 'Rohan: Making sure every record is unique...', type: 'info', icon: Database },
         ];
         setLogs(initialLogs);
     }, []);
@@ -56,11 +56,11 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
             if (Math.random() > 0.7 || currentIdx >= data.length) {
                 // System message
                 const sysMsgs = [
-                    "Syncing with intelligence engine...",
-                    "Encrypting contact details...",
-                    "Verifying phone formats...",
-                    "Allocating storage shard...",
-                    "Updating search index..."
+                    "Maya: Syncing the latest context for your campaign...",
+                    "Alex: Securing these contact details in the vault...",
+                    "Sarah: Quick check on the phone formats for global reach...",
+                    "Rohan: Mapping out the best paths for outreach...",
+                    "Maya: Our intelligence engine is now processing the batch..."
                 ];
                 newLog = {
                     id: `sys-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -75,7 +75,7 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                 if (name) {
                     newLog = {
                         id: `rec-${currentIdx}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                        text: `Importing customer: ${name}`,
+                        text: `Success Team: Welcoming ${name} to the campaign`,
                         type: 'record',
                         icon: User
                     };
@@ -112,7 +112,7 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                             <div className="absolute inset-0 w-full h-full bg-emerald-500 rounded-full animate-ping opacity-20" />
                         </div>
                         <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 font-mono">
-                            Processing_Stream
+                            Intelligence_Stream
                         </span>
                     </div>
                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800">
@@ -183,10 +183,10 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                         <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
                         <div className="absolute inset-0 bg-indigo-500/20 blur-md animate-pulse" />
                     </div>
-                    <span>Importing Customers</span>
+                    <span>Success Team is on it</span>
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-[280px] mx-auto leading-relaxed">
-                    Securely decrypting and saving <span className="text-zinc-950 dark:text-white font-semibold">{data.length} records</span> to your private dataset...
+                    Securely organizing and preparing <span className="text-zinc-950 dark:text-white font-semibold">{data.length} customer profiles</span> for your upcoming campaign...
                 </p>
             </div>
         </div>

@@ -87,6 +87,7 @@ export const CampaignCard = ({
     const statusConfig: Record<string, { label: string, color: string, bg: string, border: string, icon: any }> = {
         'COMPLETED': { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Check },
         'IN_PROGRESS': { label: 'Active', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Clock },
+        'ACTIVE': { label: 'Active', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Clock },
         'FAILED': { label: 'Attention', color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: ShieldAlert },
         'DRAFT': { label: 'Draft', color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: Pencil },
         'SCHEDULED': { label: 'Scheduled', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: Calendar }
@@ -94,6 +95,7 @@ export const CampaignCard = ({
 
     const currentStatus = statusConfig[status] || statusConfig['DRAFT'];
     const StatusIcon = currentStatus.icon;
+
 
     // Handlers
     const handleSave = async (e: React.MouseEvent) => {
@@ -103,7 +105,7 @@ export const CampaignCard = ({
         try {
             await onEdit(campaign.id, {
                 campaign_overview: { ...campaign.campaign_overview, primary_goal: primaryGoal },
-                // bolna_extracted_data: editedData
+                extracted_data: editedData
             });
             setIsEditing(false);
         } catch (error) {
@@ -131,6 +133,7 @@ export const CampaignCard = ({
 
     const handleStartCampaign = (e: React.MouseEvent) => {
         e.stopPropagation();
+        console.log("[CampaignCard] Start Campaign clicked for", campaign.id);
         if (onStartCampaign) {
             onStartCampaign();
         }
@@ -298,7 +301,7 @@ export const CampaignCard = ({
                                     <img
                                         src={`/images/avatars/notionists/full_body/avatar_${avatarIndex}.png`}
                                         alt={cohortName}
-                                        className="w-full h-full object-cover scale-150 translate-y-1.5 drop-shadow-md"
+                                        className="w-full h-full object-cover scale-150 translate-y-2 drop-shadow-md"
                                     />
                                 </div>
                             );
@@ -444,7 +447,7 @@ export const CampaignCard = ({
                                                         )}
                                                         <div className="space-y-3">
                                                             <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1">
-                                                                <MessageSquare className="w-3.5 h-3.5" /> Key Questions
+                                                                <MessageSquare className="w-3.5 h-3.5" /> Preliminary Questions
                                                             </div>
                                                             <ul className="space-y-3">
                                                                 {questions.slice(0, 3).map((q: string, idx: number) => (
@@ -468,27 +471,45 @@ export const CampaignCard = ({
                                 </div>
 
                                 {/* Action Footer for Expanded Mode */}
-                                <div className="flex items-center justify-end gap-3 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
+                                <div className="flex items-center justify-between gap-3 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
                                     <Button
-                                        variant="outline"
-                                        className="rounded-xl h-11 border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:bg-zinc-50"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (onEditClick) onEditClick(campaign.id);
-                                            else setIsEditing(!isEditing);
-                                        }}
+                                        className="rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all font-bold"
+                                        onClick={handleStartCampaign}
                                     >
-                                        <Pencil className="w-4 h-4 mr-2" />
-                                        Edit Campaign
+                                        <ArrowUpRight className="w-4 h-4 mr-2" />
+                                        Start Campaign
                                     </Button>
-                                    <Button
-                                        variant="ghost"
-                                        className="rounded-xl h-11 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10"
-                                        onClick={handleDeleteClick}
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
-                                    </Button>
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "rounded-xl h-11 border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:bg-zinc-50 transition-all duration-300"
+                                            )}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (onEditClick) onEditClick(campaign.id);
+                                                else setIsEditing(!isEditing);
+                                            }}
+                                            title="Edit campaign"
+                                        >
+                                            <Pencil className="w-4 h-4 mr-2" />
+                                            Edit Campaign
+                                        </Button>
+                                        {status === 'DRAFT' && (
+                                            <Button
+                                                variant="ghost"
+                                                className="rounded-xl h-11 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10 transition-all duration-300"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteClick(e);
+                                                }}
+                                                title="Delete campaign"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Delete
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

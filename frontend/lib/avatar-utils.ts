@@ -13,7 +13,7 @@ export const getUniqueCohortAvatars = (cohorts: string[]): Record<string, number
     const sortedCohorts = [...cohorts].sort();
     const assigned: Record<string, number> = {};
     const usedIndices = new Set<number>();
-    const MAX_AVATARS = 5;
+    const MAX_AVATARS = 50;
 
     sortedCohorts.forEach(cohort => {
         let index = getAvatarIndex(cohort, MAX_AVATARS);

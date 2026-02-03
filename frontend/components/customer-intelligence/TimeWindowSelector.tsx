@@ -147,13 +147,19 @@ function MagicalTimePicker({ value, onChange, label, selectedDate }: { value: st
     const currentMinute = now.getMinutes();
 
     // Helper to check if a time is in the past
+    // We allow the "current" 15-minute slot even if a few minutes have passed
     const isTimePast = (hour: string, minute: string) => {
         if (!isSelectedDateToday) return false;
         const hourNum = parseInt(hour);
         const minuteNum = parseInt(minute);
 
         if (hourNum < currentHour) return true;
-        if (hourNum === currentHour && minuteNum <= currentMinute) return true;
+
+        // For current hour, allow slots within the last ~15 mins (current slot)
+        if (hourNum === currentHour) {
+            return (currentMinute - minuteNum) > 15;
+        }
+
         return false;
     };
 
@@ -166,7 +172,7 @@ function MagicalTimePicker({ value, onChange, label, selectedDate }: { value: st
                 {/* Hours */}
                 <div className="flex-1 space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-hide">
                     {hours.map(hour => {
-                        const isPast = isTimePast(hour, m);
+                        const isPast = parseInt(hour) < currentHour;
                         return (
                             <button
                                 key={hour}
@@ -246,6 +252,15 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete, allWin
     };
 
     const hasOverlap = checkOverlap(day, start, end);
+
+    const durationMins = timeToMinutes(end) - timeToMinutes(start);
+    const formatDuration = (mins: number) => {
+        if (mins <= 0) return "No duration";
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${h > 0 ? `${h}h ` : ""}${m > 0 ? `${m}m` : ""}`.trim();
+    };
+
     const handleStartChange = (newStart: string) => {
         const startMins = timeToMinutes(newStart);
         const endMins = timeToMinutes(end);
@@ -338,7 +353,7 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete, allWin
                                 </div>
                             </div>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-4 rounded-3xl shadow-2xl border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 opacity-100" align="start">
+                        <PopoverContent className="w-auto p-4 rounded-3xl shadow-2xl border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 opacity-100 z-[200]" align="start">
                             <MagicalDatePicker value={day} onChange={(newDay) => onChange({ day: newDay })} />
                         </PopoverContent>
                     </Popover>
@@ -357,7 +372,7 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete, allWin
                                             {formatTime(start)}
                                         </button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-3 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 opacity-100" align="start">
+                                    <PopoverContent className="w-auto p-3 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 opacity-100 z-[200]" align="start">
                                         <MagicalTimePicker label="Start Time" value={start} onChange={handleStartChange} selectedDate={day} />
                                     </PopoverContent>
                                 </Popover>
@@ -370,10 +385,16 @@ export function TimeWindowSelector({ day, start, end, onChange, onDelete, allWin
                                             {formatTime(end)}
                                         </button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-3 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 opacity-100" align="start">
+                                    <PopoverContent className="w-auto p-3 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 opacity-100 z-[200]" align="start">
                                         <MagicalTimePicker label="End Time" value={end} onChange={handleEndChange} selectedDate={day} />
                                     </PopoverContent>
                                 </Popover>
+
+                                <div className="ml-auto px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 whitespace-nowrap">
+                                    <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                        {formatDuration(durationMins)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

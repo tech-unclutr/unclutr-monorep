@@ -885,19 +885,40 @@ class CampaignService:
                 session.add_all(archived_leads)
                 
             # Use raw SQL to ensure deletion bypasses any ORM complexity
+            logger.info("DEBUG: Executing RAW SQL DELETE for related records")
+            
+            # 1. Delete execution maps (references queue_items)
+            await session.execute(
+                text("DELETE FROM bolna_execution_maps WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
+            # 2. Delete queue items (references leads)
+            await session.execute(
+                text("DELETE FROM queue_items WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
+            # 3. Delete leads
             logger.info("DEBUG: Executing RAW SQL DELETE for Leads")
             await session.execute(
                 text("DELETE FROM campaign_leads WHERE campaign_id = :campaign_id"),
                 {"campaign_id": campaign_id}
             )
             
-            # 5. Delete Goal Details
+            # 4. Delete Goal Details
             logger.info("DEBUG: Executing RAW SQL DELETE for Goal Details")
             await session.execute(
                 text("DELETE FROM campaigns_goals_details WHERE campaign_id = :campaign_id"),
                 {"campaign_id": campaign_id}
             )
             
+            # 5. Delete from cohorts
+            await session.execute(
+                text("DELETE FROM cohorts WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
             # 6. Delete the Campaign itself
             logger.info("DEBUG: Executing RAW SQL DELETE for Campaign")
             result = await session.execute(
@@ -1099,19 +1120,48 @@ class CampaignService:
         """
         logger.info(f"Replacing leads for campaign {campaign_id}. New count: {len(leads_data)}")
         
-        # 1. Delete existing leads
+        # 0. Delete Execution Maps (references queue_items)
+        await session.execute(
+            text("DELETE FROM bolna_execution_maps WHERE campaign_id = :campaign_id"),
+            {"campaign_id": campaign_id}
+        )
+
+        # 1. Delete Queue Items (references leads)
+        await session.execute(
+            text("DELETE FROM queue_items WHERE campaign_id = :campaign_id"),
+            {"campaign_id": campaign_id}
+        )
+
+        # 2. Delete existing leads
         await session.execute(
             text("DELETE FROM campaign_leads WHERE campaign_id = :campaign_id"),
             {"campaign_id": campaign_id}
         )
         
-        # 2. Delete Goal Details (Analytics) - Start fresh
+        # 3. Delete Goal Details (Analytics) - Start fresh
         await session.execute(
             text("DELETE FROM campaigns_goals_details WHERE campaign_id = :campaign_id"),
             {"campaign_id": campaign_id}
         )
         
-        # 3. Insert New Leads
+        # 3. Clear strategy state data on the campaign to force a re-update
+        # Note: preserving brand_context, customer_context, team_member_context, and execution_windows
+        stmt_campaign = select(Campaign).where(Campaign.id == campaign_id)
+        result_campaign = await session.execute(stmt_campaign)
+        campaign = result_campaign.scalars().first()
+        
+        if campaign:
+            campaign.preliminary_questions = []
+            campaign.cohort_questions = {}
+            campaign.cohort_incentives = {}
+            campaign.incentive = None
+            campaign.cohort_config = {}
+            campaign.selected_cohorts = []
+            campaign.cohort_data = {}
+            campaign.updated_at = datetime.utcnow()
+            session.add(campaign)
+
+        # 4. Insert New Leads
         if leads_data:
             from sqlalchemy import insert
             from app.models.campaign_lead import CampaignLead

@@ -7,16 +7,15 @@ This workflow performs a clean restart of the development stack. It forcefully t
 // turbo
 ```bash
 cd backend
-source venv/bin/activate
-python scripts/stop_servers.py
+/tmp/venv_unclutr/bin/python scripts/stop_servers.py
 ```
 
 2. Start the Backend Server.
 ```bash
 # In a new terminal tab/window
 cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload
+# Using /tmp/venv_unclutr due to project dir permissions
+/tmp/venv_unclutr/bin/uvicorn app.main:app --reload
 ```
 
 3. Start the Frontend Server.
@@ -37,6 +36,5 @@ ngrok http 8000 --domain=unwastable-godsent-see.ngrok-free.dev
 // turbo
 ```bash
 cd backend
-source venv/bin/activate
-python scripts/verify_system.py
+/tmp/venv_unclutr/bin/python scripts/verify_system.py
 ```

@@ -28,21 +28,20 @@ export function CallAnalysisSummary({ campaign, onClose, onViewCampaign }: CallA
 
     const {
         name,
-        // bolna_extracted_data,
-        // bolna_conversation_time,
+        extracted_data,
+        bolna_conversation_time,
         quality_score
     } = campaign;
 
     // Fallback to decision_context if bolna_extracted_data is missing (for legacy/simulation compatibility)
-    const data = campaign.decision_context || {}; // bolna_extracted_data || 
-
-    const bolna_conversation_time = 0; // Temporarily hardcoded to avoid error
+    const data = extracted_data || campaign.decision_context || {};
 
     // Format duration
     const formatDuration = (seconds: number) => {
+        if (!seconds) return "0s";
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        return `${mins}m ${secs}s`;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
 
     return (

@@ -1,11 +1,12 @@
 import asyncio
-from typing import List
 from datetime import datetime, timezone
+
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
 from sqlmodel import select
+
 from app.core.db import get_session
 from app.models.company import Company
 from app.models.integration import Integration, IntegrationStatus
@@ -70,10 +71,9 @@ async def prune_old_raw_payloads():
     Does NOT delete the record, just the heavy JSON blob.
     """
     logger.info("Scheduler: Pruning old raw payloads...")
-    from app.models.shopify.order import ShopifyOrder
-    from app.models.shopify.inventory import ShopifyInventoryItem, ShopifyInventoryLevel
-    from sqlalchemy import text
     from datetime import timedelta
+
+    from sqlalchemy import text
     
     session_gen = get_session()
     session = await session_gen.__anext__()

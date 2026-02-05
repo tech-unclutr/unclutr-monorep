@@ -1,16 +1,19 @@
 import asyncio
-from typing import Optional
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
 from loguru import logger
+from sqlalchemy.orm import sessionmaker
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import sessionmaker
+
 from app.core.db import engine
 from app.models.integration import Integration, IntegrationStatus
-from app.services.shopify.sync_service import shopify_sync_service
-from app.services.shopify.refinement_service import shopify_refinement_service
 from app.services.analytics.service import AnalyticsService
+from app.services.shopify.refinement_service import shopify_refinement_service
+from app.services.shopify.sync_service import shopify_sync_service
+
 
 async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, months: Optional[int] = None):
     """
@@ -244,11 +247,12 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
             }
 
             
-            logger.info(f"Sync Consumed. Starting Refinement...")
+            logger.info("Sync Consumed. Starting Refinement...")
             
             # --- Refinement Phase (First Pass - Metadata) ---
-            from app.models.shopify.raw_ingest import ShopifyRawIngest
             from sqlmodel import func
+
+            from app.models.shopify.raw_ingest import ShopifyRawIngest
 
             # 1. Count Total Pending
             count_stmt = select(func.count(ShopifyRawIngest.id)).where(
@@ -359,9 +363,10 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
             integration = await session.get(Integration, integration_id)
             if integration:
                 # --- Final Tally from Refined Data ---
-                from app.models.shopify.order import ShopifyOrder
-                from app.models.shopify.customer import ShopifyCustomer
                 from sqlalchemy import func
+
+                from app.models.shopify.customer import ShopifyCustomer
+                from app.models.shopify.order import ShopifyOrder
                 
                 # Count refined orders & revenue (Shopify Definition)
                 # Gross Sales = Sum(subtotal_price)
@@ -385,12 +390,17 @@ async def run_shopify_sync_task(integration_id: uuid.UUID, delta: bool = False, 
                 cust_count = (await session.execute(cust_stmt)).scalar_one() or 0
 
                 # Count refined products & variants
-                from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+                from app.models.shopify.product import (
+                    ShopifyProduct,
+                )
                 prod_stmt = select(func.count(ShopifyProduct.id)).where(ShopifyProduct.integration_id == integration_id)
                 prod_count = (await session.execute(prod_stmt)).scalar_one() or 0
 
                 # Count refined inventory locations & levels
-                from app.models.shopify.inventory import ShopifyLocation, ShopifyInventoryLevel
+                from app.models.shopify.inventory import (
+                    ShopifyInventoryLevel,
+                    ShopifyLocation,
+                )
                 loc_stmt = select(func.count(ShopifyLocation.id)).where(ShopifyLocation.integration_id == integration_id)
                 loc_count = (await session.execute(loc_stmt)).scalar_one() or 0
                 
@@ -477,8 +487,10 @@ async def run_reconciliation_task(integration_id: uuid.UUID):
     Background Task: Zero-Drift Reconciliation
     """
     from app.core.db import async_session_factory
-    from app.services.shopify.reconciliation_service import shopify_reconciliation_service
     from app.models.integration import Integration
+    from app.services.shopify.reconciliation_service import (
+        shopify_reconciliation_service,
+    )
     
     logger.info(f"🛡️ Triggering Reconciliation Task for {integration_id}")
     

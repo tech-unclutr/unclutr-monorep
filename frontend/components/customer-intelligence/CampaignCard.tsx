@@ -3,11 +3,9 @@ import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Check, ChevronDown, ChevronUp, Calendar, Clock, Target, Users, Sparkles, BrainCircuit, ShieldAlert, AlignLeft, Mic, FileText, Pencil, Trash2, Briefcase, User, MessageSquare, Gift, Layers, ArrowUpRight } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, Calendar, Clock, Target, Users, Sparkles, BrainCircuit, ShieldAlert, AlignLeft, Mic, FileText, Pencil, Trash2, Briefcase, User, MessageSquare, Gift, Layers, ArrowUpRight, Pause, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { format, formatDistanceToNow } from "date-fns";
-import { formatMinimalTime } from "@/lib/utils";
+import { cn, formatToIST, formatRelativeTime } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -98,7 +96,9 @@ const CampaignCardBase = ({
         'ACTIVE': { label: 'Active', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Clock },
         'FAILED': { label: 'Attention', color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: ShieldAlert },
         'DRAFT': { label: 'Draft', color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: Pencil },
-        'SCHEDULED': { label: 'Scheduled', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: Calendar }
+        'SCHEDULED': { label: 'Scheduled', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: Calendar },
+        'PAUSED': { label: 'Paused', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Pause },
+        'READY': { label: 'Ready', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Play }
     };
 
     const currentStatus = statusConfig[status] || statusConfig['DRAFT'];
@@ -199,32 +199,34 @@ const CampaignCardBase = ({
                         {/* Dates */}
                         {/* Dates */}
                         <div className="flex items-center gap-3 ml-2">
-                            {/* Created At */}
                             <TooltipProvider delayDuration={300}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-1.5 cursor-help group/date opacity-60 hover:opacity-100 transition-opacity">
-                                            <Calendar className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
+                                        <div className="flex items-center gap-1.5 cursor-help opacity-80 hover:opacity-100 transition-opacity">
+                                            <Clock className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
                                             <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
-                                                {created_at ? formatMinimalTime(new Date(created_at)) : 'New'}
+                                                {updated_at ? (
+                                                    <>Last Updated: {formatToIST(updated_at)} <span className="text-zinc-400 dark:text-zinc-600 font-normal">({formatRelativeTime(updated_at)})</span></>
+                                                ) : (
+                                                    <>Created: {created_at ? formatToIST(created_at) : 'New'}</>
+                                                )}
                                             </span>
                                         </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="bottom" className="text-xs bg-zinc-900 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 px-3 py-1.5 rounded-lg shadow-xl">
-                                        <p className="font-medium">Created on {created_at ? format(new Date(created_at), "MMM d, yyyy 'at' h:mm a") : 'N/A'}</p>
+                                    <TooltipContent side="bottom" className="text-xs bg-zinc-900 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 px-4 py-2 rounded-xl shadow-xl space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-3 h-3 text-zinc-400" />
+                                            <p className="font-medium">Created: <span className="text-zinc-400 font-normal">{created_at ? formatToIST(created_at) : 'N/A'}</span></p>
+                                        </div>
+                                        {updated_at && (
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="w-3 h-3 text-zinc-400" />
+                                                <p className="font-medium">Updated: <span className="text-zinc-400 font-normal">{formatToIST(updated_at)}</span></p>
+                                            </div>
+                                        )}
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
-
-                            {/* Updated At - Always show clearly */}
-                            {updated_at && (
-                                <div className="flex items-center gap-1.5 border-l border-zinc-200 dark:border-zinc-800 pl-3 opacity-80 hover:opacity-100 transition-opacity">
-                                    <Clock className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
-                                    <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
-                                        Last Updated: {format(new Date(updated_at), "MMM d, h:mm a")} <span className="text-zinc-400 dark:text-zinc-600 font-normal">({formatDistanceToNow(new Date(updated_at), { addSuffix: true })})</span>
-                                    </span>
-                                </div>
-                            )}
                         </div>
 
                         {/* Expand Toggle Button (Visible on Hover/Expanded) */}
@@ -311,11 +313,25 @@ const CampaignCardBase = ({
                     {/* New Button: Start Campaign (Only visible when collapsed and not expanded) - Taking 4th slot */}
                     {!isExpanded && (
                         <div
-                            className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 p-4 rounded-[24px] text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all duration-300 cursor-pointer group/btn"
+                            className={cn(
+                                "flex items-center justify-center p-4 rounded-[24px] text-white shadow-lg transition-all duration-300 cursor-pointer group/btn",
+                                status === 'DRAFT'
+                                    ? "bg-zinc-600 hover:bg-zinc-700 active:bg-zinc-800 shadow-zinc-500/30 hover:shadow-zinc-500/50"
+                                    : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/30 hover:shadow-indigo-500/50"
+                            )}
                             onClick={handleStartCampaign}
                         >
-                            <span className="text-sm font-bold tracking-wide mr-2">Start Campaign</span>
-                            <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                            <span className="text-sm font-bold tracking-wide mr-2">
+                                {status === 'DRAFT' ? 'Resume Setup' :
+                                    status === 'PAUSED' ? 'Resume' :
+                                        status === 'READY' ? 'Start' :
+                                            'Open'}
+                            </span>
+                            {status === 'DRAFT' ? (
+                                <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                            ) : (
+                                <Play className="w-4 h-4 transition-transform group-hover/btn:scale-110" />
+                            )}
                         </div>
                     )}
                 </div>
@@ -506,11 +522,35 @@ const CampaignCardBase = ({
                                 {/* Action Footer for Expanded Mode */}
                                 <div className="flex items-center justify-between gap-3 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
                                     <Button
-                                        className="rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all font-bold"
+                                        className={cn(
+                                            "rounded-xl h-11 text-white shadow-lg transition-all font-bold",
+                                            status === 'DRAFT'
+                                                ? "bg-zinc-600 hover:bg-zinc-700 shadow-zinc-500/30 hover:shadow-zinc-500/50"
+                                                : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30 hover:shadow-indigo-500/50"
+                                        )}
                                         onClick={handleStartCampaign}
                                     >
-                                        <ArrowUpRight className="w-4 h-4 mr-2" />
-                                        Start Campaign
+                                        {status === 'DRAFT' ? (
+                                            <>
+                                                <ArrowUpRight className="w-4 h-4 mr-2" />
+                                                Resume Setup
+                                            </>
+                                        ) : status === 'PAUSED' ? (
+                                            <>
+                                                <Play className="w-4 h-4 mr-2" />
+                                                Resume Campaign
+                                            </>
+                                        ) : status === 'READY' ? (
+                                            <>
+                                                <Play className="w-4 h-4 mr-2" />
+                                                Open
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Play className="w-4 h-4 mr-2" />
+                                                Start Campaign
+                                            </>
+                                        )}
                                     </Button>
                                     <div className="flex items-center gap-3">
                                         <Button
@@ -528,7 +568,7 @@ const CampaignCardBase = ({
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Edit Campaign
                                         </Button>
-                                        {status === 'DRAFT' && (
+                                        {['DRAFT', 'READY'].includes(status) && (
                                             <Button
                                                 variant="ghost"
                                                 className="rounded-xl h-11 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10 transition-all duration-300"

@@ -1,8 +1,10 @@
-from typing import Optional
-from sqlmodel import Field, SQLModel
-from datetime import datetime
 import uuid
+from datetime import datetime
 from enum import Enum
+from typing import Optional
+
+from sqlmodel import Field, SQLModel
+
 
 class RequestStatus(str, Enum):
     PENDING = "PENDING"
@@ -12,6 +14,7 @@ class RequestStatus(str, Enum):
 
 
 from sqlalchemy import JSON, Column
+
 
 class RequestType(str, Enum):
     DATASOURCE = "DATASOURCE"

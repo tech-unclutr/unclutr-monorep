@@ -6,18 +6,18 @@ Impact: Medium (5-7) - Targeted marketing opportunity
 Category: Growth
 """
 
-from typing import Optional, List, Dict, Any
-from uuid import UUID
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, desc
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
-import math
+from typing import Optional
+from uuid import UUID
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.order import ShopifyOrder
-from app.models.integration import Integration
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.order import ShopifyOrder
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
+
 
 class GeoSpikeGenerator(BaseInsightGenerator):
     """

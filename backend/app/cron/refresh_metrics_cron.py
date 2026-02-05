@@ -1,11 +1,12 @@
 import asyncio
-from datetime import datetime, timezone
-from sqlmodel import select
+
 from loguru import logger
+from sqlmodel import select
 
 from app.core.db import async_session_factory
 from app.models.company import Brand
 from app.services.brand_service import brand_service
+
 
 async def refresh_all_brand_metrics():
     """

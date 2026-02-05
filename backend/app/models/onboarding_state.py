@@ -1,9 +1,10 @@
-from typing import Optional
-from sqlmodel import Field, SQLModel, Column, JSON
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from sqlmodel import JSON, Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class OnboardingStep(int):
     """DEPRECATED: Use page names instead"""

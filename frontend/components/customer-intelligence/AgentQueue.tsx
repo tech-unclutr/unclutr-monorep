@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Radio, Wifi, ChevronRight, MessageSquare } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { Bot, Radio, Wifi, ChevronRight, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { cn, parseAsUTC } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -22,21 +22,26 @@ export interface UpcomingLead {
     cohort?: string;
     avatar_seed: string;
     outcome?: string;
+    scheduled_for?: string;
+    status?: string;
 }
 
 export interface HistoryItem {
     lead_id: string;
     name: string;
-    status: string; // COMPLETED, FAILED, CONSUMED
+    status: string; // COMPLETED, FAILED, CONSUMED, INTENT_YES, etc.
     avatar_seed: string;
     outcome?: string;
+    duration?: number; // Optional as legacy items might not have it
 }
 
 export interface ExecutionEvent {
     id: string;
     timestamp: string;
-    type: 'agent_action' | 'system';
+    type: 'agent_action' | 'system' | 'thought';
     agent_name?: string;
+    agent_id?: string;
+    lead_id?: string;
     message: string;
     status: string;
 }
@@ -48,7 +53,7 @@ interface AgentQueueProps {
     events?: ExecutionEvent[]; // New Prop for Chat Bubbles
     maxConcurrency: number;
     onAgentClick: (agent: AgentStatus | null, agentName: string, index: number) => void;
-    onLeadAction?: (action: 'approve' | 'reschedule', leadId: string) => void;
+    onLeadAction?: (action: 'approve' | 'reschedule' | 'retry', leadId: string) => void;
     onViewFullQueue?: () => void;
 }
 
@@ -59,9 +64,9 @@ export function AgentQueue({ activeAgents, upcomingLeads, historyItems = [], eve
 
         // Realistic name pool for idle lanes
         const FRONTEND_NAMES = [
-            "Alex Rivera", "Sarah Chen", "Rohan Gupta", "Maya Williams",
-            "Jordan Vance", "Priya Sharma", "Vikram Malhotra", "Tara Knight",
-            "Leo Zhang", "Elena Rossi", "Marcus Thorne", "Skylar Page"
+            "Alex", "Sarah", "Rohan", "Maya",
+            "Jordan", "Priya", "Vikram", "Tara",
+            "Leo", "Elena", "Marcus", "Skylar"
         ];
         const defaultName = FRONTEND_NAMES[i % FRONTEND_NAMES.length];
 
@@ -131,15 +136,22 @@ export function AgentQueue({ activeAgents, upcomingLeads, historyItems = [], eve
     );
 }
 
-function AgentLane({ agent, agentName, leads, history, events, index, onClick, onLeadAction }: { agent: AgentStatus | null, agentName: string, leads: UpcomingLead[], history: HistoryItem[], events: ExecutionEvent[], index: number, onClick: () => void, onLeadAction?: (action: 'approve' | 'reschedule', leadId: string) => void }) {
+function AgentLane({ agent, agentName, leads, history, events, index, onClick, onLeadAction }: { agent: AgentStatus | null, agentName: string, leads: UpcomingLead[], history: HistoryItem[], events: ExecutionEvent[], index: number, onClick: () => void, onLeadAction?: (action: 'approve' | 'reschedule' | 'retry', leadId: string) => void }) {
     const isActive = agent && ['speaking', 'connected', 'ringing', 'initiated'].includes(agent.status);
 
     // Filter events for this agent
-    const agentEvents = events.filter(e => e.agent_name === agentName);
+    const agentEvents = events.filter(e => {
+        if (agent && agent.lead_id && e.lead_id && e.lead_id === agent.lead_id) {
+            return true;
+        }
+        return agent?.agent_id
+            ? e.agent_id === agent.agent_id
+            : e.agent_name === agentName;
+    });
     const latestEvent = agentEvents.length > 0 ? agentEvents[0] : null;
 
     // Determine if we should show the bubble (recent event < 8s ago)
-    const showBubble = latestEvent && isActive && (Date.now() - new Date(latestEvent.timestamp).getTime() < 8000);
+    const showBubble = latestEvent && isActive && (Date.now() - parseAsUTC(latestEvent.timestamp).getTime() < 8000);
 
     return (
         <div
@@ -152,52 +164,82 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
             {/* --- HISTORY STREAM (Left Side) --- */}
             <div className="flex-1 flex items-center justify-start gap-3 overflow-hidden opacity-60 hover:opacity-100 transition-opacity">
                 <AnimatePresence mode="popLayout">
-                    {history.map((item, itemIdx) => (
-                        <motion.div
-                            key={`lane-${index}-history-${item.lead_id}-${itemIdx}`}
-                            initial={{ opacity: 0, x: 20, scale: 0.8 }}
-                            animate={{ opacity: 1, x: 0, scale: 0.9 }}
-                            exit={{ opacity: 0, x: -20, scale: 0.8 }}
-                            className="flex flex-col items-center gap-1 min-w-[50px] grayscale hover:grayscale-0 transition-all cursor-pointer"
-                        >
-                            <HoverCard>
-                                <HoverCardTrigger asChild>
-                                    <div className="flex flex-col items-center gap-1">
-                                        <motion.div layoutId={`lane-${index}-history-avatar-${item.lead_id}`}>
-                                            <Avatar
-                                                className={cn(
-                                                    "w-8 h-8 border-2 shadow-sm",
-                                                    item.status === 'COMPLETED' ? "border-emerald-200" : "border-red-200"
-                                                )}
-                                            >
-                                                <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${item.avatar_seed}`} />
-                                                <AvatarFallback className="text-[8px]">{item.name.slice(0, 2)}</AvatarFallback>
-                                            </Avatar>
-                                        </motion.div>
-                                        <span className={cn(
-                                            "text-[9px] font-bold uppercase",
-                                            item.status === 'COMPLETED' ? "text-emerald-500" : "text-red-500"
-                                        )}>{item.status === 'COMPLETED' ? 'DONE' : 'FAIL'}</span>
-                                    </div>
-                                </HoverCardTrigger>
-                                <HoverCardContent side="bottom" align="start">
-                                    <LeadStatusCard
-                                        type="HISTORY"
-                                        lead={{
-                                            id: item.lead_id,
-                                            name: item.name,
-                                            avatar_seed: item.avatar_seed,
-                                            status: item.status,
-                                            duration: 124
-                                        }}
-                                        onAction={onLeadAction}
-                                    />
-                                </HoverCardContent>
-                            </HoverCard>
-                        </motion.div>
-                    ))}
+                    {history.map((item, itemIdx) => {
+                        // Helper for mini-status
+                        const s = (item.status || '').toUpperCase();
+                        let statusColor = "text-red-500";
+                        let borderColor = "border-red-200";
+                        let label = "FAIL";
+
+                        if (['COMPLETED', 'INTENT_YES', 'SCHEDULED'].includes(s)) {
+                            statusColor = "text-emerald-500";
+                            borderColor = "border-emerald-200/50 dark:border-emerald-500/20";
+                            label = "DONE";
+                        } else if (['PENDING_AVAILABILITY', 'SCHEDULED_CHECK'].includes(s)) {
+                            statusColor = "text-orange-500";
+                            borderColor = "border-orange-200/50 dark:border-orange-500/20";
+                            label = "REVIEW";
+                        } else if (s === 'AMBIGUOUS') {
+                            statusColor = "text-orange-500";
+                            borderColor = "border-orange-200/50 dark:border-orange-500/20";
+                            label = "UNCLEAR";
+                        } else if (['VOICEMAIL', 'NO_ANSWER', 'BUSY'].includes(s)) {
+                            statusColor = "text-amber-500";
+                            borderColor = "border-amber-200/50 dark:border-amber-500/20";
+                            label = "MISS";
+                        } else if (['INITIATED', 'RINGING', 'CONNECTED', 'IN-PROGRESS', 'SPEAKING'].includes(s)) {
+                            statusColor = "text-blue-500";
+                            borderColor = "border-blue-200/50 dark:border-blue-500/20";
+                            label = "LIVE";
+                        }
+
+                        return (
+                            <motion.div
+                                key={`lane-${index}-history-${item.lead_id}-${itemIdx}`}
+                                initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                                animate={{ opacity: 1, x: 0, scale: 0.9 }}
+                                exit={{ opacity: 0, x: -20, scale: 0.8 }}
+                                className="flex flex-col items-center gap-1 min-w-[50px] grayscale hover:grayscale-0 transition-all cursor-pointer"
+                            >
+                                <HoverCard>
+                                    <HoverCardTrigger asChild>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <motion.div layoutId={`lane-${index}-history-avatar-${item.lead_id}`}>
+                                                <Avatar
+                                                    className={cn(
+                                                        "w-8 h-8 border-2 shadow-sm",
+                                                        borderColor
+                                                    )}
+                                                >
+                                                    <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${item.avatar_seed}`} />
+                                                    <AvatarFallback className="text-[8px]">{item.name.slice(0, 2)}</AvatarFallback>
+                                                </Avatar>
+                                            </motion.div>
+                                            <span className={cn(
+                                                "text-[9px] font-bold uppercase",
+                                                statusColor
+                                            )}>{label}</span>
+                                        </div>
+                                    </HoverCardTrigger>
+                                    <HoverCardContent side="bottom" align="start">
+                                        <LeadStatusCard
+                                            type="HISTORY"
+                                            lead={{
+                                                id: item.lead_id,
+                                                name: item.name,
+                                                avatar_seed: item.avatar_seed,
+                                                status: item.status,
+                                                duration: item.duration || 0
+                                            }}
+                                            onAction={onLeadAction}
+                                        />
+                                    </HoverCardContent>
+                                </HoverCard>
+                            </motion.div>
+                        );
+                    })}
                 </AnimatePresence>
-            </div>
+            </div> // End History Stream Wrapper
 
             {/* --- AGENT (Center) --- */}
             <div className="relative z-10 mx-4 flex-shrink-0">
@@ -263,7 +305,7 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
                     </HoverCard>
 
                     <div className={cn(
-                        "absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-zinc-950 flex items-center justify-center text-[10px] text-white shadow-sm",
+                        "absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-zinc-950 flex items-center justify-center text-[10px] text-white shadow-sm z-20",
                         agent?.status === 'speaking' ? "bg-indigo-500" :
                             agent?.status === 'connected' ? "bg-emerald-500" :
                                 agent?.status === 'ringing' ? "bg-amber-500" :
@@ -271,8 +313,9 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
                                         "bg-zinc-300 dark:bg-zinc-700"
                     )}>
                         {agent?.status === 'speaking' ? <Radio className="w-2.5 h-2.5" /> :
-                            agent?.status === 'ringing' ? <Wifi className="w-2.5 h-2.5" /> :
-                                <Bot className="w-2.5 h-2.5" />}
+                            agent?.status === 'connected' ? <CheckCircle2 className="w-2.5 h-2.5" /> :
+                                agent?.status === 'ringing' ? <Wifi className="w-2.5 h-2.5" /> :
+                                    <Bot className="w-2.5 h-2.5" />}
                     </div>
 
                     <div className="flex flex-col items-center">

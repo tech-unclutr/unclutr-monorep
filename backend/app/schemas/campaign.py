@@ -1,6 +1,7 @@
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
-from uuid import UUID
+
 
 class CampaignContextUpdate(BaseModel):
     brand_context: Optional[str] = None
@@ -32,3 +33,24 @@ class CampaignSettingsUpdate(CampaignContextUpdate, CampaignExecutionUpdate):
 class CampaignContextSuggestions(BaseModel):
     brand_context: str
     team_member_context: str
+
+
+class CampaignLeadBase(BaseModel):
+    customer_name: str
+    contact_number: str
+    cohort: Optional[str] = None
+    meta_data: Optional[Dict[str, Any]] = {}
+
+class CreateFromCsvRequest(BaseModel):
+    campaign_name: Optional[str] = None
+    leads: List[CampaignLeadBase]
+    force_create: bool = False
+
+class CreateFullCampaignRequest(BaseModel):
+    campaign_name: str
+    leads: List[CampaignLeadBase]
+    settings: CampaignSettingsUpdate
+    force_create: bool = False
+
+class ReplaceLeadsRequest(BaseModel):
+    leads: List[CampaignLeadBase]

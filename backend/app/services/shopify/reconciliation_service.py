@@ -1,20 +1,20 @@
 import asyncio
-from datetime import datetime, timezone
-from typing import List, Dict, Set, Optional, Tuple
-from uuid import UUID
-from loguru import logger
-from sqlmodel import select, func
-from sqlmodel.ext.asyncio.session import AsyncSession
 import re
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
+
+import httpx
+from loguru import logger
+from sqlmodel import func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.integration import Integration
-from app.models.shopify.order import ShopifyOrder
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
-from app.models.shopify.inventory import ShopifyInventoryLevel
 from app.models.shopify.customer import ShopifyCustomer
-from app.services.shopify.sync_service import shopify_sync_service
+from app.models.shopify.inventory import ShopifyInventoryLevel
+from app.models.shopify.order import ShopifyOrder
+from app.models.shopify.product import ShopifyProduct
 from app.services.shopify.oauth_service import shopify_oauth_service
-import httpx
+
 
 class ShopifyReconciliationService:
     """
@@ -97,9 +97,9 @@ class ShopifyReconciliationService:
             # Re-fetch integration to ensure we have latest metadata
             current_integration = await session.get(Integration, integration_id)
             if current_integration:
+                from app.models.shopify.inventory import ShopifyInventoryLevel
                 from app.models.shopify.order import ShopifyOrder
                 from app.models.shopify.product import ShopifyProduct
-                from app.models.shopify.inventory import ShopifyInventoryLevel
                 
                 # Count refined orders
                 orders_count = (await session.execute(
@@ -338,7 +338,9 @@ class ShopifyReconciliationService:
                      if resp.status_code == 200:
                          levels = resp.json().get("inventory_levels", [])
                          # Ingest
-                         from app.services.shopify.sync_service import shopify_sync_service
+                         from app.services.shopify.sync_service import (
+                             shopify_sync_service,
+                         )
                          for lvl in levels:
                              # We must treat this as a virtual 'inventory_level' object for the sync service
                              # or call a specific method if exists.
@@ -348,7 +350,9 @@ class ShopifyReconciliationService:
                          # Trigger refinement? 
                          # Usually refinement is async. We can manually trigger or trust background worker.
                          # For "Reconciliation", immediate is better.
-                         from app.services.shopify.refinement_service import shopify_refinement_service
+                         from app.services.shopify.refinement_service import (
+                             shopify_refinement_service,
+                         )
                          await shopify_refinement_service.process_pending_records(session, integration.id)
                          
                  except Exception as e:
@@ -386,7 +390,7 @@ class ShopifyReconciliationService:
         Audits Customer records.
         """
         integration_id = integration.id
-        logger.info(f"🔍 Auditing Customers...")
+        logger.info("🔍 Auditing Customers...")
         
         # 1. Fetch Remote State (IDs + Timestamps)
         # Reuse _fetch_remote_map
@@ -457,7 +461,7 @@ class ShopifyReconciliationService:
                             headers["X-Shopify-Access-Token"] = token
                             
                             # Retry immediately with new token
-                            logger.info(f"DEBUG: Retrying with new token...")
+                            logger.info("DEBUG: Retrying with new token...")
                             resp = await client.get(url, headers=headers, params=params)
                         except Exception as e:
                             logger.error(f"Token refresh failed: {e}")
@@ -628,7 +632,9 @@ class ShopifyReconciliationService:
                              await self._delete_zombies(session, integration, resource_type, list(missing_in_batch))
                         
                         # INGEST
-                        from app.services.shopify.sync_service import shopify_sync_service
+                        from app.services.shopify.sync_service import (
+                            shopify_sync_service,
+                        )
                         for item in items:
                             await shopify_sync_service.ingest_raw_object(
                                 session, 
@@ -638,7 +644,9 @@ class ShopifyReconciliationService:
                             )
                         
                         # TRIGGER REFINEMENT (Immediate)
-                        from app.services.shopify.refinement_service import shopify_refinement_service
+                        from app.services.shopify.refinement_service import (
+                            shopify_refinement_service,
+                        )
                         await shopify_refinement_service.process_pending_records(session, integration.id)
                         
                         logger.info(f"✅ Healed {len(items)} items via Ingest Pipeline.")

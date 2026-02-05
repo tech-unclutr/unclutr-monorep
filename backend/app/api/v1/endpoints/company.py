@@ -1,6 +1,7 @@
 from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession 
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import get_session
 from app.core.security import get_current_user
@@ -28,8 +29,9 @@ async def read_company_me(
 
     if not current_user.current_company_id:
         # Fallback: Check for any membership
-        from app.models.iam import CompanyMembership
         from sqlmodel import select
+
+        from app.models.iam import CompanyMembership
         
         stmt = select(CompanyMembership).where(CompanyMembership.user_id == user_id)
         membership = (await session.exec(stmt)).first()

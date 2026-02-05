@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import List, Dict, Any
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import get_session
 from app.core.security import get_current_user
-from app.services.analytics.service import AnalyticsService
 from app.models.integration import Integration
-from app.models.integration_analytics import IntegrationDailyMetric
-from sqlmodel import select
+from app.services.analytics.service import AnalyticsService
 
 router = APIRouter()
 

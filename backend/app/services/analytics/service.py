@@ -1,9 +1,9 @@
 from datetime import date, timedelta
+from typing import Any, Dict, List
 from uuid import UUID
-from typing import List, Dict, Any
-from sqlmodel import select, and_
+
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from loguru import logger
 
 from app.models.integration import Integration
 from app.models.integration_analytics import IntegrationDailyMetric

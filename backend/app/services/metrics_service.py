@@ -1,21 +1,17 @@
-from typing import Optional, List, Dict, Any
-from datetime import datetime, date, timedelta
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, func, and_, or_
-from app.models.metrics import (
-    UserMetrics,
-    OnboardingMetrics,
-    IntegrationMetrics,
-    BusinessMetrics,
-    SystemMetrics
-)
-from app.models.user import User
-from app.models.company import Company, Brand, Workspace
-from app.models.integration import Integration
-from app.models.onboarding_state import OnboardingState
-from app.models.audit import AuditTrail
-from app.models.iam import CompanyMembership, WorkspaceMembership
 import logging
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List
+
+from sqlmodel import and_, func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.models.audit import AuditTrail
+from app.models.company import Brand, Company, Workspace
+from app.models.iam import CompanyMembership
+from app.models.integration import Integration
+from app.models.metrics import BusinessMetrics, OnboardingMetrics, UserMetrics
+from app.models.onboarding_state import OnboardingState
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 

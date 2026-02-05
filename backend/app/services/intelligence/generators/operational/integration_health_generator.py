@@ -7,18 +7,18 @@ Category: Operational
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from uuid import UUID
+
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.integration import Integration
 from app.models.company import Workspace
-
-
 from app.models.datasource import DataSource
+from app.models.integration import Integration
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
+
 
 class IntegrationHealthGenerator(BaseInsightGenerator):
     """

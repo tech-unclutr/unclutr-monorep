@@ -1,16 +1,23 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
-from pathlib import Path
-from fastapi import FastAPI, Request, Depends
+
+from fastapi import FastAPI, Request
+
+from app.core.config import settings
+
+# OAuth Insecure Transport for Development (Required for ngrok HTTP -> HTTPS)
+if not settings.is_production:
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    # logger.info("OAuth: OAUTHLIB_INSECURE_TRANSPORT set to 1 for development")
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
-from app.core.db import init_db, get_session
+
+from app.core.db import get_session, init_db
+from app.core.version import APP_VERSION
 from app.models.company import Company
 from app.services.shopify.oauth_service import shopify_oauth_service
-
-from app.core.version import APP_VERSION
 
 # Force reload to clear SQLAlchemy metadata cache
 
@@ -21,7 +28,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     
     # Start Background Reconciliation (Layer 3 - Scheduler)
-    from app.services.scheduler import start_scheduler, shutdown_scheduler
+    from app.services.scheduler import shutdown_scheduler, start_scheduler
     start_scheduler()
     
     yield
@@ -32,10 +39,11 @@ async def run_reconciliation_worker():
     """
     Background worker that runs every 6 hours to reconcile all active integrations.
     """
+    from sqlmodel import select
+
+    from app.core.db import get_session
     from app.models.integration import Integration, IntegrationStatus
     from app.services.shopify.tasks import run_shopify_sync_task
-    from sqlmodel import select
-    from app.core.db import get_session
     
     logger.info("Reconciliation worker started.")
     
@@ -91,7 +99,6 @@ To test protected endpoints, click the **Authorize** button:
     lifespan=lifespan
 )
 
-from fastapi.responses import HTMLResponse
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -170,8 +177,8 @@ async def root(request: Request):
         session_gen = get_session()
         session = await session_gen.__anext__()
         try:
+
             from app.models.integration import Integration
-            from datetime import datetime
             # Query all integrations and filter in Python
             stmt = select(Integration).order_by(Integration.updated_at.desc())
             result = await session.execute(stmt)
@@ -181,7 +188,8 @@ async def root(request: Request):
                 if integration.credentials and integration.credentials.get("shop") == shop:
                     if integration.updated_at:
                         # Convert to IST (UTC+5:30) and format as human-readable date/time
-                        from datetime import timedelta, timezone as tz
+                        from datetime import timedelta
+                        from datetime import timezone as tz
                         ist = tz(timedelta(hours=5, minutes=30))
                         ist_time = integration.updated_at.astimezone(ist)
                         last_installed = ist_time.strftime("%b %d, %Y at %I:%M %p IST")
@@ -213,7 +221,7 @@ async def root(request: Request):
         </head>
         <body>
             <div class="container">
-                <h1>🎯 Unclutr.ai</h1>
+                <h1>🎯 Unclutr</h1>
                 <p>Shopify Integration Active</p>
                 <div class="version">Last Installed: {display_info}</div>
                 <div class="status">● Connected</div>
@@ -237,19 +245,21 @@ async def root(request: Request):
     </html>
     """
 
+import logging
+
 from app.api.v1.api import api_router
 from app.core.config import settings
-import logging
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Rate Limiting
+import traceback
+
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from app.core.limiter import limiter
 
-import traceback
+from app.core.limiter import limiter
 
 if settings.RATE_LIMIT_ENABLED:
     app.state.limiter = limiter
@@ -266,9 +276,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     This is CRITICAL for CORS, as generic server crashes often omit CORS headers,
     leading to confusing 'CORS policy' errors in the browser.
     """
-    logger.error(f"🔥 Global Exception caught: {str(exc)}")
+    logger.error(f"🔥 Global Exception caught in {request.method} {request.url.path}: {str(exc)}")
     logger.error(traceback.format_exc())
     
+    try:
+        with open("debug_sync_error.log", "a") as f:
+            f.write(f"\n--- Global Error {request.url.path} ---\n")
+            f.write(traceback.format_exc())
+    except Exception:
+        pass
+
     # In development, return the actual error. In production, be generic.
     error_detail = str(exc) if not settings.is_production else "An unexpected internal error occurred."
     
@@ -320,9 +337,10 @@ logger.info(f"CORS origins (static): {origins}")
 # (Moved CORSMiddleware to end to ensure it runs first)
 
 # Sentry & Logging Middleware
-from app.core.logging_middleware import RequestLoggingMiddleware
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+from app.core.logging_middleware import RequestLoggingMiddleware
 
 if settings.SENTRY_DSN and settings.is_production:
     sentry_sdk.init(
@@ -337,8 +355,9 @@ else:
     logger.warning("Sentry disabled (not production) or DSN not configured")
 
 
-from app.middleware.tenant_middleware import TenantMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+
+from app.middleware.tenant_middleware import TenantMiddleware
 
 if settings.is_production:
     app.add_middleware(HTTPSRedirectMiddleware)
@@ -362,6 +381,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Shopify Sub-App (Separate Documentation Page)
 from app.api.v1.endpoints.shopify.app import shopify_app
+
 # Mount at /api/v1/integrations/shopify
 # This preserves the paths while providing a separate /docs at this URL
 app.mount(f"{settings.API_V1_STR}/integrations/shopify", shopify_app)

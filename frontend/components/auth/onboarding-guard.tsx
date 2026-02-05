@@ -28,6 +28,12 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     }, [loading, isSyncing, isAuthenticated, onboardingCompleted]);
 
     useEffect(() => {
+        // Using a ref to track if we've already redirected to prevent loops would be good, 
+        // but for now let's just stabilize the effect.
+
+        // If we're already on the onboarding page, don't do anything
+        if (pathname?.startsWith("/onboarding")) return;
+
         console.log("DEBUG: OnboardingGuard - State Check:", {
             isAuthenticated,
             onboardingCompleted,
@@ -38,16 +44,22 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
             timedOut
         });
 
-        // If we're already on the onboarding page, don't do anything
-        if (pathname === "/onboarding") return;
-
         // If authenticated but onboarding is not completed, redirect to onboarding
         // ONLY if we are NOT currently syncing AND NOT skipped
         if (!loading && !isSyncing && isAuthenticated && onboardingCompleted === false && !hasSkippedOnboarding) {
             console.log("DEBUG: OnboardingGuard - User not onboarded, redirecting to /onboarding");
             router.replace("/onboarding");
         }
-    }, [isAuthenticated, onboardingCompleted, loading, isSyncing, hasSkippedOnboarding, pathname, router, timedOut]);
+    }, [
+        isAuthenticated,
+        onboardingCompleted,
+        loading,
+        isSyncing,
+        hasSkippedOnboarding,
+        pathname,
+        router,
+        timedOut
+    ]);
 
     // While loading auth or onboarding status, show the global loader
     // But if timed out, let them through (they might experience errors later, but better than a hang)

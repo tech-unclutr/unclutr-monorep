@@ -3,6 +3,12 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Activity, Radio, CheckCircle2, AlertCircle, Clock, Zap } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getAuthToken } from "@/lib/auth"
 
 interface ActivityLog {
@@ -127,7 +133,7 @@ export function ActivityFeed({ integrationId, open, companyId, workspaceId, onSy
         // Ensure the string is treated as UTC if it doesn't have a timezone suffix
         const isoString = (dateString.endsWith('Z') || dateString.includes('+')) ? dateString : dateString + 'Z';
         const date = new Date(isoString)
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        return date.toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit' })
     }
 
     return (
@@ -240,9 +246,18 @@ export function ActivityFeed({ integrationId, open, companyId, workspaceId, onSy
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <span className="block text-[10px] font-medium text-gray-500 dark:text-zinc-400">
-                                                {formatTime(log.timestamp)}
-                                            </span>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span className="block text-[10px] font-medium text-gray-500 dark:text-zinc-400 cursor-help">
+                                                            {formatTime(log.timestamp)}
+                                                        </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="z-[9999]" side="top">
+                                                        <p>{new Date(log.timestamp).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                             <span className="text-[9px] text-gray-400 dark:text-zinc-600">
                                                 {timeAgo(log.timestamp)}
                                             </span>

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { format } from 'date-fns';
 import { CallDetailsModal } from './CallDetailsModal';
-import { Download, Filter } from 'lucide-react';
+import { Download, Filter, CheckCircle2, XCircle, Phone, Clock, PhoneCall } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -14,6 +14,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useCampaignWebSocket } from "@/hooks/use-campaign-websocket";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 interface CallLog {
     id: string;
@@ -38,6 +40,27 @@ interface CallLog {
     recording_url?: string;
     usage_metadata?: any;
     telephony_provider?: string;
+    // [NEW] Context-aware fields
+    sentiment?: {
+        emoji: string;
+        label: string;
+        score: number;
+    };
+    agreement_status?: {
+        agreed: boolean;
+        status: "yes" | "no" | "unclear";
+        confidence: "high" | "medium" | "low";
+    };
+    preferred_slot?: {
+        requested: boolean;
+        start_time?: string;
+        end_time?: string;
+        day?: string;
+        is_outside_window: boolean;
+    };
+    should_copy_to_queue?: boolean;
+    copied_to_queue_at?: string;
+    call_log_id?: string;
 }
 
 interface CallLogTableProps {
@@ -45,6 +68,7 @@ interface CallLogTableProps {
 }
 
 export default function CallLogTable({ campaignId }: CallLogTableProps) {
+    const { companyId } = useAuth();
     const [logs, setLogs] = useState<CallLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'live' | 'history'>('live');
@@ -67,7 +91,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
             log.lead.number,
             log.status,
             log.duration,
-            log.total_cost,
+            (log.total_cost * 0.9).toFixed(4),
             log.outcome || "",
             log.termination_reason || ""
         ]);
@@ -93,9 +117,10 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
     };
 
     const fetchLogs = async () => {
+        if (!companyId) return;
         setLoading(true);
         try {
-            const res: any = await api.get(`/execution/campaign/${campaignId}/logs?page=${page}&page_size=20`);
+            const res: any = await api.get(`/execution/campaign/${campaignId}/logs?page=${page}&page_size=20`, { "X-Company-ID": companyId });
             console.log("CallLogTable: logs response", res);
 
             // Handle different possible response structures
@@ -163,7 +188,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
         fetchLogs();
         const interval = setInterval(fetchLogs, 10000); // Polling for updates
         return () => clearInterval(interval);
-    }, [campaignId, page]);
+    }, [campaignId, page, companyId]);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -171,13 +196,13 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'completed': return 'text-green-400 bg-green-400/10 border-green-400/20';
-            case 'failed': return 'text-red-400 bg-red-400/10 border-red-400/20';
-            case 'connected': return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
-            case 'initiated': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
-            default: return 'text-gray-400 bg-gray-400/10 border-gray-400/20';
+    const getStatusInfo = (status: string) => {
+        switch (status?.toLowerCase()) {
+            case 'completed': return { color: 'text-green-400 bg-green-400/10 border-green-400/20', Icon: CheckCircle2 };
+            case 'failed': return { color: 'text-red-400 bg-red-400/10 border-red-400/20', Icon: XCircle };
+            case 'connected': return { color: 'text-blue-400 bg-blue-400/10 border-blue-400/20', Icon: PhoneCall };
+            case 'initiated': return { color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20', Icon: Phone };
+            default: return { color: 'text-gray-400 bg-gray-400/10 border-gray-400/20', Icon: Clock };
         }
     };
 
@@ -192,6 +217,64 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                 <span className="text-xs text-gray-600">{format(date, 'yyyy')}</span>
             </div>
         );
+    };
+
+    // [NEW] Helper function to handle copy to queue
+    const handleCopyToQueue = async (log: CallLog) => {
+        if (!companyId) return;
+
+        try {
+            await api.post(
+                `/execution/campaign/${campaignId}/lead/${log.lead.id}/copy-to-queue`,
+                {
+                    call_log_id: log.call_log_id || log.id,
+                    preferred_slot: log.preferred_slot
+                },
+                { "X-Company-ID": companyId }
+            );
+
+            toast.success("Lead copied to queue", {
+                description: `${log.lead.name} has been added to your call queue`
+            });
+
+            // Refresh logs to update UI
+            fetchLogs();
+        } catch (error: any) {
+            console.error("Failed to copy to queue:", error);
+            toast.error("Failed to copy lead", {
+                description: error.response?.data?.detail || "Please try again"
+            });
+        }
+    };
+
+    // [NEW] Helper function to handle calendar booking
+    const handleBookCall = async (log: CallLog) => {
+        if (!log.preferred_slot || !log.preferred_slot.start_time) return;
+        if (!companyId) return;
+
+        try {
+            const response = await api.post(
+                `/execution/campaign/${campaignId}/lead/${log.lead.id}/book-call`,
+                {
+                    preferred_start_time: log.preferred_slot.start_time,
+                    preferred_end_time: log.preferred_slot.end_time,
+                },
+                { "X-Company-ID": companyId }
+            );
+
+            if (response.calendar_link) {
+                // Open calendar link in new tab
+                window.open(response.calendar_link, '_blank');
+                toast.success("Calendar event created", {
+                    description: "Click to add to your calendar"
+                });
+            }
+        } catch (error: any) {
+            console.error("Failed to create calendar booking:", error);
+            toast.error("Failed to create booking", {
+                description: error.response?.data?.detail || "Please try again"
+            });
+        }
     };
 
     return (
@@ -283,13 +366,14 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                             <th className="px-6 py-3 tracking-wider">Duration</th>
                             <th className="px-6 py-3 tracking-wider">Reason</th>
                             <th className="px-6 py-3 tracking-wider">Outcome</th>
-                            <th className="px-6 py-3 tracking-wider text-right">Cost</th>
+                            <th className="px-6 py-3 tracking-wider">Context</th>
+                            <th className="px-6 py-3 tracking-wider text-right">Cost (INR)</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {displayedLogs.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                     No calls recorded yet.
                                 </td>
                             </tr>
@@ -305,15 +389,29 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                     {formatCallTime(log.created_at)}
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm text-white font-medium">{log.lead.name}</span>
-                                        <span className="text-xs text-gray-500">{log.lead.cohort === 'Default' ? 'General Audience' : (log.lead.cohort || 'General Audience')}</span>
+                                    <div className="flex items-center gap-2">
+                                        {/* Sentiment Emoji */}
+                                        {log.sentiment && (
+                                            <span className="text-lg" title={log.sentiment.label}>
+                                                {log.sentiment.emoji}
+                                            </span>
+                                        )}
+                                        <div className="flex flex-col">
+                                            <span className="text-sm text-white font-medium">{log.lead.name}</span>
+                                            <span className="text-xs text-gray-500">{log.lead.cohort === 'Default' ? 'General Audience' : (log.lead.cohort || 'General Audience')}</span>
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap">
-                                    <span className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(log.status)}`}>
-                                        {log.status}
-                                    </span>
+                                    {(() => {
+                                        const { color, Icon } = getStatusInfo(log.status);
+                                        return (
+                                            <span className={`px-2 py-0.5 rounded text-xs border flex items-center gap-1 w-fit ${color}`}>
+                                                <Icon className="w-3 h-3" />
+                                                {log.status}
+                                            </span>
+                                        );
+                                    })()}
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-300 font-mono">
                                     {formatDuration(log.duration)}
@@ -330,8 +428,68 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                         {log.outcome || '-'}
                                     </span>
                                 </td>
+                                {/* NEW: Context Column */}
+                                <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex flex-col gap-1.5 min-w-[180px]">
+                                        {/* Agreement Badge */}
+                                        {log.agreement_status?.status === 'yes' && (
+                                            <span className={`px-2 py-0.5 rounded text-xs border inline-flex items-center gap-1 w-fit ${log.agreement_status.confidence === 'high'
+                                                ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                                : 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                }`}>
+                                                ✓ Agreed ({log.agreement_status.confidence})
+                                            </span>
+                                        )}
+                                        {log.agreement_status?.status === 'no' && (
+                                            <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30 inline-flex items-center gap-1 w-fit">
+                                                ✗ Declined
+                                            </span>
+                                        )}
+
+                                        {/* Preferred Slot */}
+                                        {log.preferred_slot?.requested && log.preferred_slot.start_time && (
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-xs text-gray-400">
+                                                    📅 {format(new Date(log.preferred_slot.start_time), 'MMM d, h:mm a')}
+                                                </span>
+                                                {log.preferred_slot.is_outside_window && (
+                                                    <span className="px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 inline-flex items-center gap-1 w-fit">
+                                                        ⚠️ Out of Window
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Copy to Queue Button */}
+                                        {log.should_copy_to_queue && !log.copied_to_queue_at && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleCopyToQueue(log); }}
+                                                className="px-2 py-1 text-xs bg-indigo-500/20 text-indigo-400 rounded hover:bg-indigo-500/30 transition-colors border border-indigo-500/30 w-fit"
+                                            >
+                                                📋 Copy to Queue
+                                            </button>
+                                        )}
+
+                                        {/* Already in Queue Badge */}
+                                        {log.copied_to_queue_at && (
+                                            <span className="text-xs text-gray-500 inline-flex items-center gap-1">
+                                                ✓ In Queue
+                                            </span>
+                                        )}
+
+                                        {/* Book Call Button */}
+                                        {log.preferred_slot?.is_outside_window && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleBookCall(log); }}
+                                                className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors border border-blue-500/30 w-fit"
+                                            >
+                                                📅 Book Call
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
                                 <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-400 font-mono">
-                                    ${log.total_cost.toFixed(4)}
+                                    ₹{(log.total_cost * 0.9).toFixed(2)}
                                 </td>
                             </tr>
                         ))}

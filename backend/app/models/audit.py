@@ -1,10 +1,12 @@
-from typing import Optional, Any
-from sqlmodel import Field, SQLModel, Column, JSON
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Optional
+
+from sqlmodel import JSON, Column, Field, SQLModel
+
 
 class AuditTrail(SQLModel, table=True):
-    __tablename__ = "audit_trail"
+    __tablename__ = "audittrail"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     company_id: uuid.UUID = Field(index=True)
     brand_id: Optional[uuid.UUID] = Field(None, index=True)

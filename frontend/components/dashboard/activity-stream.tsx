@@ -89,7 +89,7 @@ export function ActivityStream() {
                                         <div className="flex items-center justify-between mb-1">
                                             <span className="text-sm font-bold text-white/90 font-mono tracking-tight">{log.action}</span>
                                             <span className="text-[10px] text-white/20 font-mono">
-                                                {new Date(log.created_at).toLocaleTimeString()}
+                                                {new Date(log.created_at).toLocaleTimeString([], { hour12: true })}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-3 text-xs text-white/40">

@@ -1,7 +1,9 @@
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Relationship, Column
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel
+
 
 class Cohort(SQLModel, table=True):
     __tablename__ = "cohorts"
@@ -17,11 +19,11 @@ class Cohort(SQLModel, table=True):
     min_ready_floor: int = Field(default=1) # Minimum number of READY items to maintain
     
     # Specific Configs
-    preliminary_questions: List[str] = Field(default=[], sa_column=Column(JSONB))
+    preliminary_questions: List[str] = Field(default=[], sa_column=Column(JSON))
     incentive: Optional[str] = Field(default=None)
     
     # Metadata
-    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
 
     # Relationships
     # campaign: "Campaign" = Relationship(back_populates="cohorts")

@@ -1,20 +1,20 @@
-import logging
-import re
 import json
-from uuid import UUID, uuid4
-from typing import List, Dict, Any
+import logging
 from datetime import datetime
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.future import select
+from typing import Any, Dict, List
+from uuid import UUID, uuid4
+
 from sqlalchemy import delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.campaign import Campaign
-from app.models.campaign_lead import CampaignLead
-from app.models.campaign_goal_detail import CampaignGoalDetail
-from app.models.archived_campaign_lead import ArchivedCampaignLead
 from app.models.archived_campaign import ArchivedCampaign
-from app.models.interview import InterviewSession
+from app.models.archived_campaign_lead import ArchivedCampaignLead
+from app.models.campaign import Campaign
+from app.models.campaign_goal_detail import CampaignGoalDetail
+from app.models.campaign_lead import CampaignLead
+
 # from app.services.intelligence.mock_bolna_service import mock_bolna_service
 from app.services.intelligence.llm_service import llm_service
 
@@ -545,8 +545,9 @@ class CampaignService:
         Generate a 2-line brand description using Gemini based on company profile.
         Includes caching to prevent repeated slow LLM calls.
         """
-        from app.models.company import Company
         import time
+
+        from app.models.company import Company
         
         # 1. Check Cache first
         cache_key = f"brand_context_{company_id}"
@@ -557,8 +558,9 @@ class CampaignService:
 
         start_time = time.time()
         # Fetch company and its brands
-        from app.models.company import Brand
         from sqlalchemy.future import select
+
+        from app.models.company import Brand
         
         # We fetch them separately or together
         company = await session.get(Company, company_id)
@@ -652,8 +654,9 @@ class CampaignService:
         if not campaign:
             raise ValueError("Campaign not found")
             
-        from app.models.user import User
         import asyncio
+
+        from app.models.user import User
 
         # Run brand context and user fetch in parallel
         brand_context_task = self.generate_brand_context(session, campaign.company_id)
@@ -682,8 +685,9 @@ class CampaignService:
         """
         Fetch unique cohorts and their lead counts from campaign leads.
         """
-        from app.models.campaign_lead import CampaignLead
         from sqlalchemy import func
+
+        from app.models.campaign_lead import CampaignLead
         
         # Get counts per cohort
         stmt = select(CampaignLead.cohort, func.count(CampaignLead.id)).where(
@@ -799,7 +803,7 @@ class CampaignService:
         
         if not campaign:
             logger.warning(f"DEBUG: Campaign {campaign_id} NOT FOUND in DB.")
-            print(f"DEBUG: Campaign not found")
+            print("DEBUG: Campaign not found")
             return False
             
         print(f"DEBUG: Campaign Found. Owner: {campaign.user_id}, Company: {campaign.company_id}")
@@ -911,6 +915,18 @@ class CampaignService:
                 {"campaign_id": campaign_id}
             )
 
+            # 3b. Delete call raw data
+            await session.execute(
+                text("DELETE FROM call_raw_data WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
+            # 3c. Delete campaign events
+            await session.execute(
+                text("DELETE FROM campaign_events WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
             # 4. Delete leads
             logger.info("DEBUG: Executing RAW SQL DELETE for Leads")
             await session.execute(
@@ -947,12 +963,12 @@ class CampaignService:
             check_campaign = await session.get(Campaign, campaign_id)
             if check_campaign:
                  logger.error(f"CRITICAL: Campaign {campaign_id} STILL EXISTS after commit!")
-                 print(f"CRITICAL: Campaign still exists in DB!")
+                 print("CRITICAL: Campaign still exists in DB!")
             else:
-                 print(f"DEBUG: Verified - Campaign is gone.")
+                 print("DEBUG: Verified - Campaign is gone.")
 
             logger.info(f"DEBUG: Successfully deleted campaign {campaign_id} (RAW SQL)")
-            print(f"DEBUG: Commit successful (RAW SQL)")
+            print("DEBUG: Commit successful (RAW SQL)")
             return True
             
         except Exception as e:
@@ -1114,7 +1130,9 @@ class CampaignService:
         company = await session.get(Company, campaign.company_id)
         timezone_str = company.timezone if company else "UTC"
 
-        from app.services.intelligence.google_calendar_service import google_calendar_service
+        from app.services.intelligence.google_calendar_service import (
+            google_calendar_service,
+        )
         events_created = await google_calendar_service.sync_campaign_windows(conn, campaign, timezone_str=timezone_str)
         
         logger.info(f"Successfully created {events_created} events for campaign {campaign_id}")
@@ -1130,11 +1148,12 @@ class CampaignService:
         Replaces leads in a campaign while preserving those already called.
         Handles cohort updates for existing leads.
         """
-        from sqlalchemy import delete, select, insert
-        from app.models.call_log import CallLog
-        from app.models.bolna_execution_map import BolnaExecutionMap
-        from app.models.queue_item import QueueItem
+        from sqlalchemy import insert, select
+
         from app.models.archived_campaign_lead import ArchivedCampaignLead
+        from app.models.bolna_execution_map import BolnaExecutionMap
+        from app.models.call_log import CallLog
+        from app.models.queue_item import QueueItem
         
         logger.info(f"Refined lead replacement for campaign {campaign_id}. New input count: {len(leads_data)}")
         
@@ -1263,6 +1282,8 @@ class CampaignService:
             campaign = result_campaign.scalars().first()
             
             if campaign:
+                # Reset campaign to DRAFT status to require re-initialization
+                campaign.status = "DRAFT"
                 campaign.preliminary_questions = []
                 campaign.cohort_questions = {}
                 campaign.cohort_incentives = {}
@@ -1271,7 +1292,14 @@ class CampaignService:
                 campaign.selected_cohorts = []
                 campaign.cohort_data = {}
                 campaign.updated_at = datetime.utcnow()
+                
+                # Update specific leads timestamp in metadata
+                meta = dict(campaign.meta_data or {})
+                meta["leads_updated_at"] = datetime.utcnow().isoformat() + "Z"
+                campaign.meta_data = meta
+                
                 session.add(campaign)
+                logger.info(f"Campaign {campaign_id} status reset to DRAFT after lead replacement")
 
         await session.commit()
         logger.info(f"Lead replacement complete: {counts}")

@@ -1,15 +1,16 @@
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlmodel import select, col
-from sqlmodel.ext.asyncio.session import AsyncSession
 import uuid
 from datetime import datetime, timezone
+from typing import List
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.user import User
 from app.services import integration_service
-from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -21,8 +22,9 @@ async def get_current_company_id(
     user = await session.get(User, user_id)
     if not user or not user.current_company_id:
         # Check if they have a company membership even if not set on user profile
-        from app.models.iam import CompanyMembership
         from sqlmodel import select
+
+        from app.models.iam import CompanyMembership
         stmt = select(CompanyMembership).where(CompanyMembership.user_id == user_id)
         membership = (await session.exec(stmt)).first()
         if not membership:
@@ -48,8 +50,8 @@ async def get_integration(
     """
     Get a specific integration with current stats.
     """
-    from app.models.integration import Integration
     from app.models.datasource import DataSource
+    from app.models.integration import Integration
     
     stmt = (
         select(Integration, DataSource)
@@ -106,8 +108,9 @@ async def sync_integration(
     """
     Trigger manual sync.
     """
-    from app.models.integration import Integration, IntegrationStatus
     from app.models.datasource import DataSource
+    from app.models.integration import Integration, IntegrationStatus
+
     # Import specific tasks
     from app.services.shopify.tasks import run_shopify_sync_task
 
@@ -143,8 +146,8 @@ async def verify_integration_integrity(
     """
     Perform deep health check on integration.
     """
-    from app.models.integration import Integration
     from app.models.datasource import DataSource
+    from app.models.integration import Integration
     from app.services.shopify.sync_service import shopify_sync_service
 
     # 1. Fetch Integration & Datasource

@@ -8,12 +8,9 @@ Purpose:
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from typing import Optional
-from uuid import UUID
-from sqlalchemy import select
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
 from app.services.intelligence.base_generator import InsightObject
 

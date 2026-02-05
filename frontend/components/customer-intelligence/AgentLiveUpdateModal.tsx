@@ -18,7 +18,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, parseAsUTC } from "@/lib/utils";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { AgentStatus } from "./AgentQueue";
 
 interface AgentLiveUpdateModalProps {
@@ -26,11 +32,12 @@ interface AgentLiveUpdateModalProps {
     onClose: () => void;
     agent: AgentStatus | null;
     agentName: string;
+    leadName?: string;
     index: number;
     events: any[]; // Specific events for this agent
 }
 
-export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, index, events }: AgentLiveUpdateModalProps) {
+export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadName, index, events }: AgentLiveUpdateModalProps) {
     const isActive = agent && ['speaking', 'connected', 'ringing'].includes(agent.status);
 
     return (
@@ -107,7 +114,7 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, index,
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Active Target</p>
-                            <p className="text-sm font-bold">{agent?.lead_name || "Scanning for leads..."}</p>
+                            <p className="text-sm font-bold">{leadName || agent?.lead_name || "Scanning for leads..."}</p>
                         </div>
                     </div>
                     {isActive && agent && (
@@ -154,15 +161,24 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, index,
                                             animate={{ opacity: 1, x: 0 }}
                                             className="flex items-start gap-4 group/log"
                                         >
-                                            <span className="text-zinc-700 shrink-0 group-hover/log:text-zinc-500 transition-colors">
-                                                [{new Date(event.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
+                                            <span className="text-zinc-700 shrink-0 group-hover/log:text-zinc-500 transition-colors cursor-help">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>[{parseAsUTC(event.timestamp).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="z-[9999]" side="top">
+                                                            <p>{new Date(event.timestamp).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </span>
                                             <div className="flex-1">
                                                 <span className={cn(
                                                     "font-bold mr-2 uppercase",
-                                                    event.type === 'system' ? "text-indigo-400" : "text-emerald-500"
+                                                    event.type === 'system' ? "text-indigo-400" : event.type === 'thought' ? "text-amber-500" : "text-emerald-500"
                                                 )}>
-                                                    {event.type === 'system' ? ">> CORE" : `>> ${agentName.split(' ')[0]}`}:
+                                                    {event.type === 'system' ? ">> CORE" : event.type === 'thought' ? ">> THOUGHT" : `>> ${agentName.split(' ')[0]}`}:
                                                 </span>
                                                 <span className="text-zinc-300 leading-relaxed uppercase tracking-tight">
                                                     {event.message}

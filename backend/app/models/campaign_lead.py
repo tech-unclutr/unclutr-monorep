@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel, UniqueConstraint
+
 
 class CampaignLead(SQLModel, table=True):
     __tablename__ = "campaign_leads"
@@ -16,6 +18,10 @@ class CampaignLead(SQLModel, table=True):
     
     status: str = Field(default="PENDING") # PENDING, PROCESSED, FAILED
     
-    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "contact_number", name="unique_campaign_lead_phone"),
+    )

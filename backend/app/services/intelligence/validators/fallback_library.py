@@ -7,7 +7,7 @@ Purpose:
 - Support multiple currencies and formatting styles
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class FallbackLibrary:

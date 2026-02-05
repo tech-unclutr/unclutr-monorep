@@ -1,7 +1,9 @@
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+
 
 # Shared properties
 class CompanyBase(BaseModel):

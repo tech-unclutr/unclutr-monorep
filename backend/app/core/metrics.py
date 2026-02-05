@@ -2,11 +2,12 @@
 Prometheus metrics for Intelligence Engine.
 Tracks performance, coverage, and error rates.
 """
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
-from functools import wraps
 import time
+from functools import wraps
 from typing import Callable
+
 from loguru import logger
+from prometheus_client import Counter, Gauge, Histogram, generate_latest
 
 # Metrics
 insight_generation_duration = Histogram(

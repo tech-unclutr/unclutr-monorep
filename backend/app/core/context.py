@@ -1,6 +1,6 @@
+import uuid
 from contextvars import ContextVar
 from typing import Optional
-import uuid
 
 # Context Variables for global access within a request
 company_id_ctx: ContextVar[Optional[uuid.UUID]] = ContextVar("company_id", default=None)

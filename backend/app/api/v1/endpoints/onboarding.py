@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.services import onboarding_service
-from pydantic import BaseModel
-from typing import List, Optional
-import uuid
 
 router = APIRouter()
 

@@ -1,15 +1,13 @@
-from typing import List, Optional
-from uuid import UUID
 from datetime import datetime
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.insight_feedback import InsightFeedback
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
 from app.models.shopify.inventory import ShopifyInventoryLevel
-from app.models.integration import Integration
-from app.models.company import Workspace
+from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+
 
 class WatchdogService:
     """

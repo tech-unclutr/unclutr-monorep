@@ -1,9 +1,11 @@
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core import security
 from app.core.db import get_session
-from app.models.user import User, UserRead, UserCreate
+from app.models.user import UserCreate, UserRead
 from app.services import auth_service
 
 router = APIRouter()
@@ -17,8 +19,9 @@ async def login_for_access_token(
     1. Checks for Swagger Dev Password (admin).
     2. If not dev, attempts real Firebase Auth (Email/Password).
     """
-    from app.core.config import settings
     import httpx
+
+    from app.core.config import settings
     
     # 1. Check Dev Password (only if enabled)
     if settings.ENABLE_DEV_AUTH and form_data.password == settings.SWAGGER_DEV_PASSWORD:
@@ -86,13 +89,22 @@ async def sync_user_endpoint(
     if not uid or not email:
         raise HTTPException(status_code=400, detail="Invalid token payload")
     
-    user_in = UserCreate(
-        id=uid,
-        email=email,
-        full_name=current_user_token.get("name"),
-        picture_url=current_user_token.get("picture")
-    )
-    
-    user = await auth_service.sync_user(session, user_in)
-    return user
+    try:
+        user_in = UserCreate(
+            id=uid,
+            email=email,
+            full_name=current_user_token.get("name"),
+            picture_url=current_user_token.get("picture")
+        )
+        user = await auth_service.sync_user(session, user_in)
+        return user
+    except Exception as e:
+        import traceback
+        tb_str = traceback.format_exc()
+        print(f"Sync Error Traceback: {tb_str}")
+        # DEBUG: returning full traceback to frontend to capture in user logs
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Sync failed: {str(e)} | Trace: {tb_str}"
+        )
 

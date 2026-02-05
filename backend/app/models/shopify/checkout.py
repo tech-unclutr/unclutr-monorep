@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Optional, Dict
-from uuid import UUID, uuid4
 from decimal import Decimal
-from sqlmodel import Field, SQLModel, Column, BigInteger
-from sqlalchemy import UniqueConstraint, ForeignKey
+from typing import Dict, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import BigInteger, Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyCheckout(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_checkout"
@@ -37,4 +39,4 @@ class ShopifyCheckout(UserTrackedModel, SQLModel, table=True):
     shopify_completed_at: Optional[datetime] = Field(default=None, index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))

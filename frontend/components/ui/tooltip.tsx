@@ -155,7 +155,7 @@ export const TooltipContent = ({
                 animate={animate}
                 exit={initial}
                 transition={{ duration: 0.15 }}
-                className={`fixed z-50 overflow-hidden rounded-md px-3 py-1.5 text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ${className}`}
+                className={`fixed z-50 overflow-hidden rounded-md bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs text-zinc-950 dark:text-zinc-50 shadow-md border border-zinc-200 dark:border-zinc-800 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ${className}`}
                 style={{
                     top: position.top,
                     left: position.left,

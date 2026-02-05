@@ -6,35 +6,37 @@ Exposes the full intelligence deck with validation and enrichment.
 
 # Force reload - debugging local_kw ghost
 
-from typing import Dict, Any
-from uuid import UUID, uuid4
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, case, desc
+from typing import Any, Dict, Optional
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
+from fastapi.responses import RedirectResponse, Response
 from loguru import logger
+from pydantic import BaseModel
+from sqlalchemy import and_, case, desc, func, not_
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.db import get_session
-from app.core.config import settings
-from app.services.intelligence.insight_engine import insight_engine
-from app.models.company import Workspace
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-from app.models.insight_tracking import InsightImpression
-from app.models.calendar_connection import CalendarConnection
-from app.services.intelligence.google_calendar_service import google_calendar_service
 from app.api.deps import get_current_active_user
-from app.models.user import User
-from fastapi.responses import RedirectResponse
-from app.services.intelligence.campaign_service import campaign_service
-from app.models.campaign import Campaign
+from app.core.config import settings
+from app.core.db import get_session
 from app.models.archived_campaign import ArchivedCampaign
+from app.models.calendar_connection import CalendarConnection
+from app.models.campaign import Campaign
 from app.models.campaign_lead import CampaignLead
-from sqlalchemy import desc
-from app.schemas.campaign import CampaignSettingsUpdate, CampaignContextSuggestions, CampaignUpdate
-from fastapi.responses import Response
-
+from app.models.insight_tracking import InsightImpression
+from app.models.user import User
+from app.schemas.campaign import (
+    CampaignContextSuggestions,
+    CampaignSettingsUpdate,
+    CampaignUpdate,
+    CreateFullCampaignRequest,
+    ReplaceLeadsRequest,
+)
+from app.services.intelligence.campaign_service import campaign_service
+from app.services.intelligence.google_calendar_service import google_calendar_service
+from app.services.intelligence.insight_engine import insight_engine
 
 router = APIRouter()
 
@@ -146,7 +148,7 @@ async def update_campaign(
 
 
 class CalendarSyncRequest(BaseModel):
-    timezone: Optional[str] = "UTC"
+    timezone: Optional[str] = None
 
 @router.post("/campaigns/{campaign_id}/calendar-sync")
 async def sync_campaign_calendar(
@@ -186,7 +188,13 @@ async def sync_campaign_calendar(
         raise HTTPException(status_code=400, detail="No active calendar connection found")
         
     try:
-        timezone = request.timezone if request else "UTC"
+        # Fetch company for timezone info
+        from app.models.company import Company
+        company = await session.get(Company, company_id)
+        
+        # Use provided timezone -> Company timezone -> UTC default
+        timezone = request.timezone if (request and request.timezone) else (company.timezone if company else "UTC")
+        
         count = await google_calendar_service.sync_campaign_windows(conn, campaign, timezone_str=timezone)
         return {"status": "success", "events_created": count}
     except Exception as e:
@@ -226,7 +234,7 @@ async def get_intelligence_deck(
         deck = await insight_engine.generate_full_deck(session, brand_id)
         
         logger.info(
-            f"Intelligence deck API called",
+            "Intelligence deck API called",
             extra={
                 "brand_id": str(brand_id),
                 "company_id": x_company_id,
@@ -280,9 +288,10 @@ async def get_top_insight(
 # Phase 6: Strategic Advisor Endpoints
 # ------------------------------------------------------------------
 
+from app.models.insight_feedback import InsightFeedback
 from app.services.intelligence.playbook_service import playbook_service
 from app.services.intelligence.simulation_service import simulation_service
-from app.models.insight_feedback import InsightFeedback
+
 
 class FeedbackCreate(BaseModel):
     insight_id: str
@@ -414,12 +423,11 @@ async def get_calendar_status(
 
     stmt = select(CalendarConnection).where(
         CalendarConnection.company_id == company_id,
+        CalendarConnection.user_id == current_user.id,
         CalendarConnection.provider == "google"
     )
     result = await session.execute(stmt)
     conn = result.scalars().first()
-    
-    # logger.info(f"DEBUG: get_calendar_status for company {company_id} and user {current_user.id}. Connection found? {bool(conn)}. Status: {conn.status if conn else 'N/A'}")
     
     if not conn or conn.status != "active":
         return {"connected": False}
@@ -431,7 +439,15 @@ async def get_calendar_status(
     writable = 'https://www.googleapis.com/auth/calendar.events' in scopes
     
     try:
-        busy_slots = await google_calendar_service.get_availability(conn)
+        all_busy = await google_calendar_service.get_availability(conn)
+        
+        # Filter out events created by SquareUp itself so they don't show up as "Busy" conflicts
+        # vs our own execution windows in the UI.
+        busy_slots = [
+            slot for slot in all_busy 
+            if "powered by SquareUp" not in slot.get('summary', '')
+        ]
+        
         return {
             "connected": True,
             "provider": "google",
@@ -516,7 +532,7 @@ class OnboardingRequest(BaseModel):
     phone_number: str
     team_member_role: str
     team_member_department: str
-    linkedin: Optional[str] = None
+    linkedin: str
 
 @router.post("/campaigns/onboarding")
 async def save_onboarding_details(
@@ -567,7 +583,7 @@ async def save_onboarding_details(
             status="DRAFT"
         )
         session.add(campaign)
-        logger.info(f"Created NEW DRAFT campaign with onboarding details")
+        logger.info("Created NEW DRAFT campaign with onboarding details")
 
     # 2. Sync Onboarding Details to User Profile (Holistic Update)
     try:
@@ -991,7 +1007,7 @@ async def get_campaign_by_id(
             pass
 
     # Calculate stats
-    from sqlalchemy import func, case
+    from sqlalchemy import case, func
     stats_stmt = select(
         func.count(CampaignLead.id).label("total"),
         func.sum(case((CampaignLead.status == "COMPLETED", 1), else_=0)).label("completed"),
@@ -1064,6 +1080,16 @@ async def list_campaigns(
         )
         .outerjoin(CampaignLead, CampaignLead.campaign_id == Campaign.id)
         .where(Campaign.company_id == company_id)
+        .where(
+            not_(
+                and_(
+                    Campaign.status == "DRAFT",
+                    Campaign.name.startswith("Campaign - "),
+                    Campaign.brand_context == None,
+                    Campaign.customer_context == None
+                )
+            )
+        )
         .group_by(Campaign.id)
         .order_by(desc(Campaign.created_at))
         .offset(offset)
@@ -1112,25 +1138,13 @@ async def delete_campaign(
     print(f"DEBUG: Service returned success={success}")
     
     if not success:
-        print(f"DEBUG: Raising 404")
+        print("DEBUG: Raising 404")
         raise HTTPException(status_code=404, detail="Campaign not found or access denied")
         
     return {"status": "success", "message": "Campaign and related data deleted & archived"}
 
 
-class CampaignLeadBase(BaseModel):
-    customer_name: str
-    contact_number: str
-    cohort: Optional[str] = None
-    meta_data: Optional[Dict[str, Any]] = {}
-
-class CreateFromCsvRequest(BaseModel):
-    campaign_name: Optional[str] = None
-    leads: List[CampaignLeadBase]
-    force_create: bool = False
-
-class ReplaceLeadsRequest(BaseModel):
-    leads: List[CampaignLeadBase]
+# Removed local definitions as they are now in app.schemas.campaign
 
 @router.put("/campaigns/{campaign_id}/leads")
 async def update_campaign_leads(
@@ -1184,36 +1198,52 @@ async def update_campaign_leads(
 
 @router.post("/campaigns/create-from-csv")
 async def create_campaign_from_csv(
-    request: CreateFromCsvRequest,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     x_company_id: str = Header(..., alias="X-Company-ID"),
     session: AsyncSession = Depends(get_session)
 ):
     """
     Creates a new Campaign (Batch) and associated CampaignLead records from uploaded CSV data.
+    OPTIMIZED: Uses raw JSON parsing and simplified hashing for performance.
     """
+    import time
+    t_start = time.time()
+    
     try:
         company_id = UUID(x_company_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid Company ID")
 
-    if not request.leads:
-        raise HTTPException(status_code=400, detail="No leads provided")
-
-    # Compute Hash
-    import hashlib
-    import json
+    # 1. Raw JSON Parse (Bypass Pydantic Loop)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        
+    leads_raw = body.get("leads", [])
+    campaign_name_raw = body.get("campaign_name")
+    force_create = body.get("force_create", False)
     
-    # Sort leads to ensure consistent hash regardless of order (optional, but good practice)
-    # Actually, order might matter for context, but let's just hash the raw list for now.
-    # We'll serialize valid leads to JSON string and hash it.
-    leads_dicts = [l.dict() for l in request.leads]
-    leads_json = json.dumps(leads_dicts, sort_keys=True)
-    source_hash = hashlib.sha256(leads_json.encode()).hexdigest()
-    logger.info(f"Duplicate check: company_id={company_id}, hash={source_hash}, force_create={request.force_create}")
+    if not leads_raw:
+        raise HTTPException(status_code=400, detail="No leads provided")
+        
+    t_parsed = time.time()
+
+    # 2. Optimized "Fingerprint" Hash (O(1) instead of O(N))
+    # Hash: count + first_lead + last_lead + campaign_name
+    import hashlib
+    
+    first_lead_sig = str(leads_raw[0].get("contact_number", "")) if leads_raw else ""
+    last_lead_sig = str(leads_raw[-1].get("contact_number", "")) if leads_raw else ""
+    
+    fingerprint = f"{len(leads_raw)}|{first_lead_sig}|{last_lead_sig}|{campaign_name_raw}"
+    source_hash = hashlib.sha256(fingerprint.encode()).hexdigest()
+    
+    logger.info(f"Duplicate check (Optimized): company_id={company_id}, hash={source_hash}, count={len(leads_raw)}")
     
     # Check for duplicates (Relaxed: Check last 24 hours)
-    if not request.force_create:
+    if not force_create:
         one_day_ago = datetime.utcnow() - timedelta(days=1)
         stmt = select(Campaign).where(
             Campaign.company_id == company_id,
@@ -1226,8 +1256,6 @@ async def create_campaign_from_csv(
         
         if existing_campaign:
             logger.info(f"Found duplicate campaign: {existing_campaign.id} ({existing_campaign.name})")
-            # Return 409 Conflict with details
-            # We must use JSONResponse to return custom content with 409
             from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=409,
@@ -1236,71 +1264,240 @@ async def create_campaign_from_csv(
                     "code": "DUPLICATE_UPLOAD",
                     "campaign_id": str(existing_campaign.id),
                     "campaign_name": existing_campaign.name,
-                    "created_at": existing_campaign.created_at.isoformat()
+                    "created_at": existing_campaign.created_at.isoformat() + "Z"
                 }
             )
 
     try:
-        # 1. Create Parent Campaign
-        # If blank, use a more descriptive placeholder
-        campaign_name = request.campaign_name
-        if not campaign_name or campaign_name.strip() == "":
+        t_dedup_start = time.time()
+        
+        # 3. Deduplicate Leads Logic (Raw Dict)
+        unique_leads: Dict[str, Any] = {}
+        
+        for lead in leads_raw:
+            # Normalize key
+            phone = str(lead.get("contact_number", "")).strip()
+            if not phone:
+                 continue # Skip invalid rows
+                 
+            key = phone
+            
+            # Extract fields safely
+            c_name = lead.get("customer_name", "Unknown")
+            c_cohort = lead.get("cohort") or "Default"
+            c_meta = lead.get("meta_data") or {}
+
+            if key in unique_leads:
+                # Duplicate found - Logic: Update to latest, log old cohort if different
+                existing = unique_leads[key]
+                old_cohort = existing["cohort"]
+                
+                # Merge logic: Take new values
+                existing["customer_name"] = c_name
+                existing["cohort"] = c_cohort
+                # Update metadata
+                existing["meta_data"] = c_meta
+                
+                # Log change if cohort differs
+                if old_cohort != c_cohort:
+                    if "duplicate_history" not in existing["meta_data"]:
+                        existing["meta_data"]["duplicate_history"] = []
+                    
+                    existing["meta_data"]["duplicate_history"].append({
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "action": "merged",
+                        "field": "cohort",
+                        "old_value": old_cohort,
+                        "new_value": c_cohort
+                    })
+            else:
+                # New entry (Raw Dict for SQLAlchemy)
+                unique_leads[key] = {
+                    "id": uuid4(),
+                    "campaign_id": None, # Will set after campaign creation
+                    "customer_name": c_name,
+                    "contact_number": key,
+                    "cohort": c_cohort,
+                    "meta_data": c_meta,
+                    "status": "PENDING",
+                    "created_at": datetime.utcnow()
+                }
+
+        final_leads_list = list(unique_leads.values())
+        t_dedup_end = time.time()
+
+        # 4. Create Parent Campaign
+        campaign_name = campaign_name_raw
+        if not campaign_name or str(campaign_name).strip() == "":
             campaign_name = f"Intelligence Batch - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
         
         campaign = Campaign(
             company_id=company_id,
             user_id=current_user.id,
             name=campaign_name,
-            status="DRAFT", # Batch/Dataset Campaigns start as DRAFT
-            phone_number="", # Not applicable for batch container
+            status="DRAFT", 
+            phone_number="", 
             source_file_hash=source_hash
         )
         session.add(campaign)
-        await session.flush() # flush to get campaign.id
+        await session.flush() 
 
-        # 2. Create Leads
-        session.add(campaign)
-        await session.flush() # flush to get campaign.id
-
-        # 2. Bulk Create Leads (SQLAlchemy Core - Fastest)
-        # Prepare list of dicts for bulk insert
+        # 5. Bulk Create Leads
         from sqlalchemy import insert
         
-        leads_data = [
-            {
-                "id": uuid4(),
-                "campaign_id": campaign.id,
-                "customer_name": lead.customer_name,
-                "contact_number": lead.contact_number,
-                "cohort": lead.cohort or "Default",
-                "meta_data": lead.meta_data,
-                "status": "PENDING",
-                "created_at": datetime.utcnow()
-            }
-            for lead in request.leads
-        ]
+        # Assign campaign_id
+        for l in final_leads_list:
+            l["campaign_id"] = campaign.id
+        
+        leads_data = final_leads_list
 
-        # Execute bulk insert
+        t_db_start = time.time()
         if leads_data:
             stmt = insert(CampaignLead).values(leads_data)
             await session.execute(stmt)
             
         await session.commit()
+        t_db_end = time.time()
         
-        logger.info(f"Created batch campaign {campaign.id} with {len(leads_data)} leads.")
+        logger.info(
+            f"CSV Upload Performance: Total={t_db_end - t_start:.3f}s | "
+            f"Parse={t_parsed - t_start:.3f}s | "
+            f"Dedup={t_dedup_end - t_dedup_start:.3f}s | "
+            f"DB={t_db_end - t_db_start:.3f}s | "
+            f"Rows={len(leads_data)}"
+        )
         
-        # Calculate time taken for debugging
-        # ...
-
         return {
             "status": "success",
             "campaign_id": campaign.id,
             "leads_count": len(leads_data),
-            "campaign_name": campaign.name
+            "original_count": len(leads_raw),
+            "campaign_name": campaign.name,
+            "performance": {
+                "total_seconds": round(t_db_end - t_start, 3),
+                "rows_per_second": round(len(leads_data) / (t_db_end - t_start + 0.001), 0)
+            }
         }
 
     except Exception as e:
         logger.error(f"Failed to create campaign from CSV: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create campaign: {str(e)}")
+
+
+@router.post("/campaigns/create-full")
+async def create_full_campaign(
+    request: CreateFullCampaignRequest,
+    current_user: User = Depends(get_current_active_user),
+    x_company_id: str = Header(..., alias="X-Company-ID"),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Creates a fully configured campaign in a single transaction.
+    Used for the new "Draft Mode" flow where data is saved only at the end.
+    """
+    try:
+        company_id = UUID(x_company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Company ID")
+
+    if not request.leads:
+        raise HTTPException(status_code=400, detail="No leads provided")
+
+    # 1. Compute Hash for Deduplication (Same logic as create-from-csv)
+    import hashlib
+    import json
+    leads_dicts = [l.dict() for l in request.leads]
+    leads_json = json.dumps(leads_dicts, sort_keys=True)
+    source_hash = hashlib.sha256(leads_json.encode()).hexdigest()
+    
+    # Check for duplicates (if not force_create)
+    if not request.force_create:
+        one_day_ago = datetime.utcnow() - timedelta(days=1)
+        stmt = select(Campaign).where(
+            Campaign.company_id == company_id,
+            Campaign.source_file_hash == source_hash,
+            Campaign.created_at >= one_day_ago
+        ).order_by(desc(Campaign.created_at)).limit(1)
+        
+        result = await session.execute(stmt)
+        existing_campaign = result.scalars().first()
+        
+        if existing_campaign:
+             from fastapi.responses import JSONResponse
+             return JSONResponse(
+                status_code=409,
+                content={
+                    "detail": "Duplicate upload detected",
+                    "code": "DUPLICATE_UPLOAD",
+                    "campaign_id": str(existing_campaign.id),
+                    "campaign_name": existing_campaign.name,
+                    "created_at": existing_campaign.created_at.isoformat() + "Z"
+                }
+            )
+
+    try:
+        # 2. Create Campaign Container
+        campaign = Campaign(
+            company_id=company_id,
+            user_id=current_user.id,
+            name=request.campaign_name,
+            status="READY", # Ready immediately as it's full creation
+            phone_number="",
+            source_file_hash=source_hash
+        )
+        
+        # Apply Settings immediately
+        settings_dict = request.settings.dict(exclude_unset=True)
+        for key, value in settings_dict.items():
+            if hasattr(campaign, key):
+                setattr(campaign, key, value)
+                
+        # Handle Cohort Data/Config logic (same as patch settings)
+        # Simplified: if cohort_data is present, trust it.
+        # Ensure fallback defaults if needed
+        if not campaign.incentive and campaign.cohort_incentives:
+             first_incentive = next(iter(campaign.cohort_incentives.values()), None)
+             if first_incentive:
+                  campaign.incentive = first_incentive
+
+        session.add(campaign)
+        await session.flush() # get ID
+
+        # 3. Deduplicate and Insert Leads
+        unique_leads: Dict[str, Any] = {}
+        for lead in request.leads:
+            key = lead.contact_number.strip()
+            # Last win logic
+            unique_leads[key] = {
+                "id": uuid4(),
+                "campaign_id": campaign.id,
+                "customer_name": lead.customer_name,
+                "contact_number": key,
+                "cohort": lead.cohort or "Default",
+                "meta_data": lead.meta_data or {},
+                "status": "PENDING",
+                "created_at": datetime.utcnow()
+            }
+        
+        leads_data = list(unique_leads.values())
+        if leads_data:
+            from sqlalchemy import insert
+            stmt = insert(CampaignLead).values(leads_data)
+            await session.execute(stmt)
+
+        await session.commit()
+        await session.refresh(campaign) # Refresh to get full object
+
+        # Calculate basic stats for return
+        return {
+            "status": "success",
+            "campaign_id": campaign.id,
+            "leads_count": len(leads_data),
+            "campaign": campaign
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to create full campaign: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create campaign: {str(e)}")
 
 
@@ -1365,6 +1562,7 @@ async def update_campaign_settings(
 
     # Update fields if provided
     update_data = settings.dict(exclude_unset=True)
+    logger.info(f"DEBUG: PATCH Payload for {campaign_id}: {update_data}")
 
     # Validation: Max 3 questions enforcement
     if "preliminary_questions" in update_data and update_data["preliminary_questions"]:
@@ -1453,6 +1651,24 @@ async def update_campaign_settings(
         except Exception as e:
              logger.error(f"Failed to auto-save brand_context to company: {e}")
 
+
+    # Promote DRAFT to READY or PAUSED
+    if campaign.status == "DRAFT":
+        # Check if campaign has history (QueueItems)
+        # If it has history, it should go to PAUSED (Ready to Resume)
+        # If it's fresh, it should go to READY (Ready to Start)
+        
+        # We check for ANY queue item to determine history
+        from app.models.queue_item import QueueItem
+        history_check_stmt = select(QueueItem).where(QueueItem.campaign_id == campaign.id).limit(1)
+        history_result = await session.execute(history_check_stmt)
+        has_history = history_result.first() is not None
+        
+        if has_history:
+            campaign.status = "PAUSED"
+        else:
+            campaign.status = "READY"
+
     session.add(campaign)
     await session.commit()
     await session.refresh(campaign)
@@ -1509,3 +1725,138 @@ async def sync_campaign_calendar(
     except Exception as e:
         logger.error(f"Failed to sync calendar: {e}")
         raise HTTPException(status_code=500, detail="Failed to sync calendar")
+
+
+# ------------------------------------------------------------------
+# Lead Management Endpoints
+# ------------------------------------------------------------------
+
+@router.delete("/leads/{lead_id}")
+async def delete_lead(
+    lead_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    x_company_id: str = Header(..., alias="X-Company-ID"),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Removes a lead from the upcoming queue and moves it back to the roster.
+    The lead is not permanently deleted - only its status is updated.
+    """
+    try:
+        try:
+            company_id = UUID(x_company_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid Company ID")
+        
+        # Find the lead and verify ownership
+        stmt = select(CampaignLead).where(CampaignLead.id == lead_id)
+        result = await session.execute(stmt)
+        lead = result.scalars().first()
+        
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        # Verify the lead belongs to a campaign owned by this user
+        campaign_stmt = select(Campaign).where(
+            Campaign.id == lead.campaign_id,
+            Campaign.company_id == company_id,
+            Campaign.user_id == current_user.id
+        )
+        campaign_result = await session.execute(campaign_stmt)
+        campaign = campaign_result.scalars().first()
+        
+        if not campaign:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Update lead status to BACKLOG (moves it back to roster)
+        lead.status = "BACKLOG"
+        
+        # Update queue item status to REMOVED (prevents it from appearing in upcoming queue)
+        from app.models.queue_item import QueueItem
+        queue_stmt = select(QueueItem).where(QueueItem.lead_id == lead_id)
+        queue_result = await session.execute(queue_stmt)
+        queue_items = queue_result.scalars().all()
+        
+        for queue_item in queue_items:
+            queue_item.status = "REMOVED"
+            queue_item.updated_at = datetime.utcnow()
+        
+        await session.commit()
+        
+        return {"status": "success", "message": "Lead removed from queue and moved back to roster"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing lead {lead_id} from queue: {str(e)}")
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=f"Failed to remove lead from queue: {str(e)}")
+
+
+
+@router.post("/leads/{lead_id}/promote")
+async def promote_lead(
+    lead_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    x_company_id: str = Header(..., alias="X-Company-ID"),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Promotes a lead back to READY status to add it back to the queue.
+    """
+    try:
+        company_id = UUID(x_company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Company ID")
+    
+    # Find the lead and verify ownership
+    stmt = select(CampaignLead).where(CampaignLead.id == lead_id)
+    result = await session.execute(stmt)
+    lead = result.scalars().first()
+    
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Verify the lead belongs to a campaign owned by this user
+    campaign_stmt = select(Campaign).where(
+        Campaign.id == lead.campaign_id,
+        Campaign.company_id == company_id,
+        Campaign.user_id == current_user.id
+    )
+    campaign_result = await session.execute(campaign_stmt)
+    campaign = campaign_result.scalars().first()
+    
+    if not campaign:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Update lead status to READY
+    lead.status = "READY"
+    
+    # Also update queue item if exists
+    from app.models.queue_item import QueueItem
+    queue_stmt = select(QueueItem).where(QueueItem.lead_id == lead_id)
+    queue_result = await session.execute(queue_stmt)
+    queue_item = queue_result.scalars().first()
+    
+    if queue_item:
+        queue_item.status = "READY"
+        queue_item.priority_score = 999  # [FIX] High priority for manual promotion
+        queue_item.execution_count = 0   # [FIX] Reset retry count for manual promotion
+        queue_item.closure_reason = None # [FIX] Clear closure reason
+        queue_item.outcome = None        # [FIX] Clear outcome
+        queue_item.updated_at = datetime.utcnow()
+        session.add(queue_item)
+    else:
+        # Create a new queue item if it doesn't exist
+        new_queue_item = QueueItem(
+            campaign_id=lead.campaign_id,
+            lead_id=lead.id,
+            status="READY",
+            priority_score=999,  # [FIX] High priority for manual promotion
+            execution_count=0    # Default, but explicit
+        )
+        session.add(new_queue_item)
+    
+    await session.commit()
+    
+    return {"status": "success", "message": "Lead promoted successfully"}

@@ -8,7 +8,7 @@ Purpose:
 """
 
 from typing import List, Set
-from itertools import combinations
+
 from loguru import logger
 
 from app.services.intelligence.base_generator import InsightObject

@@ -1,29 +1,36 @@
-import json
-from decimal import Decimal
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-from loguru import logger
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, col
-from prometheus_client import Counter, Histogram
 
-from app.models.shopify.raw_ingest import ShopifyRawIngest
-from app.models.shopify.order import ShopifyOrder, ShopifyLineItem
-from app.models.shopify.customer import ShopifyCustomer
-from app.models.shopify.transaction import ShopifyTransaction
-from app.models.shopify.refund import ShopifyRefund
-from app.models.shopify.address import ShopifyAddress
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant, ShopifyProductImage
-from app.models.shopify.inventory import ShopifyLocation, ShopifyInventoryItem, ShopifyInventoryLevel
-from app.models.shopify.analytics import ShopifyReport, ShopifyReportData
-from app.models.shopify.financials import ShopifyPayout, ShopifyDispute
-from app.models.shopify.fulfillment import ShopifyFulfillment
-from app.models.shopify.checkout import ShopifyCheckout
-from app.models.shopify.marketing import ShopifyMarketingEvent
-from app.models.shopify.discount import ShopifyPriceRule, ShopifyDiscountCode
-from app.services.shopify.metrics_service import shopify_metrics_service
+from loguru import logger
+from prometheus_client import Counter, Histogram
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.integration import Integration
+from app.models.shopify.address import ShopifyAddress
+from app.models.shopify.analytics import ShopifyReport, ShopifyReportData
+from app.models.shopify.checkout import ShopifyCheckout
+from app.models.shopify.customer import ShopifyCustomer
+from app.models.shopify.discount import ShopifyDiscountCode, ShopifyPriceRule
+from app.models.shopify.financials import ShopifyDispute, ShopifyPayout
+from app.models.shopify.fulfillment import ShopifyFulfillment
+from app.models.shopify.inventory import (
+    ShopifyInventoryItem,
+    ShopifyInventoryLevel,
+    ShopifyLocation,
+)
+from app.models.shopify.marketing import ShopifyMarketingEvent
+from app.models.shopify.order import ShopifyLineItem, ShopifyOrder
+from app.models.shopify.product import (
+    ShopifyProduct,
+    ShopifyProductImage,
+    ShopifyProductVariant,
+)
+from app.models.shopify.raw_ingest import ShopifyRawIngest
+from app.models.shopify.refund import ShopifyRefund
+from app.models.shopify.transaction import ShopifyTransaction
 
 ANALYTICS_SNAPSHOTS_CREATED = Counter(
     "shopify_analytics_snapshots_created_total",

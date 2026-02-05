@@ -1,16 +1,17 @@
 import asyncio
-import sys
 import os
-from uuid import UUID
+import sys
 
 # Add backend to path
 sys.path.append(os.path.join(os.getcwd(), "backend"))
 
-from app.core.db import async_session_factory
-from app.services.intelligence.insight_engine import insight_engine
 from loguru import logger
 from sqlalchemy import select
+
+from app.core.db import async_session_factory
 from app.models.company import Brand
+from app.services.intelligence.insight_engine import insight_engine
+
 
 async def test_generators():
     logger.info("Initializing Insight Engine...")

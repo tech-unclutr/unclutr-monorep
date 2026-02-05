@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, JSON, Column
-from sqlalchemy import BigInteger, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+
+from sqlalchemy import JSON, BigInteger, ForeignKey
+from sqlalchemy import UUID as PG_UUID
+from sqlmodel import JSON, Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyRawIngest(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_raw_ingest"
@@ -30,9 +32,9 @@ class ShopifyRawIngest(UserTrackedModel, SQLModel, table=True):
     topic: Optional[str] = Field(default=None) # orders/create, orders/updated
     api_version: str = Field(default="2024-01")
     
-    # Data - Stored as JSONB for efficient querying
-    headers: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
-    payload: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
+    # Data - Stored as JSON for efficient querying
+    headers: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+    payload: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     
     # Status
     hmac_valid: bool = Field(default=False)
@@ -40,7 +42,7 @@ class ShopifyRawIngest(UserTrackedModel, SQLModel, table=True):
     error_message: Optional[str] = Field(default=None)
     
     # Analysis
-    diff_summary: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB)) # Stores computed changes (e.g. price_old vs price_new)
+    diff_summary: Dict[str, Any] = Field(default={}, sa_column=Column(JSON)) # Stores computed changes (e.g. price_old vs price_new)
     
     # Timestamps
     fetched_at: datetime = Field(default_factory=datetime.utcnow)

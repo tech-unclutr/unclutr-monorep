@@ -8,15 +8,16 @@ Category: Growth
 
 from typing import Optional
 from uuid import UUID
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
+from loguru import logger
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.company import Workspace
+from app.models.integration import Integration
 from app.models.shopify.customer import ShopifyCustomer
 from app.models.shopify.order import ShopifyOrder
-from app.models.integration import Integration
-from app.models.company import Workspace
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
 
 
 class RelativeWhaleGenerator(BaseInsightGenerator):

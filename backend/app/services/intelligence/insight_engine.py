@@ -1,25 +1,24 @@
-from typing import List, Dict, Any, Optional
-from uuid import UUID
-from datetime import datetime
-from loguru import logger
 import time
+from datetime import datetime
+from typing import Any, Dict, List
+from uuid import UUID
 
-from app.services.intelligence.base_generator import InsightObject
-from app.services.intelligence.validators import (
-    validator_service,
-    fallback_library,
-    insight_quality_scorer,
-    insight_deduplicator
-)
-from app.models.insight_tracking import InsightGenerationLog, InsightSuppression
-from app.services.intelligence.llm_service import llm_service
+from loguru import logger
+
 from app.core.feature_flags import feature_flags
 from app.core.metrics import (
-    insight_generation_total,
-    insight_generation_duration,
     generator_errors,
-    cache_hits,
-    cache_misses
+    insight_generation_duration,
+    insight_generation_total,
+)
+from app.models.insight_tracking import InsightGenerationLog
+from app.services.intelligence.base_generator import InsightObject
+from app.services.intelligence.llm_service import llm_service
+from app.services.intelligence.validators import (
+    fallback_library,
+    insight_deduplicator,
+    insight_quality_scorer,
+    validator_service,
 )
 
 
@@ -45,34 +44,38 @@ class InsightEngine:
         Loads all 15 Phase 3 generators.
         """
         # Phase 2 Generators
-        from app.services.intelligence.generators.velocity_generator import VelocityGenerator
-        from app.services.intelligence.generators.cashflow_generator import CashflowGenerator
-        
+        from app.services.intelligence.generators.cashflow_generator import (
+            CashflowGenerator,
+        )
+
         # Financial Generators
         from app.services.intelligence.generators.financial import (
+            AdWasteGenerator,
             FrozenCashGenerator,
-            StockoutRiskGenerator,
             MarginCrusherGenerator,
             SlowMoverGenerator,
-            AdWasteGenerator
+            StockoutRiskGenerator,
         )
-        
+
         # Growth Generators
         from app.services.intelligence.generators.growth import (
-            VIPAtRiskGenerator,
-            VelocityBreakoutGenerator,
-            RelativeWhaleGenerator,
             CrossSellGenerator,
-            GeoSpikeGenerator
+            GeoSpikeGenerator,
+            RelativeWhaleGenerator,
+            VelocityBreakoutGenerator,
+            VIPAtRiskGenerator,
         )
-        
+
         # Operational Generators
         from app.services.intelligence.generators.operational import (
+            DiscountAbuseGenerator,
+            FulfillmentBottleneckGenerator,
+            IntegrationHealthGenerator,
             LeakingBucketGenerator,
             RefundAnomalyGenerator,
-            FulfillmentBottleneckGenerator,
-            DiscountAbuseGenerator,
-            IntegrationHealthGenerator
+        )
+        from app.services.intelligence.generators.velocity_generator import (
+            VelocityGenerator,
         )
         
         self.generators = [
@@ -193,7 +196,7 @@ class InsightEngine:
         insight_generation_duration.labels(brand_id=str(brand_id), generator="total").observe(generation_time_ms / 1000)
         
         logger.info(
-            f"Full deck generated",
+            "Full deck generated",
             extra={
                 "brand_id": str(brand_id),
                 "total_insights": len(deduplicated),

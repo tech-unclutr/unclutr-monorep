@@ -1,24 +1,23 @@
 from __future__ import annotations
-import hmac
-import hashlib
+
+import asyncio
 import base64
-import uuid
+import hashlib
+import hmac
 import json
-import time
-from typing import Dict, Optional, Tuple, Any
-from urllib.parse import urlencode, urlparse, parse_qs
-from datetime import datetime
+import uuid
+from typing import Any, Dict, Optional
+from urllib.parse import urlencode
 
 import httpx
-import asyncio
 from cryptography.fernet import Fernet
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from loguru import logger
-from sqlmodel.ext.asyncio.session import AsyncSession 
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.models.integration import Integration, IntegrationStatus
-from app.models.company import Company
+from app.models.integration import Integration
+
 
 class ShopifyOAuthService:
     """

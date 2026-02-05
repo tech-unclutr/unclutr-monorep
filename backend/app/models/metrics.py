@@ -1,8 +1,10 @@
-from typing import Optional, Dict, Any
-from sqlmodel import Field, SQLModel, Column, JSON
-from datetime import datetime, date
-from enum import Enum
 import uuid
+from datetime import date, datetime
+from enum import Enum
+from typing import Dict, Optional
+
+from sqlmodel import JSON, Column, Field, SQLModel
+
 
 class MetricType(str, Enum):
     """Types of metrics we track"""

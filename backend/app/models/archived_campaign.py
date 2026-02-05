@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column, Text
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel, Text
+
 
 class ArchivedCampaign(SQLModel, table=True):
     __tablename__ = "archived_campaigns"
@@ -24,14 +26,14 @@ class ArchivedCampaign(SQLModel, table=True):
     # bolna_total_cost: Optional[int] = Field(default=None)
     # bolna_error_message: Optional[str] = Field(default=None)
     # bolna_transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
-    # bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    # bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    # bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    # bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     # bolna_created_at: Optional[datetime] = Field(default=None)
     # bolna_updated_at: Optional[datetime] = Field(default=None)
     
     # Legacy fields
-    decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     # Quality Scoring
     quality_score: int = Field(default=0)
@@ -41,23 +43,23 @@ class ArchivedCampaign(SQLModel, table=True):
     brand_context: Optional[str] = Field(default=None, sa_column=Column(Text))
     customer_context: Optional[str] = Field(default=None, sa_column=Column(Text))
     team_member_context: Optional[str] = Field(default=None, sa_column=Column(Text))
-    preliminary_questions: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
-    question_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
-    incentive_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
-    cohort_questions: Optional[Dict[str, List[str]]] = Field(default={}, sa_column=Column(JSONB))
-    cohort_incentives: Optional[Dict[str, str]] = Field(default={}, sa_column=Column(JSONB))
+    preliminary_questions: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    question_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    incentive_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    cohort_questions: Optional[Dict[str, List[str]]] = Field(default={}, sa_column=Column(JSON))
+    cohort_incentives: Optional[Dict[str, str]] = Field(default={}, sa_column=Column(JSON))
     incentive: Optional[str] = Field(default=None, sa_column=Column(Text))
     
     # Execution Settings
     total_call_target: Optional[int] = Field(default=None)
     call_duration: Optional[int] = Field(default=600)
-    cohort_config: Optional[Dict[str, int]] = Field(default={}, sa_column=Column(JSONB))
-    selected_cohorts: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
-    execution_windows: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSONB))
-    cohort_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    cohort_config: Optional[Dict[str, int]] = Field(default={}, sa_column=Column(JSON))
+    selected_cohorts: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    execution_windows: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
+    cohort_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     # Associated Data
-    goal_details: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSONB))
+    goal_details: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     
     original_created_at: datetime = Field(description="Original creation time")
     original_updated_at: datetime = Field(description="Original last update time")

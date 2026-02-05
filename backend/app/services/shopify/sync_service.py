@@ -1,17 +1,18 @@
-import json
 import hashlib
-import httpx
+import json
 from datetime import datetime, timezone
-from typing import Optional, Dict, List, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
+
+import httpx
 from loguru import logger
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, func
 
 from app.models.integration import Integration, IntegrationStatus
 from app.models.shopify.raw_ingest import ShopifyRawIngest
 from app.services.shopify.oauth_service import shopify_oauth_service
-from app.core.config import settings
+
 
 class ShopifySyncService:
     def __init__(self):
@@ -643,7 +644,9 @@ class ShopifySyncService:
                 # Check if we already synced this report today (same-day deduplication)
                 # Skip dedup if custom range is provided
                 from datetime import date
+
                 from sqlalchemy import func
+
                 from app.models.shopify.analytics import ShopifyReportData
                 
                 today = date.today()
@@ -1539,7 +1542,7 @@ class ShopifySyncService:
                 url_part = link.split(';')[0].strip('<> ')
                 # Extract page_info param
                 try:
-                    from urllib.parse import urlparse, parse_qs
+                    from urllib.parse import parse_qs, urlparse
                     parsed = urlparse(url_part)
                     return parse_qs(parsed.query)['page_info'][0]
                 except Exception:
@@ -1584,22 +1587,39 @@ class ShopifySyncService:
         Validates that we have a complete one-on-one replica of the Shopify store.
         Checks ALL Shopify tables: operational data + analytics data.
         """
-        from app.models.shopify.order import ShopifyOrder
-        from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant, ShopifyProductImage
-        from app.models.shopify.customer import ShopifyCustomer
-        from app.models.shopify.inventory import ShopifyLocation, ShopifyInventoryLevel, ShopifyInventoryItem
-        from app.models.shopify.transaction import ShopifyTransaction
-        from app.models.shopify.refund import ShopifyRefund
-        from app.models.shopify.financials import ShopifyPayout, ShopifyDispute, ShopifyBalanceTransaction
-        from app.models.shopify.address import ShopifyAddress
-        from app.models.shopify.raw_ingest import ShopifyRawIngest
-        from app.models.shopify.analytics import ShopifyReport, ShopifyReportData, ShopifyAnalyticsSnapshot
-        from app.models.shopify.metrics import ShopifyDailyMetric
-        from app.models.shopify.fulfillment import ShopifyFulfillment
-        from app.models.shopify.checkout import ShopifyCheckout
-        from app.models.shopify.marketing import ShopifyMarketingEvent
-        from app.models.shopify.discount import ShopifyPriceRule, ShopifyDiscountCode
         from datetime import datetime, timedelta
+
+        from app.models.shopify.address import ShopifyAddress
+        from app.models.shopify.analytics import (
+            ShopifyAnalyticsSnapshot,
+            ShopifyReport,
+            ShopifyReportData,
+        )
+        from app.models.shopify.checkout import ShopifyCheckout
+        from app.models.shopify.customer import ShopifyCustomer
+        from app.models.shopify.discount import ShopifyDiscountCode, ShopifyPriceRule
+        from app.models.shopify.financials import (
+            ShopifyBalanceTransaction,
+            ShopifyDispute,
+            ShopifyPayout,
+        )
+        from app.models.shopify.fulfillment import ShopifyFulfillment
+        from app.models.shopify.inventory import (
+            ShopifyInventoryItem,
+            ShopifyInventoryLevel,
+            ShopifyLocation,
+        )
+        from app.models.shopify.marketing import ShopifyMarketingEvent
+        from app.models.shopify.metrics import ShopifyDailyMetric
+        from app.models.shopify.order import ShopifyOrder
+        from app.models.shopify.product import (
+            ShopifyProduct,
+            ShopifyProductImage,
+            ShopifyProductVariant,
+        )
+        from app.models.shopify.raw_ingest import ShopifyRawIngest
+        from app.models.shopify.refund import ShopifyRefund
+        from app.models.shopify.transaction import ShopifyTransaction
         
         report = {
             "integration_id": str(integration_id),

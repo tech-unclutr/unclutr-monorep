@@ -1,17 +1,20 @@
+import os
+from datetime import datetime, timedelta, timezone
+from datetime import time as dt_time
+from typing import Any, Dict, List
+from uuid import UUID
+
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
+import pytz
 from googleapiclient.discovery import build
-from datetime import datetime, timedelta, timezone, time as dt_time
-from typing import Dict, Any, Optional, List
-from uuid import UUID
+from loguru import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from loguru import logger
 
 from app.core.config import settings
 from app.models.calendar_connection import CalendarConnection
-import json
-import pytz
+
 
 class GoogleCalendarService:
     SCOPES = [
@@ -59,6 +62,12 @@ class GoogleCalendarService:
 
     async def handle_callback(self, code: str, state: str, session: AsyncSession) -> CalendarConnection:
         """Exchanges auth code for tokens and saves them."""
+        # Force OAUTHLIB_INSECURE_TRANSPORT for development
+        # This is critical for ngrok/localhost where HTTPS might not be fully recognized by oauthlib
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+        # Relax token scope validation as Google might return more scopes than requested
+        os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+        
         try:
             company_id_str, user_id = state.split(":")
             company_id = UUID(company_id_str)
@@ -67,7 +76,15 @@ class GoogleCalendarService:
             raise ValueError("Invalid state payload")
 
         flow = self.get_flow()
-        flow.fetch_token(code=code)
+        try:
+            logger.info(f"Google OAuth: Fetching token with redirect_uri: {self.redirect_uri}")
+            flow.fetch_token(code=code)
+        except Exception as e:
+            import traceback
+            logger.error(f"Google OAuth fetch_token failed: {e}")
+            logger.error(traceback.format_exc())
+            raise ValueError(f"Failed to fetch token from Google: {e}")
+            
         credentials = flow.credentials
 
         # Prepare tokens for storage
@@ -120,8 +137,8 @@ class GoogleCalendarService:
             token=conn.credentials.get("token"),
             refresh_token=conn.credentials.get("refresh_token"),
             token_uri=conn.credentials.get("token_uri"),
-            client_id=conn.credentials.get("client_id"),
-            client_secret=conn.credentials.get("client_secret"),
+            client_id=settings.GOOGLE_CLIENT_ID,
+            client_secret=settings.GOOGLE_CLIENT_SECRET,
             scopes=conn.credentials.get("scopes"),
         )
 
@@ -195,8 +212,8 @@ class GoogleCalendarService:
                 token=conn.credentials.get("token"),
                 refresh_token=conn.credentials.get("refresh_token"),
                 token_uri=conn.credentials.get("token_uri"),
-                client_id=conn.credentials.get("client_id"),
-                client_secret=conn.credentials.get("client_secret"),
+                client_id=settings.GOOGLE_CLIENT_ID,
+                client_secret=settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
             return build('calendar', 'v3', credentials=creds)
@@ -236,8 +253,8 @@ class GoogleCalendarService:
                         token=conn.credentials.get("token"),
                         refresh_token=conn.credentials.get("refresh_token"),
                         token_uri=conn.credentials.get("token_uri"),
-                        client_id=conn.credentials.get("client_id"),
-                        client_secret=conn.credentials.get("client_secret"),
+                        client_id=settings.GOOGLE_CLIENT_ID,
+                        client_secret=settings.GOOGLE_CLIENT_SECRET,
                         scopes=conn.credentials.get("scopes"),
                     )
                     service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
@@ -271,15 +288,29 @@ class GoogleCalendarService:
                     start = event.get('start')
                     end = event.get('end')
                     
-                    # Skip if:
-                    # 1. It's an all-day event (only has 'date', no 'dateTime')
-                    # 2. It's marked as 'transparent' (Free)
-                    if not start or not end or 'dateTime' not in start or event.get('transparency') == 'transparent':
-                        continue
+                    transparency = event.get('transparency', 'opaque')
                     
+                    if transparency == 'transparent':
+                        continue
+
+                    # Try to get dateTime (Time-based events)
+                    s_dt = start.get('dateTime')
+                    e_dt = end.get('dateTime')
+
+                    # Fallback to date (All-Day events)
+                    # All-day events have 'date' but no 'dateTime'
+                    if not s_dt and 'date' in start:
+                        s_dt = f"{start['date']}T00:00:00Z"
+                        e_dt = f"{end['date']}T00:00:00Z"
+                    
+                    if not s_dt or not e_dt:
+                        continue
+                        
                     all_busy.append({
-                        'start': start['dateTime'],
-                        'end': end['dateTime']
+                        'start': s_dt,
+                        'end': e_dt,
+                        'summary': event.get('summary', ''),
+                        'transparency': transparency
                     })
             
             # Sort by start time
@@ -309,7 +340,6 @@ class GoogleCalendarService:
         Returns the number of events created.
         """
         import asyncio
-        from datetime import time as dt_time
         
         loop = asyncio.get_running_loop()
 
@@ -318,8 +348,8 @@ class GoogleCalendarService:
                 token=conn.credentials.get("token"),
                 refresh_token=conn.credentials.get("refresh_token"),
                 token_uri=conn.credentials.get("token_uri"),
-                client_id=conn.credentials.get("client_id"),
-                client_secret=conn.credentials.get("client_secret"),
+                client_id=settings.GOOGLE_CLIENT_ID,
+                client_secret=settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
             return build('calendar', 'v3', credentials=creds)
@@ -399,15 +429,13 @@ class GoogleCalendarService:
         events_created = 0
 
         for i, window in enumerate(execution_windows):
-            logger.info(f"--- Processing slot {i+1}/{len(execution_windows)} ---")
+            logger.info(f"[SYNC_DEBUG] Processing window {i+1}/{len(execution_windows)}: {window}")
             day_str = window.get('day')
             start_time_str = window.get('start')
             end_time_str = window.get('end')
             
-            logger.info(f"Processing window: day={day_str}, start={start_time_str}, end={end_time_str}")
-
             if not day_str or not start_time_str or not end_time_str:
-                logger.warning(f"Missing data for window: {window}")
+                logger.warning(f"[SYNC_DEBUG] Missing data for window: {window}")
                 continue
 
             # Direct Date Parsing
@@ -468,12 +496,14 @@ class GoogleCalendarService:
                 def _insert_event():
                     return service.events().insert(calendarId='primary', body=event_body).execute()
 
-                await loop.run_in_executor(None, _insert_event)
+                res = await loop.run_in_executor(None, _insert_event)
                 events_created += 1
-                logger.info(f"Created event for {day_str} {start_time_str}")
+                logger.info(f"[SYNC_DEBUG] Created event for {day_str} {start_time_str}. Event ID: {res.get('id')}")
                 
             except Exception as e:
-                logger.error(f"Failed to sync window for {day_str} {start_time_str}: {e}")
+                logger.error(f"[SYNC_DEBUG] Failed to sync window for {day_str} {start_time_str}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
 
         return events_created
 
@@ -482,7 +512,6 @@ class GoogleCalendarService:
         Creates a single execution window event in Google Calendar.
         """
         import asyncio
-        from datetime import time as dt_time
         
         loop = asyncio.get_running_loop()
 
@@ -491,8 +520,8 @@ class GoogleCalendarService:
                 token=conn.credentials.get("token"),
                 refresh_token=conn.credentials.get("refresh_token"),
                 token_uri=conn.credentials.get("token_uri"),
-                client_id=conn.credentials.get("client_id"),
-                client_secret=conn.credentials.get("client_secret"),
+                client_id=settings.GOOGLE_CLIENT_ID,
+                client_secret=settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
             return build('calendar', 'v3', credentials=creds)

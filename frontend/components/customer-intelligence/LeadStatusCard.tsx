@@ -3,7 +3,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, User, FileText, CheckCircle2 } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { Clock, User, FileText, CheckCircle2, RotateCcw, AlertCircle, Phone, PhoneIncoming, PhoneCall, XCircle, AlertTriangle } from 'lucide-react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LeadStatusCardProps {
     lead: {
@@ -18,22 +25,75 @@ interface LeadStatusCardProps {
         scheduled_for?: string;
     };
     type: 'UPCOMING' | 'AGENT_ACTIVE' | 'HISTORY' | 'HUMAN_QUEUE';
-    onAction?: (action: 'approve' | 'reschedule', leadId: string) => void;
+    onAction?: (action: 'approve' | 'reschedule' | 'retry', leadId: string) => void;
 }
 
 export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
-    const getStatusColor = (status: string) => {
+    const getStatusInfo = (status: string) => {
         switch (status?.toLowerCase()) {
-            case 'completed': return 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
-            case 'failed': return 'text-red-500 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
-            case 'speaking': return 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800';
-            case 'connected': return 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
-            case 'pending_availability': return 'text-orange-500 bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800';
-            case 'scheduled': return 'text-blue-500 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
-            case 'initiated': return 'text-blue-500 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
-            default: return 'text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700';
+            case 'completed':
+            case 'intent_yes':
+            case 'scheduled':
+                return {
+                    color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800',
+                    Icon: CheckCircle2
+                };
+
+            case 'pending_availability':
+            case 'ambiguous':
+            case 'scheduled_check':
+                return {
+                    color: 'text-orange-500 bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800',
+                    Icon: AlertCircle
+                };
+
+            case 'voicemail':
+            case 'no_answer':
+            case 'busy':
+                return {
+                    color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800',
+                    Icon: PhoneIncoming
+                };
+
+            case 'speaking':
+                return {
+                    color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800',
+                    Icon: PhoneCall
+                };
+
+            case 'initiated':
+            case 'ringing':
+            case 'connected':
+            case 'in-progress':
+                return {
+                    color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
+                    Icon: Phone
+                };
+
+            case 'failed':
+            case 'intent_no':
+            case 'dnc':
+            case 'failed_connect':
+            case 'hangup':
+            case 'silence':
+            case 'language_barrier':
+            case 'wrong_person':
+            case 'fax_robot':
+                return {
+                    color: 'text-red-500 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800',
+                    Icon: XCircle
+                };
+
+            default:
+                return {
+                    color: 'text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700',
+                    Icon: Clock
+                };
         }
     };
+
+    const retriableStates = ['failed', 'voicemail', 'no_answer', 'busy', 'cancelled', 'hangup', 'silence', 'ambiguous', 'language_barrier', 'failed_connect'];
+    const isRetriable = retriableStates.includes(lead.status?.toLowerCase() || '');
 
     return (
         <div className="w-[320px] p-1 flex flex-col gap-4">
@@ -46,9 +106,57 @@ export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
                 <div className="flex-1 min-w-0">
                     <h4 className="text-base font-bold text-zinc-900 dark:text-white truncate">{lead.name}</h4>
                     <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className={`text-[10px] px-2 py-0.5 h-5 rounded-full border ${getStatusColor(lead.status || 'Waiting')}`}>
-                            {lead.status === 'PENDING_AVAILABILITY' ? 'Review Required' : (lead.status || 'In Queue')}
-                        </Badge>
+                        {(() => {
+                            const { color: statusColor, Icon: StatusIcon } = getStatusInfo(lead.status || 'Waiting');
+                            return (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Badge variant="outline" className={`text-[10px] px-2 py-0.5 h-6 rounded-full border flex items-center gap-1.5 cursor-default transition-all hover:scale-105 active:scale-95 ${statusColor}`}>
+                                                <StatusIcon className="w-3 h-3 shrink-0" />
+                                                <span className="truncate">
+                                                    {lead.status === 'PENDING_AVAILABILITY' ? 'Review Required' :
+                                                        lead.status === 'AMBIGUOUS' ? 'Unclear Outcome' :
+                                                            (lead.status || 'In Queue')}
+                                                </span>
+                                            </Badge>
+                                        </TooltipTrigger>
+                                        {(lead.outcome || lead.status === 'AMBIGUOUS') && (
+                                            <TooltipContent
+                                                side="top"
+                                                className="z-[100] bg-zinc-950/90 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-4 rounded-2xl max-w-[240px]"
+                                            >
+                                                <div className="flex flex-col gap-2.5">
+                                                    <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                                                        {(() => {
+                                                            const statusKey = lead.status?.toLowerCase();
+                                                            const isError = statusKey === 'failed' || statusKey === 'intent_no' || statusKey === 'dnc' || statusKey === 'failed_connect';
+                                                            const isAmbiguous = statusKey === 'ambiguous' || statusKey === 'pending_availability';
+
+                                                            return (
+                                                                <div className={cn(
+                                                                    "p-1 rounded-md",
+                                                                    isError ? "bg-red-500/20 text-red-400" :
+                                                                        isAmbiguous ? "bg-amber-500/20 text-amber-400" : "bg-indigo-500/20 text-indigo-400"
+                                                                )}>
+                                                                    <AlertCircle className="w-3 h-3" />
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                        <span className="font-black uppercase tracking-[0.2em] text-[9px] text-white/50">
+                                                            {lead.status?.toLowerCase() === 'ambiguous' ? 'Neural Insight' : 'Status Detail'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] leading-relaxed font-semibold text-white/90">
+                                                        {lead.outcome || (lead.status === 'AMBIGUOUS' ? 'AI connected but intent was unclear. Manual review suggested.' : '')}
+                                                    </p>
+                                                </div>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
+                            );
+                        })()}
                         {lead.cohort && (
                             <span className="text-[10px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md">
                                 {lead.cohort}
@@ -58,14 +166,6 @@ export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
                 </div>
             </div>
 
-            {lead.status?.toLowerCase() === 'failed' && lead.outcome && (
-                <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl">
-                    <p className="text-[10px] font-bold text-red-600 dark:text-red-400 leading-tight">
-                        <span className="uppercase tracking-widest mr-1">Error:</span>
-                        {lead.outcome}
-                    </p>
-                </div>
-            )}
 
             {/* Context / Metadata */}
             <div className="space-y-3">
@@ -126,12 +226,29 @@ export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
                     </>
                 ) : (
                     <>
-                        <Button variant="outline" size="sm" className="w-full text-xs h-8">
-                            <User className="w-3.5 h-3.5 mr-1.5" />
-                            Profile
-                        </Button>
-                        <Button variant="ghost" size="sm" className="w-full text-xs h-8 text-zinc-500 hover:text-zinc-900">
-                            View Logs
+                        {isRetriable ? (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                className="w-full text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                                onClick={() => onAction?.('retry', lead.id)}
+                            >
+                                <RotateCcw className="w-3 h-3 mr-1.5" />
+                                Retry Call
+                            </Button>
+                        ) : (
+                            <Button variant="outline" size="sm" className="w-full text-xs h-8">
+                                <User className="w-3.5 h-3.5 mr-1.5" />
+                                Profile
+                            </Button>
+                        )}
+                        <Button
+                            variant={isRetriable ? "outline" : "ghost"}
+                            size="sm"
+                            className={isRetriable ? "w-full text-xs h-8" : "w-full text-xs h-8 text-zinc-500 hover:text-zinc-900"}
+                        >
+                            {isRetriable ? <User className="w-3.5 h-3.5 mr-1.5" /> : null}
+                            {isRetriable ? "Profile" : "View Logs"}
                         </Button>
                     </>
                 )}
@@ -140,4 +257,4 @@ export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
     );
 }
 
-import { CheckCircle2 as CheckCircleIcon } from 'lucide-react'; 
+

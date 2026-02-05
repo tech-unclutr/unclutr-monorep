@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sse_starlette.sse import EventSourceResponse
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, delete
-from app.core.db import get_session, engine
-from app.core.security import get_current_user
-from app.models.audit import AuditTrail
-from app.models.onboarding_state import OnboardingState
-from app.models.company import Company, Brand, Workspace
-from app.models.iam import CompanyMembership, WorkspaceMembership
 import asyncio
 import json
+
+from fastapi import APIRouter, Depends, Request
+from sqlmodel import delete, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sse_starlette.sse import EventSourceResponse
+
+from app.core.db import engine, get_session
+from app.core.security import get_current_user
+from app.models.audit import AuditTrail
+from app.models.company import Brand, Company, Workspace
+from app.models.iam import CompanyMembership, WorkspaceMembership
+from app.models.onboarding_state import OnboardingState
 
 router = APIRouter()
 

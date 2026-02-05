@@ -1,15 +1,17 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from sqlmodel import select, func
-from sqlmodel.ext.asyncio.session import AsyncSession
-from loguru import logger
 
-from app.services.analytics.base import BaseAnalyticsProvider
+from loguru import logger
+from sqlmodel import func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.integration import Integration
 from app.models.integration_analytics import IntegrationDailyMetric
-from app.models.shopify.order import ShopifyOrder
 from app.models.shopify.customer import ShopifyCustomer
+from app.models.shopify.order import ShopifyOrder
 from app.models.shopify.transaction import ShopifyTransaction
+from app.services.analytics.base import BaseAnalyticsProvider
+
 
 class ShopifyAnalyticsProvider(BaseAnalyticsProvider):
     async def calculate_daily_metrics(

@@ -143,7 +143,7 @@ export function SearchableSelect({
                     transition={{ duration: 0.15, ease: "easeOut" }}
                     style={usePortal ? dropdownStyle : {}}
                     className={cn(
-                        "bg-white dark:bg-zinc-900 rounded-xl shadow-2xl shadow-zinc-500/20 border border-zinc-100 dark:border-zinc-800 overflow-hidden ring-1 ring-black/5 flex flex-col min-w-[200px]",
+                        "bg-white dark:bg-zinc-950 rounded-xl shadow-2xl shadow-zinc-500/20 border border-zinc-100 dark:border-zinc-800 overflow-hidden ring-1 ring-black/5 flex flex-col min-w-[200px]",
                         usePortal ? "searchable-select-dropdown" : "absolute top-[calc(100%+8px)] left-0 w-full z-50 max-h-[320px]"
                     )}
                 >

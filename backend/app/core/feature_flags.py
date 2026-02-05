@@ -3,8 +3,9 @@ Feature flag configuration for Intelligence Engine.
 Allows graceful enabling/disabling of insights without code deployment.
 """
 import os
-from typing import Optional
+
 from loguru import logger
+
 
 class FeatureFlags:
     """Centralized feature flag management."""

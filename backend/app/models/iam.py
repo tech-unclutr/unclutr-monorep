@@ -1,8 +1,10 @@
-from typing import Optional, List
-from sqlmodel import Field, SQLModel, Relationship, UniqueConstraint
-from datetime import datetime
 import uuid
+from datetime import datetime
 from enum import Enum
+from typing import Optional
+
+from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
+
 
 class SystemRole(str, Enum):
     OWNER = "owner"
@@ -60,5 +62,6 @@ class CompanyEntitlement(SQLModel, table=True):
 
 # Forward references
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from app.models.company import Company, Workspace

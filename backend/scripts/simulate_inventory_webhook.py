@@ -1,6 +1,6 @@
 import asyncio
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import json
 from sqlmodel import select, text
@@ -36,7 +36,7 @@ async def simulate_webhook():
             "inventory_item_id": 50629646647520,
             "location_id": 87525294304,
             "available": 0,
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
         payload_str = json.dumps(payload, sort_keys=True)
@@ -60,7 +60,7 @@ async def simulate_webhook():
             )
         """)
         
-        now_naive = datetime.now()
+        now_aware = datetime.now(timezone.utc)
         
         params = {
             "id": raw_ingest_id,
@@ -68,8 +68,8 @@ async def simulate_webhook():
             "company_id": company_id,
             "object_type": "inventory_level",
             "shopify_object_id": 50629646647520,
-            "shopify_updated_at": now_naive,
-            "dedupe_key": f"inventory_level_{50629646647520}_{87525294304}_{int(datetime.now().timestamp())}",
+            "shopify_updated_at": now_aware,
+            "dedupe_key": f"inventory_level_{50629646647520}_{87525294304}_{int(datetime.now(timezone.utc).timestamp())}",
             "dedupe_hash_canonical": dedupe_hash,
             "source": "webhook",
             "topic": "inventory_levels/update",
@@ -78,7 +78,7 @@ async def simulate_webhook():
             "payload": json.dumps(payload),
             "hmac_valid": True,
             "processing_status": "pending",
-            "fetched_at": now_naive,
+            "fetched_at": now_aware,
             "created_by": "Simulated Test",
             "diff_summary": json.dumps({})
         }

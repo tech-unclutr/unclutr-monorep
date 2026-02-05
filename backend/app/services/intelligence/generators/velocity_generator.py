@@ -1,11 +1,14 @@
 from datetime import date, timedelta
-from typing import Optional, Dict, Any
-from uuid import UUID
-from sqlalchemy import select, func
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.integration_analytics import IntegrationDailyMetric
 from decimal import Decimal
+from typing import Optional
+from uuid import UUID
+
 from loguru import logger
+from sqlalchemy import func, select
+
+from app.models.integration_analytics import IntegrationDailyMetric
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
+
 
 class VelocityGenerator(BaseInsightGenerator):
     """
@@ -55,8 +58,8 @@ class VelocityGenerator(BaseInsightGenerator):
         # ============================================================
         # STEP 2: Fetch Data with Validation
         # ============================================================
-        from app.models.integration import Integration
         from app.models.company import Workspace
+        from app.models.integration import Integration
         
         count_recent_stmt = select(func.count(func.distinct(IntegrationDailyMetric.snapshot_date))).where(
             IntegrationDailyMetric.integration_id.in_(

@@ -1,0 +1,78 @@
+/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/auth/__init__.py:54: FutureWarning: You are using a Python version 3.9 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.9"), FutureWarning)
+/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/param/Documents/Unclutr/backend/venv/lib/python3.9/site-packages/google/oauth2/__init__.py:40: FutureWarning: You are using a Python version 3.9 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
+  warnings.warn(eol_message.format("3.9"), FutureWarning)
+2026-02-04 09:25:29,319 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-02-04 09:25:29,319 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-02-04 09:25:29,322 INFO sqlalchemy.engine.Engine select current_schema()
+2026-02-04 09:25:29,323 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-02-04 09:25:29,324 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-02-04 09:25:29,324 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-02-04 09:25:29,325 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-04 09:25:29,525 INFO sqlalchemy.engine.Engine SELECT campaigns.id AS campaigns_id, campaigns.company_id AS campaigns_company_id, campaigns.user_id AS campaigns_user_id, campaigns.name AS campaigns_name, campaigns.status AS campaigns_status, campaigns.source_file_hash AS campaigns_source_file_hash, campaigns.decision_context AS campaigns_decision_context, campaigns.quality_score AS campaigns_quality_score, campaigns.quality_gap AS campaigns_quality_gap, campaigns.brand_context AS campaigns_brand_context, campaigns.customer_context AS campaigns_customer_context, campaigns.team_member_context AS campaigns_team_member_context, campaigns.preliminary_questions AS campaigns_preliminary_questions, campaigns.question_bank AS campaigns_question_bank, campaigns.incentive_bank AS campaigns_incentive_bank, campaigns.cohort_questions AS campaigns_cohort_questions, campaigns.cohort_incentives AS campaigns_cohort_incentives, campaigns.incentive AS campaigns_incentive, campaigns.total_call_target AS campaigns_total_call_target, campaigns.call_duration AS campaigns_call_duration, campaigns.cohort_config AS campaigns_cohort_config, campaigns.selected_cohorts AS campaigns_selected_cohorts, campaigns.execution_windows AS campaigns_execution_windows, campaigns.cohort_data AS campaigns_cohort_data, campaigns.execution_config AS campaigns_execution_config, campaigns.custom_analytics_config AS campaigns_custom_analytics_config, campaigns.meta_data AS campaigns_meta_data, campaigns.created_at AS campaigns_created_at, campaigns.updated_at AS campaigns_updated_at 
+FROM campaigns 
+WHERE campaigns.id = $1::UUID
+2026-02-04 09:25:29,525 INFO sqlalchemy.engine.Engine [generated in 0.00049s] (UUID('ad93fc09-1a73-4273-929a-73c2b6572a8c'),)
+/Users/param/Documents/Unclutr/backend/debug_aa.py:35: DeprecationWarning: 
+        🚨 You probably want to use `session.exec()` instead of `session.execute()`.
+
+        This is the original SQLAlchemy `session.execute()` method that returns objects
+        of type `Row`, and that you have to call `scalars()` to get the model objects.
+
+        For example:
+
+        ```Python
+        heroes = await session.execute(select(Hero)).scalars().all()
+        ```
+
+        instead you could use `exec()`:
+
+        ```Python
+        heroes = await session.exec(select(Hero)).all()
+        ```
+        
+  result = await session.execute(stmt)
+Campaign: AA (ad93fc09-1a73-4273-929a-73c2b6572a8c)
+Status: PAUSED
+Windows: [{'day': '2026-02-04', 'end': '10:15', 'start': '03:15'}]
+
+--- Checking Leads for Campaign ad93fc09-1a73-4273-929a-73c2b6572a8c ---
+2026-02-04 09:25:29,537 INFO sqlalchemy.engine.Engine SELECT queue_items.id, queue_items.campaign_id, queue_items.lead_id, queue_items.status, queue_items.outcome, queue_items.priority_score, queue_items.cohort_id, queue_items.scheduled_for, queue_items.locked_by_user_id, queue_items.locked_at, queue_items.created_at, queue_items.updated_at, queue_items.execution_count, campaign_leads.id AS id_1, campaign_leads.campaign_id AS campaign_id_1, campaign_leads.customer_name, campaign_leads.contact_number, campaign_leads.cohort, campaign_leads.status AS status_1, campaign_leads.meta_data, campaign_leads.created_at AS created_at_1 
+FROM queue_items JOIN campaign_leads ON queue_items.lead_id = campaign_leads.id 
+WHERE queue_items.campaign_id = $1::UUID AND campaign_leads.customer_name ILIKE $2::VARCHAR
+2026-02-04 09:25:29,537 INFO sqlalchemy.engine.Engine [generated in 0.00022s] (UUID('ad93fc09-1a73-4273-929a-73c2b6572a8c'), '%param%')
+/Users/param/Documents/Unclutr/backend/debug_aa.py:56: DeprecationWarning: 
+        🚨 You probably want to use `session.exec()` instead of `session.execute()`.
+
+        This is the original SQLAlchemy `session.execute()` method that returns objects
+        of type `Row`, and that you have to call `scalars()` to get the model objects.
+
+        For example:
+
+        ```Python
+        heroes = await session.execute(select(Hero)).scalars().all()
+        ```
+
+        instead you could use `exec()`:
+
+        ```Python
+        heroes = await session.exec(select(Hero)).all()
+        ```
+        
+  maps = (await session.execute(m_stmt)).scalars().all()
+Lead: Param (50249051-f661-41dd-b7c4-cdd52374ba80)
+  QueueItem ID: 9b291578-e740-4ed5-a29f-7596ed215fea
+  Status: SCHEDULED
+  Updated At: 2026-02-03 22:32:33.339126
+  Priority: 100
+2026-02-04 09:25:29,548 INFO sqlalchemy.engine.Engine SELECT bolna_execution_maps.id, bolna_execution_maps.queue_item_id, bolna_execution_maps.campaign_id, bolna_execution_maps.bolna_call_id, bolna_execution_maps.bolna_agent_id, bolna_execution_maps.call_status, bolna_execution_maps.call_outcome, bolna_execution_maps.transcript_summary, bolna_execution_maps.full_transcript, bolna_execution_maps.total_cost, bolna_execution_maps.currency, bolna_execution_maps.call_duration, bolna_execution_maps.transcript, bolna_execution_maps.extracted_data, bolna_execution_maps.telephony_provider, bolna_execution_maps.termination_reason, bolna_execution_maps.created_at, bolna_execution_maps.updated_at, bolna_execution_maps.last_webhook_payload 
+FROM bolna_execution_maps 
+WHERE bolna_execution_maps.queue_item_id = $1::UUID
+2026-02-04 09:25:29,548 INFO sqlalchemy.engine.Engine [generated in 0.00019s] (UUID('9b291578-e740-4ed5-a29f-7596ed215fea'),)
+  Execution Maps (3):
+    - ID: 34a135f8-bad2-4c98-a290-8cbe99f2a9ee | Status: completed | Outcome: VOICEMAIL | Updated: 2026-02-03 22:24:57.913691
+    - ID: db6d6e34-7320-436d-b68e-a23fe5c98a21 | Status: completed | Outcome: VOICEMAIL | Updated: 2026-02-03 22:25:25.774858
+    - ID: c7d60615-30d3-4db4-8fa9-d241bc35e4d7 | Status: completed | Outcome: SCHEDULED | Updated: 2026-02-03 23:22:49.388396
+2026-02-04 09:25:29,553 INFO sqlalchemy.engine.Engine ROLLBACK

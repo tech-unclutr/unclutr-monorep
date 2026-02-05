@@ -1,10 +1,16 @@
-import firebase_admin
-from firebase_admin import auth, credentials
-from fastapi import HTTPException, status, Security, Request, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
-from app.core.config import settings
-import os
 import logging
+import os
+
+import firebase_admin
+from fastapi import Depends, HTTPException, Request, Security, status
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+    OAuth2PasswordBearer,
+)
+from firebase_admin import auth, credentials
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

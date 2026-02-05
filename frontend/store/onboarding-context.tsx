@@ -138,20 +138,28 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
                 if (response) {
                     // ALWAYS Hydrate: Even if is_completed=true, we might be in "Edit" mode.
                     console.log('DEBUG: Backend Raw Response:', response);
-                    // Merge all page data into state
-                    const mergedState: Partial<OnboardingState> = {
-                        companyName: response.basics_data?.companyName || '',
-                        brandName: response.basics_data?.brandName || '',
-                        category: response.basics_data?.category || '',
-                        region: response.basics_data?.region || initialState.region,
-                        channels: response.channels_data?.channels || response.channels_data || initialState.channels,
-                        primaryPartners: response.channels_data?.primaryPartners || initialState.primaryPartners,
-                        stack: response.stack_data?.stack || response.stack_data || initialState.stack,
-                        integrationRequestsDraft: response.finish_data?.integrationRequestsDraft || []
-                    };
+                    // ONLY Hydrate if we actually have meaningful data from the backend
+                    // This prevents the "Sync Race Condition" where an empty backend record
+                    // overwrites a populated local draft before the user finishes.
+                    const hasBasics = response.basics_data && (response.basics_data.companyName || response.basics_data.brandName);
 
-                    setState(prev => ({ ...prev, ...mergedState }));
-                    console.log('Hydrated from backend:', mergedState);
+                    if (hasBasics || response.is_completed) {
+                        const mergedState: Partial<OnboardingState> = {
+                            companyName: response.basics_data?.companyName || '',
+                            brandName: response.basics_data?.brandName || '',
+                            category: response.basics_data?.category || '',
+                            region: response.basics_data?.region || initialState.region,
+                            channels: response.channels_data?.channels || response.channels_data || initialState.channels,
+                            primaryPartners: response.channels_data?.primaryPartners || initialState.primaryPartners,
+                            stack: response.stack_data?.stack || response.stack_data || initialState.stack,
+                            integrationRequestsDraft: response.finish_data?.integrationRequestsDraft || []
+                        };
+
+                        setState(prev => ({ ...prev, ...mergedState }));
+                        console.log('Hydrated from backend:', mergedState);
+                    } else {
+                        console.log('Backend state is empty, keeping local draft.');
+                    }
                 }
             } catch (err) {
                 console.warn("No existing onboarding state found or fetch failed", err);

@@ -1,13 +1,14 @@
 import logging
 import uuid
-from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi import Request, Response, HTTPException
-from fastapi.responses import JSONResponse
 
-from app.core.security import get_current_user_no_depends
-from app.core.context import set_company_ctx, set_workspace_ctx, set_user_ctx
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from sqlmodel import select
-from app.core.db import AsyncSession, get_session, async_session_factory
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.context import set_company_ctx, set_user_ctx, set_workspace_ctx
+from app.core.db import async_session_factory
+from app.core.security import get_current_user_no_depends
 from app.models.iam import CompanyMembership
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 set_user_ctx(user_id)
                 request.state.user_id = user_id
                 request.state.token_payload = decoded_token
-            except Exception as e:
+            except Exception:
                 pass
 
         # 2. Bypass check for public endpoints or WebSocket upgrade requests
@@ -53,7 +54,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/integrations/shopify/auth/url",
             "/intelligence/calendar/google/callback",
             "/intelligence/interview/bolna-webhook",
-            "/integrations/webhook/bolna"
+            "/webhook/bolna"
         ]
         
         # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR is a websocket

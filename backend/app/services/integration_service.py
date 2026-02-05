@@ -1,18 +1,17 @@
-from typing import List, Optional, Dict, Any
+import logging
 import uuid
 from datetime import datetime, timezone
-from sqlmodel import select, and_
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import selectinload
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm.attributes import flag_modified
+from sqlmodel import and_, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.integration import Integration, IntegrationStatus
-from app.models.datasource import DataSource
 from app.models.company import Company, Workspace
-import logging
-
-from app.models.onboarding_state import OnboardingState
+from app.models.datasource import DataSource
 from app.models.iam import CompanyMembership
+from app.models.integration import Integration, IntegrationStatus
+from app.models.onboarding_state import OnboardingState
 
 logger = logging.getLogger(__name__)
 

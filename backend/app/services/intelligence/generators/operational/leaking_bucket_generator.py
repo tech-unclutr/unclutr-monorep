@@ -6,18 +6,19 @@ Impact: High (7-9) - quality/brand risk
 Category: Operational
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from uuid import UUID
-from sqlalchemy import select, func, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
-from app.models.shopify.order import ShopifyOrder, ShopifyLineItem
-from app.models.shopify.refund import ShopifyRefund
-from app.models.integration import Integration
+from loguru import logger
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.order import ShopifyLineItem, ShopifyOrder
+from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+from app.models.shopify.refund import ShopifyRefund
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
 
 
 class LeakingBucketGenerator(BaseInsightGenerator):

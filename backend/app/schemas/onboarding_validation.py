@@ -1,5 +1,7 @@
+from typing import Dict, List, Literal, Optional, Union
+
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Literal, Union, Dict
+
 
 # Shared Models
 class RegionData(BaseModel):

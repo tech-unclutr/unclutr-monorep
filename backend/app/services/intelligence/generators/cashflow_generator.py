@@ -1,15 +1,17 @@
-from typing import Optional, List, Dict, Any
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-from datetime import date, timedelta, datetime
-from sqlalchemy import select, func, and_, desc
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.inventory import ShopifyInventoryLevel, ShopifyInventoryItem
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
-from app.models.shopify.order import ShopifyOrder, ShopifyLineItem
-from app.models.integration import Integration
-from app.models.company import Workspace, Brand
-from decimal import Decimal
+
 from loguru import logger
+from sqlalchemy import desc, func, select
+
+from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.inventory import ShopifyInventoryItem, ShopifyInventoryLevel
+from app.models.shopify.order import ShopifyLineItem, ShopifyOrder
+from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
+
 
 class CashflowGenerator(BaseInsightGenerator):
     """

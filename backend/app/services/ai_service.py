@@ -1,7 +1,9 @@
-import vertexai
-from vertexai.generative_models import GenerativeModel, Content, Part
-from app.core.config import settings
 import logging
+
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

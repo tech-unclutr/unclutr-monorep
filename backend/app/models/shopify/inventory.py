@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Optional, Dict
-from uuid import UUID, uuid4
 from decimal import Decimal
-from sqlmodel import Field, SQLModel, Column, BigInteger
-from sqlalchemy import UniqueConstraint, ForeignKey
+from typing import Dict, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import BigInteger, Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyLocation(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_location"
@@ -35,7 +37,7 @@ class ShopifyLocation(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: Optional[datetime] = Field(default=None, index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
 class ShopifyInventoryItem(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_inventory_item"
@@ -54,7 +56,7 @@ class ShopifyInventoryItem(UserTrackedModel, SQLModel, table=True):
     requires_shipping: bool = Field(default=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
 class ShopifyInventoryLevel(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_inventory_level"
@@ -71,4 +73,4 @@ class ShopifyInventoryLevel(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: Optional[datetime] = Field(default=None, index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))

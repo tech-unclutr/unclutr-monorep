@@ -1,12 +1,14 @@
 from datetime import date
-from typing import Optional, Dict
-from uuid import UUID, uuid4
 from decimal import Decimal
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import UniqueConstraint, ForeignKey
+from typing import Dict
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyDailyMetric(UserTrackedModel, SQLModel, table=True):
     """
@@ -44,4 +46,4 @@ class ShopifyDailyMetric(UserTrackedModel, SQLModel, table=True):
     currency: str = Field(default="USD")
     
     # Additional data (e.g. top products, category distribution)
-    meta_data: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    meta_data: Dict = Field(default={}, sa_column=Column(postgresql.JSON))

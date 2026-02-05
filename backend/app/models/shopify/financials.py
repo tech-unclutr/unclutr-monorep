@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Optional, Dict, List
 from decimal import Decimal
+from typing import Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Relationship, Column
-from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
+
+from sqlalchemy import BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyPayout(UserTrackedModel, SQLModel, table=True):
     """
@@ -30,9 +32,9 @@ class ShopifyPayout(UserTrackedModel, SQLModel, table=True):
     processed_at: Optional[datetime] = Field(default=None)
     
     # Summary of transactions included (optional purely for aggregation, real mapping via join)
-    summary: Optional[Dict] = Field(default=None, sa_column=Column(postgresql.JSONB)) 
+    summary: Optional[Dict] = Field(default=None, sa_column=Column(postgresql.JSON)) 
     
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
 class ShopifyDispute(UserTrackedModel, SQLModel, table=True):
     """
@@ -59,7 +61,7 @@ class ShopifyDispute(UserTrackedModel, SQLModel, table=True):
     evidence_sent_on: Optional[datetime] = Field(default=None)
     finalized_on: Optional[datetime] = Field(default=None)
     
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
 class ShopifyBalanceTransaction(UserTrackedModel, SQLModel, table=True):
     """
@@ -91,4 +93,4 @@ class ShopifyBalanceTransaction(UserTrackedModel, SQLModel, table=True):
     
     processed_at: datetime = Field(index=True)
     
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))

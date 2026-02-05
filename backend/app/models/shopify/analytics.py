@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Relationship, Column
-from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
+
+from sqlalchemy import BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyReport(UserTrackedModel, SQLModel, table=True):
     """
@@ -31,7 +33,7 @@ class ShopifyReport(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: datetime = Field(index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
     # Relationships
     data_snapshots: list["ShopifyReportData"] = Relationship(
@@ -65,7 +67,7 @@ class ShopifyReportData(UserTrackedModel, SQLModel, table=True):
     
     # The Data
     captured_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    data: Dict = Field(default={}, sa_column=Column(postgresql.JSONB)) # The rows/columns result
+    data: Dict = Field(default={}, sa_column=Column(postgresql.JSON)) # The rows/columns result
 
     # Relationships
     report: Optional[ShopifyReport] = Relationship(back_populates="data_snapshots")
@@ -78,7 +80,7 @@ class ShopifyAnalyticsSnapshot(UserTrackedModel, SQLModel, table=True):
     """
     Time-series snapshots for analytics data.
     Stores normalized time-bucket data (e.g., daily/hourly metrics) extracted from report results.
-    This enables efficient querying of time-series data without parsing large JSONB payloads.
+    This enables efficient querying of time-series data without parsing large JSON payloads.
     """
     __tablename__ = "shopify_analytics_snapshot"
     __table_args__ = (
@@ -106,10 +108,10 @@ class ShopifyAnalyticsSnapshot(UserTrackedModel, SQLModel, table=True):
     granularity: str = Field(index=True)  # 'day', 'hour', 'week', 'month'
     
     # Metrics for this time bucket
-    data: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))  # e.g., {"revenue": 1500.50, "orders": 42}
+    data: Dict = Field(default={}, sa_column=Column(postgresql.JSON))  # e.g., {"revenue": 1500.50, "orders": 42}
     
     # Metadata for additional context (e.g., "currency", "timezone")
-    meta_data: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    meta_data: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
     # Relationships
     report: Optional[ShopifyReport] = Relationship(back_populates="analytics_snapshots")

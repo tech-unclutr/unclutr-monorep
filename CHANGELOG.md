@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3-stable] - 2026-02-05
+### Behind the Scene Execution Panel - Fully Working
+
+#### Backend
+- **Campaign Intelligence**: Fully implemented the background execution engine for campaigns.
+- **Shopify Integration**: Robust stability overhaul and financial accuracy alignment (penny-perfect historical and delta sync).
+- **Architecture**: Improved transaction handling and backend synchronization logic.
+- **Sentry**: Optimized initialization for backend monitoring.
+
+#### Frontend
+- **UI Architecture**: Implemented premium "Behind the scene execution panel" for real-time campaign oversight.
+- **Transitions**: Refined UI fluidity with abstract MagicLoader and premium transition effects.
+- **State Management**: Enhanced auth context and onboarding guard reliability.
+- **UX**: Eliminated UI flickering (FOUC) during authentication refreshes.
+
+## [1.1.2] - 2026-02-01
+### Stability & Documentation
+- Added comprehensive local setup guide.
+- Refined campaign intelligence for initial v1.1.2 release.
+
+## [1.1.1-stable] - 2026-02-01
+### Enhanced Campaign Management & Calendar Integration
+- Premium UI polish for campaign dashboard and calendar views.
+
+## [1.1.0-stable] - 2026-02-01
+### Minimalist UI Refinements
+- Bug fixes and transition to a more minimalist subtle aesthetic.
+
+## [1.0.0-stable] - 2026-01-29
+### Initial MVP Infrastructure
+- Core Unclutr MVP release with foundational auth and integration support.
+
 ## [0.0.5] - 2026-01-09
 ### Integrations Page v1 Completed
 

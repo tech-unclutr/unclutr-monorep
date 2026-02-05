@@ -1,8 +1,7 @@
-import asyncio
-from datetime import datetime
 from uuid import UUID
+
 from app.models.interview import InterviewSession
-from app.core.db import get_session
+
 
 class MockBolnaService:
     """

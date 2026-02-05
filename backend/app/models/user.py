@@ -1,7 +1,9 @@
-from typing import Optional, Dict, Any
-from sqlmodel import Field, SQLModel, Column, JSON
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from sqlmodel import JSON, Column, Field, SQLModel
+
 
 class UserBase(SQLModel):
     email: str = Field(index=True, unique=True)

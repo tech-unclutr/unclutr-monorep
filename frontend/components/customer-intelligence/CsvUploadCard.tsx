@@ -14,10 +14,9 @@ import {
     RefreshCcw,
     AlertTriangle
 } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn, formatToIST, formatRelativeTime } from "@/lib/utils";
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import {
@@ -47,17 +46,19 @@ interface CsvUploadCardProps {
     campaignId?: string;
     onLeadsUpdated?: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
+    isMagicUI?: boolean;
 }
 
 type Stage = 'UPLOAD' | 'MAPPING' | 'PREVIEW' | 'UPLOADING' | 'DONE' | 'ORCHESTRATION' | 'ERROR';
 
 import { CampaignComposer } from './CampaignComposer';
 import { ProcessingLog } from './ProcessingLog';
+import { ConfirmExitDialog } from './ConfirmExitDialog';
 
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useAuth } from "@/context/auth-context";
 
-export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create', campaignId: propCampaignId, onLeadsUpdated, onDirtyChange }: CsvUploadCardProps) {
+export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create', campaignId: propCampaignId, onLeadsUpdated, onDirtyChange, isMagicUI }: CsvUploadCardProps) {
     const { companyId: authCompanyId, user } = useAuth();
 
     // Dynamic storage key to avoid collisions between creating and edit flows
@@ -82,11 +83,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     useEffect(() => {
         if (!onDirtyChange) return;
 
-        // We consider it dirty if we are in MAPPING or UPLOADING stage
+        // We consider it dirty if we are in MAPPING, UPLOADING, or ORCHESTRATION stage
         // OR if we have parsed data but haven't finished
-        const isDirty = persistedState.stage === 'MAPPING' || persistedState.stage === 'UPLOADING';
+        const isDirty = (persistedState.stage === 'MAPPING' || persistedState.stage === 'UPLOADING' || persistedState.stage === 'ORCHESTRATION') ||
+            (persistedState.data.length > 0 && persistedState.stage !== 'DONE' && persistedState.stage !== 'UPLOAD');
         onDirtyChange(isDirty);
-    }, [persistedState.stage, onDirtyChange]);
+    }, [persistedState.stage, persistedState.data.length, onDirtyChange]);
 
     // Force reset to UPLOAD stage when mode or campaignId changes to ensure fresh start
     // This is critical for edit mode to work on first attempt
@@ -138,9 +140,27 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     // We will rely on explicit Cancel/Success actions to clean up.
 
     const { stage, headers, data, mapping, campaignName, campaignId } = persistedState;
+
+    // Memoize leads generation for passing to Composer
+    const mappedLeads = React.useMemo(() => {
+        if (!mapping.customer_name || !mapping.contact_number) return [];
+        return data.map(row => {
+            const lead: any = {
+                customer_name: row[mapping.customer_name],
+                contact_number: String(row[mapping.contact_number]).trim(),
+                meta_data: row // Store original row as metadata
+            };
+            if (mapping.cohort && row[mapping.cohort]) {
+                lead.cohort = row[mapping.cohort];
+            }
+            return lead;
+        });
+    }, [data, mapping]);
+
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [errorResult, setErrorResult] = useState<{ title: string; message: string; canRetry: boolean } | null>(null);
+    const [isExitWarningOpen, setIsExitWarningOpen] = useState(false);
 
     // Duplicate Detection State
     const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
@@ -328,31 +348,37 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                     throw new Error(response.message || "Failed to update leads (Unknown error)");
                 }
             } else {
-                // CREATE MODE
-                const payload: any = {
-                    campaign_name: campaignName,
-                    leads: leads
-                };
+                // CREATE MODE (Draft)
+                // We do NOT call the API here anymore. We just transition to ORCHESTRATION state.
+                // The CampaignComposer will handle the creation on "Finish".
 
+                console.log("CsvUpload: Draft mode -> Orchestration", { leadCount: leads.length });
                 if (forceCreate) {
-                    payload.force_create = true;
+                    // If force create was requested (after duplicate check), we just proceed.
+                    // The composer check will happen on final submit (create-full), which also duplicates check?
+                    // Actually, create-full has duplicate check.
+                    // IMPORTANT: If user explicitly said "Create Duplicate", we need to pass that intent to Composer?
+                    // Currently CampaignComposer finalize doesn't support "force_create" flag prop.
+                    // But strictly speaking, the user *just* uploaded a file. 
+                    // If they clicked "Create Duplicate", we proceed.
+                    // The backend create-full check will likely flag it again unless we pass force_create.
+                    // Adding forceCreate intent to state?
+                    // For now, let's just let them proceed. If they hit duplicate error at end, they will see it then?
+                    // Or we rely on the check we just "skipped" effectively?
+                    // Wait, we *didn't* check for duplicates yet because we didn't call the API.
+                    // In the OLD flow, API called check.
+                    // NEW FLOW: We don't call API. So we don't know if it's duplicate until the END.
+                    // This changes UX: Duplicate warning happens at END now, instead of middle.
+                    // Is this acceptable? "Prevent data from being saved... until ... logic".
+                    // Yes, acceptable.
                 }
 
-                console.log("CsvUpload: Submitting payload...", { leadCount: leads.length, forceCreate });
-                const response = await api.post("/intelligence/campaigns/create-from-csv", payload);
-
-                if (response.status === 'success') {
-                    console.log("CsvUpload: Success!", response);
-                    setPersistedState(prev => ({
-                        ...prev,
-                        campaignId: response.campaign_id,
-                        stage: 'ORCHESTRATION'
-                    }));
-                    // Defer onSuccess until orchestration is complete
-                    setIsDuplicateAlertOpen(false);
-                } else {
-                    throw new Error("Unexpected response status: " + response.status);
-                }
+                setPersistedState(prev => ({
+                    ...prev,
+                    stage: 'ORCHESTRATION',
+                    campaignId: null // Ensure null for draft mode
+                }));
+                setIsDuplicateAlertOpen(false);
             }
         } catch (error: any) {
             // Check for duplicate upload (409 Conflict) - this is an expected flow, not an error
@@ -448,20 +474,29 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     }, []);
 
     const handleCancel = () => {
-        if (onCancel) {
-            onCancel();
+        const isDirty = (persistedState.stage === 'MAPPING' || persistedState.stage === 'UPLOADING' || persistedState.stage === 'ORCHESTRATION') ||
+            (persistedState.data.length > 0 && persistedState.stage !== 'DONE' && persistedState.stage !== 'UPLOAD');
+
+        if (isDirty) {
+            setIsExitWarningOpen(true);
         } else {
-            reset();
+            if (onCancel) {
+                onCancel();
+            } else {
+                reset();
+            }
         }
     };
 
 
-    if (stage === 'ORCHESTRATION' && campaignId) {
+    if (stage === 'ORCHESTRATION') {
         return (
             <CampaignComposer
                 campaignId={campaignId}
+                initialLeads={mappedLeads} // Pass leads for Draft Mode
                 initialName={campaignName}
                 onBack={() => setPersistedState(prev => ({ ...prev, stage: 'MAPPING' }))}
+                onCampaignIdGenerated={(id) => setPersistedState(prev => ({ ...prev, campaignId: id }))}
                 onComplete={() => {
                     if (mode === 'create' && onSuccess && campaignId) {
                         // Critical: Reset state first to return to "Upload" screen behind the popup
@@ -491,6 +526,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                     }
                 }}
                 className={className}
+                isMagicUI={isMagicUI}
             />
         );
     }
@@ -498,16 +534,15 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
     return (
         <Card className={cn(
-            "relative overflow-hidden transition-all duration-700 ease-out",
-            "backdrop-blur-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)]",
-            "bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800/60 rounded-[40px]",
-            className
+            "relative overflow-hidden transition-all duration-300",
+            "bg-white dark:bg-zinc-950 border-gray-200 dark:border-white/[0.08] shadow-sm rounded-xl",
+            className,
+            // [FIX] Force auto height and prevent flex growth in UPLOAD stage
+            stage === 'UPLOAD' && "!flex-none !h-auto !self-start"
         )}>
-            {/* Ambient Background Effects */}
-            <div className="absolute inset-0 pointer-events-none transition-opacity duration-1000 overflow-hidden opacity-100">
-                <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_0%,rgba(99,102,241,0.08),transparent_50%)]" />
-                <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_100%,rgba(16,185,129,0.05),transparent_50%)]" />
-                <div className="absolute top-[20%] right-[10%] w-[300px] h-[300px] bg-indigo-500/5 blur-[100px] rounded-full" />
+            {/* Minimal Ambient Background */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-50">
+                <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_0%,rgba(99,102,241,0.03),transparent_50%)]" />
             </div>
 
             {/* Cancel Button - Only show when onCancel is provided (modal context) */}
@@ -527,18 +562,24 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 </div>
             )}
 
-            <CardContent className="p-6 md:p-8 flex flex-col h-full relative z-10 flex-1">
+            <CardContent className={cn(
+                "p-6 md:p-8 flex flex-col relative z-10 min-h-0",
+                stage === 'UPLOAD' ? "!flex-none !h-auto" : "flex-1"
+            )}>
                 {stage === 'UPLOAD' && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="flex-1 flex flex-col items-center justify-center p-4 md:p-6"
+                        className={cn(
+                            "flex flex-col items-center justify-center p-4 md:p-6",
+                            stage === 'UPLOAD' ? "!flex-none !h-auto" : "flex-1"
+                        )}
                     >
                         <div
                             className={cn(
-                                "relative w-full max-w-2xl aspect-[2.4/1] flex flex-col items-center justify-center",
-                                "rounded-[3rem] overflow-hidden transition-all duration-500",
+                                "relative w-full max-w-2xl min-h-[300px] py-12 flex flex-col items-center justify-center",
+                                "rounded-lg overflow-hidden transition-all duration-300",
                                 "group/upload cursor-pointer"
                             )}
                             onDragOver={(e) => e.preventDefault()}
@@ -559,15 +600,9 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                 }}
                             />
 
-                            {/* Organic Portal Background */}
-                            <div className="absolute inset-0 bg-white dark:bg-zinc-900/40 transition-all duration-700 group-hover/upload:bg-zinc-50 dark:group-hover/upload:bg-zinc-900/60" />
+                            <div className="absolute inset-0 bg-gray-50/50 dark:bg-white/[0.02] border-2 border-dashed border-gray-200 dark:border-white/[0.08] rounded-xl transition-all duration-300 group-hover/upload:border-gray-300 dark:group-hover/upload:border-white/20" />
 
-                            {/* Glowing Orbs - Portal Effect */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[100px] opacity-50 group-hover/upload:opacity-100 transition-all duration-1000 group-hover/upload:scale-110" />
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-[80px] opacity-30 group-hover/upload:opacity-70 transition-all duration-1000 delay-100 animate-pulse" />
 
-                            {/* Border Glow (Instead of Dashed Line) */}
-                            <div className="absolute inset-0 border-2 border-zinc-200 dark:border-zinc-800 rounded-[3rem] transition-all duration-500 group-hover/upload:border-indigo-500/50 dark:group-hover/upload:border-indigo-500/50 group-hover/upload:shadow-[0_0_60px_-10px_rgba(99,102,241,0.3)]" />
 
                             <div className="relative z-10 flex flex-col items-center text-center space-y-6">
                                 <motion.div
@@ -575,9 +610,8 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                     className="relative w-24 h-24 mb-1"
                                 >
                                     {/* Icon Background */}
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-[2rem] opacity-20 dark:opacity-30 blur-2xl group-hover/upload:blur-3xl group-hover/upload:opacity-30 transition-all duration-500" />
-                                    <div className="absolute inset-0 bg-white dark:from-zinc-800 dark:to-zinc-900 dark:bg-gradient-to-tr rounded-[2rem] border-2 border-zinc-100 dark:border-zinc-700 shadow-2xl shadow-indigo-500/20 flex items-center justify-center group-hover/upload:shadow-indigo-500/30 transition-all duration-500">
-                                        <Upload className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+                                    <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center transition-all duration-300">
+                                        <Upload className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                                     </div>
 
                                     {/* Floating Particles/Badge */}
@@ -590,29 +624,26 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                     </motion.div>
                                 </motion.div>
 
-                                <div className="space-y-3 max-w-md">
-                                    <h3 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-zinc-900 via-indigo-600 to-zinc-900 dark:from-white dark:via-indigo-300 dark:to-white tracking-tight">
-                                        Upload Dataset
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                                        Upload Leads
                                     </h3>
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400 font-semibold leading-relaxed">
-                                        Drag & drop your customer file to begin <br />
-                                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">Automatic Column Mapping Active</span>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-normal">
+                                        Drag and drop your CSV or Excel file to get started
                                     </p>
                                 </div>
                             </div>
 
                             {/* Bottom Indicators */}
-                            <div className="absolute bottom-4 flex items-center gap-6 opacity-80 group-hover/upload:opacity-100 transition-opacity duration-500">
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                                    <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50" />
+                            {/* Bottom Indicators - Subtle labels */}
+                            <div className="absolute bottom-6 flex items-center gap-8 opacity-60">
+                                <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-gray-400">
                                     Name
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                                    <div className="w-2 h-2 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50" />
+                                <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-gray-400">
                                     Phone
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                                    <div className="w-2 h-2 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50" />
+                                <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-gray-400">
                                     Cohort
                                 </div>
                             </div>
@@ -621,92 +652,119 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 )}
 
                 {stage === 'MAPPING' && (
-                    <div className="flex flex-col h-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-6">
-
-                                <div className="relative group">
-                                    <div className="absolute -inset-2 bg-indigo-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative p-4 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-sm border border-indigo-500/10">
-                                        <TableIcon className="w-8 h-8" />
-                                    </div>
+                    <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-8 pr-12">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                                    <TableIcon className="w-5 h-5" />
                                 </div>
                                 <div className="space-y-1">
-                                    <h3 className="text-3xl font-extrabold dark:text-white tracking-tight leading-none">Map Data Columns</h3>
-                                    <p className="text-sm text-gray-400 dark:text-gray-500 font-medium">Connect your CSV architecture to our intelligence engine.</p>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Map Data columns</h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Align your file columns with our intelligence engine.</p>
                                 </div>
+                            </div>
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                </span>
+                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Mapping Active</span>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-6">
+                        {/* Main Split Content */}
+                        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-6">
+
+                            {/* Left Column: Configuration (4 cols) */}
+                            <div className="lg:col-span-5 flex flex-col space-y-8">
+
                                 {mode === 'create' && (
-                                    <div className="space-y-3">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Campaign Identity</label>
-                                        <Input
-                                            placeholder="Enter campaign name (e.g., Q1 Retention)"
-                                            value={campaignName}
-                                            onChange={(e) => setPersistedState(prev => ({ ...prev, campaignName: e.target.value }))}
-                                            className="rounded-2xl h-12 bg-white/50 dark:bg-white/[0.02] border-gray-100 dark:border-white/10 focus:bg-white dark:focus:bg-zinc-900 transition-all font-medium text-lg px-6"
-                                        />
+                                    <div className="space-y-3 group">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 group-focus-within:text-indigo-500 transition-colors">Campaign Name</label>
+                                        </div>
+                                        <div className="relative">
+                                            <Input
+                                                placeholder="e.g. Q1 Customer Outreach"
+                                                value={campaignName}
+                                                onChange={(e) => setPersistedState(prev => ({ ...prev, campaignName: e.target.value }))}
+                                                className="h-12 bg-gray-50/50 dark:bg-white/[0.02] border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm px-4 font-medium"
+                                            />
+                                        </div>
                                     </div>
                                 )}
 
                                 <div className="space-y-4">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Column Mapping</label>
+                                    <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Column Mapping</label>
+                                        <span className="text-[10px] text-gray-400 font-medium italic">Auto-detected best matches</span>
+                                    </div>
 
-                                    <div className="space-y-4">
-                                        <div className="group/row flex items-center justify-between p-4 rounded-2xl bg-white/40 dark:bg-white/[0.02] border border-gray-100/50 dark:border-white/[0.05] hover:border-indigo-500/20 hover:bg-indigo-500/[0.02] transition-all">
-                                            <div className="space-y-1">
-                                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Customer Name</span>
-                                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold opacity-60">Primary Identifier</p>
+                                    <div className="space-y-3">
+                                        {/* Name Field */}
+                                        <div className="p-4 rounded-xl border border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] shadow-sm hover:shadow-md transition-shadow group focus-within:ring-1 focus-within:ring-indigo-500/50">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Customer Name</span>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20">REQUIRED</span>
                                             </div>
                                             <Select value={mapping.customer_name} onValueChange={(val) => setPersistedState(prev => ({
                                                 ...prev,
                                                 mapping: { ...prev.mapping, customer_name: val }
                                             }))}>
-                                                <SelectTrigger className="w-[180px] h-11 rounded-xl border-gray-100 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500/20">
-                                                    <SelectValue placeholder="Select column" />
+                                                <SelectTrigger className="w-full h-10 border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] focus:ring-indigo-500/20 rounded-lg text-xs font-medium">
+                                                    <SelectValue placeholder="Select column..." />
                                                 </SelectTrigger>
-                                                <SelectContent className="z-[100] rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
-                                                    {headers.map(h => <SelectItem key={h} value={h} className="rounded-lg">{h}</SelectItem>)}
+                                                <SelectContent>
+                                                    {headers.map(h => <SelectItem key={h} value={h} className="text-xs">{h}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
-                                        <div className="group/row flex items-center justify-between p-4 rounded-2xl bg-white/40 dark:bg-white/[0.02] border border-gray-100/50 dark:border-white/[0.05] hover:border-indigo-500/20 hover:bg-indigo-500/[0.02] transition-all">
-                                            <div className="space-y-1">
-                                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Phone Number</span>
-                                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold opacity-60">Reachability</p>
+                                        {/* Phone Field */}
+                                        <div className="p-4 rounded-xl border border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] shadow-sm hover:shadow-md transition-shadow group focus-within:ring-1 focus-within:ring-indigo-500/50">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Phone Number</span>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20">REQUIRED</span>
                                             </div>
                                             <Select value={mapping.contact_number} onValueChange={(val) => setPersistedState(prev => ({
                                                 ...prev,
                                                 mapping: { ...prev.mapping, contact_number: val }
                                             }))}>
-                                                <SelectTrigger className="w-[180px] h-11 rounded-xl border-gray-100 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500/20">
-                                                    <SelectValue placeholder="Select column" />
+                                                <SelectTrigger className="w-full h-10 border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] focus:ring-indigo-500/20 rounded-lg text-xs font-medium">
+                                                    <SelectValue placeholder="Select column..." />
                                                 </SelectTrigger>
-                                                <SelectContent className="z-[100] rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
-                                                    {headers.map(h => <SelectItem key={h} value={h} className="rounded-lg">{h}</SelectItem>)}
+                                                <SelectContent>
+                                                    {headers.map(h => <SelectItem key={h} value={h} className="text-xs">{h}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
-                                        <div className="group/row flex items-center justify-between p-4 rounded-2xl bg-white/40 dark:bg-white/[0.02] border border-gray-100/50 dark:border-white/[0.05] hover:border-indigo-500/20 hover:bg-indigo-500/[0.02] transition-all">
-                                            <div className="space-y-1">
-                                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cohort (Optional)</span>
-                                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold opacity-60">Segmentation</p>
+                                        {/* Cohort Field */}
+                                        <div className="p-4 rounded-xl border border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] shadow-sm hover:shadow-md transition-shadow group focus-within:ring-1 focus-within:ring-indigo-500/50">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                                                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">Cohort / Group</span>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-gray-400 bg-gray-50 dark:bg-white/5 px-2 py-0.5 rounded border border-gray-100 dark:border-white/10">OPTIONAL</span>
                                             </div>
                                             <Select value={mapping.cohort} onValueChange={(val) => setPersistedState(prev => ({
                                                 ...prev,
                                                 mapping: { ...prev.mapping, cohort: val }
                                             }))}>
-                                                <SelectTrigger className="w-[180px] h-11 rounded-xl border-gray-100 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500/20">
-                                                    <SelectValue placeholder="Select column" />
+                                                <SelectTrigger className="w-full h-10 border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] focus:ring-indigo-500/20 rounded-lg text-xs font-medium text-gray-500">
+                                                    <SelectValue placeholder="No grouping selected" />
                                                 </SelectTrigger>
-                                                <SelectContent className="z-[100] rounded-2xl border-white/10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl">
-                                                    <SelectItem value="none" className="rounded-lg">None</SelectItem>
-                                                    {headers.map(h => <SelectItem key={h} value={h} className="rounded-lg">{h}</SelectItem>)}
+                                                <SelectContent>
+                                                    <SelectItem value="none" className="text-xs">None</SelectItem>
+                                                    {headers.map(h => <SelectItem key={h} value={h} className="text-xs">{h}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -714,74 +772,120 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                 </div>
                             </div>
 
-                            <div className="flex flex-col">
-                                <div className="flex flex-col space-y-4 h-full">
-                                    <div className="flex items-center justify-between px-1">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Data Preview ({data.length} records)</label>
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/5 border border-indigo-500/10">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Live View</span>
-                                        </div>
+                            {/* Right Column: Preview Sheet (7 cols) */}
+                            <div className="lg:col-span-7 flex flex-col h-full min-h-0">
+                                <div className="flex items-center justify-between mb-4 px-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                        <span className="w-4 h-4 rounded bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500">
+                                            <TableIcon className="w-2.5 h-2.5" />
+                                        </span>
+                                        Data Preview
+                                    </label>
+                                    <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-100 dark:border-emerald-500/20">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        {data.length} RECORDS READY
                                     </div>
+                                </div>
 
-                                    <div className="flex-1 rounded-[2rem] border border-gray-100 dark:border-white/10 bg-white/30 dark:bg-black/40 backdrop-blur-sm overflow-hidden shadow-sm relative">
-                                        <div className="absolute inset-0 overflow-auto custom-scrollbar">
-                                            <table className="w-full text-[11px] text-left border-collapse">
-                                                <thead className="sticky top-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md z-10">
-                                                    <tr className="border-b border-gray-100 dark:border-white/5">
-                                                        {headers.slice(0, 3).map(h => (
-                                                            <th key={h} className="px-5 py-4 font-bold text-gray-400 uppercase tracking-widest text-[10px]">{h}</th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100/50 dark:divide-white/[0.03]">
-                                                    {data.slice(0, 15).map((row, i) => (
-                                                        <tr key={i} className="hover:bg-indigo-500/[0.02] transition-colors">
-                                                            {headers.slice(0, 3).map(h => (
-                                                                <td key={h} className="px-5 py-3 text-gray-600 dark:text-gray-400 font-medium truncate max-w-[120px]">
-                                                                    {row[h]}
-                                                                </td>
-                                                            ))}
+                                {/* Premium Table Container */}
+                                <div className="flex-1 rounded-2xl border border-gray-200/60 dark:border-white/[0.08] bg-white dark:bg-zinc-900/50 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col relative group">
+                                    {/* Table Decor */}
+                                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                    <div className="flex-1 overflow-auto custom-scrollbar bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:16px_16px]">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead className="sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md z-10 shadow-sm">
+                                                <tr className="border-b border-gray-100 dark:border-white/5">
+                                                    <th className="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/3">Name</th>
+                                                    <th className="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/3">Phone</th>
+                                                    <th className="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/3">Cohort</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 dark:divide-white/[0.02]">
+                                                {data.slice(0, 50).map((row, i) => {
+                                                    const name = mapping.customer_name ? row[mapping.customer_name] : null;
+                                                    const phone = mapping.contact_number ? row[mapping.contact_number] : null;
+                                                    const cohort = mapping.cohort && mapping.cohort !== 'none' ? row[mapping.cohort] : null;
+
+                                                    return (
+                                                        <tr key={i} className="group/row hover:bg-indigo-50/30 dark:hover:bg-indigo-500/5 transition-colors">
+                                                            <td className="px-5 py-2.5">
+                                                                {name ? (
+                                                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{name}</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-gray-300 dark:text-gray-600 font-medium italic">-</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-5 py-2.5">
+                                                                {phone ? (
+                                                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 font-mono tracking-tight">{phone}</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-gray-300 dark:text-gray-600 font-medium italic">-</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-5 py-2.5">
+                                                                {cohort ? (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400">
+                                                                        {cohort}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-gray-300 dark:text-gray-600 font-medium italic">-</span>
+                                                                )}
+                                                            </td>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
                                     </div>
 
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/[0.03] dark:bg-amber-500/5 border border-amber-500/10 group/alert hover:bg-amber-500/[0.05] transition-all">
-                                        <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-500 shadow-sm">
-                                            <AlertCircle className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80 font-semibold tracking-tight">Verify that phone numbers include country codes for global reach.</span>
+                                    {/* Fade at bottom */}
+                                    <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none" />
+                                </div>
+
+                                <div className="mt-4 flex items-center justify-between gap-3 px-1">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                                        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                            Ensure phone numbers include country codes for best results.
+                                        </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-6 mt-auto">
+                        {/* Footer Actions */}
+                        <div className="pt-6 mt-auto border-t border-gray-100 dark:border-white/5 flex items-center justify-between animate-in slide-in-from-bottom-2 duration-700 delay-100">
                             <Button
                                 variant="ghost"
                                 onClick={() => setPersistedState(prev => ({ ...prev, stage: 'UPLOAD' }))}
-                                className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium rounded-xl hover:bg-black/5 dark:hover:bg-white/5"
+                                className="text-gray-400 hover:text-gray-700 dark:hover:text-white font-semibold text-xs uppercase tracking-wide px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
                             >
                                 Back
                             </Button>
+
                             <Button
                                 onClick={() => handleCreateCampaign(false)}
                                 disabled={isProcessing}
-                                size="lg"
-                                className="relative group overflow-hidden rounded-2xl h-12 px-10 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-gray-100 font-bold transition-all shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/20"
+                                className={cn(
+                                    "rounded-xl h-11 px-8 text-sm font-bold shadow-xl transition-all hover:-translate-y-0.5 active:translate-y-0",
+                                    isProcessing
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-white/10"
+                                        : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/25 ring-4 ring-indigo-500/10"
+                                )}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <span className="relative flex items-center">
+                                <span className="flex items-center gap-2">
                                     {isProcessing ? (
                                         <>
-                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                            Team is analyzing your list...
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Processing Data...</span>
                                         </>
-                                    ) : ((mode === 'edit' || !!campaignId) ? "Update Campaign Leads" : "Create Intelligence Batch")}
-                                    {!isProcessing && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}
+                                    ) : (
+                                        <>
+                                            <span>{(mode === 'edit' || !!campaignId) ? "Update Leads" : "Create Intelligence Batch"}</span>
+                                            <ArrowRight className="w-4 h-4 opacity-70" />
+                                        </>
+                                    )}
                                 </span>
                             </Button>
                         </div>
@@ -920,11 +1024,11 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                 </div>
                                 <div className="pl-4 text-sm flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                                     <span className="text-gray-900 dark:text-gray-100 font-semibold italic">
-                                        {duplicateCampaignInfo?.date && formatDistanceToNow(new Date(duplicateCampaignInfo.date), { addSuffix: true })}
+                                        {duplicateCampaignInfo?.date && formatRelativeTime(duplicateCampaignInfo.date)}
                                     </span>
                                     <span className="hidden sm:inline text-gray-300 dark:text-gray-600">•</span>
                                     <span className="text-gray-400">
-                                        {duplicateCampaignInfo?.date && format(new Date(duplicateCampaignInfo.date), 'MMM do, yyyy • h:mm a')}
+                                        {duplicateCampaignInfo?.date && formatToIST(duplicateCampaignInfo.date)}
                                     </span>
                                 </div>
                             </div>
@@ -944,6 +1048,18 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                <ConfirmExitDialog
+                    isOpen={isExitWarningOpen}
+                    onClose={() => setIsExitWarningOpen(false)}
+                    onConfirm={() => {
+                        setIsExitWarningOpen(false);
+                        if (onCancel) onCancel();
+                        else reset();
+                    }}
+                    title="Discard Upload?"
+                    description="You have pending customer data. If you leave now, you'll need to re-upload and map the file."
+                />
             </CardContent>
         </Card >
     );

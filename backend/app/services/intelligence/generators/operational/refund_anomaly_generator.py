@@ -9,14 +9,15 @@ Category: Operational
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.refund import ShopifyRefund
-from app.models.integration import Integration
+from loguru import logger
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.refund import ShopifyRefund
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
 
 
 class RefundAnomalyGenerator(BaseInsightGenerator):

@@ -40,7 +40,7 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
     const pathname = usePathname();
     const { theme, setTheme, resolvedTheme } = useTheme();
-    const { user, companyId, logout } = useAuth();
+    const { user, dbUser, companyId, logout } = useAuth();
     const [mounted, setMounted] = useState(false);
     const [companyName, setCompanyName] = useState<string>("Your Brand");
 
@@ -58,12 +58,15 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
             client.companies.readCompany(companyId)
                 .then((company: any) => {
                     // Prefer Brand Name if available (since User wants Brand Name visible)
-                    const display = (company.brands && company.brands.length > 0)
-                        ? company.brands[0].name
-                        : company.name;
+                    // The backend Company model uses brand_name, while the Brand model has .name
+                    // We prioritize Company.brand_name -> Brand[0].name -> Company.legal_name -> Fallback
+                    const display = company.brand_name ||
+                        (company.brands && company.brands.length > 0 && company.brands[0].name) ||
+                        company.legal_name;
 
-                    setCompanyName(display || "Your Brand");
-                    localStorage.setItem(`company_name_${companyId}`, display || "Your Brand");
+                    const userDisplayName = dbUser?.full_name || user?.displayName || "New Brand";
+                    setCompanyName(display || userDisplayName);
+                    localStorage.setItem(`company_name_${companyId}`, display || userDisplayName);
                 })
                 .catch(err => {
                     console.error("Failed to fetch company details:", err);
@@ -102,8 +105,8 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         <Leaf className="w-5 h-5 fill-white" />
                     </div>
                     <div className={cn("flex flex-col transition-opacity duration-200", isCollapsed ? "hidden opacity-0 w-0" : "flex opacity-100")}>
-                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">SquareUp</span>
-                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Your Customer OS</span>
+                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">Unclutr</span>
+                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Your Brand OS</span>
                     </div>
                 </div>
             </div>

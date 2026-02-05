@@ -1,9 +1,10 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from app.models.user import User, UserCreate, UserRead
 from datetime import datetime
 
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.iam import CompanyMembership
+from app.models.user import User, UserCreate, UserRead
 
 
 async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
@@ -28,7 +29,6 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
             new_uid = user_in.id
             
             # --- MIGRATION: Update References ---
-            from textwrap import dedent
             from sqlalchemy import text
             
             # We use raw SQL for efficient bulk updates without loading everything
@@ -71,6 +71,14 @@ async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
         session.add(user)
     else:
         # Update existing
+        # Security: User claims this is their email, but we must check if another user (different UID) owns it
+        # This prevents unique constraint violations if they changed email to one that is already taken
+        if user_in.email != user.email:
+            email_check_stmt = select(User).where(User.email == user_in.email).where(User.id != user.id)
+            email_check_result = await session.exec(email_check_stmt)
+            if email_check_result.first():
+                raise ValueError(f"Email {user_in.email} is already in use by another account.")
+
         if not user.full_name:
             user.full_name = user_in.full_name
         user.picture_url = user_in.picture_url

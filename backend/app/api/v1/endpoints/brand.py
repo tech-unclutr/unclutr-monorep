@@ -1,14 +1,14 @@
 from typing import Any, Dict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
+from loguru import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from loguru import logger
 
 from app.api.deps import get_session
-from app.services.brand_service import brand_service
 from app.core.security import get_current_user
+from app.services.brand_service import brand_service
 
 router = APIRouter()
 
@@ -46,7 +46,7 @@ async def get_brand_overview(
         metrics = await brand_service.calculate_aggregated_metrics(session, brand_id)
         
         logger.info(
-            f"Brand overview fetched successfully",
+            "Brand overview fetched successfully",
             extra={
                 "brand_id": str(brand_id),
                 "company_id": str(x_company_id),
@@ -61,7 +61,7 @@ async def get_brand_overview(
         import traceback
         error_msg = traceback.format_exc()
         logger.error(
-            f"Error fetching brand overview",
+            "Error fetching brand overview",
             extra={
                 "brand_id": str(brand_id),
                 "error": str(e),

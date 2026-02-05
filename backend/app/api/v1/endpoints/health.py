@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy import text
-from app.core.db import get_session
-import firebase_admin
-from firebase_admin import auth
-import vertexai
-from app.core.config import settings
 import logging
+
+import firebase_admin
+import vertexai
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.core.config import settings
+from app.core.db import get_session
 
 logger = logging.getLogger(__name__)
 

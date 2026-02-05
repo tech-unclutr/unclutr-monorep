@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Optional, Dict, List
-from uuid import UUID, uuid4
 from decimal import Decimal
-from sqlmodel import Field, SQLModel, Column, BigInteger, Relationship
-from sqlalchemy import UniqueConstraint, ForeignKey
+from typing import Dict, List, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import BigInteger, Column, Field, Relationship, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyProduct(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_product"
@@ -33,7 +35,7 @@ class ShopifyProduct(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: datetime = Field(index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
     # Relationships
     variants: List["ShopifyProductVariant"] = Relationship(back_populates="product", sa_relationship_kwargs={"cascade": "all, delete"})
@@ -71,7 +73,7 @@ class ShopifyProductVariant(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: Optional[datetime] = Field(default=None, index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
     
     # Relationships
     product: ShopifyProduct = Relationship(back_populates="variants")
@@ -99,7 +101,7 @@ class ShopifyProductImage(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: Optional[datetime] = Field(default=None, index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
     
     # Relationships
     product: ShopifyProduct = Relationship(back_populates="images")

@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Optional, List, Dict
-from uuid import UUID, uuid4
 from decimal import Decimal
-from sqlmodel import Field, SQLModel, Relationship, Column
-from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
+from typing import Dict, List, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyOrder(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_order"
@@ -50,7 +52,7 @@ class ShopifyOrder(UserTrackedModel, SQLModel, table=True):
     shopify_cancelled_at: Optional[datetime] = Field(default=None, index=True)
 
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
     
     # Relationships
     line_items: List["ShopifyLineItem"] = Relationship(back_populates="order", sa_relationship_kwargs={"cascade": "all, delete"})

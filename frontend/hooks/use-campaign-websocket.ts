@@ -17,14 +17,17 @@ interface CampaignStatusData {
     history: any[];
     all_leads_by_cohort: Record<string, any[]>;
     is_completed: boolean;
+    is_exhausted?: boolean;
     completion_data: any;
     next_leads?: any[]; // Added for WS (Human Queue)
     events?: any[];     // Added for WS (Mission Control)
     execution_windows?: any[]; // Added for scheduling
+    campaign_metadata?: any; // Added to fix build error
+    user_queue?: any[]; // Added for User Action Panel
 }
 
 interface WebSocketMessage {
-    type: 'connected' | 'status_update' | 'agents_update' | 'new_event' | 'pong';
+    type: 'connected' | 'status_update' | 'agents_update' | 'new_event' | 'user_queue_update' | 'item_locked_update' | 'pong';
     campaign_id?: string;
     data?: CampaignStatusData;
     agents?: any[];
@@ -163,6 +166,17 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
                         case 'new_event':
                             // Handle new events if needed
                             console.log('[WebSocket] New event:', message.event);
+                            break;
+
+                        case 'user_queue_update':
+                            if (message.data?.user_queue) {
+                                setData(prev => prev ? { ...prev, user_queue: message.data?.user_queue } : null);
+                            }
+                            break;
+
+                        case 'item_locked_update':
+                            // Handle lock/unlock events if needed (e.g. toast)
+                            console.log('[WebSocket] Item locked/unlocked:', message.message);
                             break;
 
                         case 'pong':

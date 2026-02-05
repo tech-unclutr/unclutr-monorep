@@ -1,25 +1,50 @@
+
 import asyncio
+import os
+import sys
 from uuid import UUID
-from sqlmodel import select
-from app.core.db import init_db, get_session
+from datetime import datetime
+import pytz
+
+# Set up paths
+sys.path.append(os.getcwd())
+
+from app.core.db import async_session_factory
 from app.models.campaign import Campaign
 
-async def check_campaign():
-    await init_db()
-    async for session in get_session():
-        # Get latest campaign
-        stmt = select(Campaign).order_by(Campaign.created_at.desc()).limit(1)
-        result = await session.execute(stmt)
-        campaign = result.scalars().first()
+async def check_campaign_windows(campaign_id_str):
+    campaign_id = UUID(campaign_id_str)
+    async with async_session_factory() as session:
+        campaign = await session.get(Campaign, campaign_id)
+        if not campaign:
+            print(f"Campaign {campaign_id} not found")
+            return
+            
+        print(f"Campaign: {campaign.name}")
+        print(f"Status: {campaign.status}")
+        print(f"Windows: {campaign.execution_windows}")
         
-        if campaign:
-            print(f"Campaign Found: {campaign.id}")
-            print(f"Name: {campaign.name}")
-            print(f"Execution Windows: {campaign.execution_windows}")
-            print(f"Number of windows: {len(campaign.execution_windows or [])}")
-        else:
-            print("No campaigns found.")
-        break
+        now_local = datetime.now()
+        print(f"Current Local Time: {now_local}")
+        
+        if campaign.execution_windows:
+            for w in campaign.execution_windows:
+                day = w.get('day', '')
+                st = w.get('start', '')
+                et = w.get('end', '')
+                print(f"Checking Window: {day} {st} - {et}")
+                if day and st and et:
+                    try:
+                        start_dt = datetime.fromisoformat(f"{day}T{st}:00")
+                        end_dt = datetime.fromisoformat(f"{day}T{et}:00")
+                        print(f"  Parsed: {start_dt} - {end_dt}")
+                        if start_dt <= now_local <= end_dt:
+                            print("  Status: ACTIVE")
+                        else:
+                            print("  Status: INACTIVE")
+                    except Exception as e:
+                        print(f"  Error: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(check_campaign())
+    campaign_id = "ff4d88d2-9c17-4da6-90a5-c8eceb976566"
+    asyncio.run(check_campaign_windows(campaign_id))

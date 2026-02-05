@@ -56,7 +56,7 @@ const extractLinkedinHandle = (url: string | undefined): string => {
 
 export function ContactDetailsCard({ contactDetails, onChange, isSaved, isLoading, onSave, className }: ContactDetailsCardProps) {
     const [viewState, setViewState] = useState<ViewState>(() => {
-        if (contactDetails.name && contactDetails.phone && contactDetails.role && contactDetails.department) {
+        if (contactDetails.name && contactDetails.phone && contactDetails.role && contactDetails.department && contactDetails.linkedin) {
             return 'VIEW';
         }
         return 'EDIT';
@@ -98,6 +98,11 @@ export function ContactDetailsCard({ contactDetails, onChange, isSaved, isLoadin
 
         if (!contactDetails.department || contactDetails.department.length < 2) {
             newErrors.department = "Department is required.";
+            isValid = false;
+        }
+
+        if (!contactDetails.linkedin || contactDetails.linkedin.length < 3) {
+            newErrors.linkedin = "LinkedIn profile is required.";
             isValid = false;
         }
 
@@ -323,12 +328,15 @@ export function ContactDetailsCard({ contactDetails, onChange, isSaved, isLoadin
 
                             {/* LinkedIn (Optional) */}
                             <div className="space-y-2 group">
-                                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                                    LinkedIn <span className="opacity-50 font-normal normal-case ml-1 text-[10px]">(Optional)</span>
+                                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 group-focus-within:text-orange-500 transition-colors">
+                                    LinkedIn
                                 </Label>
                                 <div className="relative transform transition-all duration-300 group-focus-within:scale-[1.005]">
-                                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                                        <Linkedin className="w-4 h-4 text-[#0077B5]" />
+                                    <div className={cn(
+                                        "absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors",
+                                        errors.linkedin ? "text-red-500" : "text-gray-400 pointer-events-none"
+                                    )}>
+                                        <Linkedin className={cn("w-4 h-4", !errors.linkedin && "text-[#0077B5]")} />
                                     </div>
                                     <div className="absolute left-10 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium select-none pointer-events-none whitespace-nowrap">
                                         linkedin.com/in/
@@ -337,14 +345,17 @@ export function ContactDetailsCard({ contactDetails, onChange, isSaved, isLoadin
                                         value={extractLinkedinHandle(contactDetails.linkedin)}
                                         onChange={(e) => {
                                             onChange('linkedin', extractLinkedinHandle(e.target.value));
+                                            if (errors.linkedin) setErrors(prev => ({ ...prev, linkedin: '' }));
                                         }}
                                         disabled={viewState === 'Unlocking'}
                                         className={cn(
                                             "pl-[152px] md:pl-[156px] h-11 rounded-xl bg-white/50 dark:bg-black/20 border-zinc-200 dark:border-white/10",
                                             "focus:ring-4 focus:ring-[#0077b5]/10 focus:border-[#0077b5] focus:bg-white dark:focus:bg-black/40",
-                                            "transition-all duration-300 text-sm shadow-sm"
+                                            "transition-all duration-300 text-sm shadow-sm",
+                                            errors.linkedin && "border-red-500 focus:border-red-500"
                                         )}
                                     />
+                                    {errors.linkedin && <p className="text-[10px] text-red-500 pl-1">{errors.linkedin}</p>}
                                 </div>
                             </div>
 

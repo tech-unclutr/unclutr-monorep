@@ -1,20 +1,21 @@
-from typing import Any, List, Dict, Set
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from sqlalchemy.orm import selectinload
 import uuid
+from typing import Any, Dict, List, Set
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import get_session
 from app.core.security import get_current_user
-from app.models.company import Company, Brand
-from app.models.iam import CompanyMembership
+from app.models.company import Company
 from app.models.datasource import DataSource
+from app.models.iam import CompanyMembership
 from app.schemas.settings import (
+    ChannelSettings,
     OnboardingSettingsResponse,
     RegionSettings,
-    ChannelSettings,
-    StackSettings
+    StackSettings,
 )
 
 router = APIRouter()

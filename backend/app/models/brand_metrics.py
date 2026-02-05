@@ -1,9 +1,11 @@
-from datetime import date, datetime
-from typing import Optional, Dict
 import uuid
-from sqlmodel import Field, SQLModel, Column
+from datetime import date, datetime
+from typing import Dict
+
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, SQLModel
+
 
 class BrandMetrics(SQLModel, table=True):
     """
@@ -25,5 +27,5 @@ class BrandMetrics(SQLModel, table=True):
     total_inventory_value: float = Field(default=0.0)
     
     # Intelligence Deck (Phase 2)
-    insights: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    insights: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
     updated_at: datetime = Field(default_factory=datetime.utcnow)

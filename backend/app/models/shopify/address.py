@@ -1,10 +1,12 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
 
+from sqlalchemy import BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, SQLModel
+
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyAddress(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_address"
@@ -41,4 +43,4 @@ class ShopifyAddress(UserTrackedModel, SQLModel, table=True):
     default: bool = Field(default=False)
 
     # Store the latest raw data
-    raw_payload: Optional[Dict] = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Optional[Dict] = Field(default={}, sa_column=Column(postgresql.JSON))

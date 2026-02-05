@@ -37,6 +37,7 @@ import { CampaignComposer } from "@/components/customer-intelligence/CampaignCom
 import { CampaignSuccessPopup } from "@/components/customer-intelligence/CampaignSuccessPopup"; // [NEW]
 
 import { useAuth } from "@/context/auth-context"; // [NEW]
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 
 // Types for Mock State
 type ExtractionStatus = 'IDLE' | 'CALLING' | 'RINGING' | 'IN_PROGRESS' | 'COMPLETED' | 'REVIEW' | 'ERROR';
@@ -79,26 +80,46 @@ export default function CustomerIntelligencePage() {
     // Derived state for readiness - Single Source of Truth is now the LATEST CAMPAIGN or User Settings
     const latestCampaign = latestCampaigns.length > 0 ? latestCampaigns[0] : null;
     const isContactReady = !!(
-        (dbUser?.contact_number && dbUser?.designation && dbUser?.team) ||
-        (dbUser?.settings?.intelligence_unlocked)
+        dbUser?.full_name &&
+        dbUser?.contact_number &&
+        dbUser?.designation &&
+        dbUser?.team &&
+        dbUser?.linkedin_profile
     );
+
+    const [isSuccessSequence, setIsSuccessSequence] = useState(false); // [NEW] Explicit success flow tracking
+
+    // Countdown State
+    const [countdown, setCountdown] = useState(3);
 
     // Quick Glance Effect: If data is ready, ensure we move to dashboard
     useEffect(() => {
-        if (isContactReady) {
-            // [NEW] If already unlocked in settings AND not a fresh save in this session, skip glance entirely
-            if (dbUser?.settings?.intelligence_unlocked && !isContactSaved) {
-                setShowGlance(false);
-                return;
-            }
+        // Guard: Only run if contact is ready
+        if (!isContactReady) return;
 
-            // Fresh save OR first time seeing it: show for 1.5s as a "Success Screen"
-            const timer = setTimeout(() => {
-                setShowGlance(false);
-            }, 1500);
-            return () => clearTimeout(timer);
+        // CASE 1: User just completed the form (Success Sequence)
+        // We want to show the glance/countdown.
+        if (isSuccessSequence) {
+            setCountdown(3);
+            const interval = setInterval(() => {
+                setCountdown((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        setShowGlance(false); // End glance after countdown
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(interval);
         }
-    }, [isContactReady, dbUser?.settings?.intelligence_unlocked, isContactSaved]);
+
+        // CASE 2: User loaded page and is ALREADY ready (Initial Load)
+        // We want to skip glance immediately.
+        // (Unless we decide to show a quick "Welcome Back" - but valid requirement is usually instant access)
+        setShowGlance(false);
+
+    }, [isContactReady, isSuccessSequence]); // Re-run if ready changes or if we enter success sequence
 
     const CAMPAIGNS_PER_PAGE = 3;
 
@@ -137,14 +158,14 @@ export default function CustomerIntelligencePage() {
                     linkedin: baseline.linkedin
                 });
 
-                if (baseline.phone && baseline.role && baseline.department) {
+                if (baseline.name && baseline.phone && baseline.role && baseline.department && baseline.linkedin) {
                     setIsContactSaved(true);
                 }
             }
 
-            if (data.campaigns.length < limit) {
-                setHasMoreCampaigns(false);
-            }
+            // Robust hasMore check: if we got exactly what we asked for, there might be more.
+            // If we got less, we definitely hit the end.
+            setHasMoreCampaigns(data.campaigns.length >= limit);
 
             // Update offset based on the actual number of items fetched or the limit requested
             // If we are appending, we move the offset forward by the number of new items
@@ -211,7 +232,7 @@ export default function CustomerIntelligencePage() {
     // Refresh campaigns when an interview completes
     useEffect(() => {
         if (status === 'COMPLETED' && activeCampaign) {
-            fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
+            fetchCampaigns(0, false, latestCampaigns.length + 1);
         }
     }, [status, activeCampaign]);
 
@@ -342,6 +363,7 @@ export default function CustomerIntelligencePage() {
 
             // Success!
             setIsContactSaved(true);
+            setIsSuccessSequence(true); // [NEW] Trigger countdown sequence
             setOriginalContactDetails({ ...contactDetails });
             toast.success("Identity Verified. Customer Intelligence Unlocked.");
 
@@ -355,7 +377,7 @@ export default function CustomerIntelligencePage() {
             // Refresh campaigns to update the view immediately
             // Small delay to allow animation to play out?
             setTimeout(() => {
-                fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
+                fetchCampaigns(0, false, latestCampaigns.length + 1);
             }, 1000);
 
         } catch (error: any) {
@@ -569,27 +591,6 @@ export default function CustomerIntelligencePage() {
     return (
         <div id="customer-intelligence-scroll-container" className="p-6 md:p-8 h-[calc(100vh-4rem)] flex flex-col overflow-y-auto scrollbar-hide">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
-                {/* Header Section - Only show when not in blocking state and NOT in success glance */}
-                {(isLoadingUser || (isContactReady && !showGlance)) && (
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex flex-col gap-0.5">
-                            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Customer Intelligence Lab</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium max-w-2xl">
-                                Transform your outreach with AI-powered customer insights. Upload your leads, let our AI conduct discovery calls, and receive personalized campaign strategies tailored to each prospect.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                SYSTEM ONLINE
-                            </span>
-                        </div>
-                    </div>
-                )}
-
                 <AnimatePresence mode="wait">
                     {isLoadingUser ? (
                         <motion.div
@@ -640,11 +641,26 @@ export default function CustomerIntelligencePage() {
                             <ContactDetailsCard
                                 contactDetails={contactDetails}
                                 onChange={handleContactChange}
-                                isSaved={isContactSaved || !!dbUser?.settings?.intelligence_unlocked}
+                                isSaved={isContactSaved}
                                 isLoading={isSaveLoading}
                                 onSave={handleSaveContact}
                                 className="relative z-10 w-full"
                             />
+
+                            {/* Redirect Countdown - Only show when successful */}
+                            {isContactReady && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.5 }}
+                                    className="relative z-10 mt-6 text-center"
+                                >
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest bg-white/50 dark:bg-black/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/10 inline-flex items-center gap-2">
+                                        <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
+                                        Redirecting to Dashboard in <span className="text-emerald-500 font-mono text-xs">{countdown}</span>s
+                                    </p>
+                                </motion.div>
+                            )}
                         </motion.div>
                     ) : (
                         <motion.div
@@ -652,313 +668,176 @@ export default function CustomerIntelligencePage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.2 }}
-                            className="w-full"
+                            className="w-full space-y-12"
                         >
-                            {/* Bento Grid Layout */}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* Hero Header - Minimalist & Premium */}
+                            <div className="text-center space-y-3 py-8">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-gray-50 dark:bg-white/[0.03] border border-gray-200/50 dark:border-white/[0.06]">
+                                    <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+                                    <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Intelligence Engine</span>
+                                </div>
+                                <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 dark:text-white tracking-tight">
+                                    Customer Intelligence Lab
+                                </h1>
+                                <p className="text-base text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                                    Upload your leads, and watch our AI conduct personalized discovery calls.
+                                    Get deep customer insights and tailored campaign strategies—automatically.
+                                </p>
+                            </div>
 
-                                {/* 1. CSV Upload Mega-Card (Left 3/4) */}
-                                <CsvUploadCard
-                                    className="lg:col-span-9"
-                                    onSuccess={() => setShowSuccessPopup(true)}
-                                />
+                            {/* Main Interactive Row - Hero Panel (75%) and Quick Check (25%) */}
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
 
-                                <CampaignSuccessPopup
-                                    isOpen={showSuccessPopup}
-                                    onClose={() => setShowSuccessPopup(false)}
-                                    onComplete={() => {
-                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
-                                    }}
-                                />
+                                {/* 1. CSV Upload Card - Dominant Hero (75% on desktop) */}
+                                <div className="lg:col-span-3">
+                                    <CsvUploadCard
+                                        className="h-full min-h-[400px] shadow-sm border-gray-200/80 dark:border-white/[0.08]"
+                                        onSuccess={() => setShowSuccessPopup(true)}
+                                        isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
+                                    />
+                                    <CampaignSuccessPopup
+                                        isOpen={showSuccessPopup}
+                                        onClose={() => setShowSuccessPopup(false)}
+                                        onComplete={() => {
+                                            fetchCampaigns(0, false, latestCampaigns.length + 1);
+                                        }}
+                                    />
+                                </div>
 
-                                {/* 2. Right Column (Calendar & Readiness) */}
-                                <div className="lg:col-span-3 space-y-4 flex flex-col">
+                                {/* 2. Calendar Sync Card - Subtle Quick Check (25% on desktop) */}
+                                <div className="relative group rounded-[2.5rem] overflow-hidden flex flex-col h-auto self-start">
+                                    <div className="absolute inset-0 bg-white dark:bg-zinc-900/50 border border-gray-200/80 dark:border-white/[0.08] transition-all duration-200 group-hover:border-gray-300 dark:group-hover:border-white/[0.12] rounded-[2.5rem]" />
 
-                                    {/* Calendar Sync Card */}
-                                    <div className="relative group rounded-[2.5rem] overflow-hidden">
-                                        <div className="absolute inset-0 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 transition-all duration-300 group-hover:bg-white/70 dark:group-hover:bg-black/50" />
-
-                                        <div className="relative p-5 flex flex-col h-full z-10">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="p-2.5 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/10">
+                                    <div className="relative p-6 flex flex-col h-full z-10">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className="p-2 rounded-lg bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-400 mt-0.5">
                                                     <Calendar className="w-4 h-4" />
                                                 </div>
-                                                <div className={cn(
-                                                    "px-3 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1.5",
-                                                    isCalendarConnected
-                                                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
-                                                        : "bg-zinc-100/50 text-zinc-400 border-zinc-200/50 dark:bg-white/5 dark:border-white/5"
-                                                )}>
-                                                    <div className={cn("w-1.5 h-1.5 rounded-full", isCalendarConnected ? "bg-emerald-500 animate-pulse" : "bg-zinc-400")} />
-                                                    {isCalendarConnected ? "SYNC ACTIVE" : "OFFLINE"}
+                                                <div>
+                                                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1.5 leading-none">Calendar Access</h3>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0 leading-relaxed max-w-[140px]">
+                                                        Sync schedule to block execution windows.
+                                                    </p>
                                                 </div>
                                             </div>
+                                            <div className={cn(
+                                                "px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1.5 shrink-0",
+                                                isCalendarConnected
+                                                    ? "bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                                                    : "bg-gray-50 text-gray-400 border-gray-200/50 dark:bg-white/[0.03] dark:border-white/[0.06]"
+                                            )}>
+                                                <div className={cn("w-1.5 h-1.5 rounded-full", isCalendarConnected ? "bg-emerald-500 animate-pulse" : "bg-gray-400")} />
+                                                {isCalendarConnected ? "ACTIVE" : "OFFLINE"}
+                                            </div>
+                                        </div>
 
-                                            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">Calendar Access</h3>
-                                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-4 font-medium leading-relaxed">
-                                                Sync your schedule to automatically block execution windows.
-                                            </p>
-
-                                            {isLoadingInitial || isConnecting || isDisconnecting ? (
-                                                <div className="flex-1 flex items-center justify-center py-8">
-                                                    <MagicLoader text={isConnecting ? "Connecting..." : "Syncing..."} />
-                                                </div>
-                                            ) : !isCalendarConnected ? (
+                                        {isLoadingInitial || isConnecting || isDisconnecting ? (
+                                            <div className="flex-1 flex items-center justify-center">
+                                                <MagicLoader text={isConnecting ? "Connecting..." : "Syncing..."} />
+                                            </div>
+                                        ) : !isCalendarConnected ? (
+                                            <div className="flex-1 flex items-center justify-center">
                                                 <Button
                                                     onClick={handleConnectCalendar}
-                                                    className="w-full rounded-2xl h-11 bg-zinc-900 dark:bg-white/10 hover:bg-zinc-800 dark:hover:bg-white/20 text-white font-semibold transition-all shadow-lg hover:shadow-xl"
+                                                    className="w-full rounded-2xl h-10 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs font-semibold transition-all shadow-lg"
                                                 >
-                                                    Connect Google Calendar
-                                                    <ArrowUpRight className="w-4 h-4 ml-2 opacity-60" />
+                                                    Connect Google
+                                                    <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 opacity-50" />
                                                 </Button>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Google Calendar</span>
-                                                        </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={handleDisconnectCalendar}
-                                                            className="w-6 h-6 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-full transition-colors"
-                                                            title="Disconnect"
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col flex-1 space-y-6">
+                                                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200/50 dark:border-emerald-500/10 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Google Calendar</span>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={handleDisconnectCalendar}
+                                                        className="w-6 h-6 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-colors"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
+
+                                                <div className="relative">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">24H Availability</span>
+                                                        <button
+                                                            onClick={() => setIsAvailabilityPopupOpen(true)}
+                                                            className="text-[10px] text-blue-500 hover:text-blue-600 font-semibold"
                                                         >
-                                                            <X className="w-3.5 h-3.5" />
-                                                        </Button>
+                                                            View Week
+                                                        </button>
                                                     </div>
 
-                                                    <div className="relative">
-                                                        {/* Label */}
-                                                        <div className="flex items-center justify-between mb-2 px-1">
-                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">24H Availability</span>
-                                                        </div>
+                                                    <div
+                                                        className="grid grid-cols-8 gap-1 p-2.5 bg-gray-50 dark:bg-white/[0.02] rounded-lg border border-gray-200/50 dark:border-white/[0.06] cursor-pointer hover:border-gray-300 dark:hover:border-white/[0.1] transition-colors"
+                                                        onClick={() => setIsAvailabilityPopupOpen(true)}
+                                                        title="View Full Week"
+                                                    >{(() => {
+                                                        const now = new Date();
+                                                        const startOfHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+                                                        const slots = Array.from({ length: 18 }).map((_, i) => {
+                                                            const start = new Date(startOfHour.getTime() + i * 1 * 60 * 60 * 1000);
+                                                            const end = new Date(startOfHour.getTime() + (i + 1) * 1 * 60 * 60 * 1000);
+                                                            const isBusy = (calendarData?.busy_slots || []).some((slot: any) => {
+                                                                const s = new Date(slot.start).getTime();
+                                                                const e = new Date(slot.end).getTime();
+                                                                return (s < end.getTime() && e > start.getTime());
+                                                            });
+                                                            return { isBusy, key: i };
+                                                        });
 
-                                                        {/* Heatmap Grid */}
-                                                        <div
-                                                            className="grid grid-cols-8 gap-1.5 p-3 bg-white/50 dark:bg-black/20 rounded-[1.5rem] border border-zinc-100 dark:border-white/5 cursor-pointer hover:border-indigo-500/20 transition-colors"
-                                                            onClick={() => setIsAvailabilityPopupOpen(true)}
-                                                            title="View Full Week"
-                                                        >
-                                                            {(() => {
-                                                                const now = new Date();
-                                                                const startOfHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
-                                                                // Show next 24 hours (first 16 for cleaner grid? 2 rows of 8)
-                                                                // Let's do 16 slots for cleaner visual in the small card
-                                                                const slots = Array.from({ length: 16 }).map((_, i) => {
-                                                                    const start = new Date(startOfHour.getTime() + i * 1 * 60 * 60 * 1000);
-                                                                    const end = new Date(startOfHour.getTime() + (i + 1) * 1 * 60 * 60 * 1000);
-                                                                    const isBusy = (calendarData?.busy_slots || []).some((slot: any) => {
-                                                                        const s = new Date(slot.start).getTime();
-                                                                        const e = new Date(slot.end).getTime();
-                                                                        return (s < end.getTime() && e > start.getTime());
-                                                                    });
-                                                                    return { isBusy, key: i };
-                                                                });
-
-                                                                return slots.map(slot => (
-                                                                    <div
-                                                                        key={slot.key}
-                                                                        className={cn(
-                                                                            "aspect-square rounded-full transition-all duration-500",
-                                                                            slot.isBusy
-                                                                                ? "bg-rose-500/80 shadow-sm shadow-rose-500/20"
-                                                                                : "bg-emerald-500/20 scale-75"
-                                                                        )}
-                                                                    />
-                                                                ));
-                                                            })()}
-                                                        </div>
+                                                        return slots.map(slot => (
+                                                            <div
+                                                                key={slot.key}
+                                                                className={cn(
+                                                                    "aspect-square rounded-full transition-all duration-300",
+                                                                    slot.isBusy
+                                                                        ? "bg-rose-500/70"
+                                                                        : "bg-emerald-500/20"
+                                                                )}
+                                                            />
+                                                        ));
+                                                    })()}
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Minimalist Animation Card */}
-                                    <div className="relative group rounded-[2.5rem] overflow-hidden min-h-[300px]">
-                                        {/* Transparent Background */}
-                                        <div className="absolute inset-0 bg-transparent transition-all duration-300" />
-
-                                        {/* Floating Orbs Animation - Ambient Projection */}
-                                        <div className="relative p-6 flex flex-col h-full z-10">
-                                            {/* Subtle background tint for visibility/separation */}
-                                            <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] bg-zinc-50/30 dark:bg-zinc-900/20">
-                                                {/* Orb 1 - Orange (Subtle & Flowing) */}
-                                                <motion.div
-                                                    animate={{
-                                                        x: [0, 80, -40, 0],
-                                                        y: [0, -60, 40, 0],
-                                                        scale: [1, 1.2, 0.9, 1],
-                                                        opacity: [0.2, 0.35, 0.2],
-                                                    }}
-                                                    transition={{
-                                                        duration: 20,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut",
-                                                    }}
-                                                    className="absolute top-1/4 left-1/4 w-40 h-40 bg-orange-500/25 rounded-full blur-[60px]"
-                                                />
-
-                                                {/* Orb 2 - Emerald (Balancing) */}
-                                                <motion.div
-                                                    animate={{
-                                                        x: [0, -70, 30, 0],
-                                                        y: [0, 80, -20, 0],
-                                                        scale: [1, 1.3, 0.95, 1],
-                                                        opacity: [0.15, 0.3, 0.15],
-                                                    }}
-                                                    transition={{
-                                                        duration: 22,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut",
-                                                        delay: 2,
-                                                    }}
-                                                    className="absolute top-1/2 right-1/4 w-48 h-48 bg-emerald-500/20 rounded-full blur-[70px]"
-                                                />
-
-                                                {/* Orb 3 - Indigo (Deep Ambient) */}
-                                                <motion.div
-                                                    animate={{
-                                                        x: [0, 50, -30, 0],
-                                                        y: [0, -50, 30, 0],
-                                                        scale: [1, 1.15, 1.05, 1],
-                                                        opacity: [0.12, 0.25, 0.12],
-                                                    }}
-                                                    transition={{
-                                                        duration: 25,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut",
-                                                        delay: 4,
-                                                    }}
-                                                    className="absolute bottom-1/4 left-1/3 w-44 h-44 bg-indigo-500/15 rounded-full blur-[65px]"
-                                                />
-
-                                                {/* Floating Dust Particles - Noticeworthy Detail */}
-                                                {Array.from({ length: 12 }).map((_, i) => (
-                                                    <motion.div
-                                                        key={i}
-                                                        animate={{
-                                                            y: [0, -100, 0],
-                                                            x: [0, (i % 2 === 0 ? 15 : -15), 0],
-                                                            opacity: [0.2, 0.6, 0.2],
-                                                            scale: [1, 1.2, 1],
-                                                        }}
-                                                        transition={{
-                                                            duration: 12 + i * 1,
-                                                            repeat: Infinity,
-                                                            ease: "easeInOut",
-                                                            delay: i * 0.8,
-                                                        }}
-                                                        className="absolute w-1 h-1 bg-zinc-600/40 dark:bg-white/30 rounded-full"
-                                                        style={{
-                                                            left: `${15 + (i * 7)}%`,
-                                                            top: `${20 + (i % 4) * 20}%`,
-                                                        }}
-                                                    />
-                                                ))}
-
-                                                {/* Thin Geometric Rings - Elegant Structure */}
-                                                <motion.div
-                                                    animate={{
-                                                        rotate: [0, 360],
-                                                        opacity: [0.15, 0.3, 0.15],
-                                                    }}
-                                                    transition={{
-                                                        duration: 40,
-                                                        repeat: Infinity,
-                                                        ease: "linear",
-                                                    }}
-                                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-[1px] border-orange-500/15 dark:border-white/10 rounded-full"
-                                                />
-                                                <motion.div
-                                                    animate={{
-                                                        rotate: [360, 0],
-                                                        opacity: [0.15, 0.3, 0.15],
-                                                    }}
-                                                    transition={{
-                                                        duration: 45,
-                                                        repeat: Infinity,
-                                                        ease: "linear",
-                                                    }}
-                                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 border-[1px] border-emerald-500/15 dark:border-white/10 rounded-full border-dashed"
-                                                />
-
-                                                {/* Very Subtle Gradient Wash */}
-                                                <motion.div
-                                                    animate={{
-                                                        opacity: [0.15, 0.3, 0.15],
-                                                    }}
-                                                    transition={{
-                                                        duration: 10,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut",
-                                                    }}
-                                                    className="absolute inset-0 bg-gradient-radial from-white/10 via-transparent to-transparent"
-                                                />
                                             </div>
-
-                                            {/* Central Focal Point - Minimalist */}
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                {/* Ambient Glow */}
-                                                <motion.div
-                                                    animate={{
-                                                        scale: [1, 1.1, 1],
-                                                        opacity: [0.1, 0.25, 0.1],
-                                                    }}
-                                                    transition={{
-                                                        duration: 8,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut",
-                                                    }}
-                                                    className="w-56 h-56 bg-gradient-radial from-orange-400/15 to-transparent rounded-full blur-2xl"
-                                                />
-
-                                                {/* Geometric Core */}
-                                                <motion.div
-                                                    animate={{
-                                                        rotate: [0, 45, 0, -45, 0],
-                                                        opacity: [0.3, 0.6, 0.3],
-                                                    }}
-                                                    transition={{
-                                                        duration: 20,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut",
-                                                    }}
-                                                    className="w-12 h-12 border border-white/20 dark:border-white/10 rounded-xl transform rotate-45"
-                                                />
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
-
                                 </div>
                             </div>
 
                             {/* Latest Campaigns Section */}
-                            <div id="latest-campaigns" className="mb-12 mt-6">
-                                <div className="flex items-center justify-between mb-8">
+                            <div id="latest-campaigns" className="pt-8 border-t border-gray-100 dark:border-white/[0.05]">
+                                <div className="flex items-center justify-between mb-6">
                                     <div>
-                                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Latest Campaigns</h2>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Review your past interview strategies and generated contexts.</p>
+                                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Latest campaigns</h2>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Monitor and manage your active intelligence campaigns.</p>
                                     </div>
                                     {latestCampaigns.length > 0 && hasMoreCampaigns && (
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             onClick={() => handleLoadMore()}
                                             disabled={isLoadingCampaigns}
-                                            className="rounded-xl border-gray-200 dark:border-white/10"
+                                            className="text-xs font-medium text-gray-500 hover:text-gray-900 dark:hover:text-white h-8"
                                         >
-                                            {isLoadingCampaigns ? "Loading..." : "Load Older Campaigns"}
+                                            {isLoadingCampaigns ? "Loading..." : "View More"}
                                         </Button>
                                     )}
                                 </div>
 
                                 {latestCampaigns.length === 0 && !isLoadingCampaigns ? (
-                                    <div className="p-12 rounded-3xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] flex flex-col items-center justify-center text-center">
-                                        <Sparkles className="w-8 h-8 text-gray-300 mb-4" />
-                                        <h3 className="text-gray-900 dark:text-white font-medium mb-1">No campaigns yet</h3>
-                                        <p className="text-gray-500 text-sm">Start an interview simulation to generate your first campaign.</p>
+                                    <div className="py-20 rounded-xl border border-dashed border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.01] flex flex-col items-center justify-center text-center">
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center mb-4">
+                                            <Sparkles className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No campaigns yet</h3>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px] leading-relaxed">Your generated interview strategies will appear here.</p>
                                     </div>
                                 ) : (
                                     <motion.div
@@ -966,7 +845,6 @@ export default function CustomerIntelligencePage() {
                                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                                     >
                                         <AnimatePresence>
-                                            {/* Deduplicate campaigns to prevent key errors */}
                                             {Array.from(new Map(latestCampaigns.map(c => [c.id, c])).values()).map((campaign, i) => {
                                                 const isExpanded = expandedCampaignId === campaign.id;
                                                 return (
@@ -992,9 +870,6 @@ export default function CustomerIntelligencePage() {
                                                             }}
                                                             onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
                                                             onStartCampaign={() => {
-                                                                console.log("[CI] Force navigating to campaign:", campaign.id);
-                                                                toast.loading("Starting campaign session...");
-                                                                // Force hard navigation to ensure clean state
                                                                 window.location.href = `/dashboard-new/customer-intelligence/campaign/${campaign.id}`;
                                                             }}
                                                         />
@@ -1012,7 +887,7 @@ export default function CustomerIntelligencePage() {
                                 )}
                             </div>
 
-                            {/* Goal Extraction Section (Moved) - HIDDEN */}
+                            {/* Goal Extraction Section (Hidden but present for functionality if toggled) */}
                             {false && (
                                 <div id="ai-alignment-section" className="mt-20 border-t border-gray-100/50 dark:border-white/[0.03] pt-20">
                                     <div className="flex flex-col gap-0.5 mb-10">
@@ -1022,9 +897,7 @@ export default function CustomerIntelligencePage() {
 
                                     <Card className="overflow-hidden border-gray-100/50 dark:border-white/[0.03] bg-white/40 dark:bg-white/[0.01] backdrop-blur-md rounded-[2.5rem] relative group min-h-[550px] max-w-4xl">
                                         <div className="absolute inset-0 bg-gradient-to-br from-orange-500/[0.03] to-transparent pointer-events-none" />
-
                                         <CardContent className="p-0 flex flex-col h-full relative z-10">
-
                                             <AnimatePresence mode="wait">
                                                 {status === 'IDLE' || status === 'CALLING' || status === 'RINGING' || status === 'IN_PROGRESS' ? (
                                                     <motion.div
@@ -1034,7 +907,6 @@ export default function CustomerIntelligencePage() {
                                                         exit={{ opacity: 0 }}
                                                         className="flex flex-col items-center justify-center h-full p-8 md:p-12 text-center"
                                                     >
-                                                        {/* Siri-style Waveform */}
                                                         <div className="mb-12 relative flex items-center justify-center h-32 w-full">
                                                             <LiveWaveform isActive={status === 'IN_PROGRESS' || status === 'CALLING' || status === 'RINGING'} />
                                                         </div>
@@ -1044,20 +916,11 @@ export default function CustomerIntelligencePage() {
                                                                 {status === 'IDLE' ? "Align with AI Researcher" :
                                                                     status === 'CALLING' || status === 'RINGING' ? "Connecting with AI..." : "Extracting Strategic Goals"}
                                                             </h2>
-                                                            <div className="text-gray-500 dark:text-zinc-400 mb-8 leading-relaxed space-y-3">
+                                                            <div className="text-gray-500 dark:text-zinc-400 mb-8 leading-relaxed">
                                                                 {status === 'IDLE' ? (
-                                                                    <>
-                                                                        <p className="text-base">
-                                                                            Our AI agent will call you to extract primary goals and cohorts for your upcoming high-intent customer interviews.
-                                                                        </p>
-                                                                        <ContactDetailsInline
-                                                                            contactDetails={contactDetails}
-                                                                            onChange={handleContactChange}
-                                                                            onSave={() => handleSaveContact(true)}
-                                                                            onCancel={handleCancelEdit}
-                                                                            className="justify-center py-2"
-                                                                        />
-                                                                    </>
+                                                                    <p className="text-base">
+                                                                        Our AI agent will call you to extract primary goals and cohorts for your upcoming high-intent customer interviews.
+                                                                    </p>
                                                                 ) : (
                                                                     <p className="text-base">
                                                                         Stay on the line. We're capturing your objectives to build the perfect interview script.
@@ -1065,110 +928,24 @@ export default function CustomerIntelligencePage() {
                                                                 )}
                                                             </div>
 
-                                                            {status === 'IDLE' ? (
-                                                                <>
-                                                                    <Button
-                                                                        onClick={handleStartInterview}
-                                                                        size="lg"
-                                                                        disabled={!isContactReady}
-                                                                        className={cn(
-                                                                            "rounded-2xl h-14 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 enabled:hover:bg-zinc-800 dark:enabled:hover:bg-gray-100 transition-all font-bold text-lg group",
-                                                                            !isContactReady && "opacity-50 cursor-not-allowed"
-                                                                        )}
-                                                                        title={!isContactReady ? "Please provide contact details first" : "Start Interview"}
-                                                                    >
-                                                                        Trigger Phone Interview
-                                                                        <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                                                                    </Button>
-                                                                </>
-                                                            ) : (
-                                                                <div className="flex flex-col items-center">
-                                                                    <div className="flex items-center gap-3 px-6 py-3 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-500 font-bold animate-pulse mb-4">
-                                                                        <span className="relative flex h-3 w-3">
-                                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                                                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-                                                                        </span>
-                                                                        {status === 'CALLING' ? "Calling your number..." :
-                                                                            status === 'RINGING' ? "Phone is ringing..." :
-                                                                                detailedStatus ?
-                                                                                    <span className="capitalize">{detailedStatus?.replace(/_/g, ' ')}...</span> :
-                                                                                    "Interview in progress..."}
-                                                                    </div>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        onClick={() => setStatus('IDLE')}
-                                                                        className="text-gray-400 text-xs hover:text-red-500"
-                                                                    >
-                                                                        End Session
-                                                                    </Button>
-                                                                </div>
+                                                            {status === 'IDLE' && (
+                                                                <Button
+                                                                    onClick={handleStartInterview}
+                                                                    size="lg"
+                                                                    disabled={!isContactReady}
+                                                                    className={cn(
+                                                                        "rounded-2xl h-14 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 transition-all font-bold text-lg",
+                                                                        !isContactReady && "opacity-50 cursor-not-allowed"
+                                                                    )}
+                                                                >
+                                                                    Trigger Phone Interview
+                                                                    <ChevronRight className="w-5 h-5 ml-2" />
+                                                                </Button>
                                                             )}
-                                                        </div>
-                                                    </motion.div>
-
-
-                                                ) : status === 'COMPLETED' && activeCampaign ? (
-                                                    <CallAnalysisSummary
-                                                        campaign={activeCampaign}
-                                                        onClose={() => setStatus('IDLE')}
-                                                        onViewCampaign={() => {
-                                                            // Scroll to campaigns list with enhanced behavior
-                                                            setStatus('IDLE');
-
-                                                            // Small delay to ensure DOM updates complete
-                                                            setTimeout(() => {
-                                                                const campaignsList = document.getElementById('latest-campaigns');
-                                                                if (campaignsList) {
-                                                                    // Scroll with offset for better visibility
-                                                                    const yOffset = -80; // Offset from top for better visibility
-                                                                    const y = campaignsList.getBoundingClientRect().top + window.pageYOffset + yOffset;
-
-                                                                    window.scrollTo({
-                                                                        top: y,
-                                                                        behavior: 'smooth'
-                                                                    });
-                                                                }
-                                                            }, 100);
-                                                        }}
-                                                    />
-                                                ) : status === 'ERROR' ? (
-                                                    <motion.div
-                                                        key="error-state"
-                                                        initial={{ opacity: 0, scale: 0.95 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        className="flex flex-col items-center"
-                                                    >
-                                                        <div className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
-                                                            <X className="w-16 h-16 text-red-500" />
-                                                        </div>
-
-                                                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                                                            Interview Failed
-                                                        </h2>
-
-                                                        <p className="text-gray-500 dark:text-zinc-400 mb-6 max-w-md text-center">
-                                                            {errorMessage || "An error occurred while starting the interview."}
-                                                        </p>
-
-                                                        <div className="flex gap-3">
-                                                            <Button
-                                                                variant="outline"
-                                                                onClick={() => setStatus('IDLE')}
-                                                                className="rounded-2xl"
-                                                            >
-                                                                Cancel
-                                                            </Button>
-                                                            <Button
-                                                                onClick={handleStartInterview}
-                                                                className="rounded-2xl bg-orange-500 hover:bg-orange-600 text-white"
-                                                            >
-                                                                Try Again
-                                                            </Button>
                                                         </div>
                                                     </motion.div>
                                                 ) : null}
                                             </AnimatePresence>
-
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -1176,64 +953,64 @@ export default function CustomerIntelligencePage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                <DisconnectConfirmDialog
+                    isOpen={isDisconnectDialogOpen}
+                    onClose={() => setIsDisconnectDialogOpen(false)}
+                    onConfirm={confirmDisconnect}
+                    isLoading={isDisconnecting}
+                />
+
+                <AvailabilityMagicPopup
+                    isOpen={isAvailabilityPopupOpen}
+                    onClose={() => setIsAvailabilityPopupOpen(false)}
+                    busySlots={calendarData?.busy_slots || []}
+                    activeCampaign={activeCampaign || (latestCampaigns.length > 0 ? latestCampaigns[0] : null)}
+                    onSaveWindow={handleSaveWindow}
+                />
+
+                <AnimatePresence>
+                    {isComposerOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 md:p-8">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="w-full max-w-4xl"
+                            >
+                                {composerView === 'leads' ? (
+                                    <CsvUploadCard
+                                        mode="edit"
+                                        campaignId={editingCampaignId!}
+                                        onLeadsUpdated={() => {
+                                            fetchCampaigns(0, false, latestCampaigns.length + 1);
+                                            setComposerView('composer');
+                                        }}
+                                        onCancel={() => setIsComposerOpen(false)}
+                                        className="h-full shadow-2xl"
+                                    />
+                                ) : (
+                                    <CampaignComposer
+                                        key={`composer-${editingCampaignId}-${composerView}`}
+                                        campaignId={editingCampaignId!}
+                                        isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
+                                        onComplete={() => {
+                                            fetchCampaigns(0, false, latestCampaigns.length + 1);
+                                            setIsComposerOpen(false);
+                                        }}
+                                        onBack={() => {
+                                            fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
+                                            setIsComposerOpen(false);
+                                        }}
+                                        onEditLeads={() => setComposerView('leads')}
+                                        className="h-full shadow-2xl"
+                                    />
+                                )}
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
-
-            <DisconnectConfirmDialog
-                isOpen={isDisconnectDialogOpen}
-                onClose={() => setIsDisconnectDialogOpen(false)}
-                onConfirm={confirmDisconnect}
-                isLoading={isDisconnecting}
-            />
-
-            <AvailabilityMagicPopup
-                isOpen={isAvailabilityPopupOpen}
-                onClose={() => setIsAvailabilityPopupOpen(false)}
-                busySlots={calendarData?.busy_slots || []}
-                activeCampaign={activeCampaign || (latestCampaigns.length > 0 ? latestCampaigns[0] : null)}
-                onSaveWindow={handleSaveWindow}
-            />
-
-            <AnimatePresence>
-                {isComposerOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 md:p-8">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-4xl"
-                        >
-                            {composerView === 'leads' ? (
-                                <CsvUploadCard
-                                    mode="edit"
-                                    campaignId={editingCampaignId!}
-                                    onLeadsUpdated={() => {
-                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
-                                        setComposerView('composer');
-                                    }}
-                                    onCancel={() => setIsComposerOpen(false)}
-                                    className="h-full shadow-2xl"
-                                />
-                            ) : (
-                                <CampaignComposer
-                                    campaignId={editingCampaignId!}
-                                    onComplete={() => {
-                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
-                                        setIsComposerOpen(false);
-                                    }}
-                                    onBack={() => {
-                                        fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
-                                        setIsComposerOpen(false);
-                                    }}
-                                    onEditLeads={() => setComposerView('leads')}
-                                    className="h-full shadow-2xl"
-                                />
-                            )}
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </div >
+        </div>
     );
 }
-
-

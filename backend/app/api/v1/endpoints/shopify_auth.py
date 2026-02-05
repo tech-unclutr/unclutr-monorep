@@ -1,23 +1,30 @@
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, BackgroundTasks, Header
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+)
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
-from sqlmodel import select, col, func
-from sqlmodel.ext.asyncio.session import AsyncSession
 from loguru import logger
+from pydantic import BaseModel
+from sqlmodel import func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.deps import get_current_active_user, get_db_session
-from app.models.user import User
-from app.models.integration import Integration, IntegrationStatus
-from app.services.shopify.oauth_service import shopify_oauth_service
-from app.services.analytics.service import AnalyticsService
-from app.models.company import Company
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.version import get_app_version
+from app.models.integration import Integration, IntegrationStatus
+from app.models.user import User
+from app.services.analytics.service import AnalyticsService
+from app.services.shopify.oauth_service import shopify_oauth_service
 
 router = APIRouter()
 
@@ -375,9 +382,9 @@ async def handle_shopify_webhook(
 
         # 4. Ingest
         payload = await request.json()
-        from app.services.shopify.sync_service import shopify_sync_service
-        from app.services.shopify.refinement_service import shopify_refinement_service
         from app.models.shopify.product import ShopifyProduct
+        from app.services.shopify.refinement_service import shopify_refinement_service
+        from app.services.shopify.sync_service import shopify_sync_service
         
         # Map topic to object_type
         obj_type = "unknown"
@@ -462,10 +469,10 @@ async def handle_shopify_webhook(
         # 6. Real-Time Stats Recalculation from DB (Source of Truth)
         # Query actual counts from refined tables to ensure accuracy
         logger.info(f"Starting real-time stats recalculation for integration {integration.id}")
-        from app.models.shopify.order import ShopifyOrder
-        from app.models.shopify.product import ShopifyProduct
         from app.models.shopify.customer import ShopifyCustomer
         from app.models.shopify.inventory import ShopifyInventoryLevel, ShopifyLocation
+        from app.models.shopify.order import ShopifyOrder
+        from app.models.shopify.product import ShopifyProduct
         
         try:
             logger.info("Querying database for fresh stats...")

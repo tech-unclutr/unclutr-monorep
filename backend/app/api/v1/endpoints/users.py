@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
-from typing import Dict, Any
-from sqlmodel.ext.asyncio.session import AsyncSession
+from typing import Any, Dict
+
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core import security
 from app.core.db import get_session
 from app.models.user import User, UserRead, UserUpdate

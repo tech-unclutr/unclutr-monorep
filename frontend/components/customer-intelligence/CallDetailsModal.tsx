@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
     Play,
     Pause,
     Download,
@@ -76,16 +82,25 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                             </DialogTitle>
                             <DialogDescription className="text-slate-400 flex items-center gap-3 mt-1 text-xs">
                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDuration(call.duration)}</span>
-                                <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" /> ${call.total_cost?.toFixed(4)}</span>
+                                <span className="flex items-center gap-1"><span className="text-[10px] font-bold">₹</span> {(call.total_cost * 0.9).toFixed(2)}</span>
                                 {call.telephony_provider && <span className="uppercase tracking-wider text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">{call.telephony_provider}</span>}
                             </DialogDescription>
                         </div>
                     </div>
-                    <div className="text-right text-xs text-slate-500">
-                        ID: {call.bolna_call_id?.slice(0, 8)}...
-                        <br />
-                        {new Date(call.created_at).toLocaleString()}
-                    </div>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="cursor-help">
+                                    ID: {call.bolna_call_id?.slice(0, 8)}...
+                                    <br />
+                                    {new Date(call.created_at).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="z-[9999]" side="top">
+                                <p>{new Date(call.created_at).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </DialogHeader>
 
                 {/* content */}
@@ -177,31 +192,102 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                         <TabsContent value="technical" className="flex-1 p-0 m-0 overflow-hidden bg-slate-950">
                             <ScrollArea className="h-full w-full p-6">
                                 <div className="max-w-4xl mx-auto space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                        <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-                                            <h4 className="text-slate-400 text-xs uppercase tracking-wider mb-2">Detailed Costs</h4>
-                                            <div className="text-2xl font-mono text-emerald-400">${call.total_cost?.toFixed(6)}</div>
-                                            <div className="text-xs text-slate-600 mt-1">Total spend for this execution</div>
-                                        </div>
-                                        <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-                                            <h4 className="text-slate-400 text-xs uppercase tracking-wider mb-2">Duration</h4>
-                                            <div className="text-2xl font-mono text-blue-400">{call.duration}s</div>
-                                            <div className="text-xs text-slate-600 mt-1">Connection time</div>
-                                        </div>
+                                    {/* Summary Stats Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <Card className="bg-slate-900 border-slate-800">
+                                            <CardContent className="pt-4">
+                                                <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Cost</div>
+                                                <div className="text-2xl font-mono text-emerald-400">₹{(call.total_cost * 0.9).toFixed(4)}</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card className="bg-slate-900 border-slate-800">
+                                            <CardContent className="pt-4">
+                                                <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">Duration</div>
+                                                <div className="text-2xl font-mono text-blue-400">{formatDuration(call.duration)}</div>
+                                            </CardContent>
+                                        </Card>
+                                        <Card className="bg-slate-900 border-slate-800">
+                                            <CardContent className="pt-4">
+                                                <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">Telephony</div>
+                                                <div className="text-sm font-medium text-slate-300 uppercase">{call.telephony_provider || "Unknown"}</div>
+                                            </CardContent>
+                                        </Card>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <h4 className="text-slate-400 text-sm font-medium">Raw Usage Metadata</h4>
-                                        <div className="bg-slate-900 rounded-lg border border-slate-800 p-4 font-mono text-xs text-slate-400 overflow-x-auto">
-                                            <pre>{JSON.stringify(call.usage_metadata || {}, null, 2)}</pre>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Telephony Details */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-slate-400 text-sm font-semibold flex items-center gap-2">
+                                                <Activity className="w-4 h-4" /> Telephony Details
+                                            </h4>
+                                            <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4 space-y-3">
+                                                <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                                                    <span className="text-xs text-slate-500">Call ID</span>
+                                                    <span className="text-xs font-mono text-slate-400">{call.bolna_call_id || "N/A"}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                                                    <span className="text-xs text-slate-500">Provider</span>
+                                                    <span className="text-xs text-slate-300">{call.telephony_provider || "N/A"}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1">
+                                                    <span className="text-xs text-slate-500">Destination</span>
+                                                    <span className="text-xs text-slate-300">{call.lead?.number || "N/A"}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div className="space-y-2">
-                                        <h4 className="text-slate-400 text-sm font-medium">Termination Reason</h4>
-                                        <p className="text-sm text-slate-300 bg-slate-900 p-3 rounded border border-slate-800/50">
-                                            {call.termination_reason || "Normal Completion"}
-                                        </p>
+                                        {/* Usage Breakdown */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-slate-400 text-sm font-semibold flex items-center gap-2">
+                                                <DollarSign className="w-4 h-4" /> Usage Breakdown
+                                            </h4>
+                                            <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4 space-y-3">
+                                                {call.raw_data?.usage_breakdown ? (
+                                                    Object.entries(call.raw_data.usage_breakdown).map(([key, value]: [string, any]) => (
+                                                        <div key={key} className="flex justify-between items-center py-1 border-b border-slate-800/50 last:border-0">
+                                                            <span className="text-xs text-slate-500 capitalize">{key}</span>
+                                                            <div className="text-right">
+                                                                <div className="text-[10px] text-slate-400">{value.units} {value.unit_type || "units"}</div>
+                                                                <div className="text-xs text-indigo-400 font-mono">${value.cost?.toFixed(4)}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="text-xs text-slate-600 italic">No usage breakdown available</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Performance & Diagnostics */}
+                                        <div className="space-y-3">
+                                            <h4 className="text-slate-400 text-sm font-semibold flex items-center gap-2">
+                                                <Cpu className="w-4 h-4" /> Session Diagnostics
+                                            </h4>
+                                            <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-4 space-y-3">
+                                                <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                                                    <span className="text-xs text-slate-500">Avg Latency</span>
+                                                    <span className="text-xs text-slate-300">{(call.raw_data?.latency_metrics?.avg_latency || 0).toFixed(2)}ms</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
+                                                    <span className="text-xs text-slate-500">Max Latency</span>
+                                                    <span className="text-xs text-slate-300">{(call.raw_data?.latency_metrics?.max_latency || 0).toFixed(2)}ms</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1">
+                                                    <span className="text-xs text-slate-500">Termination</span>
+                                                    <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400 whitespace-nowrap">
+                                                        {call.termination_reason || "Normal"}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Advanced Metadata (Collapsible Raw Data) */}
+                                        <div className="space-y-3 md:col-span-2">
+                                            <h4 className="text-slate-400 text-sm font-semibold">Raw Engine Response</h4>
+                                            <div className="bg-slate-900 rounded-lg border border-slate-800 p-4 font-mono text-[10px] text-slate-500 max-h-40 overflow-y-auto">
+                                                <pre>{JSON.stringify(call.raw_data || {}, null, 2)}</pre>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </ScrollArea>

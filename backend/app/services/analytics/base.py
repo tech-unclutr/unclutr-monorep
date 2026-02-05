@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from datetime import date
-from uuid import UUID
-from typing import Dict, Any, List
+from typing import Dict
 
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.integration import Integration
 from app.models.integration_analytics import IntegrationDailyMetric
+
 
 class BaseAnalyticsProvider(ABC):
     @abstractmethod

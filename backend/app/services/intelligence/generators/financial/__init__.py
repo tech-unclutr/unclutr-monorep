@@ -2,11 +2,11 @@
 Financial Intelligence Generators
 """
 
+from .ad_waste_generator import AdWasteGenerator
 from .frozen_cash_generator import FrozenCashGenerator
-from .stockout_risk_generator import StockoutRiskGenerator
 from .margin_crusher_generator import MarginCrusherGenerator
 from .slow_mover_generator import SlowMoverGenerator
-from .ad_waste_generator import AdWasteGenerator
+from .stockout_risk_generator import StockoutRiskGenerator
 
 __all__ = [
     "FrozenCashGenerator",

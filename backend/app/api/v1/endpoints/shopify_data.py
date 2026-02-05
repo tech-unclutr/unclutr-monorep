@@ -1,21 +1,19 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from sqlmodel import select, func
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.deps import get_current_active_user, get_db_session
-from app.models.user import User
 from app.models.integration import Integration
-from app.models.iam import SystemRole
-from app.models.shopify.order import ShopifyOrder
-from app.models.shopify.raw_ingest import ShopifyRawIngest
 from app.models.shopify.inventory import ShopifyLocation
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
 from app.models.shopify.metrics import ShopifyDailyMetric
-from app.services.shopify.metrics_service import shopify_metrics_service
+from app.models.shopify.order import ShopifyOrder
+from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+from app.models.shopify.raw_ingest import ShopifyRawIngest
+from app.models.user import User
 
 router = APIRouter()
 
@@ -292,7 +290,7 @@ async def get_activity_log(
                         status_emoji = "💰"
                         category = "Financials"
                     elif payload.get("refunds"):
-                        desc = f"Refund Issued (Customer Care) 🔄"
+                        desc = "Refund Issued (Customer Care) 🔄"
                         status_emoji = "💸"
                         category = "Financials"
                         importance = "high"

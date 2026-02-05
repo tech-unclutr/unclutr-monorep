@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column, Text
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel, Text
+
 
 class CampaignGoalDetail(SQLModel, table=True):
     __tablename__ = "campaigns_goals_details"
@@ -39,19 +41,19 @@ class CampaignGoalDetail(SQLModel, table=True):
     summary: Optional[str] = Field(default=None, sa_column=Column(Text))
     error_message: Optional[str] = Field(default=None)
     
-    # Structured Data (JSONB)
-    usage_breakdown: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    cost_breakdown: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    agent_extraction: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    custom_extractions: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    transfer_call_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    context_details: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    batch_run_details: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    latency_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    retry_config: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    retry_history: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    # Structured Data (JSON)
+    usage_breakdown: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    cost_breakdown: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    agent_extraction: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    custom_extractions: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    transfer_call_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    context_details: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    batch_run_details: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    latency_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    retry_config: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    retry_history: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     
     # Other Config
     workflow_retries: Optional[int] = Field(default=None)
@@ -59,7 +61,7 @@ class CampaignGoalDetail(SQLModel, table=True):
     deleted: bool = Field(default=False)
     
     # Full Raw Data
-    raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
 
     # System Timestamps
     system_created_at: datetime = Field(default_factory=datetime.utcnow)

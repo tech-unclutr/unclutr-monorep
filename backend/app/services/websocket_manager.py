@@ -4,12 +4,12 @@ WebSocket Connection Manager for Real-time Campaign Updates
 Manages WebSocket connections for campaign execution updates,
 providing real-time data synchronization without polling.
 """
-from typing import Dict, Set
-from fastapi import WebSocket
-import json
 import logging
+from datetime import date, datetime
+from typing import Dict, Set
 from uuid import UUID
-from datetime import datetime, date
+
+from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 

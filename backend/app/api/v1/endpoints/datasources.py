@@ -1,19 +1,21 @@
+import uuid
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-import uuid
 
+from app.api.v1.endpoints.integrations import get_current_company_id
 from app.core.db import get_session
 from app.core.security import get_current_user
-from app.models.datasource import DataSource
-from app.api.v1.endpoints.integrations import get_current_company_id
 from app.models.company import Company
+from app.models.datasource import DataSource
 
 router = APIRouter()
 
-from app.models.datasource_request import UserRequest, RequestType, RequestStatus
 from pydantic import BaseModel
+
+from app.models.datasource_request import RequestStatus, RequestType, UserRequest
 
 
 @router.get("/")

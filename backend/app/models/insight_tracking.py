@@ -8,10 +8,11 @@ Purpose:
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Column, Relationship
+
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, SQLModel
 
 
 class InsightGenerationLog(SQLModel, table=True):
@@ -28,10 +29,10 @@ class InsightGenerationLog(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     brand_id: UUID = Field(foreign_key="brand.id", nullable=False, index=True)
     generated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
-    insights: Dict[str, Any] = Field(default={}, sa_column=Column(postgresql.JSONB))
+    insights: Dict[str, Any] = Field(default={}, sa_column=Column(postgresql.JSON))
     briefing: Optional[str] = Field(default=None)
     generation_time_ms: Optional[int] = Field(default=None)
-    validation_failures: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(postgresql.JSONB))
+    validation_failures: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(postgresql.JSON))
 
 
 class InsightImpression(SQLModel, table=True):

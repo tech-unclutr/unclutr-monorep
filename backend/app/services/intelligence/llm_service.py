@@ -1,11 +1,12 @@
 
-import os
 import asyncio
 import json
 import time
+from typing import Any, Dict, List
+
 import google.generativeai as genai
-from typing import List, Dict, Any, Optional
 from loguru import logger
+
 from app.core.config import settings
 
 # In-memory cache for simplicity and speed

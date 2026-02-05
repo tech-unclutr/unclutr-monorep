@@ -1,26 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Bot,
-    Terminal,
-    Activity,
-    Zap,
-    Shield,
-    Cpu,
-    Radio,
-    Clock,
-    User,
-    Wifi,
-    Sparkles,
+    Phone,
     Mic,
     MoreHorizontal,
-    Cloud,
-    MessageSquare,
-    Loader2
+    User,
+    Clock,
+    Zap,
+    BrainCircuit,
+    Sparkles,
+    CheckCircle2,
+    XCircle,
+    Voicemail,
+    PhoneOff,
+    Timer,
+    Signal,
+    Terminal,
+    Activity
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn, parseAsUTC } from "@/lib/utils";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { AgentStatus } from "./AgentQueue";
 
 interface AgentLiveStreamProps {
@@ -30,226 +37,305 @@ interface AgentLiveStreamProps {
 }
 
 export function AgentLiveStream({ agent, events, index }: AgentLiveStreamProps) {
-    // Normalize status and check if active
     const status = (agent.status || 'idle').toLowerCase();
     const isActive = ['speaking', 'connected', 'ringing', 'listening', 'processing', 'initiated', 'in-progress', 'queued'].includes(status);
-    const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll logic
+    // Auto-scroll for thoughts
+    const scrollRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [events]);
 
+    // Format Duration
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // --- STATE VISUALS HELPER ---
+    const getStateVisuals = (s: string) => {
+        switch (s) {
+            case 'speaking': return { color: "text-indigo-500", bg: "bg-indigo-500", border: "border-indigo-200", icon: Mic, label: "Speaking" };
+            case 'listening': return { color: "text-emerald-500", bg: "bg-emerald-500", border: "border-emerald-200", icon: Signal, label: "Listening" };
+            case 'processing': return { color: "text-purple-500", bg: "bg-purple-500", border: "border-purple-200", icon: BrainCircuit, label: "Thinking" };
+            case 'ringing': return { color: "text-amber-500", bg: "bg-amber-500", border: "border-amber-200", icon: Phone, label: "Ringing" };
+            case 'initiated': return { color: "text-blue-500", bg: "bg-blue-500", border: "border-blue-200", icon: Phone, label: "Dialing" };
+            case 'completed': return { color: "text-green-600", bg: "bg-green-600", border: "border-green-200", icon: CheckCircle2, label: "Completed" };
+            case 'failed': return { color: "text-red-500", bg: "bg-red-500", border: "border-red-200", icon: XCircle, label: "Failed" };
+            case 'voicemail': return { color: "text-orange-500", bg: "bg-orange-500", border: "border-orange-200", icon: Voicemail, label: "Voicemail" };
+            case 'voicemail': return { color: "text-orange-500", bg: "bg-orange-500", border: "border-orange-200", icon: Voicemail, label: "Voicemail" };
+            default: return { color: "text-zinc-500", bg: "bg-zinc-500", border: "border-zinc-200", icon: MoreHorizontal, label: s };
+        }
+    };
+
+    // --- CLIENT-SIDE TICKER FOR SMOOTH CLOCK ---
+    // Since backend updates might come in bursts, we want the clock to tick smoothly every second.
+    // We initialize with the backend's duration and increment locally.
+    const [clientDuration, setClientDuration] = useState(agent.duration);
+
+    useEffect(() => {
+        // Sync with backend whenever it updates
+        setClientDuration(agent.duration);
+    }, [agent.duration]);
+
+    useEffect(() => {
+        if (!isActive) return;
+
+        const interval = setInterval(() => {
+            setClientDuration(prev => prev + 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [isActive]);
+
+    const visual = getStateVisuals(status);
+    const StatusIcon = visual.icon;
+
+    // Filter for just thoughts and latest relevant event
+    const thoughts = events.filter(e => e.type === 'thought').slice(-1); // Just the very latest thought for the "Cloud"
+    const relevantEvents = events.slice(-3); // Last 3 events for context
+
     return (
-        <div className="flex flex-col gap-6 h-full">
-            {/* Top: Active Agent Identity Card - Enhanced "Living" Feel */}
-            <motion.div
-                layoutId={`agent-card-${agent.lead_id}`}
-                className={cn(
-                    "relative overflow-hidden rounded-[32px] border p-8 transition-all duration-700",
-                    isActive
-                        ? "bg-white dark:bg-zinc-950 border-indigo-200 dark:border-indigo-900/50 shadow-2xl shadow-indigo-500/10"
-                        : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                )}
-            >
-                {/* Background Ambient Effects */}
-                {isActive && (
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full animate-pulse" />
-                        <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-purple-500/10 blur-[80px] rounded-full" />
-                    </div>
-                )}
-
-                <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
-                    {/* Avatar & Status Section */}
-                    <div className="flex flex-col items-center gap-4 shrink-0">
-                        <div className="relative">
-                            {/* Living Pulse Rings */}
-                            {isActive && (
-                                <>
-                                    <motion.div
-                                        className="absolute inset-0 rounded-full border border-indigo-500/30"
-                                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                                    />
-                                    <motion.div
-                                        className="absolute inset-0 rounded-full border border-indigo-500/20"
-                                        animate={{ scale: [1, 2, 1], opacity: [0.3, 0, 0.3] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                                    />
-                                </>
-                            )}
-
-                            <Avatar className="w-24 h-24 border-4 border-white dark:border-zinc-950 shadow-xl relative z-10">
-                                <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${agent.agent_name}&backgroundColor=e0e7ff`} />
-                                <AvatarFallback>{(agent.agent_name || "AI").slice(0, 2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-
-                            {/* Status Badge Overlap */}
-                            <div className={cn(
-                                "absolute -bottom-2 -right-2 px-3 py-1 rounded-full border-2 border-white dark:border-zinc-950 flex items-center gap-1.5 shadow-lg relative z-20",
-                                isActive ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-600"
-                            )}>
-                                {isActive ? (
-                                    agent.status.toLowerCase() === 'initiated' ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                        <Wifi className="w-3 h-3 animate-pulse" />
-                                    )
-                                ) : (
-                                    <Clock className="w-3 h-3" />
-                                )}
-                                <span className="text-[10px] font-black uppercase tracking-wider">{status}</span>
-                            </div>
-                        </div>
-
-                        <div className="text-center">
-                            <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">{agent.agent_name}</h3>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">AI Voice Agent</p>
-                        </div>
-                    </div>
-
-                    {/* Vertical Divider */}
-                    <div className="hidden md:block w-px h-32 bg-gradient-to-b from-transparent via-zinc-200 dark:via-zinc-800 to-transparent" />
-
-                    {/* Target & Metric Info */}
-                    <div className="flex-1 w-full space-y-6">
-                        <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                                <span className="flex items-center gap-2 text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
-                                    <User className="w-3.5 h-3.5" />
-                                    Active Target
-                                </span>
-                                <div className="text-2xl font-medium text-zinc-900 dark:text-zinc-100">
-                                    {isActive ? (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="bg-zinc-100 dark:bg-zinc-800/50 px-3 py-1 rounded-lg inline-block"
-                                        >
-                                            {agent.lead_name}
-                                        </motion.div>
-                                    ) : (
-                                        <motion.span
-                                            animate={{ opacity: [0.5, 1, 0.5] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                            className="text-zinc-400 italic flex items-center gap-2"
-                                        >
-                                            <Sparkles className="w-4 h-4" /> Finding next lead...
-                                        </motion.span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {isActive && (
-                                <div className="text-right">
-                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Duration</span>
-                                    <span className="text-3xl font-mono font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
-                                        {Math.floor(agent.duration / 60)}:{(agent.duration % 60).toString().padStart(2, '0')}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Interactive Waveform / Status Line */}
-                        <div className="h-12 bg-zinc-100 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex items-center px-4 relative">
-                            {isActive ? (
-                                <>
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-1.5 rounded-full bg-indigo-500/10 text-indigo-500 animate-pulse">
-                                            {agent.status.toLowerCase() === 'initiated' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-                                        </div>
-                                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
-                                            {status === 'initiated' || status === 'queued' ? `Dialing ${agent.lead_name}...` :
-                                                status === 'ringing' ? "Ringing..." :
-                                                    (status === 'connected' || status === 'in-progress') ? "Connection Established." :
-                                                        status === 'speaking' ? "Agent Speaking..." :
-                                                            status === 'listening' ? "Listening to customer..." :
-                                                                status === 'processing' ? "Analyzing response..." :
-                                                                    status === 'completed' ? "Call Completed." :
-                                                                        status === 'failed' ? "Call Failed / No Answer." : "Connectivity established."}
-                                        </span>
-                                    </div>
-                                    {/* Fake Audio Waveform Animation - Only if not initiating */}
-                                    {agent.status.toLowerCase() !== 'initiated' && (
-                                        <div className="absolute right-0 top-0 bottom-0 w-1/3 flex items-center justify-center gap-1 opacity-50 px-4 mask-linear-fade">
-                                            {[...Array(8)].map((_, i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    className="w-1 bg-indigo-500 rounded-full"
-                                                    animate={{
-                                                        height: status === 'speaking' ? [4, 24, 8, 32, 12] : status === 'listening' ? [4, 12, 4, 16, 4] : [4, 8, 4]
-                                                    }}
-                                                    transition={{
-                                                        duration: 0.8,
-                                                        repeat: Infinity,
-                                                        repeatType: "mirror",
-                                                        delay: i * 0.1
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-                                    <MoreHorizontal className="w-4 h-4 animate-pulse" />
-                                    <span>System in standby...</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+        <div className={cn(
+            "relative h-full w-full overflow-hidden rounded-[32px] border transition-all duration-700 flex flex-col",
+            isActive
+                ? "bg-white dark:bg-zinc-950 border-indigo-100 dark:border-indigo-900/30 shadow-2xl shadow-indigo-500/10"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+        )}>
+            {/* --- BACKGROUND AMBIANCE --- */}
+            {isActive && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <motion.div
+                        className={cn("absolute -top-[20%] -right-[20%] w-[70%] h-[70%] rounded-full blur-[100px] opacity-20 transition-colors duration-1000", visual.bg)}
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+                        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-white/80 to-transparent dark:from-zinc-950/80 z-10" />
                 </div>
-            </motion.div>
+            )}
 
-            {/* Bottom: Neural Stream - Thought Cloud Style */}
-            <div className="flex-1 flex flex-col relative min-h-[300px]">
-                {/* Section Header */}
-                <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
-                        <MessageSquare className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-black text-zinc-700 dark:text-zinc-200 uppercase tracking-tight">Neural Thoughts</h4>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Live Reasoning Stream</p>
-                    </div>
-                    {isActive && (
-                        <div className="ml-auto flex items-center gap-1.5">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            {/* --- HEADER: CALLER ID --- */}
+            <div className="relative z-20 p-6 pb-2 flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                    {/* Agent Avatar */}
+                    <div className="relative">
+                        <div className={cn(
+                            "absolute inset-0 rounded-full blur-md opacity-40 transition-colors duration-500",
+                            isActive ? visual.bg : "bg-transparent"
+                        )} />
+                        <Avatar className="w-14 h-14 border-2 border-white dark:border-zinc-900 shadow-md relative z-10">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${agent.agent_name || 'agent'}&backgroundColor=e0e7ff`} />
+                            <AvatarFallback>{(agent.agent_name || 'AI').slice(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        {/* Status Badge */}
+                        <div className={cn(
+                            "absolute -bottom-1 -right-1 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full border border-white dark:border-zinc-900 shadow-sm transition-colors duration-500 bg-white dark:bg-zinc-900",
+                        )}>
+                            <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", visual.bg)} />
+                            <span className={cn("text-[9px] font-bold uppercase tracking-wider", visual.color)}>
+                                {visual.label}
                             </span>
-                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-wider">Updating</span>
                         </div>
-                    )}
+                    </div>
+
+                    <div>
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+                            {agent.agent_name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {agent.lead_name || "Connecting..."}
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 font-mono">
+                                <Clock className="w-3 h-3" />
+                                {formatDuration(clientDuration)}
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Thought Stream Container */}
-                <div
-                    ref={scrollRef}
-                    className="flex-1 overflow-y-auto px-2 space-y-3 pb-4 scrollbar-none mask-fade-top"
-                >
-                    <AnimatePresence initial={false} mode='popLayout'>
-                        {events.length > 0 ? (
-                            events.map((event) => (
-                                <ThoughtBubble key={event.id} event={event} />
-                            ))
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-zinc-400 space-y-4 opacity-50">
-                                <Cloud className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
-                                <span className="text-[10px] uppercase font-bold tracking-widest">No thoughts recorded...</span>
-                            </div>
-                        )}
+                {/* Connection Strength / Meta */}
+                <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1 p-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg">
+                        <Signal className={cn("w-3.5 h-3.5", isActive ? "text-emerald-500" : "text-zinc-400")} />
+                    </div>
+                </div>
+            </div>
+
+            {/* --- BODY: STREAM OF CONSCIOUSNESS --- */}
+            <div className="relative flex-1 flex flex-col justify-end p-6 z-10 gap-4">
+
+                {/* 1. THE THOUGHT CLOUD (The "Mind") */}
+                <div className="flex-1 flex flex-col justify-center items-center relative min-h-[80px] max-h-[160px] py-2">
+                    <AnimatePresence mode="wait">
+                        {thoughts.length > 0 ? (
+                            <motion.div
+                                key={thoughts[0].id}
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                className="relative max-w-[90%] text-center"
+                            >
+                                <div className="inline-flex items-center justify-center p-4 rounded-[24px] bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-indigo-100/50 dark:border-indigo-900/30 shadow-sm">
+                                    <Sparkles className="w-4 h-4 text-indigo-400 mr-2 shrink-0" />
+                                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 italic leading-snug">
+                                        "{thoughts[0].message}"
+                                    </p>
+                                </div>
+                                <div className="flex justify-center gap-1 mt-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                </div>
+                            </motion.div>
+                        ) : isActive ? (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 0.5 }}
+                                className="flex flex-col items-center gap-3"
+                            >
+                                <div className="relative w-12 h-12">
+                                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-zinc-200 dark:border-zinc-700 animate-[spin_8s_linear_infinite]" />
+                                    <div className="absolute inset-3 rounded-full border-2 border-indigo-100 dark:border-zinc-800 animate-[spin_4s_linear_infinite_reverse]" />
+                                </div>
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Neural Watchdog Active</span>
+                            </motion.div>
+                        ) : null}
                     </AnimatePresence>
                 </div>
+
+                {/* 2. THE NEURAL LOGS (The "Terminal") */}
+                <div className="relative h-32 w-full bg-[#0a0a0a] dark:bg-black rounded-2xl overflow-hidden shadow-[inset_0_2px_8px_rgba(0,0,0,0.4),0_8px_24px_-8px_rgba(0,0,0,0.3)] border border-zinc-900/50 dark:border-zinc-950">
+                    {/* Realistic terminal texture */}
+                    <div className="absolute inset-0 opacity-[0.015]" style={{
+                        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
+                    }} />
+
+                    {/* Scanline effect for realism */}
+                    <motion.div
+                        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+                        style={{
+                            background: 'linear-gradient(transparent 50%, rgba(255,255,255,0.1) 50%)',
+                            backgroundSize: '100% 4px'
+                        }}
+                        animate={{ y: ['0%', '100%'] }}
+                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    <div className="relative z-10 h-full flex flex-col p-4 font-mono">
+                        {/* Terminal header */}
+                        <div className="flex items-center gap-3 mb-3 pb-2 border-b border-zinc-800/60">
+                            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-zinc-500 uppercase tracking-[0.12em] font-black text-[10px] flex-1">
+                                Neural Streams / Live Logs
+                            </span>
+                            {isActive && (
+                                <div className="flex items-center gap-1.5">
+                                    <motion.div
+                                        className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"
+                                        animate={{ opacity: [1, 0.4, 1] }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                    />
+                                    <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider">LIVE</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Terminal content */}
+                        <ScrollArea className="flex-1 pr-2">
+                            <div className="space-y-1.5">
+                                <AnimatePresence initial={false}>
+                                    {events.filter(e => e.type !== 'thought').slice(-10).map((event, i) => (
+                                        <motion.div
+                                            key={event.id + i}
+                                            initial={{ opacity: 0, x: -8 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="flex items-start gap-2.5 text-[10px] leading-relaxed"
+                                        >
+                                            <span className="text-zinc-600 shrink-0 font-semibold tabular-nums cursor-help">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>[{parseAsUTC(event.timestamp).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="z-[9999]" side="top">
+                                                            <p>{new Date(event.timestamp).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </span>
+                                            <span className="text-zinc-300 leading-relaxed">
+                                                <span className={cn(
+                                                    "font-black mr-1.5",
+                                                    event.type === 'agent_action' ? "text-indigo-400" : "text-emerald-400"
+                                                )}>
+                                                    {event.type === 'agent_action' ? "ACT:" : "SYS:"}
+                                                </span>
+                                                {event.message.replace(/^.*: "/, '').replace(/"$/, '')}
+                                            </span>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+
+                                {(events.length === 0 || !isActive) && (
+                                    <div className="h-16 flex flex-col items-center justify-center opacity-20 gap-2">
+                                        <motion.div
+                                            animate={isActive ? { rotate: 360 } : {}}
+                                            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                        >
+                                            <Activity className="w-5 h-5 text-zinc-500" strokeWidth={2.5} />
+                                        </motion.div>
+                                        <span className="uppercase tracking-[0.2em] font-black text-[9px] text-zinc-500">
+                                            {isActive ? "Neural Link Initializing..." : "Uplink Standby"}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </div>
+                </div>
+
+                {/* 3. THE PULSE (The "Voice") */}
+                <div className="h-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between px-4 overflow-hidden relative">
+                    <span className={cn("text-[10px] font-bold uppercase tracking-wider relative z-10 transition-colors", visual.color)}>
+                        {visual.label}
+                    </span>
+
+                    {/* Organic Waveform */}
+                    <div className="flex items-center gap-1 z-10 h-full py-3">
+                        {isActive && [...Array(12)].map((_, i) => (
+                            <motion.div
+                                key={i}
+                                className={cn("w-1 rounded-full", visual.bg)}
+                                animate={{
+                                    height: status === 'speaking' ? [4, 24, 4] :
+                                        status === 'listening' ? [4, 12, 4] : [4, 6, 4],
+                                    opacity: [0.4, 1, 0.4]
+                                }}
+                                transition={{
+                                    duration: status === 'speaking' ? 0.4 : 1.5,
+                                    repeat: Infinity,
+                                    repeatType: "mirror",
+                                    delay: i * 0.1,
+                                    ease: "easeInOut"
+                                }}
+                            />
+                        ))}
+                        {!isActive && <div className="text-[10px] text-zinc-300 font-medium">Channel Closed</div>}
+                    </div>
+                </div>
+
             </div>
         </div>
     );
 }
 
-// Sub-component for individual "Thought Bubble" / Toast Style
+// Sub-component for individual "Thought Bubble" - Premium Redesign
 const ThoughtBubble = ({ event }: { event: any }) => {
     // Typewriter state
     const [displayedText, setDisplayedText] = useState("");
@@ -257,7 +343,7 @@ const ThoughtBubble = ({ event }: { event: any }) => {
     const isSystem = event.type === 'system';
 
     // Parse time
-    const timeStr = new Date(event.timestamp || Date.now()).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeStr = new Date(event.timestamp || Date.now()).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     useEffect(() => {
         let currentIndex = 0;
@@ -268,7 +354,7 @@ const ThoughtBubble = ({ event }: { event: any }) => {
             } else {
                 clearInterval(interval);
             }
-        }, 12); // Slightly faster
+        }, 12);
 
         return () => clearInterval(interval);
     }, [fullText]);
@@ -276,47 +362,79 @@ const ThoughtBubble = ({ event }: { event: any }) => {
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            initial={{ opacity: 0, y: 30, scale: 0.9, filter: "blur(10px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.9, y: -20, filter: "blur(10px)" }}
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
             className={cn(
-                "group relative p-4 rounded-2xl border backdrop-blur-md transition-all",
+                "group relative p-6 rounded-[32px] border transition-all duration-700",
                 isSystem
-                    ? "bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 border-zinc-200 dark:border-zinc-800"
-                    : "bg-gradient-to-br from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900/30 shadow-sm"
+                    ? "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800"
+                    : "bg-white dark:bg-zinc-900/80 backdrop-blur-xl border-indigo-100 dark:border-indigo-500/20 shadow-[0_20px_40px_-12px_rgba(99,102,241,0.08)]"
             )}
         >
-            {/* Connector Line (Cloud Stem) */}
-            <div className={cn(
-                "absolute -left-2 top-6 w-2 h-px mix-blend-multiply dark:mix-blend-screen",
-                isSystem ? "bg-zinc-200 dark:bg-zinc-800" : "bg-indigo-200 dark:bg-indigo-800"
-            )} />
+            {/* Glossy overlay effect for non-system thoughts */}
+            {!isSystem && (
+                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[32px] pointer-events-none" />
+            )}
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4 relative z-10">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={cn(
-                            "text-[9px] px-1.5 py-0 h-4 border-0 font-black uppercase tracking-wider",
-                            isSystem ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300"
+                    <div className="flex items-center gap-3">
+                        <div className={cn(
+                            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] shadow-sm",
+                            isSystem
+                                ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                                : "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-indigo-500/20"
                         )}>
-                            {isSystem ? "SYS" : event.agent_name?.split(' ')[0] || "AI"}
-                        </Badge>
-                        <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-600 font-medium">
-                            {timeStr}
-                        </span>
+                            {isSystem ? "SYSTEM LINK" : (event.agent_name?.toUpperCase() || "CORE AI")}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 cursor-help">
+                            <Clock className="w-3 h-3" />
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="tracking-tighter">{timeStr}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="z-[9999]" side="top">
+                                        <p>{new Date(event.timestamp || Date.now()).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                     </div>
+
+                    {!isSystem && <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />}
                 </div>
 
-                <p className={cn(
-                    "text-xs font-medium leading-relaxed",
-                    isSystem ? "text-zinc-500 dark:text-zinc-400 italic" : "text-zinc-700 dark:text-zinc-200"
-                )}>
-                    {displayedText}
-                    {displayedText.length < fullText.length && (
-                        <span className="inline-block w-1 h-3 bg-indigo-500 ml-1 animate-pulse align-middle" />
-                    )}
-                </p>
+                <div className="relative">
+                    <p className={cn(
+                        "text-[15px] font-medium leading-relaxed tracking-tight",
+                        isSystem ? "text-zinc-500 dark:text-zinc-400 italic font-normal" : "text-zinc-800 dark:text-zinc-100"
+                    )}>
+                        {displayedText}
+                        {displayedText.length < fullText.length && (
+                            <motion.span
+                                animate={{ opacity: [1, 0, 1] }}
+                                transition={{ duration: 0.8, repeat: Infinity }}
+                                className="inline-block w-2 h-4 bg-indigo-500 ml-1.5 align-middle rounded-sm shadow-[0_0_8px_rgba(99,102,241,0.6)]"
+                            />
+                        )}
+                    </p>
+                </div>
+
+                {!isSystem && (
+                    <div className="flex items-center gap-4 pt-2 border-t border-zinc-50 dark:border-zinc-800/50">
+                        <div className="flex items-center gap-1.5">
+                            <div className="flex -space-x-1.5">
+                                {[1, 2, 3].map((_, i) => (
+                                    <div key={i} className="w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-900/50 border border-white dark:border-zinc-900" />
+                                ))}
+                            </div>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Active Layers</span>
+                        </div>
+                    </div>
+                )}
             </div>
         </motion.div>
     );

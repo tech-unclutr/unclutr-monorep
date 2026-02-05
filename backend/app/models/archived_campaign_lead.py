@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel
+
 
 class ArchivedCampaignLead(SQLModel, table=True):
     __tablename__ = "archived_campaign_leads"
@@ -15,7 +17,7 @@ class ArchivedCampaignLead(SQLModel, table=True):
     contact_number: str = Field(nullable=False)
     cohort: Optional[str] = Field(default=None)
     
-    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     created_at: datetime = Field(description="Original creation time")
     archived_at: datetime = Field(default_factory=datetime.utcnow)

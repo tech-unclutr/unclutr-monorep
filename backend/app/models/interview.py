@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel
+
 
 class InterviewSession(SQLModel, table=True):
     __tablename__ = "interview_sessions"
@@ -18,7 +20,7 @@ class InterviewSession(SQLModel, table=True):
     transcript: Optional[str] = Field(default=None)
     
     # Metadata from Bolna (call_id, agent_id, etc.)
-    metadata_info: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
+    metadata_info: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

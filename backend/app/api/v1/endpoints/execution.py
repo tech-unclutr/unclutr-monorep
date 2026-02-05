@@ -1,25 +1,32 @@
+from datetime import datetime, timedelta
 from typing import Any, List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, or_, and_
-from datetime import datetime, timedelta
 
-from app.api.deps import get_session, get_current_active_user
-from app.models.user import User
-from app.models.campaign import Campaign
-from app.models.queue_item import QueueItem
-from app.models.campaign_lead import CampaignLead
-from app.services.queue_warmer import QueueWarmer
-from app.services.intelligence.google_calendar_service import google_calendar_service
-from app.models.calendar_connection import CalendarConnection
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from app.services.websocket_manager import manager as ws_manager
+from sqlmodel import and_, func, or_, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.api.deps import get_current_active_user, get_session
+from app.core.agreement_utils import detect_agreement_status, should_copy_to_queue
 from app.core.db import async_session_factory
+from app.core.intelligence_utils import enrich_user_intent
+from app.core.lead_utils import normalize_phone_number
+from app.core.sentiment_utils import analyze_sentiment
+from app.models.calendar_connection import CalendarConnection
+from app.models.campaign import Campaign
+from app.models.campaign_lead import CampaignLead
+from app.models.queue_item import QueueItem
+from app.models.user import User
+from app.services.intelligence.google_calendar_service import google_calendar_service
+from app.services.queue_warmer import QueueWarmer
+from app.services.websocket_manager import manager as ws_manager
 
 router = APIRouter()
 
 from app.models.bolna_execution_map import BolnaExecutionMap
+from app.models.call_log import CallLog
+from app.models.campaign_event import CampaignEvent
 
 # Timeout constants for stale call detection
 INITIATED_TIMEOUT_MINUTES = 5  # Calls stuck in "initiated" for >5 min are stale
@@ -37,10 +44,10 @@ async def get_active_status(
     """
     Returns the real-time status of active agents (calls).
     """
-    return await get_campaign_realtime_status_internal(campaign_id, session)
+    return await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=True)
 
 
-async def get_campaign_realtime_status_internal(campaign_id: UUID, session: AsyncSession, trigger_warmer: bool = True) -> dict:
+async def get_campaign_realtime_status_internal(campaign_id: UUID, session: AsyncSession, trigger_warmer: bool = False) -> dict:
     """
     Core logic for calculating the real-time engagement dashboard.
     Shared between periodic polling and WebSocket broadcasts.
@@ -49,13 +56,21 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
         return {}
+
+    # Initialize variables to avoid UnboundLocalError
+    total_leads = 0
+    call_logs_count = 0
         
     # [NEW] Trigger Warmer/Replenish at the VERY START to ensure all subsequent queries see the new state
     # This ensures "DIALING_INTENT" leads added by the warmer appear in the 'agents' list immediately.
     if trigger_warmer and campaign.status not in ["COMPLETED", "DRAFT"]:
-        await QueueWarmer.check_and_replenish(campaign_id, session)
-        # Refresh campaign object as warmer might have updated its status (e.g. to PAUSED)
-        await session.refresh(campaign)
+        try:
+            await QueueWarmer.check_and_replenish(campaign_id, session)
+            # Refresh campaign object as warmer might have updated its status (e.g. to PAUSED)
+            await session.refresh(campaign)
+        except Exception as e:
+            print(f"[Execution] Warning: QueueWarmer failed in active-status check: {e}")
+            # We continue execution so the dashboard still loads (partial degradation)
 
     config = campaign.execution_config or {}
     MAX_CONCURRENCY = config.get("max_concurrent_calls", 2) # Default to 2
@@ -65,7 +80,11 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     # Note: We join BolnaExecutionMap loosely, then filter in the WHERE clause
     # IMPORTANT: Filter out stale entries based on timeout thresholds
     
-    initiated_cutoff = datetime.utcnow() - timedelta(minutes=INITIATED_TIMEOUT_MINUTES)
+    # [FIX] Stricter timeout for DIALING_INTENT to prevent "ghost dialing"
+    # If it's been in DIALING_INTENT for > 2 mins without an execution map, it's stuck.
+    dialing_cutoff = datetime.utcnow() - timedelta(minutes=2)
+    
+    initiated_cutoff = datetime.utcnow() - timedelta(minutes=2) # Reduced from 5
     active_cutoff = datetime.utcnow() - timedelta(minutes=ACTIVE_CALL_TIMEOUT_MINUTES)
     
     statement = (
@@ -75,28 +94,38 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         .where(QueueItem.campaign_id == campaign_id)
         .where(
             or_(
-                # Case 1: DIALING_INTENT - ALWAYS include these as active agents
-                # This ensures we don't prematurely mark a campaign as complete
-                # while leads are still in the process of being dialed or retried.
-                QueueItem.status == "DIALING_INTENT",
+                # Case 1: DIALING_INTENT - Must be recent
+                and_(
+                    QueueItem.status == "DIALING_INTENT",
+                    QueueItem.updated_at > dialing_cutoff
+                ),
                 # Case 2: Active execution map with recent activity
                 and_(
-                    BolnaExecutionMap.call_status.in_(["initiated", "ringing", "connected", "speaking", "listening", "processing"]),
+                    func.lower(BolnaExecutionMap.call_status).in_(["initiated", "ringing", "connected", "speaking", "listening", "processing", "in-progress"]),
+                    # [FIX] Zombie Guard: Do not show executions if the QueueItem is already finalized/closed
+                    # This prevents "Dialing..." persisting after a webhook closes the item or admin resets it.
+                    QueueItem.status.not_in([
+                        "COMPLETED", "FAILED", "INTENT_YES", "INTENT_NO", "DNC", 
+                        "WRONG_PERSON", "SCHEDULED", "PENDING_AVAILABILITY", 
+                        "INTENT_UNKNOWN", "CLOSED", "FAX_ROBOT", "SILENCE",
+                        "LANGUAGE_BARRIER", "FAILED_CONNECT", "VOICEMAIL", "NO_ANSWER", "BUSY", "HANGUP"
+                    ]),
                     or_(
-                        # Initiated calls must be recent (< 5 min)
+                        # Initiated calls must be recent (< 2 min)
                         and_(
-                            BolnaExecutionMap.call_status == "initiated",
+                            func.lower(BolnaExecutionMap.call_status) == "initiated",
                             BolnaExecutionMap.updated_at > initiated_cutoff
                         ),
                         # Active calls must be recent (< 30 min)
                         and_(
-                            BolnaExecutionMap.call_status.in_(["ringing", "connected", "speaking", "listening", "processing"]),
+                            func.lower(BolnaExecutionMap.call_status).in_(["ringing", "connected", "speaking", "listening", "processing", "in-progress"]),
                             BolnaExecutionMap.updated_at > active_cutoff
                         )
                     )
                 )
             )
         )
+        .order_by(QueueItem.created_at.asc())
     )
     
     result = await session.execute(statement)
@@ -122,25 +151,34 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     agents = []
     # Real-world names pool
     NAMES = [
-        "Alex Rivera", "Sarah Chen", "Rohan Gupta", "Maya Williams", 
-        "Jordan Vance", "Priya Sharma", "Vikram Malhotra", "Tara Knight",
-        "Leo Zhang", "Elena Rossi", "Marcus Thorne", "Skylar Page"
+        "Alex", "Sarah", "Rohan", "Maya", 
+        "Jordan", "Priya", "Vikram", "Tara",
+        "Leo", "Elena", "Marcus", "Skylar"
     ]
     
     for i, (q_item, lead, exec_map) in enumerate(unique_items.values()):
-        # Assign a name based on the ID or index for consistency during a session
-        name_idx = (hash(str(lead.id)) % len(NAMES))
+        # [FIX] Use stable ID-based indexing instead of non-deterministic hash()
+        # This ensures agent names remain consistent across restarts and processes.
+        lead_id_int = int(str(lead.id).replace('-', ''), 16)
+        name_idx = (lead_id_int % len(NAMES))
         agent_name = NAMES[name_idx]
         
         # Determine status
         if exec_map:
-            # Normalize to lowercase and map in-progress -> connected
-            status = (exec_map.call_status or "initiated").lower()
-            if status == "in-progress":
-                status = "connected"
-            
-            duration = exec_map.call_duration
-            agent_id = exec_map.bolna_agent_id or str(exec_map.id)
+            # [FIX] If we are in DIALING_INTENT but the map is old/stale (failed/completed), 
+            # it implies we are retrying. Show 'initiated' to reflect the new attempt.
+            is_stale_map = exec_map.call_status in ["completed", "failed", "busy", "no-answer", "canceled"]
+            if q_item.status == "DIALING_INTENT" and is_stale_map:
+                 status = "initiated"
+                 duration = 0
+                 agent_id = f"pending-{q_item.id}" # Use synthetic ID for the new attempt
+            else:
+                 # Normalize to lowercase but keep speaking/listening/processing for real-time visualization
+                 status = (exec_map.call_status or "initiated").lower()
+                 if status == "in-progress":
+                    status = "connected"
+                 duration = exec_map.call_duration
+                 agent_id = f"call-{q_item.id}"
         else:
             # Synthetic status for DIALING_INTENT without map
             status = "initiated" 
@@ -172,7 +210,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         select(QueueItem, CampaignLead)
         .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
         .where(QueueItem.campaign_id == campaign_id)
-        .where(QueueItem.status.in_(["PENDING", "QUEUED", "READY"]))
+        .where(QueueItem.status.in_(["PENDING", "QUEUED", "READY", "SCHEDULED"]))
         # Filter by selected cohorts to be safe, even if Warmer *should* have handled it
         .where(or_(len(selected_cohorts) == 0, CampaignLead.cohort.in_(selected_cohorts)))
         .order_by(QueueItem.priority_score.desc(), QueueItem.created_at.asc())
@@ -187,16 +225,19 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     # Add buffered items first (with deduplication)
     for q_item, lead in buffered_items:
         # Skip if we've already added this lead
-        if str(lead.id) in seen_leads:
+        norm_num = normalize_phone_number(lead.contact_number)
+        if norm_num in seen_leads:
             continue
-        
+        seen_leads.add(norm_num)
         seen_leads.add(str(lead.id))
+
         upcoming_data.append({
             "lead_id": lead.id,
             "name": lead.customer_name,
             "cohort": lead.cohort,
             "avatar_seed": lead.id,
-            "status": q_item.status # Optional debug info
+            "status": q_item.status, # Optional debug info
+            "scheduled_for": q_item.scheduled_for.isoformat() + "Z" if q_item.scheduled_for else None
         })
         
     # Part B: Backlog (Fill remaining slots)
@@ -218,6 +259,13 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         backlog_leads = backlog_result.scalars().all()
         
         for lead in backlog_leads:
+            # Deduplicate by normalized number
+            norm_num = normalize_phone_number(lead.contact_number)
+            if norm_num in seen_leads or str(lead.id) in seen_leads:
+                continue
+            seen_leads.add(norm_num)
+            seen_leads.add(str(lead.id))
+
             upcoming_data.append({
                 "lead_id": lead.id,
                 "name": lead.customer_name,
@@ -227,36 +275,205 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
             })
 
     # 4. Fetch Recent History (Completed/Failed) for "Left side" of the queue
-    # We want valid queue items that are NOT in active states and NOT in READY state
-    # i.e. COMPLETED, FAILED, CONSUMED
+    # We want valid call logs for this campaign, latest first
     history_stmt = (
-        select(QueueItem, CampaignLead, BolnaExecutionMap)
-        .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
-        .outerjoin(BolnaExecutionMap, QueueItem.id == BolnaExecutionMap.queue_item_id)
-        .where(QueueItem.campaign_id == campaign_id)
-        .where(QueueItem.status.in_(["COMPLETED", "FAILED", "CONSUMED", "INTENT_YES", "INTENT_NO", "INTENT_NO_ANSWER"]))
-        .order_by(QueueItem.updated_at.desc())
-        .limit(10)
+        select(CallLog, CampaignLead)
+        .join(CampaignLead, CallLog.lead_id == CampaignLead.id)
+        .where(CallLog.campaign_id == campaign_id)
+        .order_by(CallLog.created_at.desc())
+        .limit(100)
     )
     
     history_result = await session.execute(history_stmt)
     history_items = history_result.all()
     
-    history_data = []
-    seen_history_leads = set()
-    for q_item, lead, exec_map in history_items:
-        lead_id_str = str(lead.id)
-        if lead_id_str in seen_history_leads:
-            continue
-        seen_history_leads.add(lead_id_str)
+    def get_critical_signal(outcome: str, extracted: dict) -> dict:
+        # 1. DNC
+        if outcome == "DNC / Stop":
+            return {"type": "DNC", "label": "DNC Request", "severity": "critical"}
         
+        dnc_val = extracted.get("do_not_call_event")
+        if dnc_val and isinstance(dnc_val, str) and not dnc_val.lower().startswith("no"):
+            if any(kw in dnc_val.lower() for kw in ["stop", "remove", "dnc", "don't call"]):
+                return {"type": "DNC", "label": "DNC Request", "severity": "critical"}
+
+        # 2. Wrong Person
+        if outcome == "Wrong Person" or extracted.get("wrong_person"):
+            return {"type": "WRONG_PERSON", "label": "Wrong Person", "severity": "warning"}
+
+        # 3. Language Barrier
+        if outcome == "Language Barrier" or extracted.get("language_barrier"):
+            return {"type": "LANGUAGE_BARRIER", "label": "Language Barrier", "severity": "warning"}
+
+        return None
+
+    def classify_intent_priority(key_insight: str, outcome: str, duration: int) -> dict:
+        """Classify the priority/value of a user intent for visual emphasis."""
+        if not key_insight:
+            return None
+            
+        insight_lower = key_insight.lower()
+        outcome_upper = (outcome or "").upper()
+        
+        # Skip technical failures - these are low priority by default
+        technical_failures = ["voicemail", "no answer", "busy", "silence", "hung up immediately"]
+        if any(fail in insight_lower for fail in technical_failures):
+            return None
+        
+        # High Priority - Hot Leads (expressed interest or intent to act)
+        hot_keywords = [
+            "interested", "want to try", "sounds good", "tell me more", 
+            "how much", "pricing", "price", "cost",
+            "schedule", "book", "sign up", "register",
+            "yes", "sure", "okay", "sounds great",
+            "feedback", "follow-up", "call back", "call later",
+            "demo", "trial", "sample"
+        ]
+        if any(kw in insight_lower for kw in hot_keywords):
+            return {"level": "high", "label": "🔥 Hot Lead", "emoji": "🔥"}
+        
+        # Medium Priority - Engaged (asked questions, had real conversation)
+        if duration > 20 and outcome_upper not in ["VOICEMAIL", "NO_ANSWER", "BUSY", "HANGUP"]:
+            engaged_keywords = ["what", "how", "when", "why", "tell", "explain", "?", "intends", "possibly"]
+            if any(kw in insight_lower for kw in engaged_keywords):
+                return {"level": "medium", "label": "⚡ Engaged", "emoji": "⚡"}
+        
+        # If we have a real intent (not generic), mark as engaged
+        if len(key_insight) > 30 and "user" in insight_lower:
+            return {"level": "medium", "label": "⚡ Engaged", "emoji": "⚡"}
+        
+        return None
+
+    history_data = []
+    seen_history_leads = set() # Optional: if we want to collapse retries, but user wants activity truth
+    for call_log, lead in history_items:
+        # Extract core variables from webhook_payload if available
+        payload = call_log.webhook_payload or {}
+        extracted = payload.get("extracted_data", {}) or {}
+        
+        # 1. Key quote/intent
+        key_insight = extracted.get("user_intent") or extracted.get("specific_objections")
+        if not key_insight:
+            # Fallback: get last user message from transcript
+            transcript = payload.get("transcript", [])
+            if isinstance(transcript, list):
+                user_msgs = [t.get("content") for t in transcript if isinstance(t, dict) and t.get("role") == "user"]
+            else:
+                user_msgs = []
+            
+            if user_msgs:
+                key_insight = user_msgs[-1]
+                
+        # [NEW] Apply Context-Aware Enrichment on-the-fly
+        if key_insight:
+            transcript_str = str(payload.get("transcript", ""))
+            key_insight = enrich_user_intent(
+                raw_intent=str(key_insight),
+                outcome=(call_log.outcome or call_log.status or "").upper(),
+                duration=call_log.duration,
+                transcript=transcript_str
+            )
+        
+        # 2. Transcripts (safe list)
+        transcript = payload.get("transcript")
+        if not isinstance(transcript, list):
+            transcript = []
+        
+        # 3. Critical Signal (Context-Aware)
+        critical_signal = get_critical_signal(call_log.outcome, extracted)
+        
+        # 3.5 Intent Priority (NEW)
+        intent_priority = classify_intent_priority(key_insight, call_log.outcome, call_log.duration)
+        
+        # 4. Scheduling preference
+        scheduling = extracted.get("scheduling_preferences")
+
+        # [NEW] 5. Sentiment Analysis
+        transcript_str = str(payload.get("transcript", ""))
+        sentiment = analyze_sentiment(
+            transcript=transcript_str,
+            outcome=call_log.outcome or call_log.status or "",
+            duration=call_log.duration,
+            extracted_data=extracted
+        )
+
+        # [NEW] 6. Agreement Detection
+        agreement_status = detect_agreement_status(
+            user_intent=key_insight or "",
+            outcome=call_log.outcome or "",
+            extracted_data=extracted
+        )
+
+        # [NEW] 7. Preferred Slot Extraction and Analysis
+        preferred_slot = None
+        if scheduling and isinstance(scheduling, dict):
+            # Parse scheduling preferences
+            preferred_slot = {
+                "requested": True,
+                "start_time": scheduling.get("preferred_time"),
+                "end_time": scheduling.get("preferred_end_time"),
+                "day": scheduling.get("preferred_day"),
+                "is_outside_window": False  # Will be calculated below
+            }
+            
+            # Check if preferred slot is outside execution windows
+            if preferred_slot["start_time"]:
+                try:
+
+                    from dateutil import parser
+                    
+                    # Parse the preferred time
+                    pref_time = parser.parse(preferred_slot["start_time"])
+                    
+                    # Get campaign execution windows
+                    campaign = await session.get(Campaign, call_log.campaign_id)
+                    if campaign and campaign.execution_windows:
+                        is_in_window = False
+                        for window in campaign.execution_windows:
+                            try:
+                                from dateutil import parser as date_parser
+                                
+                                window_start = date_parser.parse(f"{window['day']}T{window['start']}")
+                                window_end = date_parser.parse(f"{window['day']}T{window['end']}")
+                                
+                                if window_start <= pref_time <= window_end:
+                                    is_in_window = True
+                                    break
+                            except:
+                                continue
+                        
+                        preferred_slot["is_outside_window"] = not is_in_window
+                except:
+                    # If parsing fails, assume it's outside window to be safe
+                    preferred_slot["is_outside_window"] = True
+
+        # [NEW] 8. Check if should copy to queue and if already copied
+        should_copy = should_copy_to_queue(agreement_status) and not call_log.copied_to_user_queue
+        copied_at = call_log.copied_to_queue_at.isoformat() + "Z" if call_log.copied_to_queue_at else None
+
         history_data.append({
             "lead_id": lead.id,
             "name": lead.customer_name,
-            "status": q_item.status,
-            "outcome": q_item.outcome, 
-            "duration": exec_map.call_duration if exec_map else 0,
-            "avatar_seed": lead.id
+            "phone_number": lead.contact_number,
+            "status": call_log.outcome or call_log.status,
+            "outcome": call_log.outcome, 
+            "duration": call_log.duration,
+            "avatar_seed": lead.id,
+            "timestamp": call_log.created_at.isoformat() + "Z",
+            "recording_url": call_log.recording_url,
+            "transcript": transcript,
+            "key_insight": key_insight,
+            "is_dnc": critical_signal["type"] == "DNC" if critical_signal else False,
+            "critical_signal": critical_signal, 
+            "intent_priority": intent_priority,
+            "scheduling_preference": scheduling,
+            # [NEW] Context-aware fields
+            "sentiment": sentiment,
+            "agreement_status": agreement_status,
+            "preferred_slot": preferred_slot,
+            "should_copy_to_queue": should_copy,
+            "copied_to_queue_at": copied_at,
+            "call_log_id": str(call_log.id),  # For API calls
         })
 
     # 5. Fetch ALL Leads by Cohort for the comprehensive view
@@ -280,8 +497,21 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         "QUEUED": 5,
         "COMPLETED": 4,
         "INTENT_YES": 4,
+        "SCHEDULED": 4,
+        "PENDING_AVAILABILITY": 4,
         "FAILED": 3,
+        "VOICEMAIL": 3,
+        "NO_ANSWER": 3,
+        "BUSY": 3,
+        "HANGUP": 3,
+        "SILENCE": 3,
+        "FAILED_CONNECT": 3,
+        "LANGUAGE_BARRIER": 3,
         "INTENT_NO": 2,
+        "DNC": 2,
+        "WRONG_PERSON": 2,
+        "FAX_ROBOT": 2,
+        "AMBIGUOUS": 2,
         "BACKLOG": 1
     }
     
@@ -292,8 +522,14 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         current_outcome = q_item.outcome if q_item else None
         
         # If we've seen this lead before, check if we should update it
-        if lead_id in seen_leads_by_cohort:
-            existing = seen_leads_by_cohort[lead_id]
+        norm_num = normalize_phone_number(lead.contact_number)
+        
+        # Priority check for same lead (by ID or normalized number)
+        is_duplicate = lead_id in seen_leads_by_cohort or norm_num in seen_leads_by_cohort
+        existing_info = seen_leads_by_cohort.get(lead_id) or seen_leads_by_cohort.get(norm_num)
+
+        if is_duplicate:
+            existing = existing_info
             existing_priority = status_priority.get(existing["status"], 0)
             current_priority = status_priority.get(current_status, 0)
             
@@ -304,15 +540,18 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
                 if old_cohort in leads_by_cohort:
                     leads_by_cohort[old_cohort] = [
                         item for item in leads_by_cohort[old_cohort] 
-                        if str(item["lead_id"]) != lead_id
+                        if str(item["lead_id"]) != str(existing["lead_id"])
                     ]
                 
                 # Update tracking
-                seen_leads_by_cohort[lead_id] = {
+                track_info = {
                     "cohort": cohort,
                     "status": current_status,
-                    "outcome": current_outcome
+                    "outcome": current_outcome,
+                    "lead_id": lead_id
                 }
+                seen_leads_by_cohort[lead_id] = track_info
+                seen_leads_by_cohort[norm_num] = track_info
                 
                 # Add to new cohort
                 if cohort not in leads_by_cohort:
@@ -329,11 +568,14 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
             continue
         
         # First time seeing this lead
-        seen_leads_by_cohort[lead_id] = {
+        track_info = {
             "cohort": cohort,
             "status": current_status,
-            "outcome": current_outcome
+            "outcome": current_outcome,
+            "lead_id": lead_id
         }
+        seen_leads_by_cohort[lead_id] = track_info
+        seen_leads_by_cohort[norm_num] = track_info
         
         if cohort not in leads_by_cohort:
             leads_by_cohort[cohort] = []
@@ -343,6 +585,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
             "name": lead.customer_name,
             "status": current_status,
             "outcome": current_outcome,
+            "execution_count": q_item.execution_count if q_item else 0, # [NEW] Exposed for frontend warning
             "avatar_seed": lead.id
         })
 
@@ -353,9 +596,14 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         "total_targets": 0,
         "total_completed": 0,
         "completion_rate": 0.0,
-        "cohort_progress": {}
+        "cohort_progress": {},
+        "total_calls": 0,
+        "call_distribution": {}
     }
     
+    # Success statuses that count towards completion
+    SUCCESS_STATUSES = ["INTENT_YES"]
+
     # Get cohort data from campaign
     cohort_data = campaign.cohort_data or {}
     
@@ -369,20 +617,22 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
             target = cohort_config.get("target", 0)
             total_targets += target
             
-            # Count INTENT_YES calls for this cohort
-            intent_yes_stmt = (
+            # Count successful calls for this cohort
+            success_stmt = (
                 select(QueueItem)
                 .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
                 .where(QueueItem.campaign_id == campaign_id)
                 .where(CampaignLead.cohort == cohort_name)
-                .where(QueueItem.status == "INTENT_YES")
+                .where(QueueItem.status.in_(SUCCESS_STATUSES))
             )
-            intent_yes_result = await session.execute(intent_yes_stmt)
-            completed_count = len(intent_yes_result.scalars().all())
+            success_result = await session.execute(success_stmt)
+            completed_count = len(success_result.scalars().all())
             total_completed += completed_count
             
-            is_cohort_complete = completed_count >= target
-            if not is_cohort_complete:
+            # A cohort is complete if it has a target > 0 and met it, 
+            # OR if it was selected but has no target (implicitly complete when exhausted, handled by global fallback below)
+            is_cohort_complete = target > 0 and completed_count >= target
+            if target > 0 and not is_cohort_complete:
                 all_cohorts_complete = False
             
             completion_data["cohort_progress"][cohort_name] = {
@@ -390,6 +640,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
                 "completed": completed_count,
                 "is_complete": is_cohort_complete
             }
+            print(f"[Execution] Cohort {cohort_name}: Target={target}, Completed={completed_count}, IsComplete={is_cohort_complete}")
         
         completion_data["total_targets"] = total_targets
         completion_data["total_completed"] = total_completed
@@ -398,18 +649,82 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         # Check if all cohorts met their targets
         if all_cohorts_complete and total_targets > 0:
             is_completed = True
+            print(f"[Execution] All cohorts complete. Marking campaign {campaign_id} as COMPLETED.")
     
+    # [NEW] Check for leads exhaustion
+    total_leads = completion_data["total_targets"]
+
+    # [NEW] Fallback: If no targets defined via cohorts, use total leads as targets
+    if completion_data["total_targets"] == 0:
+        # Count all unique leads in the campaign
+        total_leads_stmt = select(func.count(CampaignLead.id)).where(CampaignLead.campaign_id == campaign_id)
+        total_leads = (await session.execute(total_leads_stmt)).scalar() or 0
+        
+        # Count all unique successful queue items
+        total_success_stmt = (
+            select(func.count(QueueItem.id))
+            .where(QueueItem.campaign_id == campaign_id)
+            .where(QueueItem.status.in_(SUCCESS_STATUSES))
+        )
+        total_success = (await session.execute(total_success_stmt)).scalar() or 0
+        
+        completion_data["total_targets"] = total_leads
+        completion_data["total_completed"] = total_success
+        completion_data["completion_rate"] = (total_success / total_leads * 100) if total_leads > 0 else 0
+        
+        # Optionally populate cohort_progress for visibility even without targets
+        if not completion_data["cohort_progress"] and leads_by_cohort:
+            for cohort_name, leads in leads_by_cohort.items():
+                cohort_success = sum(1 for l in leads if l["status"] in SUCCESS_STATUSES)
+                completion_data["cohort_progress"][cohort_name] = {
+                    "target": len(leads),
+                    "completed": cohort_success,
+                    "is_complete": cohort_success >= len(leads) if len(leads) > 0 else True
+                }
+
+
+    # [NEW] Calculate Total Calls and Distribution for Dynamic Summary
+    # We want to count actual attempts (Calls made)
+    attempted_stmt = (
+        select(QueueItem.status, func.count(QueueItem.id))
+        .where(QueueItem.campaign_id == campaign_id)
+        .where(QueueItem.status.in_(["COMPLETED", "FAILED", "VOICEMAIL", "NO_ANSWER", "BUSY", "HANGUP", "SILENCE", "FAILED_CONNECT", "LANGUAGE_BARRIER", "INTENT_YES", "INTENT_NO", "DNC", "WRONG_PERSON", "FAX_ROBOT", "AMBIGUOUS", "CONNECTED", "SPEAKING", "LISTENING", "PROCESSING", "IN-PROGRESS", "INITIATED", "RINGING"]))
+        .group_by(QueueItem.status)
+    )
+    attempted_result = await session.execute(attempted_stmt)
+    attempted_counts = attempted_result.all()
+    
+    total_calls = 0
+    call_distribution = {}
+    
+    for status, count in attempted_counts:
+        total_calls += count
+        # Normalize status keys for frontend if needed, or keep raw
+        status_key = status
+        call_distribution[status_key] = count
+        
+    completion_data["total_calls"] = total_calls
+    completion_data["call_distribution"] = call_distribution
+
     # Lead-based completion check (fallback or additional condition)
     # Check if all leads have been exhausted (excluding those that need retry/reset)
-    if not is_completed:
+    
+    is_exhausted = False
+    
+    # [FIX] Only check for exhaustion if campaign was previously active
+    # This prevents marking DRAFT/IDLE campaigns as complete before they've even started
+    # processing leads (before queue warmer has populated anything)
+    if campaign.status in ["ACTIVE", "IN_PROGRESS"]:
         # Check for leads that are currently ready to be called or in the backlog
         # We EXCLUDE FAILED leads from this check because they require a manual RESET to be tried again.
         # This prevents the "Agents Standing By" stalemate when only failures remain.
         
+        # [FIX] Include SCHEDULED leads in the "not complete" check
+        # This prevents premature completion when leads are waiting for their window
         ready_to_call_stmt = (
             select(QueueItem)
             .where(QueueItem.campaign_id == campaign_id)
-            .where(QueueItem.status.in_(["READY", "PENDING", "QUEUED"]))
+            .where(QueueItem.status.in_(["READY", "PENDING", "QUEUED", "SCHEDULED", "DIALING_INTENT", "CONNECTED", "RINGING"]))
         )
         ready_to_call_result = await session.execute(ready_to_call_stmt)
         ready_leads = ready_to_call_result.scalars().all()
@@ -425,19 +740,37 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         backlog_result = await session.execute(backlog_stmt)
         backlog_leads = backlog_result.scalars().all()
         
+        # [FIX] Added a check for CallLogs to avoid false-positives on fresh starts
+        # If there are NO call logs and NO agents, but we have leads, we aren't done.
+        call_logs_stmt = select(func.count(CallLog.id)).where(CallLog.campaign_id == campaign_id)
+        call_logs_count = (await session.execute(call_logs_stmt)).scalar() or 0
+
+        print(f"[Execution] Exhaustion Check: Ready={len(ready_leads)}, Backlog={len(backlog_leads)}, ActiveAgents={len(agents)}, Logs={call_logs_count}")
+
         # If no ready leads, no backlog, and no current active agents, mark as complete
+        # BUT only if we've actually tried something (logs > 0) OR if we truly have 0 leads total (already handles)
         if len(ready_leads) == 0 and len(backlog_leads) == 0 and len(agents) == 0:
-            is_completed = True
+            if call_logs_count > 0 or total_leads == 0:
+                # [FIX]: Exhaustion is NOT Completion. 
+                # Completion = Targets Met (handled above).
+                # Exhaustion = No leads left.
+                is_exhausted = True
+                print(f"[Execution] Campaign {campaign_id} EXHAUSTED (No leads left, targets not necessarily met)")
+
+    # [NEW] Final Polish: If campaign is completed, mark all cohorts as complete to avoid "In Progress" UI stalemate
+    if is_completed or is_exhausted:
+        for cohort_name in completion_data["cohort_progress"]:
+            completion_data["cohort_progress"][cohort_name]["is_complete"] = True
 
     # 8. Auto-pause campaign if completed to stop further calling
-    # We allow auto-completion from ACTIVE, IN_PROGRESS OR PAUSED states 
-    # (if the final lead was a failure that left the campaign in PAUSED/Standby)
-    if is_completed and campaign.status in ["ACTIVE", "IN_PROGRESS", "PAUSED"]:
+    # We allow auto-completion from ACTIVE or IN_PROGRESS states only.
+    # CRITICAL: Do NOT auto-complete from PAUSED state (avoids immediate re-completion after reset)
+    if (is_completed or is_exhausted) and campaign.status in ["ACTIVE", "IN_PROGRESS"]:
         campaign.status = "COMPLETED"
         session.add(campaign)
         await session.commit()
         await session.refresh(campaign)
-        print(f"[Execution] Campaign {campaign_id} auto-completed: Criteria met")
+        print(f"[Execution] Campaign {campaign_id} auto-completed: Criteria met (Completed={is_completed}, Exhausted={is_exhausted})")
 
     
     # 9. Fetch Consolidated Data for WebSocket (Events & Next Leads)
@@ -462,6 +795,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         "all_leads_by_cohort": leads_by_cohort,
         "is_completed": is_completed,
         "completion_data": completion_data,
+        "is_exhausted": is_exhausted, # [FIX] Allow exhausted to be true even if completed (though mutually exclusive conceptually, helpful for UI priority)
         "execution_windows": campaign.execution_windows,
         
         # NEW: Add campaign metadata for real-time frontend updates
@@ -478,8 +812,8 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
             "preliminary_questions": campaign.preliminary_questions or [],
             "incentive": campaign.incentive,
             "call_duration": campaign.call_duration,
-            "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
-            "updated_at": campaign.updated_at.isoformat() if campaign.updated_at else None,
+            "created_at": campaign.created_at.isoformat() + "Z" if campaign.created_at else None,
+            "updated_at": campaign.updated_at.isoformat() + "Z" if campaign.updated_at else None,
         }
     }
     
@@ -496,167 +830,30 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
 
 async def get_campaign_events_internal(campaign_id: UUID, session: AsyncSession) -> List[dict]:
     """
-    Internal logic to fetch recent campaign events.
+    Fetches campaign events from the persistent CampaignEvent table.
     """
-    # 1. Fetch recent activity from BolnaExecutionMap
-    statement = (
-        select(BolnaExecutionMap, CampaignLead)
-        .join(QueueItem, BolnaExecutionMap.queue_item_id == QueueItem.id)
-        .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
-        .where(BolnaExecutionMap.campaign_id == campaign_id)
-        .order_by(BolnaExecutionMap.updated_at.desc())
-        .limit(20)
+    stmt = (
+        select(CampaignEvent)
+        .where(CampaignEvent.campaign_id == campaign_id)
+        .order_by(CampaignEvent.created_at.desc(), CampaignEvent.id.desc())
+        .limit(50)
     )
-    result = await session.execute(statement)
-    results = result.all()
+    result = await session.execute(stmt)
+    events = result.scalars().all()
     
-    # [NEW] Check for leads in DIALING_INTENT
-    # These should show up as "Initializing" immediately in the UI.
-    pending_dialing_stmt = (
-        select(QueueItem, CampaignLead)
-        .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
-        .where(QueueItem.campaign_id == campaign_id)
-        .where(QueueItem.status == "DIALING_INTENT")
-    )
-    pending_dialing = (await session.execute(pending_dialing_stmt)).all()
-    
-    events = []
-    NAMES = [
-        "Alex Rivera", "Sarah Chen", "Rohan Gupta", "Maya Williams", 
-        "Jordan Vance", "Priya Sharma", "Vikram Malhotra", "Tara Knight",
-        "Leo Zhang", "Elena Rossi", "Marcus Thorne", "Skylar Page"
-    ]
-    
-    # Add pending dialing events first
-    for q_item, lead in pending_dialing:
-        name_idx = (hash(str(lead.id)) % len(NAMES))
-        agent_name = NAMES[name_idx]
-        events.append({
-            "id": f"pending-evt-{q_item.id}",
-            "timestamp": q_item.updated_at.isoformat(),
-            "type": "agent_action",
-            "agent_name": agent_name,
-            "message": f"Initializing neural link with {lead.customer_name}...",
-            "status": "initiated"
+    formatted_events = []
+    for e in events:
+        formatted_events.append({
+            "id": str(e.id),
+            "timestamp": e.created_at.isoformat() + "Z",
+            "type": e.event_type.lower(),
+            "agent_name": e.agent_name,
+            "message": e.message,
+            "status": e.status,
+            "lead_id": str(e.lead_id) if e.lead_id else None
         })
-
-    unique_exec_maps = {}
-    for exec_map, lead in results:
-        qi_id = str(exec_map.queue_item_id)
-        if qi_id not in unique_exec_maps:
-            unique_exec_maps[qi_id] = (exec_map, lead)
-        else:
-            # Keep newest
-            existing_map, _ = unique_exec_maps[qi_id]
-            if exec_map.updated_at > existing_map.updated_at:
-                unique_exec_maps[qi_id] = (exec_map, lead)
-
-    for exec_map, lead in unique_exec_maps.values():
-        name_idx = (hash(str(lead.id)) % len(NAMES))
-        agent_name = NAMES[name_idx]
-        
-        # -- DYNAMIC MESSAGE GENERATION --
-        msg = None
-        payload = exec_map.last_webhook_payload or {}
-        
-        # 1. Check for real transcript turns (The "Neural Thought" Commentary)
-        transcript_data = payload.get('transcript')
-        if isinstance(transcript_data, list) and len(transcript_data) > 0:
-            last_turn = transcript_data[-1]
-            role = last_turn.get('role', 'system')
-            content = (last_turn.get('content', '') or last_turn.get('message', '')).strip()
-            
-            if content:
-                # -- NEURAL COMMENTARY ENGINE --
-                # Turn raw turns into narrative commentary
-                if role == 'agent' or role == 'assistant':
-                    # Common agent patterns
-                    c = content.lower()
-                    if any(x in c for x in ["hello", "hi", "hey"]):
-                        msg = f"{agent_name} has initiated contact and is greeting {lead.customer_name}."
-                    elif "?" in content:
-                        msg = f"{agent_name} is inquiring about {lead.customer_name}'s perspective to gather insights."
-                    elif any(x in c for x in ["pricing", "cost", "deal", "discount"]):
-                        msg = f"{agent_name} is discussing value and pricing structures with {lead.customer_name}."
-                    elif any(x in c for x in ["perfect", "great", "awesome", "understand"]):
-                        msg = f"{agent_name} is acknowledging the response and building rapport."
-                    else:
-                        msg = f"{agent_name} is conveying brand context and guiding the conversation."
-                elif role == 'user':
-                    msg = f"{lead.customer_name} is responding to {agent_name}'s prompts, providing valuable feedback."
-        
-        # 2. If no transcript turn, check Extracted Data (The "Decision")
-        if not msg and exec_map.extracted_data:
-             extracted = exec_map.extracted_data
-             if extracted.get('interested'):
-                 msg = "Analyzed Intent: POSITIVE. Scheduling follow-up actions."
-             elif extracted.get('not_interested'):
-                 msg = "Analyzed Intent: NEGATIVE. Gracefully closing conversation."
-             elif extracted.get('callback_time'):
-                 msg = f"Negotiating Schedule: User requested callback at {extracted.get('callback_time')}"
-
-        # 3. Fallback to Status-based messages (The "Action")
-        if not msg:
-            # Normalize status for mapping
-            normalized_status = (exec_map.call_status or "initiated").lower()
-            if normalized_status == "in-progress":
-                normalized_status = "connected"
-
-            status_messages = {
-                "initiated": f"Initializing neural link with {lead.customer_name}...",
-                "ringing": f"Dialing {lead.customer_name}...",
-                "connected": f"Connection established with {lead.customer_name}. Engaging neural voice engine.",
-                "speaking": f"{agent_name} is actively speaking, conveying brand context to {lead.customer_name}.",
-                "listening": f"{agent_name} is listening intently to {lead.customer_name}'s response.",
-                "processing": f"Neural processor is analyzing sentiment and drafting a relevant response.",
-                "completed": f"Session completed with {lead.customer_name}. Archiving interaction context.",
-                "failed": f"Connection failed for {lead.customer_name}. Queuing retry logic."
-            }
-            msg = status_messages.get(normalized_status, f"Agent {agent_name} executing: {normalized_status}")
-        
-        # Deduplication Logic (for noise/jitter)
-        current_ts = exec_map.updated_at
-        is_duplicate_noise = False
-        
-        for existing_evt in events:
-            if existing_evt["message"] == msg:
-                if existing_evt["timestamp"] and current_ts:
-                    try:
-                        existing_dt = datetime.fromisoformat(existing_evt["timestamp"]) if isinstance(existing_evt["timestamp"], str) else existing_evt["timestamp"]
-                        if isinstance(existing_dt, datetime) and isinstance(current_ts, datetime):
-                             existing_dt = existing_dt.replace(tzinfo=None)
-                             current_ts_naive = current_ts.replace(tzinfo=None)
-                             diff = abs((existing_dt - current_ts_naive).total_seconds())
-                             
-                             if diff < 60: # 1 minute window for duplicates
-                                 is_duplicate_noise = True
-                                 break
-                    except Exception:
-                        pass
-        
-        if not is_duplicate_noise:
-            events.append({
-                "id": str(exec_map.id),
-                "timestamp": exec_map.updated_at.isoformat() if exec_map.updated_at else None,
-                "type": "agent_action",
-                "agent_name": agent_name,
-                "message": msg,
-                "status": exec_map.call_status
-            })
-        
-    # Add System Keep-Alive if quiet
-    if not events:
-        campaign = await session.get(Campaign, campaign_id)
-        if campaign and campaign.status in ["ACTIVE", "IN_PROGRESS"]:
-             events.append({
-                 "id": "sys-1",
-                 "timestamp": datetime.utcnow().isoformat(),
-                 "type": "system",
-                 "message": "System: Monitoring active channels. No significant anomalies detected.",
-                 "status": "info"
-             })
-             
-    return sorted(events, key=lambda x: x["timestamp"] or "", reverse=True)
+    
+    return formatted_events
 
 
 async def get_next_leads_internal(campaign_id: UUID, session: AsyncSession) -> List[dict]:
@@ -713,102 +910,162 @@ async def start_session(
     Starts the execution session for a campaign.
     Triggers the Queue Warmer to start filling the buffer.
     """
+    print(f"[Execution] DEBUG: Starting session for campaign {campaign_id}")
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
+        print("[Execution] DEBUG: Campaign not found")
         raise HTTPException(status_code=404, detail="Campaign not found")
         
+    print(f"[Execution] DEBUG: Campaign found. Status: {campaign.status}")
+
     # Check if strategy is defined (selected_cohorts or cohort_data)
     if not campaign.selected_cohorts and not campaign.cohort_data:
+         print("[Execution] DEBUG: Missing strategy")
          raise HTTPException(
              status_code=400, 
              detail="Campaign strategy (cohorts/targets) must be defined before starting execution."
          )
 
+
     # Validate Execution Window
     if campaign.execution_windows:
-        # Use local time for comparison to match user expectation (assuming server is local to user/business)
-        now_local = datetime.now()
-        is_in_active_window = False
-        
-        for w in campaign.execution_windows:
-            day = w.get('day', '')
-            st = w.get('start', '')
-            et = w.get('end', '')
+        try:
+            # Use local time for comparison to match user expectation (assuming server is local to user/business)
+            now_local = datetime.now()
+            is_in_active_window = False
             
-            if day and st and et:
-                try:
-                    start_dt = datetime.fromisoformat(f"{day}T{st}:00")
-                    end_dt = datetime.fromisoformat(f"{day}T{et}:00")
-                    
-                    # [FIX] Added a 2-minute grace period to the start time 
-                    # to handle milliseconds/clock jitter or immediate retries
-                    effective_start = start_dt - timedelta(minutes=2)
-                    
-                    # Strictly check if we are CURRENTLY in the window (with grace)
-                    if effective_start <= now_local <= end_dt:
-                        is_in_active_window = True
-                        break
-                except Exception as e:
-                    print(f"[Execution] Window parse error for window {w}: {e}")
-                    continue
-        
-        if not is_in_active_window:
-            print(f"[Execution] Campaign {campaign_id} start blocked. Time: {now_local}, Windows: {campaign.execution_windows}")
-            # Clear window_expired flag first so it doesn't double stack if they try again after updating
-            meta = dict(campaign.meta_data or {})
-            meta["window_expired"] = True
-            campaign.meta_data = meta
-            session.add(campaign)
-            await session.commit()
+            for w in campaign.execution_windows:
+                day = w.get('day', '')
+                st = w.get('start', '')
+                et = w.get('end', '')
+                
+                if day and st and et:
+                    try:
+                        start_dt = datetime.fromisoformat(f"{day}T{st}:00")
+                        end_dt = datetime.fromisoformat(f"{day}T{et}:00")
+                        
+                        # [FIX] Added a 2-minute grace period to the start time 
+                        # to handle milliseconds/clock jitter or immediate retries
+                        effective_start = start_dt - timedelta(minutes=2)
+                        
+                        # Strictly check if we are CURRENTLY in the window (with grace)
+                        if effective_start <= now_local <= end_dt:
+                            is_in_active_window = True
+                            break
+                    except Exception as e:
+                        print(f"[Execution] Window parse error for window {w}: {e}")
+                        continue
             
-            # Formatted time for error message
-            current_time_str = now_local.strftime("%I:%M %p")
-            
+            if not is_in_active_window:
+                print(f"[Execution] Campaign {campaign_id} start blocked. Time: {now_local}, Windows: {campaign.execution_windows}")
+                # Clear window_expired flag first so it doesn't double stack if they try again after updating
+                meta = dict(campaign.meta_data or {})
+                meta["window_expired"] = True
+                campaign.meta_data = meta
+                session.add(campaign)
+                await session.commit()
+                
+                # Formatted time for error message
+                current_time_str = now_local.strftime("%I:%M %p")
+                
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Campaign cannot start: Current time ({current_time_str}) is outside the scheduled execution window."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            # Fallback error handling for window parsing to prevent 500
+            print(f"[Execution] Critical error in execution window validation: {e}")
+            # We don't block start if validation crashes, but we log it. 
+            # Or safer: we block start but return a clean 400.
+            # Let's err on side of caution and allow start if validation fails purely due to code error, 
+            # BUT since this is a restriction feature, maybe we should block.
+            # However, the user issue is a 500 crash. Let's return a 400 with details.
             raise HTTPException(
                 status_code=400,
-                detail=f"Campaign cannot start: Current time ({current_time_str}) is outside the scheduled execution window."
+                detail=f"Error validating execution schedule: {str(e)}. Please check your schedule settings."
             )
 
     # Enforce Single Active Campaign Rule
     # Pause all other campaigns for this company that are ACTIVE or IN_PROGRESS
-    other_campaigns_stmt = (
-        select(Campaign)
-        .where(Campaign.company_id == campaign.company_id)
-        .where(Campaign.id != campaign_id)
-        .where(Campaign.status.in_(["ACTIVE", "IN_PROGRESS"]))
-    )
-    other_campaigns_result = await session.execute(other_campaigns_stmt)
-    other_campaigns = other_campaigns_result.scalars().all()
-    
-    for other_camp in other_campaigns:
-        other_camp.status = "PAUSED"
-        session.add(other_camp)
-        
-        # Clean QueueItems for other campaigns that are being paused
-        # This removes READY, DIALING_INTENT, PENDING, QUEUED, and LOCKED items
-        statuses_to_clean = ["READY", "DIALING_INTENT", "PENDING", "QUEUED", "LOCKED"]
-        delete_stmt = (
-            select(QueueItem)
-            .where(QueueItem.campaign_id == other_camp.id)
-            .where(QueueItem.status.in_(statuses_to_clean))
+    print("[Execution] DEBUG: Window validation passed. Auto-pausing other campaigns...")
+    # Enforce Single Active Campaign Rule
+    # Pause all other campaigns for this company that are ACTIVE or IN_PROGRESS
+    try:
+        other_campaigns_stmt = (
+            select(Campaign)
+            .where(Campaign.company_id == campaign.company_id)
+            .where(Campaign.id != campaign_id)
+            .where(Campaign.status.in_(["ACTIVE", "IN_PROGRESS"]))
         )
-        items_to_delete = (await session.execute(delete_stmt)).scalars().all()
-        for item in items_to_delete:
-            await session.delete(item)
+        other_campaigns_result = await session.execute(other_campaigns_stmt)
+        other_campaigns = other_campaigns_result.scalars().all()
+        
+        for other_camp in other_campaigns:
+            other_camp.status = "PAUSED"
+            session.add(other_camp)
             
-        print(f"[Execution] Auto-paused campaign {other_camp.id} and cleaned {len(items_to_delete)} queue items.")
+            # Clean QueueItems for other campaigns that are being paused
+            # This removes READY, DIALING_INTENT, PENDING, QUEUED, and LOCKED items
+            statuses_to_clean = ["READY", "DIALING_INTENT", "PENDING", "QUEUED", "LOCKED"]
+            delete_stmt = (
+                select(QueueItem)
+                .where(QueueItem.campaign_id == other_camp.id)
+                .where(QueueItem.status.in_(statuses_to_clean))
+            )
+            items_to_delete = (await session.execute(delete_stmt)).scalars().all()
+            
+            if items_to_delete:
+                item_ids = [item.id for item in items_to_delete]
+                # [FIX] Delete associated BolnaExecutionMap records first to avoid ForeignKeyViolationError
+                from sqlalchemy import delete
+                await session.execute(
+                    delete(BolnaExecutionMap).where(BolnaExecutionMap.queue_item_id.in_(item_ids))
+                )
+                
+                for item in items_to_delete:
+                    await session.delete(item)
+                
+            print(f"[Execution] Auto-paused campaign {other_camp.id} and cleaned {len(items_to_delete)} queue items.")
+    except Exception as e:
+         print(f"[Execution] Error auto-pausing other campaigns: {e}")
+         await session.rollback()
+         # Continue anyway, not critical
+
 
     # Update status to ACTIVE
-    campaign.status = "ACTIVE"
-    campaign.updated_at = datetime.utcnow()
-    session.add(campaign)
-    await session.commit()
-    await session.refresh(campaign)
+    print("[Execution] DEBUG: Updating status to ACTIVE and committing...")
+    try:
+        campaign.status = "ACTIVE"
+        campaign.updated_at = datetime.utcnow()
+        session.add(campaign)
+        await session.commit()
+        await session.refresh(campaign)
+        print("[Execution] DEBUG: Commit successful.")
+    except Exception as commit_err:
+        print(f"[Execution] CRITICAL: Commit failed: {commit_err}")
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database commit failed: {str(commit_err)}")
     
     # Trigger Warmer
-    await QueueWarmer.check_and_replenish(campaign_id, session)
+    print("[Execution] DEBUG: Triggering QueueWarmer...")
+
+    try:
+        # [NEW] Clear old buffer if resuming to ensure we pick fresh top leads
+        # Logic: If we are just starting, we probably want the BEST leads now, not what was left over from last time.
+        await QueueWarmer.clear_ready_buffer(session, campaign_id)
+        
+        await QueueWarmer.check_and_replenish(campaign_id, session)
+    except Exception as e:
+        print(f"[Execution] CRITICAL: QueueWarmer failed after start: {e}")
+        import traceback
+        traceback.print_exc()
+        # Do NOT raise 500 here. The campaign is ACTIVE now, so UI should show it.
+        # The user might notice no calls are happening, but at least the UI won't crash.
 
     # [NEW] Sync Execution Windows to Calendar
+    print("[Execution] DEBUG: Syncing to Calendar...")
     try:
         stmt = select(CalendarConnection).where(
             CalendarConnection.company_id == campaign.company_id,
@@ -819,12 +1076,34 @@ async def start_session(
         if conn:
             await google_calendar_service.sync_campaign_windows(conn, campaign)
             print(f"[Execution] Synced windows for campaign {campaign.id} to Google Calendar")
+        else:
+            print("[Execution] DEBUG: No active calendar connection found.")
     except Exception as e:
         print(f"[Execution] Calendar sync failed: {e}")
 
+
     # Broadcast new state
-    status_data = await get_campaign_realtime_status_internal(campaign_id, session)
+    print("[Execution] DEBUG: Fetching final status data..." )
     
+    # Log System Event
+    session.add(CampaignEvent(
+        campaign_id=campaign_id,
+        event_type="SYSTEM",
+        message="Campaign Session Initialized. Agents are standing by.",
+        status="PAUSED"
+    ))
+    await session.commit()
+
+    try:
+        status_data = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=False)
+        print("[Execution] DEBUG: Status data fetched successfully.")
+    except Exception as e:
+        print(f"[Execution] Warning: Failed to fetch initial status data: {e}")
+        import traceback
+        traceback.print_exc()
+        status_data = {}
+    
+    print("[Execution] DEBUG: Returning success response.")
     return {"status": "started", "campaign_status": campaign.status, "data": status_data}
 
 @router.post("/campaign/{campaign_id}/pause")
@@ -862,8 +1141,17 @@ async def pause_session(
     except Exception as e:
         print(f"[Execution] Calendar sync failed: {e}")
     
+    # Log System Event
+    session.add(CampaignEvent(
+        campaign_id=campaign_id,
+        event_type="SYSTEM",
+        message="Campaign Session Paused. Agents stopped.",
+        status="PAUSED"
+    ))
+    await session.commit()
+
     # Broadcast new state
-    status_data = await get_campaign_realtime_status_internal(campaign_id, session)
+    status_data = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=False)
     
     return {"status": "paused", "campaign_status": campaign.status, "data": status_data}
 
@@ -952,50 +1240,80 @@ async def reschedule_lead(
     return {"status": "success", "new_status": q_item.status, "scheduled_for": q_item.scheduled_for}
 
 @router.post("/campaign/{campaign_id}/reset")
-async def reset_campaign_progress(
+async def reset_campaign(
     campaign_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Resets the campaign to start calling fresh for leads that have NOT completed.
-    
-    PRESERVES:
-    - INTENT_YES (Interested)
-    - INTENT_NO (Not Interested)
-    - SCHEDULED (Pending Callback)
-    - CONSUMED (Manual Call)
-    
-    RESETS (Deletes QueueItem):
-    - FAILED
-    - INTENT_NO_ANSWER
-    - DIALING_INTENT (Stuck)
-    - READY
-    - ELIGIBLE
+    Resets a campaign to allow re-running.
+    1. Sets Campaign Status to PAUSED (stops auto-dialer).
+    2. Resets all [Retriable States] leads to "READY" state.
+    3. Resets "DIALING_INTENT" to "READY" (clears stuck calls).
+    4. Clears execution history references to allow fresh start.
     """
+    print(f"[Execution] Resetting campaign {campaign_id}")
+    
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-        
-    # Define statuses to PRESERVE (Completed or Active Scheduled)
-    preserve_statuses = ["INTENT_YES", "INTENT_NO", "SCHEDULED", "CONSUMED", "INTENT_YES_PENDING"]
+
+    # [UPDATED] List of states that qualify for a reset (Retriable)
+    # We explicitly exclude: INTENT_YES, INTENT_NO, DNC, WRONG_PERSON, SCHEDULED, PENDING_AVAILABILITY
+    # We include: FAILED, NO_ANSWER, BUSY, VOICEMAIL, SILENCE, HANGUP, AMBIGUOUS, LANGUAGE_BARRIER, FAILED_CONNECT
+    RETRIABLE_STATES = [
+        "FAILED", "NO_ANSWER", "BUSY", "CANCELLED", 
+        "INTENT_NO_ANSWER", # Legacy
+        "DIALING_INTENT",   # Stuck calls
+        "VOICEMAIL", "SILENCE", "HANGUP", "AMBIGUOUS", "LANGUAGE_BARRIER", "FAILED_CONNECT",
+        "PENDING" # Stuck from initial migration/data cleaning
+    ]
     
-    # Check what we are about to delete (ignoring preserve list)
-    statement = (
+    # 1. Fetch items to reset
+    stmt = (
         select(QueueItem)
         .where(QueueItem.campaign_id == campaign_id)
-        .where(QueueItem.status.not_in(preserve_statuses))
+        .where(QueueItem.status.in_(RETRIABLE_STATES))
     )
-    result = await session.execute(statement)
+    result = await session.execute(stmt)
     items_to_reset = result.scalars().all()
     
     count = len(items_to_reset)
+    item_ids = [item.id for item in items_to_reset]
+    print(f"[Execution] Found {count} items to reset in states: {RETRIABLE_STATES}")
+
+    # 2. Invalidate old BolnaExecutionMaps (Optional but good for cleanliness)
+    # We mark them as "reset_history" so they don't block dedup logic if we used it
+    if item_ids:
+        map_stmt = (
+            select(BolnaExecutionMap)
+            .where(BolnaExecutionMap.queue_item_id.in_(item_ids))
+        )
+        maps_result = await session.execute(map_stmt)
+        active_maps = maps_result.scalars().all()
+        for m in active_maps:
+            if m.call_status not in ["completed", "failed"]:
+                m.call_status = "canceled_by_reset" 
+                session.add(m)
+
+    # 2.5 Clear Call Logs (History) to ensure UI looks "fresh"
+    # This prevents the "Roster" (AgentQueue) from showing old failures in the history column
+    log_stmt = select(CallLog).where(CallLog.campaign_id == campaign_id)
+    logs_result = await session.execute(log_stmt)
+    logs_to_delete = logs_result.scalars().all()
     
-    # Reset Logic: Update status to READY instead of deleting (avoids FK constraints with history)
+    for log in logs_to_delete:
+        await session.delete(log)
+
+    print(f"[Execution] Deleted {len(logs_to_delete)} call logs for campaign reset.")
+        
+    # 3. Reset Status to READY
     now = datetime.utcnow()
     for item in items_to_reset:
+        print(f"[Execution] Resetting item {item.id} (Lead {item.lead_id}): Status={item.status}, Count={item.execution_count} -> 0")
         item.status = "READY"
         item.outcome = None # Clear previous failure reasons
+        item.execution_count = 0 # [FIX] Reset retry counter
         item.locked_by_user_id = None
         item.locked_at = None
         item.scheduled_for = None
@@ -1017,12 +1335,168 @@ async def reset_campaign_progress(
     
     # Trigger Warmer Logic - it will see these as "READY" in buffer but will NOT start calling 
     # because campaign.status is now PAUSED.
+    print("[Execution] Triggering Warmer after reset (expecting no promotions as PAUSED)...")
     await QueueWarmer.check_and_replenish(campaign_id, session)
     
+    # Log System Event
+    session.add(CampaignEvent(
+        campaign_id=campaign_id,
+        event_type="SYSTEM",
+        message=f"Campaign Reset Initiated by User. {count} items re-queued for attempt.",
+        status="RESET"
+    ))
+    await session.commit()
+
     # Refresh state and broadcast
+    status_data = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=False)
+    
+    return {"status": "reset_complete", "items_reset": count, "maps_invalidated": len(active_maps) if item_ids else 0, "campaign_status": campaign.status, "data": status_data}
+
+
+@router.post("/campaign/{campaign_id}/retry/{lead_id}")
+async def retry_lead(
+    campaign_id: UUID,
+    lead_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Manually retries a specific lead.
+    1. Finds the QueueItem for this lead.
+    2. Resets status to READY.
+    3. Invalidates any active execution map.
+    4. Triggers UI update.
+    """
+    print(f"[Execution] Retrying lead {lead_id} in campaign {campaign_id}")
+    
+    # 1. Fetch QueueItem
+    stmt = (
+        select(QueueItem)
+        .where(QueueItem.campaign_id == campaign_id)
+        .where(QueueItem.lead_id == lead_id)
+    )
+    result = await session.execute(stmt)
+    q_item = result.scalars().first()
+    
+    if not q_item:
+        raise HTTPException(status_code=404, detail="Queue item not found for this lead")
+
+    # 2. Invalidate old BolnaExecutionMaps
+    map_stmt = (
+        select(BolnaExecutionMap)
+        .where(BolnaExecutionMap.queue_item_id == q_item.id)
+    )
+    maps_result = await session.execute(map_stmt)
+    active_maps = maps_result.scalars().all()
+    for m in active_maps:
+        if m.call_status not in ["completed", "failed", "busy", "no-answer", "canceled"]:
+            m.call_status = "canceled_by_retry" 
+            session.add(m)
+            
+    # 3. Reset Status to READY
+    now = datetime.utcnow()
+    q_item.status = "READY"
+    q_item.outcome = None 
+    q_item.locked_by_user_id = None
+    q_item.locked_at = None
+    q_item.scheduled_for = None
+    q_item.updated_at = now
+    
+    session.add(q_item)
+    await session.commit()
+    
+    # Trigger UI update
+    status_data = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=False)
+    
+    return {"status": "retry_initiated", "lead_id": lead_id, "data": status_data}
+
+
+@router.post("/campaign/{campaign_id}/replenish")
+async def replenish_calls(
+    campaign_id: UUID,
+    threshold_seconds: int = 10,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Replenish leads that had short calls (e.g. < 10 seconds), resetting them to READY.
+    Also switches the campaign back to ACTIVE mode.
+    """
+    print(f"[Execution] Replenishing calls < {threshold_seconds}s for campaign {campaign_id}")
+    
+    # 1. Identify Target Leads
+    # We want QueueItems that are effectively 'done' but had a short call log
+    
+    # Subquery: Find CallLogs with duration < threshold
+    # Note: We group by lead_id to find the LATEST call log for that lead
+    # and check if that latest call was short.
+    
+    # Use a direct join strategy
+    stmt = (
+        select(QueueItem, CallLog)
+        .join(CallLog, QueueItem.lead_id == CallLog.lead_id)
+        .where(QueueItem.campaign_id == campaign_id)
+        # Only look at items that are currently considered "processed"/failed/completed
+        # We don't want to reset items that are already waiting (READY) or Scheduled
+        .where(QueueItem.status.not_in(["READY", "PENDING", "QUEUED", "SCHEDULED", "DIALING_INTENT", "CONNECTED", "RINGING"]))
+        # Filter for short calls
+        .where(CallLog.duration < threshold_seconds)
+        # Ensure it's the latest call log for this lead to avoid resetting old history
+        .order_by(CallLog.created_at.desc())
+    )
+    
+    # Execute (might get duplicates if multiple logs, so we handle that)
+    result = await session.execute(stmt)
+    rows = result.all()
+    
+    processed_leads = set()
+    count = 0
+    
+    now = datetime.utcnow()
+    
+    for q_item, call_log in rows:
+        if q_item.lead_id in processed_leads:
+            continue
+            
+        # Double check: is this the LATEST log? 
+        # (SQLAlchemy join approach above might return multiple logs per lead)
+        # A cleaner way is to fetch all matches and deduce in python or complex subquery.
+        # Given potential scale, let's verify quickly.
+        # Actually, simpler: just reset them. If they had *any* short call that left them in a bad state?
+        # User requirement: "less than 10 seconds call states". 
+        # Usually implies the *outcome* of the interaction was a short call.
+        
+        processed_leads.add(q_item.lead_id)
+        
+        # Reset Item
+        q_item.status = "READY"
+        q_item.outcome = None
+        q_item.locked_by_user_id = None
+        q_item.locked_at = None
+        q_item.updated_at = now
+        session.add(q_item)
+        count += 1
+        
+    # 2. Re-activate Campaign
+    campaign = await session.get(Campaign, campaign_id)
+    if campaign:
+        campaign.status = "ACTIVE"
+        session.add(campaign)
+        
+    await session.commit()
+    
+    # 3. Trigger Warmer
+    await QueueWarmer.check_and_replenish(campaign_id, session)
+    
+    # 4. Return Status
     status_data = await get_campaign_realtime_status_internal(campaign_id, session)
     
-    return {"status": "reset_complete", "items_reset": count, "campaign_status": campaign.status, "data": status_data}
+    return {
+        "status": "replenished", 
+        "count": count, 
+        "campaign_status": "ACTIVE",
+        "data": status_data
+    }
 
 
 @router.post("/campaign/{campaign_id}/extend-window")
@@ -1134,7 +1608,9 @@ async def campaign_websocket(
         
         # Send initial state (Immediate sync so UI doesn't wait for next broadcast)
         async with async_session_factory() as session:
-            initial_status = await get_campaign_realtime_status_internal(campaign_id, session)
+            # [FIX] Trigger warmer on connect to ensure "Upcoming Queue" is populated even if paused
+            # This handles the "reload page -> queue empty" issue
+            initial_status = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=True)
             await ws_manager.send_personal_message({
                 "type": "status_update",
                 "campaign_id": campaign_id_str,
@@ -1150,7 +1626,7 @@ async def campaign_websocket(
             if data == "ping":
                 await ws_manager.send_personal_message({
                     "type": "pong",
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
                 }, websocket)
                 
     except WebSocketDisconnect:
@@ -1159,6 +1635,32 @@ async def campaign_websocket(
         print(f"[WebSocket] Error in campaign websocket: {e}")
         ws_manager.disconnect(websocket, campaign_id_str)
 
+
+
+def _parse_fallback_extraction(payload: dict) -> dict:
+    """
+    Helper to extract structured data from payload if the column is null.
+    """
+    if not payload:
+        return {}
+    
+    # Check directly for extracted_data in payload
+    if payload.get("extracted_data"):
+        return payload.get("extracted_data")
+        
+    # Check custom_extractions
+    custom = payload.get("custom_extractions")
+    if custom:
+        if isinstance(custom, str):
+            import json
+            try:
+                return json.loads(custom)
+            except:
+                return {"raw": custom}
+        elif isinstance(custom, dict):
+            return custom
+            
+    return {}
 
 @router.get("/campaign/{campaign_id}/logs")
 async def get_campaign_call_logs(
@@ -1190,62 +1692,71 @@ async def get_campaign_call_logs(
     logs = []
     
     for execution, lead, q_item in results.all():
-        # 1. Business Outcome Logic
-        # Priority: explicit outcome > intent map > queue status > "-"
-        business_outcome = execution.call_outcome
+        try:
+            # 1. Business Outcome Logic
+            # Priority: explicit outcome > intent map > queue status > "-"
+            business_outcome = execution.call_outcome
 
-        # Map Intent (Strong overrides)
-        intent_map = {
-            "INTENT_YES": "Interested",
-            "INTENT_NO": "Not Interested",
-            "SCHEDULED": "Scheduled",
-            "INTENT_NO_ANSWER": "No Answer",
-            "FAILED": "Failed Attempt",
-            "DIALING_INTENT": "Dialing",
-            "CONSUMED": "Completed", 
-            "COMPLETED": "Completed"
-        }
-        
-        if not business_outcome:
-            if q_item and q_item.status in intent_map:
-                business_outcome = intent_map[q_item.status]
-            elif q_item:
-                # Fallback to humanized status (e.g. "INTENT_YES_PENDING" -> "Intent Yes Pending")
-                business_outcome = q_item.status.replace("_", " ").title()
-            else:
-                business_outcome = execution.call_status.title()
-
-        # 2. Reason Logic
-        # Priority: termination_reason > call_status > "-"
-        reason = execution.termination_reason
-        if not reason:
-            reason = execution.call_status # e.g. "completed", "failed"
-            
-        logs.append({
-            "id": str(execution.id),
-            "bolna_call_id": execution.bolna_call_id,
-            "status": execution.call_status,
-            "outcome": business_outcome,
-            "duration": execution.call_duration,
-            "total_cost": execution.total_cost,
-            "currency": execution.currency,
-            "created_at": execution.created_at.isoformat(),
-            "termination_reason": reason,
-            "transcript_summary": execution.transcript_summary,
-            "full_transcript": execution.full_transcript or execution.transcript,
-            "extracted_data": execution.extracted_data,
-            # Placeholder for recording_url - BolnaExecutionMap doesn't strictly have it but webhook might have sent it.
-            # Ideally we join with CallLog if we want persistence or store it in extracted_data/last_webhook_payload
-            "recording_url": execution.last_webhook_payload.get("recording_url") if execution.last_webhook_payload else None,
-            "usage_metadata": execution.last_webhook_payload.get("usage") if execution.last_webhook_payload else None,
-            "telephony_provider": execution.telephony_provider,
-            "lead": {
-                "id": str(lead.id) if lead else None,
-                "name": lead.customer_name if lead else "Unknown Lead",
-                "number": lead.contact_number if lead else "N/A",
-                "cohort": lead.cohort if lead else "N/A"
+            # Map Intent (Strong overrides)
+            intent_map = {
+                "INTENT_YES": "Interested",
+                "INTENT_NO": "Not Interested",
+                "SCHEDULED": "Scheduled",
+                "INTENT_NO_ANSWER": "No Answer",
+                "FAILED": "Failed Attempt",
+                "DIALING_INTENT": "Dialing",
+                "CONSUMED": "Completed", 
+                "COMPLETED": "Completed"
             }
-        })
+            
+            if not business_outcome:
+                if q_item and q_item.status in intent_map:
+                    business_outcome = intent_map[q_item.status]
+                elif q_item:
+                    # Fallback to humanized status (e.g. "INTENT_YES_PENDING" -> "Intent Yes Pending")
+                    business_outcome = (q_item.status or "Unknown").replace("_", " ").title()
+                else:
+                    business_outcome = (execution.call_status or "Unknown").title()
+
+            # 2. Reason Logic
+            # Priority: termination_reason > call_status > "-"
+            reason = execution.termination_reason
+            if not reason:
+                reason = execution.call_status # e.g. "completed", "failed"
+            
+            # Extract recording_url from telephony_data or fallback to top-level
+            telephony_data = (execution.last_webhook_payload or {}).get("telephony_data", {})
+            recording_url = telephony_data.get("recording_url") or (execution.last_webhook_payload or {}).get("recording_url")
+                
+            logs.append({
+                "id": str(execution.id),
+                "bolna_call_id": execution.bolna_call_id,
+                "status": execution.call_status,
+                "outcome": business_outcome,
+                "duration": execution.call_duration,
+                "total_cost": execution.total_cost,
+                "currency": execution.currency,
+                "created_at": execution.created_at.isoformat() + "Z" if execution.created_at else None,
+                "termination_reason": reason,
+                "transcript_summary": execution.transcript_summary,
+                "full_transcript": execution.full_transcript or execution.transcript,
+                "extracted_data": execution.extracted_data or _parse_fallback_extraction(execution.last_webhook_payload),
+                "recording_url": recording_url,
+                "raw_data": execution.last_webhook_payload,
+                "usage_metadata": (execution.last_webhook_payload or {}).get("usage_breakdown") or (execution.last_webhook_payload or {}).get("usage"),
+                "telephony_provider": execution.telephony_provider,
+                "lead": {
+                    "id": str(lead.id) if lead else None,
+                    "name": lead.customer_name if lead else "Unknown Lead",
+                    "number": lead.contact_number if lead else "N/A",
+                    "cohort": lead.cohort if lead else "N/A"
+                }
+            })
+        except Exception as e:
+            print(f"[Execution] Error processing log row {execution.id if execution else 'unknown'}: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
         
     return logs
 
@@ -1307,3 +1818,53 @@ async def get_campaign_stats(
         "status_breakdown": status_breakdown,
         "outcome_breakdown": outcome_breakdown
     }
+
+
+
+@router.post("/campaign/{campaign_id}/hard-reset")
+async def hard_reset_campaign(
+    campaign_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    [DESTRUCTIVE] Hard Reset: Wipes all execution data for the campaign.
+    1. Deletes all BolnaExecutionMaps (Call History).
+    2. Deletes all QueueItems (Queue State).
+    3. Deletes all CallLogs (Call Records).
+    4. Resets Campaign Status to DRAFT.
+    5. Resets all Leads to PENDING (Optional, effectively done by removing QueueItems).
+    """
+    print(f"[Execution] HARD RESET initiated for campaign {campaign_id}")
+    
+    campaign = await session.get(Campaign, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    # 1. Delete BolnaExecutionMaps
+    stmt_maps = select(BolnaExecutionMap).where(BolnaExecutionMap.campaign_id == campaign_id)
+    maps = (await session.execute(stmt_maps)).scalars().all()
+    for m in maps:
+        await session.delete(m)
+        
+    # 2. Delete QueueItems
+    stmt_q = select(QueueItem).where(QueueItem.campaign_id == campaign_id)
+    items = (await session.execute(stmt_q)).scalars().all()
+    for item in items:
+        await session.delete(item)
+        
+    # 3. Delete CallLogs
+    stmt_logs = select(CallLog).where(CallLog.campaign_id == campaign_id)
+    logs = (await session.execute(stmt_logs)).scalars().all()
+    for log in logs:
+        await session.delete(log)
+        
+    # 4. Reset Campaign Status
+    campaign.status = "DRAFT"
+    campaign.updated_at = datetime.utcnow()
+    session.add(campaign)
+    
+    await session.commit()
+    
+    print(f"[Execution] HARD RESET COMPLETE for campaign {campaign_id}")
+    return {"status": "success", "message": "Campaign data wiped successfully."}

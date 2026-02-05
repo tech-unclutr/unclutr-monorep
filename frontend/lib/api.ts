@@ -5,26 +5,8 @@ import { auth } from "./firebase";
 // Use direct backend URL for local dev to avoid Next.js proxy stripping headers/slashes
 // Use dynamic base URL: prioritize env var, then current origin, fallback to localhost
 const getBaseUrl = () => {
-    // Robust fallback for localhost development:
-    // If we are on localhost and the env var is either missing OR relative (e.g. "/api"), 
-    // force direct connection to Python backend on port 8000.
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        if (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.startsWith('/')) {
-            console.log("DEBUG: api.ts - Localhost detected. Defaulting API to http://127.0.0.1:8000/api/v1");
-            return "http://127.0.0.1:8000/api/v1";
-        }
-    }
-
     if (process.env.NEXT_PUBLIC_API_URL) return `${process.env.NEXT_PUBLIC_API_URL}/api/v1`;
-    if (typeof window !== 'undefined') {
-        const { hostname } = window.location;
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-            // If on ngrok or other, use the same domain for API (assumes proxy or standard setup)
-            // But here we know backend is usually on :8000
-            return `http://${hostname}:8000/api/v1`;
-        }
-    }
-    return "http://127.0.0.1:8000/api/v1";
+    return "/api/v1";
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -54,6 +36,10 @@ export const api = {
             ...((options.headers as any) || {}),
         };
 
+        if (!companyId && endpoint.startsWith('/execution')) {
+            console.warn(`DEBUG: API Request to ${endpoint} missing X-Company-ID. LocalStorage 'unclutr_company_id' is:`, companyId);
+        }
+
         const fullUrl = `${API_BASE_URL}${endpoint}`;
 
         const response = await fetch(fullUrl, {
@@ -64,6 +50,7 @@ export const api = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+            console.error("DEBUG: API Error", { url: fullUrl, status: response.status, errorData });
             throw new ApiError(errorData.detail || response.statusText, response.status, errorData);
         }
 

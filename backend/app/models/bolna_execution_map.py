@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column, Text
-from sqlalchemy.dialects.postgresql import JSONB
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel, Text
+
 
 class BolnaExecutionMap(SQLModel, table=True):
     __tablename__ = "bolna_execution_maps"
@@ -28,7 +30,7 @@ class BolnaExecutionMap(SQLModel, table=True):
     currency: str = Field(default="USD")
     call_duration: int = Field(default=0) # Seconds
     transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
-    extracted_data: Optional[Dict] = Field(default={}, sa_column=Column(JSONB)) # Focused extraction
+    extracted_data: Optional[Dict] = Field(default={}, sa_column=Column(JSON)) # Focused extraction
     telephony_provider: Optional[str] = Field(default=None)
     termination_reason: Optional[str] = Field(default=None)
     
@@ -36,4 +38,4 @@ class BolnaExecutionMap(SQLModel, table=True):
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
     
     # Raw webhook data for debugging
-    last_webhook_payload: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    last_webhook_payload: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))

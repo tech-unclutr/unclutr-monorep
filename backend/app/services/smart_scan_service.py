@@ -1,8 +1,10 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 from uuid import UUID
+
+from loguru import logger
 from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
-from loguru import logger
+
 
 class SmartScanService:
     """

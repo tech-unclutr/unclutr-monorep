@@ -2,12 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal, Cpu, Zap, Activity, Trash2 } from 'lucide-react';
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, parseAsUTC } from "@/lib/utils";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ExecutionEvent {
     id: string;
     timestamp: string;
-    type: 'agent_action' | 'system';
+    type: 'agent_action' | 'system' | 'thought';
     agent_name?: string;
     message: string;
     status: string;
@@ -84,16 +90,25 @@ export function ExecutionFeed({ campaignId, isActive, events, onClear, viewMode 
                                     animate={{ opacity: 1, x: 0 }}
                                     className="flex items-start gap-3 py-1 border-b border-zinc-900 last:border-0"
                                 >
-                                    <span className="text-zinc-600 shrink-0">
-                                        [{new Date(event.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
+                                    <span className="text-zinc-600 shrink-0 cursor-help">
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span>[{parseAsUTC(event.timestamp).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="z-[9999]" side="top">
+                                                    <p>{new Date(event.timestamp).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
                                     </span>
 
                                     <div className="flex-1">
                                         <span className={cn(
                                             "font-bold mr-2",
-                                            event.type === 'system' ? "text-indigo-400" : "text-emerald-500"
+                                            event.type === 'system' ? "text-indigo-400" : event.type === 'thought' ? "text-amber-500" : "text-emerald-500"
                                         )}>
-                                            {event.type === 'system' ? "CORE" : event.agent_name}:
+                                            {event.type === 'system' ? "CORE" : event.type === 'thought' ? "THOUGHT" : event.agent_name}:
                                         </span>
                                         <span className="text-zinc-300 leading-relaxed uppercase tracking-tight">
                                             {event.message}

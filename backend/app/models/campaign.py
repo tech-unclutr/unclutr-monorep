@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column, Text, Relationship
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import event
+
+from sqlalchemy import JSON, event
+from sqlmodel import Column, Field, Relationship, SQLModel, Text
 
 # Updated schema - removed deprecated Bolna columns
 
@@ -26,14 +26,14 @@ class Campaign(SQLModel, table=True):
     # bolna_total_cost: Optional[int] = Field(default=None) # Cost in cents
     # bolna_error_message: Optional[str] = Field(default=None)
     # bolna_transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
-    # bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    # bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
-    # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB)) # Full raw webhook payload
+    # bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    # bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON)) # Full raw webhook payload
     # bolna_created_at: Optional[datetime] = Field(default=None)
     # bolna_updated_at: Optional[datetime] = Field(default=None)
     
     # Legacy fields (for backward compatibility with simulation)
-    decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     # Quality Scoring
     quality_score: int = Field(default=0) # 0-5
@@ -43,20 +43,20 @@ class Campaign(SQLModel, table=True):
     brand_context: Optional[str] = Field(default=None, sa_column=Column(Text))
     customer_context: Optional[str] = Field(default=None, sa_column=Column(Text))
     team_member_context: Optional[str] = Field(default=None, sa_column=Column(Text))
-    preliminary_questions: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB)) # Global Selection
-    question_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
-    incentive_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB))
-    cohort_questions: Optional[Dict[str, List[str]]] = Field(default={}, sa_column=Column(JSONB)) # Mapping of cohort name to list of question strings
-    cohort_incentives: Optional[Dict[str, str]] = Field(default={}, sa_column=Column(JSONB)) # Mapping of cohort name to incentive string
+    preliminary_questions: Optional[List[str]] = Field(default=[], sa_column=Column(JSON)) # Global Selection
+    question_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    incentive_bank: Optional[List[str]] = Field(default=[], sa_column=Column(JSON))
+    cohort_questions: Optional[Dict[str, List[str]]] = Field(default={}, sa_column=Column(JSON)) # Mapping of cohort name to list of question strings
+    cohort_incentives: Optional[Dict[str, str]] = Field(default={}, sa_column=Column(JSON)) # Mapping of cohort name to incentive string
     incentive: Optional[str] = Field(default=None, sa_column=Column(Text))
     
     # Execution Settings
     total_call_target: Optional[int] = Field(default=None)
     call_duration: Optional[int] = Field(default=600) # Default 10 mins in seconds
-    cohort_config: Optional[Dict[str, int]] = Field(default={}, sa_column=Column(JSONB)) # {cohort_name: target_count}
-    selected_cohorts: Optional[List[str]] = Field(default=[], sa_column=Column(JSONB)) # List of selected cohort names
-    execution_windows: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSONB)) # [{start, end}]
-    cohort_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    cohort_config: Optional[Dict[str, int]] = Field(default={}, sa_column=Column(JSON)) # {cohort_name: target_count}
+    selected_cohorts: Optional[List[str]] = Field(default=[], sa_column=Column(JSON)) # List of selected cohort names
+    execution_windows: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON)) # [{start, end}]
+    cohort_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
     # Execution Logic
     cohorts: List["Cohort"] = Relationship(sa_relationship_kwargs={"cascade": "all, delete-orphan"})
@@ -64,17 +64,17 @@ class Campaign(SQLModel, table=True):
     # Config for Bolna Execution
     execution_config: Optional[Dict[str, Any]] = Field(default={
         "max_concurrent_calls": 2, # Strict Limit for Free Tier
-        "target_ready_buffer": 3, # Max 3 leads in human buffer
+        "target_ready_buffer": 2, # Max 2 leads in human buffer
         "display_count": 2, # How many to show on frontend
         "overbook_cap": 10, # Max total READY items to prevent stale buffer
         "freshness_ttl_minutes": 60, # How long before a READY item is recycled
-    }, sa_column=Column(JSONB))
+    }, sa_column=Column(JSON))
     
     # Custom Analytics & dynamic extraction rules
-    custom_analytics_config: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSONB))
+    custom_analytics_config: Optional[List[Dict[str, Any]]] = Field(default=[], sa_column=Column(JSON))
     
     # Metadata
-    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSONB))
+    meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,

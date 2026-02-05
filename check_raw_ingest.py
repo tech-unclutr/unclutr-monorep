@@ -3,7 +3,8 @@ import asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-DATABASE_URL = "postgresql+asyncpg://param@localhost:5432/postgres"
+from app.core.config import settings
+DATABASE_URL = settings.DATABASE_URL
 
 async def check_raw_ingest_status():
     engine = create_async_engine(DATABASE_URL)

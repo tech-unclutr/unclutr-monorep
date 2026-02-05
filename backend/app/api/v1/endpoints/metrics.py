@@ -1,23 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from typing import List, Dict, Any, Optional
-from datetime import date, datetime, timedelta
-from app.core.db import get_session
-from app.core.security import get_current_user
-from app.services.metrics_service import MetricsService
-from app.models.metrics import (
-    BusinessMetrics,
-    OnboardingMetrics,
-    UserMetrics,
-    IntegrationMetrics
-)
-from app.models.onboarding_state import OnboardingState
-from app.models.integration import Integration
-from app.models.company import Company
-import logging
 import csv
 import io
+import logging
+from datetime import date, timedelta
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.core.db import get_session
+from app.core.security import get_current_user
+from app.models.company import Company
+from app.models.integration import Integration
+from app.models.metrics import (
+    BusinessMetrics,
+    IntegrationMetrics,
+    OnboardingMetrics,
+    UserMetrics,
+)
+from app.models.onboarding_state import OnboardingState
+from app.services.metrics_service import MetricsService
 
 logger = logging.getLogger(__name__)
 

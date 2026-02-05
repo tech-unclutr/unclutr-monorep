@@ -1,7 +1,7 @@
-from typing import AsyncGenerator
-from fastapi import Depends, HTTPException, status
-from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import Depends, HTTPException
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core import security
 from app.core.db import get_session
 from app.models.user import User

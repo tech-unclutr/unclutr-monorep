@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 def get_app_version() -> str:
     """Read version from VERSION file."""
     version_file = Path(__file__).parent.parent.parent / "VERSION"

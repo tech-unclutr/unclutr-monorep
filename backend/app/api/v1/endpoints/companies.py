@@ -1,17 +1,21 @@
-from typing import Any
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.company import Company
 
 router = APIRouter()
 
-from app.schemas.company_extended import CompanyReadWithBrands
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+
 from app.models.iam import CompanyMembership
+from app.schemas.company_extended import CompanyReadWithBrands
+
 
 @router.get("/{id}", response_model=CompanyReadWithBrands)
 async def read_company(

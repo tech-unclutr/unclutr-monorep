@@ -1,21 +1,18 @@
-from datetime import date, datetime, timedelta, timezone
-from typing import Dict, Any, List
+from datetime import datetime, timezone
+from decimal import Decimal
+from functools import wraps
+from typing import Any, Dict
 from uuid import UUID
 
-from sqlmodel import select, func
-from sqlmodel.ext.asyncio.session import AsyncSession
 from loguru import logger
+from sqlmodel import func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.brand_metrics import BrandMetrics
 from app.models.integration import Integration, IntegrationStatus
-from app.models.shopify.metrics import ShopifyDailyMetric
-from app.services.shopify.metrics_service import shopify_metrics_service
-
 from app.models.shopify.order import ShopifyOrder
 from app.services.intelligence.insight_engine import insight_engine
-from decimal import Decimal
-import asyncio
-from functools import wraps
+from app.services.shopify.metrics_service import shopify_metrics_service
 
 # Simple in-memory cache for the decorator (keyed by brand_id + date)
 # In production, this would use Redis.
@@ -59,9 +56,10 @@ class BrandService:
         today = datetime.now(timezone.utc).date()
         
         # 1. Fetch active integrations and Company (for currency)
-        from app.models.company import Workspace, Company, Brand
-        from app.models.datasource import DataSource
         from sqlalchemy.orm import selectinload
+
+        from app.models.company import Brand, Company, Workspace
+        from app.models.datasource import DataSource
         
         # Get Company through Brand to get the source-of-truth currency
         brand_stmt = select(Brand).where(Brand.id == brand_id)

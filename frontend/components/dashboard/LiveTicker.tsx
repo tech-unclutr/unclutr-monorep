@@ -37,7 +37,7 @@ export function LiveTicker({ status, logs = [] }: LiveTickerProps) {
 
         const interval = setInterval(() => {
             setCurrentLogIndex((prev) => (prev + 1) % displayLogs.length)
-            setCurrentTime(new Date().toLocaleTimeString())
+            setCurrentTime(new Date().toLocaleTimeString([], { hour12: true }))
         }, 2000)
 
         return () => clearInterval(interval)

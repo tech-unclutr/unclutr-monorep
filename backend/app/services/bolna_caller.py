@@ -1,18 +1,20 @@
-import httpx
-from typing import List, Dict, Any, Optional
+import asyncio
+from datetime import datetime
+from typing import Any, Dict, List
 from uuid import UUID, uuid4
-from datetime import datetime, timedelta
+
+import httpx
+import pytz
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.core.config import settings
-from app.models.campaign import Campaign
 from app.models.bolna_execution_map import BolnaExecutionMap
+from app.models.campaign import Campaign
 from app.models.campaign_lead import CampaignLead
 from app.models.company import Company
+from app.models.queue_item import QueueItem
 from app.models.user import User
 
-
-    
-import pytz
 
 class BolnaCaller:
     @staticmethod
@@ -38,31 +40,26 @@ class BolnaCaller:
         company = await session.get(Company, campaign.company_id)
         user = await session.get(User, campaign.user_id)
         
-        # 1.2 Determine Earliest Execution Window
+        # 1.2 Determine Active Execution Window
         window_str = "No window scheduled"
         
         # USE AWARE DATETIMES
         now_utc = datetime.now(pytz.utc)
-        start_iso = now_utc.isoformat().replace('+00:00', 'Z')
-        end_iso = (now_utc + timedelta(hours=1)).isoformat().replace('+00:00', 'Z')
+        tz_ist = pytz.timezone("Asia/Kolkata")
         
+        active_window = None
         if campaign.execution_windows:
             try:
-                # Sort by day and start time
-                windows = sorted(campaign.execution_windows, key=lambda x: (x.get('day', ''), x.get('start', '')))
-                
-                # Find the current or next window
-                active_window = None
-                for w in windows:
+                # Find the window where 'now' falls between start and end
+                for w in campaign.execution_windows:
                     day = w.get('day', '')
+                    st = w.get('start', '')
                     et = w.get('end', '')
-                    if day and et:
-                        # Parse end_dt as IST (Asia/Kolkata) since that's what the UI/user seems to use
-                        tz_ist = pytz.timezone("Asia/Kolkata")
-                        end_dt_naive = datetime.fromisoformat(f"{day}T{et}:00")
-                        end_dt = tz_ist.localize(end_dt_naive)
+                    if day and st and et:
+                        start_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{st}:00"))
+                        end_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{et}:00"))
                         
-                        if end_dt > now_utc:
+                        if start_dt <= now_utc <= end_dt:
                             active_window = w
                             break
                 
@@ -71,37 +68,26 @@ class BolnaCaller:
                     st = active_window.get('start', '')
                     et = active_window.get('end', '')
                     
+                    # Exact format requested: YYYY-MM-DD HH:MM to YYYY-MM-DD HH:MM IST
                     window_str = f"{day} {st} to {day} {et} IST"
                     
-                    # BOLNA FIX: Ensure startTime/endTime are sent as UTC ISO with Z
-                    # This tells Bolna explicitly that these are UTC, preventing IST assumptions on naive strings
-                    start_dt_naive = datetime.fromisoformat(f"{day}T{st}:00")
-                    # If start time is in the past, use 'now'
-                    start_dt_ist = tz_ist.localize(start_dt_naive)
+                    # BOLNA FIX: Exact naive ISO format requested: YYYY-MM-DDTHH:MM:SS
+                    start_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{st}:00"))
+                    end_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{et}:00"))
                     
-                    effective_start = max(now_utc, start_dt_ist)
-                    
-                    start_iso = effective_start.astimezone(pytz.utc).isoformat().replace('+00:00', 'Z')
-                    end_iso = end_dt.astimezone(pytz.utc).isoformat().replace('+00:00', 'Z')
-                    
-                    # Safety check: if end passed while processing
-                    if now_utc > end_dt:
-                         return {"status": "error", "error_type": "WINDOW_EXPIRED", "message": "Execution window has passed"}
+                    start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                    end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
                 else:
-                    # No future windows found - Fallback to 1-hour window from now
-                    now_ist = now_utc.astimezone(pytz.timezone("Asia/Kolkata"))
-                    day = now_ist.strftime("%Y-%m-%d")
-                    st = now_ist.strftime("%H:%M")
-                    et = (now_ist + timedelta(hours=1)).strftime("%H:%M")
-                    
-                    window_str = f"{day} {st} to {day} {et} IST"
-                    
-                    # Already set fallback ISOs at top of block
-                    
-                    print(f"[BolnaCaller] WARNING: No scheduled window found. Defaulting to fallback 1h window: {window_str}")
+                    # No active window found - Prevent call
+                    print(f"[BolnaCaller] ERROR: No active execution window for campaign {campaign.id}. 'Now' is {now_utc.astimezone(tz_ist)}")
+                    return {"status": "error", "error_type": "WINDOW_EXPIRED", "message": "No active execution window found for the current time."}
                     
             except Exception as e:
                 print(f"[BolnaCaller] Error parsing execution windows: {e}")
+                return {"status": "error", "message": f"Error parsing execution windows: {e}"}
+        else:
+            # No windows defined at all
+            return {"status": "error", "error_type": "WINDOW_EXPIRED", "message": "No execution windows defined for this campaign."}
 
         # 1.3 Team Member First Name
         team_first_name = (user.designation if user else None) or "Aditi"
@@ -132,8 +118,17 @@ class BolnaCaller:
             lead = await session.get(CampaignLead, lead_id)
             if not lead:
                 continue
-                
+
             queue_item_id = queue_item_ids[idx]
+            q_item = await session.get(QueueItem, queue_item_id)
+            
+            # [HARD GUARDRAIL] Redundant safety check
+            # We allow execution_count == 2 (that's the 2nd call), but not more.
+            # Note: QueueWarmer increments count BEFORE calling this, so a valid 2nd call will have count=2 here.
+            if q_item and q_item.execution_count > 2:
+                print(f"[BolnaCaller] HARD GUARDRAIL: Skipping call for lead {lead.id} - Execution count {q_item.execution_count} exceeds limit.")
+                continue
+
             
             # Correctly handle questions and incentives (Real cohort data)
             cohort_name = lead.cohort
@@ -170,6 +165,7 @@ class BolnaCaller:
                 "preliminary_questions": ", ".join(questions_list) if questions_list else "None",
                 "incentive": incentive_val,
                 "execution_window": window_str,
+                "call_length_planned": BolnaCaller._human_readable_duration(campaign.call_duration or 600),
                 "startTime": start_iso,
                 "endTime": end_iso,
             }
@@ -202,71 +198,175 @@ class BolnaCaller:
             # implementation_plan said "batch", assuming `POST /batch`.
             # Let's assume singular call loop for safety unless docs say otherwise.
         
-        # 3. Execute Calls (Loop for now)
+        # 3. Execute Calls (Concurrent)
         results = []
-        async with httpx.AsyncClient() as client:
-            for i, task in enumerate(tasks):
-                try:
-                    # Replace with actual Bolna Endpoint
-                    url = f"{settings.BOLNA_API_BASE_URL}/call" 
-                    headers = {"Authorization": f"Bearer {settings_api_key}"}
-                    
-                    print(f"[BolnaCaller] Triggering call to {task['recipient_phone_number']} via {url}")
-                    response = await client.post(url, json=task, headers=headers, timeout=10.0)
-                    if response.status_code >= 400:
-                         print(f"[BolnaCaller] API Error ({response.status_code}): {response.text}")
-                    response.raise_for_status()
-                    data = response.json()
-                    
-                    # 4. Save Execution Map
-                    call_id = data.get("execution_id") or data.get("run_id") or data.get("call_id") or data.get("id") or f"mock-{uuid4()}" # Fallback
-                    
-                    execution_map = BolnaExecutionMap(
-                        queue_item_id=queue_item_ids[i],
-                        campaign_id=campaign_id,
-                        bolna_call_id=call_id,
-                        bolna_agent_id=settings_agent_id or "unknown",
-                        call_status="initiated"
-                    )
-                    session.add(execution_map)
-
-                    # 5. [NEW] Create Persistent Call Log
-                    
-                    from app.models.call_log import CallLog
-                    
-                    # Extract lead_id from queue_item_ids map or direct index
-                    # We have lead_ids list and queue_item_ids list aligned by index i
-                    current_lead_id = lead_ids[i]
-
-                    call_log = CallLog(
-                        campaign_id=campaign_id,
-                        lead_id=current_lead_id,
-                        bolna_call_id=call_id,
-                        bolna_agent_id=settings_agent_id or "unknown",
-                        status="initiated",
-                        webhook_payload=data # Initial response data
-                    )
-                    session.add(call_log)
-
-                    results.append({"status": "success", "call_id": call_id})
-                    
-                except Exception as e:
-                    error_msg = str(e)
-                    # Try to be more specific for unverified numbers or other common data issues
-                    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 400:
-                        try:
-                            err_data = e.response.json()
-                            bolna_msg = err_data.get("message", "")
-                            if "verified phone numbers" in bolna_msg:
-                                error_msg = "Your customer data for this customer is incorrect (Unverified number)"
-                        except:
-                            pass
-                    
-                    print(f"[BolnaCaller] Failed to trigger call for {task['recipient_phone_number']}: {error_msg}")
-                    results.append({"status": "error", "error": error_msg})
-
-
-
+        sent_numbers = set() # Safety check for intra-batch duplicates
         
-        await session.commit()
+        # [FIX] Auto-detect Ngrok URL for Webhook
+        # This ensures real-time updates work in dev environment without manual config
+        webhook_url = None
+        try:
+            async with httpx.AsyncClient() as client:
+                # Try fetching from local Ngrok API
+                ngrok_res = await client.get("http://localhost:4040/api/tunnels", timeout=0.5)
+                if ngrok_res.status_code == 200:
+                    tunnels = ngrok_res.json().get("tunnels", [])
+                    # Find https tunnel
+                    public_url = next((t["public_url"] for t in tunnels if t["proto"] == "https"), None)
+                    if public_url:
+                        webhook_url = f"{public_url}/api/v1/integrations/webhook/bolna"
+                        print(f"[BolnaCaller] Auto-detected Ngrok Webhook URL: {webhook_url}")
+        except Exception:
+            # Silently fail if ngrok API is not accessible (e.g. prod)
+            pass
+
+        # Define internal helper for single concurrent call
+        async def params_trigger_single_call(client, task, original_index, url, headers):
+            current_number = task["recipient_phone_number"]
+            try:
+                print(f"[BolnaCaller] Triggering call to {current_number} via {url}")
+                print(f"[BolnaCaller] Payload for {current_number}: {task}") 
+                
+                # Using a longer timeout since we are firing many at once, though awaiting them concurrently 
+                # effectively reduces total wait time, individual request might still take a moment.
+                response = await client.post(url, json=task, headers=headers, timeout=15.0)
+                
+                if response.status_code >= 400:
+                        print(f"[BolnaCaller] API Error for {current_number} ({response.status_code}): {response.text}")
+                
+                response.raise_for_status()
+                data = response.json()
+                print(f"[BolnaCaller] Success response for {current_number}: {data}")
+                
+                return {
+                    "status": "success", 
+                    "original_index": original_index,
+                    "data": data,
+                    "phone": current_number
+                }
+            except Exception as e:
+                error_msg = str(e)
+                if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 400:
+                    try:
+                        err_data = e.response.json()
+                        bolna_msg = err_data.get("message", "")
+                        if "verified phone numbers" in bolna_msg:
+                            error_msg = "Unverified Phone Number (Telephony Error)"
+                        else:
+                            error_msg = f"Bolna API Error: {bolna_msg}"
+                    except:
+                        pass
+                
+                print(f"[BolnaCaller] Failed to trigger call for {current_number}: {error_msg}")
+                # [FIX]: Return the actual error message so QueueWarmer can mark it as FAILED outcome
+                return {
+                    "status": "error", 
+                    "original_index": original_index,
+                    "error": error_msg,
+                    "phone": current_number
+                }
+
+        # Prepare coroutines
+        async with httpx.AsyncClient() as client:
+            coros = []
+            
+            # Pre-calc headers/url
+            url = f"{settings.BOLNA_API_BASE_URL}/call" 
+            headers = {"Authorization": f"Bearer {settings_api_key}"}
+
+            for i, task in enumerate(tasks):
+                current_number = task["recipient_phone_number"]
+                
+                if current_number in sent_numbers:
+                    print(f"[BolnaCaller] Safety: Skipping duplicate number {current_number} in batch.")
+                    results.append({"status": "error", "error": "Duplicate phone number in batch"})
+                    continue
+                
+                sent_numbers.add(current_number)
+
+                # Inject Webhook URL if detected
+                if webhook_url:
+                    task["webhook_url"] = webhook_url 
+                    if "user_data" in task:
+                        task["user_data"]["webhook_endpoint"] = webhook_url
+
+                coros.append(params_trigger_single_call(client, task, i, url, headers))
+
+            if not coros:
+                 # await session.commit() # Pass up
+                 return {"results": results, "count": len(results)}
+
+            # Run all network requests concurrently!
+            print(f"[BolnaCaller] Awaiting {len(coros)} concurrent calls...")
+            concurrent_results = await asyncio.gather(*coros, return_exceptions=True)
+            
+            # Process results sequentially to update DB (Session is not thread-safe)
+            for res in concurrent_results:
+                if isinstance(res, Exception):
+                    # Should be covered by internal try/except but just in case
+                    print(f"[BolnaCaller] Unexpected concurrent error: {res}")
+                    results.append({"status": "error", "error": str(res)})
+                    continue
+                    
+                i = res["original_index"]
+                
+                if res["status"] == "error":
+                    results.append({"status": "error", "error": res["error"]})
+                    continue
+                
+                # Success path
+                data = res["data"]
+                call_id = data.get("execution_id") or data.get("run_id") or data.get("call_id") or data.get("id") or f"mock-{uuid4()}"
+                
+                # 4. Save Execution Map (Session add is synchronous and fast)
+                execution_map = BolnaExecutionMap(
+                    queue_item_id=queue_item_ids[i],
+                    campaign_id=campaign_id,
+                    bolna_call_id=call_id,
+                    bolna_agent_id=settings_agent_id or "unknown",
+                    call_status="initiated",
+                    total_cost=0.0,
+                    currency="USD",
+                    call_duration=0
+                )
+                session.add(execution_map)
+
+                # 5. Create Persistent Call Log
+                from app.models.call_log import CallLog
+                current_lead_id = lead_ids[i]
+
+                call_log = CallLog(
+                    campaign_id=campaign_id,
+                    lead_id=current_lead_id,
+                    bolna_call_id=call_id,
+                    bolna_agent_id=settings_agent_id or "unknown",
+                    status="initiated",
+                    webhook_payload=data,
+                    duration=0,
+                    total_cost=0.0,
+                    currency="USD"
+                )
+                session.add(call_log)
+                results.append({"status": "success", "call_id": call_id})
+
+        await session.flush() # Replaced commit with flush
         return {"results": results, "count": len(results)}
+
+    @staticmethod
+    def _human_readable_duration(seconds: int) -> str:
+        """Converts seconds into a natural-sounding string like '10 minutes'."""
+        if not seconds or seconds <= 0:
+            return "0 seconds"
+            
+        minutes = seconds // 60
+        remaining_seconds = seconds % 60
+        
+        parts = []
+        if minutes > 0:
+            parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+        if remaining_seconds > 0:
+            parts.append(f"{remaining_seconds} second{'s' if remaining_seconds != 1 else ''}")
+            
+        if len(parts) == 0:
+            return "0 seconds"
+        return " and ".join(parts)

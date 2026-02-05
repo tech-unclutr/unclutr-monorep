@@ -6,19 +6,20 @@ Impact: Medium (5-7) - Revenue expansion
 Category: Growth
 """
 
-from typing import Optional, List, Dict, Any
-from uuid import UUID
-from datetime import datetime, timedelta
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
-from collections import defaultdict
 import itertools
+from collections import defaultdict
+from datetime import datetime, timedelta
+from typing import Optional
+from uuid import UUID
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.order import ShopifyOrder, ShopifyLineItem
-from app.models.integration import Integration
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.order import ShopifyLineItem, ShopifyOrder
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
+
 
 class CrossSellGenerator(BaseInsightGenerator):
     """

@@ -6,19 +6,19 @@ Impact: Critical (9-10) - losing money per sale
 Category: Financial
 """
 
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from uuid import UUID
-from sqlalchemy import select, func, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.inventory import ShopifyInventoryItem
-from app.models.shopify.product import ShopifyProductVariant
-from app.models.shopify.order import ShopifyOrder, ShopifyLineItem
-from app.models.integration import Integration
+from loguru import logger
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.inventory import ShopifyInventoryItem
+from app.models.shopify.order import ShopifyLineItem, ShopifyOrder
+from app.models.shopify.product import ShopifyProductVariant
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
 
 
 class MarginCrusherGenerator(BaseInsightGenerator):

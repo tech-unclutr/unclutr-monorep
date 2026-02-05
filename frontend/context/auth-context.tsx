@@ -44,77 +44,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const init = async () => {
             console.log("DEBUG: AuthProvider [Init] Starting setup...");
-            try {
-                await setPersistence(auth, browserLocalPersistence);
-            } catch (e) {
+
+            // 1. Force persistence immediately (Non-blocking as much as possible)
+            setPersistence(auth, browserLocalPersistence).catch(e => {
                 console.error("DEBUG: AuthProvider [Init] Persistence error:", e);
-            }
+            });
 
-            console.log("DEBUG: AuthProvider [Init] 2. Checking Redirect Result...");
-            try {
-                const result = await handleAuthRedirect();
-                if (result?.user && isMounted) {
-                    console.log("DEBUG: AuthProvider [Init] 2a. Redirect SUCCESS:", result.user.email);
-                    setUser(result.user);
-                }
-            } catch (e) {
-                console.error("DEBUG: AuthProvider [Init] Redirect Error:", e);
-            }
-
-            console.log("DEBUG: AuthProvider [Init] 3. Attaching onAuthStateChanged...");
+            // 2. Attach onAuthStateChanged observer IMMEDIATELY.
+            // This is the primary source of truth for the session.
+            console.log("DEBUG: AuthProvider [Init] Attaching onAuthStateChanged observer...");
             const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                 if (!isMounted) return;
                 console.log("DEBUG: AuthProvider [State] Update:", firebaseUser?.email || "none");
 
                 setUser(firebaseUser);
+
                 if (firebaseUser) {
-                    // Prevent concurrent syncs for the same user/token
+                    // Prevent concurrent syncs for the same user
                     if (syncInProgress.current === firebaseUser.uid) {
-                        console.log("DEBUG: AuthProvider [Sync] Sync already in progress for this UID, skipping.");
+                        console.log("DEBUG: AuthProvider [Sync] Sync already in progress, skipping.");
                         return;
                     }
                     syncInProgress.current = firebaseUser.uid;
 
-                    console.log("DEBUG: AuthProvider [Sync] Starting sync for", firebaseUser.email);
+                    console.log("DEBUG: AuthProvider [Sync] Starting background sync for", firebaseUser.email);
                     setIsSyncing(true);
                     try {
                         const syncData = await syncUserWithBackend(firebaseUser);
-                        console.log("DEBUG: AuthProvider [Sync] Data received:", syncData);
+                        console.log("DEBUG: AuthProvider [Sync] Response Data:", JSON.stringify(syncData, null, 2));
+                        console.log("DEBUG: AuthProvider [Sync] current_company_id:", syncData.current_company_id);
 
-                        // Persist to localStorage FIRST, before state updates
-                        // This ensures the OpenAPI client can read companyId synchronously when components re-render
-                        if (syncData.current_company_id) {
-                            localStorage.setItem('unclutr_company_id', syncData.current_company_id);
+                        // Handle both snake_case (Python) and camelCase (JS) just in case
+                        const syncedCompanyId = syncData.current_company_id || syncData.currentCompanyId;
+
+                        if (syncedCompanyId) {
+                            localStorage.setItem('unclutr_company_id', syncedCompanyId);
                         } else {
                             localStorage.removeItem('unclutr_company_id');
                         }
 
                         if (isMounted) {
                             setOnboardingCompleted(syncData.onboarding_completed);
-                            setCompanyId(syncData.current_company_id);
+                            setCompanyId(syncedCompanyId);
                             setRole(syncData.role || null);
                             setDbUser(syncData);
                         }
                     } catch (e) {
                         console.error("DEBUG: AuthProvider [Sync] Background Error:", e);
                         if (isMounted) {
-                            // If sync fails but we ARE authenticated, fallback to false to allow redirection
-                            // the Guard or Onboarding page will try again or handle it.
                             setOnboardingCompleted(onboardingCompleted ?? false);
                         }
                     } finally {
                         syncInProgress.current = null;
                         setIsSyncing(false);
 
-                        // Clear loading state AFTER sync completes (success or failure)
-                        // This ensures components don't make API calls until companyId is available
+                        // Clear loading state AFTER sync completes if it was the first load
                         if (isMounted && loading) {
                             console.log("DEBUG: AuthProvider [Init] Clearing loading state after sync.");
                             setLoading(false);
                         }
                     }
                 } else {
-                    console.log("DEBUG: AuthProvider [Sync] No user, clearing onboarding status");
+                    console.log("DEBUG: AuthProvider [Sync] No user, clearing context.");
                     setOnboardingCompleted(null);
                     setCompanyId(null);
                     setRole(null);
@@ -122,30 +113,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.removeItem('unclutr_company_id');
                     syncInProgress.current = null;
 
-                    // Clear loading state when no user
                     if (isMounted && loading) {
-                        console.log("DEBUG: AuthProvider [Init] Clearing loading state (no user).");
+                        console.log("DEBUG: AuthProvider [Init] Clearing loading state (no session).");
                         setLoading(false);
                     }
                 }
             });
 
-            // Safety: ensure loading is cleared even if observer is slow
-            setTimeout(() => {
+            // 3. Handle Redirect Result in background (Don't block the observer)
+            (async () => {
+                console.log("DEBUG: AuthProvider [Init] Checking Redirect Result...");
+                try {
+                    const result = await handleAuthRedirect();
+                    if (result?.user && isMounted) {
+                        console.log("DEBUG: AuthProvider [Init] Redirect Success:", result.user.email);
+                        // The observer will pick this up, but we set it manually for instant UI update
+                        setUser(result.user);
+                    }
+                } catch (e) {
+                    console.error("DEBUG: AuthProvider [Init] Redirect Error:", e);
+                }
+            })();
+
+            // Safety timeout: Increased to 15s to allow for slower backend cold starts
+            const safetyTimer = setTimeout(() => {
                 if (isMounted && loading) {
-                    console.log("DEBUG: AuthProvider [Init] Safety timeout clearing loading (10s reached).");
+                    console.warn("DEBUG: AuthProvider [Init] Safety timeout clearing loading (15s). Context may be inconsistent.");
                     setLoading(false);
                 }
-            }, 10000);
+            }, 15000);
 
-            return unsubscribe;
+            return () => {
+                unsubscribe();
+                clearTimeout(safetyTimer);
+            };
         };
 
-        const initPromise = init();
+        const initCleanupPromise = init();
 
         return () => {
             isMounted = false;
-            initPromise.then(unsub => unsub && unsub());
+            initCleanupPromise.then(cleanup => cleanup && cleanup());
         };
     }, []); // Run once on mount
 
@@ -156,15 +164,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const syncData = await syncUserWithBackend(user);
 
                 // Update local persistence first (matches init flow)
-                if (syncData.current_company_id) {
-                    localStorage.setItem('unclutr_company_id', syncData.current_company_id);
+                const syncedCompanyId = syncData.current_company_id || syncData.currentCompanyId;
+
+                if (syncedCompanyId) {
+                    localStorage.setItem('unclutr_company_id', syncedCompanyId);
                 } else {
                     localStorage.removeItem('unclutr_company_id');
                 }
 
                 // Update all context states to reflect new data
                 setOnboardingCompleted(syncData.onboarding_completed);
-                setCompanyId(syncData.current_company_id);
+                setCompanyId(syncedCompanyId);
                 setRole(syncData.role || null);
                 setDbUser(syncData);
 

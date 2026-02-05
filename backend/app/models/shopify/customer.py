@@ -1,12 +1,13 @@
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import BigInteger, UniqueConstraint, ForeignKey
+
+from sqlalchemy import JSON, BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyCustomer(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_customer"
@@ -38,11 +39,11 @@ class ShopifyCustomer(UserTrackedModel, SQLModel, table=True):
     accepts_marketing: bool = Field(default=False)
     
     # Address Snapshot
-    default_address: Optional[dict] = Field(default={}, sa_column=Column(JSONB))
+    default_address: Optional[dict] = Field(default={}, sa_column=Column(JSON))
     
     # Timestamps
     shopify_created_at: datetime = Field(index=True)
     shopify_updated_at: datetime = Field(index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))

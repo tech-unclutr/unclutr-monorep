@@ -295,7 +295,7 @@ export default function LoginPage() {
                         <div className="absolute inset-0 h-12 w-12 rounded-[18px] bg-white/10 blur-xl -z-10 animate-pulse" />
                     </motion.div>
 
-                    <h1 className="text-4xl lg:text-5xl font-black text-white tracking-[-0.03em] leading-[0.9] max-w-sm font-display perspective-1000">
+                    <h1 className="text-4xl lg:text-5xl font-black text-white tracking-[-0.03em] leading-[0.9] max-w-lg font-display perspective-1000">
                         <motion.span
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}

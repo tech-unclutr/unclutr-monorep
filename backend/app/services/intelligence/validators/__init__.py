@@ -2,10 +2,10 @@
 Validators package: Trust architecture for 100% accuracy.
 """
 
-from .validator_service import validator_service, ValidatorService, ValidationResult
-from .fallback_library import fallback_library, FallbackLibrary
-from .quality_scorer import insight_quality_scorer, InsightQualityScorer, QualityScore
-from .deduplicator import insight_deduplicator, InsightDeduplicator
+from .deduplicator import InsightDeduplicator, insight_deduplicator
+from .fallback_library import FallbackLibrary, fallback_library
+from .quality_scorer import InsightQualityScorer, QualityScore, insight_quality_scorer
+from .validator_service import ValidationResult, ValidatorService, validator_service
 
 __all__ = [
     "validator_service",

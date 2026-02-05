@@ -2,7 +2,9 @@
 Metrics API endpoint for Prometheus scraping.
 """
 from fastapi import APIRouter, Response
-from app.core.metrics import get_metrics, CONTENT_TYPE_LATEST
+
+from prometheus_client import CONTENT_TYPE_LATEST
+from app.core.metrics import get_metrics
 
 router = APIRouter()
 

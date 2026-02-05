@@ -1,8 +1,9 @@
-from sqlalchemy import event, select
-from sqlalchemy.orm import Session, Query, decl_api
-from app.core.context import get_company_ctx, get_user_ctx
-import uuid
 from typing import Any
+
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+
+from app.core.context import get_company_ctx, get_user_ctx
 
 # Models that MUST be scoped by company_id
 SCOPED_MODELS = [

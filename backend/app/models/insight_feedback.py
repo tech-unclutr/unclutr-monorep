@@ -1,9 +1,10 @@
-from typing import Optional, Dict, Any
-from uuid import UUID, uuid4
 from datetime import datetime
-from sqlmodel import SQLModel, Field
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column, String
+from typing import Any, Dict, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import JSON, Column
+from sqlmodel import Field, SQLModel
+
 
 class InsightFeedback(SQLModel, table=True):
     __tablename__ = "insight_feedback"
@@ -14,7 +15,7 @@ class InsightFeedback(SQLModel, table=True):
     status: str = Field(description="ACCEPTED, REJECTED, ALREADY_DONE, SNOOZED")
     
     # Verification Logic
-    verification_intent: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    verification_intent: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     verification_status: str = Field(default="PENDING", description="PENDING, VERIFIED, FAILED")
     
     user_comment: Optional[str] = None
@@ -28,5 +29,5 @@ class FeedbackLearning(SQLModel, table=True):
     brand_id: UUID = Field(index=True)
     generator_type: str
     refusal_reason: str = Field(description="SEASONAL, STRATEGIC_HOLD, FALSE_POSITIVE")
-    learning_vector: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSONB))
+    learning_vector: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)

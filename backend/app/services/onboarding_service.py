@@ -1,15 +1,16 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from sqlalchemy.orm import selectinload
-from app.models.onboarding_state import OnboardingState, OnboardingStep
-from app.models.company import Company, Brand, Workspace
-from app.models.iam import CompanyMembership, WorkspaceMembership, SystemRole
-from app.models.audit import AuditTrail
-from typing import Optional, Dict, Any
-from datetime import datetime
-import uuid
 import logging
+import uuid
+from datetime import datetime
+from typing import Any, Dict, Optional
 
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.models.audit import AuditTrail
+from app.models.company import Brand, Company, Workspace
+from app.models.iam import CompanyMembership, SystemRole, WorkspaceMembership
+from app.models.onboarding_state import OnboardingState
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,7 @@ async def save_onboarding_progress(
                 company.brand_name = data.get("brandName", company.brand_name)
                 company.industry = data.get("category", company.industry)
                 
-                region = data.get("region", {})
+                region = data.get("region") or {}
                 company.country = region.get("country", company.country)
                 company.currency = region.get("currency", company.currency)
                 company.timezone = region.get("timezone", company.timezone)

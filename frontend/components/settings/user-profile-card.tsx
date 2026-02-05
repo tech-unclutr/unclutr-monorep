@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 
 import { Pencil, Check, X, User, Phone } from "lucide-react"
 
@@ -137,11 +138,11 @@ export function UserProfileCard({ workspaceName }: UserProfileCardProps) {
                 <div className="flex flex-col gap-3 group/field">
                     <label className="text-[10px] font-bold tracking-[0.1em] uppercase text-zinc-400 dark:text-zinc-500 transition-colors group-hover/field:text-zinc-800 dark:group-hover/field:text-zinc-300">Contact Number</label>
                     {isEditing ? (
-                        <Input
+                        <PhoneInput
                             value={contactNumber}
-                            onChange={(e) => setContactNumber(e.target.value)}
-                            placeholder="+1 234 567 8900"
-                            className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-zinc-900 dark:focus:border-zinc-100 focus:ring-zinc-900/10 transition-all text-zinc-900 dark:text-zinc-100 rounded-xl h-12 text-base"
+                            onChange={setContactNumber}
+                            placeholder="12345 67890"
+                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus-within:border-zinc-900 dark:focus-within:border-zinc-100 focus-within:ring-zinc-900/10 transition-all text-zinc-900 dark:text-zinc-100 rounded-xl h-12 text-base"
                         />
                     ) : (
                         <div className="pt-0.5">

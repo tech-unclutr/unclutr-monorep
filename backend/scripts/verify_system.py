@@ -14,9 +14,14 @@ async def verify_system():
     
     async with engine.connect() as conn:
         # Get list of all tables
-        result = await conn.execute(text(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-        ))
+        if engine.dialect.name == 'sqlite':
+            result = await conn.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ))
+        else:
+            result = await conn.execute(text(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+            ))
         tables = [row[0] for row in result.fetchall()]
         
         print("\n📊 Table Row Counts:")

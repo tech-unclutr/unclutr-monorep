@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Dict, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column, BigInteger
-from sqlalchemy import UniqueConstraint, ForeignKey
+
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlmodel import BigInteger, Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyPriceRule(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_price_rule"
@@ -38,7 +40,7 @@ class ShopifyPriceRule(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: datetime = Field(index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
 
 class ShopifyDiscountCode(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_discount_code"
@@ -64,4 +66,4 @@ class ShopifyDiscountCode(UserTrackedModel, SQLModel, table=True):
     shopify_updated_at: datetime = Field(index=True)
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))

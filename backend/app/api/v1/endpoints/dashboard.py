@@ -1,13 +1,14 @@
-from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from loguru import logger
 from datetime import datetime
+from typing import Any, Dict
+
+from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core import security
 from app.core.db import get_session
-from app.models.company import Workspace, Brand
+from app.models.company import Workspace
 from app.services.intelligence.insight_engine import insight_engine
 from app.services.smart_scan_service import smart_scan_service
 

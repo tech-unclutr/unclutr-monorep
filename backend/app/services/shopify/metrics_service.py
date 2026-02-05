@@ -1,16 +1,17 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Optional, List, Dict
+from typing import Dict
 from uuid import UUID
 
-from sqlmodel import select, func, and_
-from sqlmodel.ext.asyncio.session import AsyncSession
 from loguru import logger
+from sqlmodel import func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.shopify.order import ShopifyOrder
+from app.models.integration import Integration
 from app.models.shopify.customer import ShopifyCustomer
 from app.models.shopify.metrics import ShopifyDailyMetric
-from app.models.integration import Integration
+from app.models.shopify.order import ShopifyOrder
+
 
 class ShopifyMetricsService:
     """

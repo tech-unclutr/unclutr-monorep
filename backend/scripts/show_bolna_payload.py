@@ -13,6 +13,7 @@ from app.models.campaign_lead import CampaignLead
 from app.models.company import Company
 from app.models.user import User
 from app.core.config import settings
+import pytz
 
 
 async def show_bolna_payload():
@@ -49,22 +50,26 @@ async def show_bolna_payload():
         
         # --- REPLICATE BOLNA_CALLER LOGIC ---
         
-        # 1. Execution Window
+        # 1. Active Execution Window
         window_str = "No window scheduled"
         start_iso = datetime.utcnow().isoformat()
         end_iso = (datetime.utcnow() + timedelta(hours=1)).isoformat()
         
+        tz_ist = pytz.timezone("Asia/Kolkata")
+        now_utc = datetime.now(pytz.utc)
+        
+        active_window = None
         if campaign.execution_windows:
             try:
-                windows = sorted(campaign.execution_windows, key=lambda x: (x.get('day', ''), x.get('start', '')))
-                now_utc = datetime.utcnow()
-                active_window = None
-                for w in windows:
+                for w in campaign.execution_windows:
                     day = w.get('day', '')
+                    st = w.get('start', '')
                     et = w.get('end', '')
-                    if day and et:
-                        end_dt = datetime.fromisoformat(f"{day}T{et}:00")
-                        if end_dt > now_utc:
+                    if day and st and et:
+                        start_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{st}:00"))
+                        end_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{et}:00"))
+                        
+                        if start_dt <= now_utc <= end_dt:
                             active_window = w
                             break
                 
@@ -73,15 +78,19 @@ async def show_bolna_payload():
                     st = active_window.get('start', '')
                     et = active_window.get('end', '')
                     window_str = f"{day} {st} to {day} {et} IST"
-                    start_iso = now_utc.isoformat()
-                    end_iso = f"{day}T{et}:00"
+                    
+                    start_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{st}:00"))
+                    end_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{et}:00"))
+                    
+                    start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                    end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
                 else:
-                    window_str = "EXPIRED"
+                    window_str = "NO ACTIVE WINDOW (Calls would be blocked)"
             except Exception as e:
                 print(f"⚠️  Error parsing execution windows: {e}")
         
         # 2. Team Member First Name
-        team_first_name = campaign.team_member_role or "Aditi"
+        team_first_name = "Aditi"
         if user and user.full_name:
             team_first_name = user.full_name.split()[0]
         elif campaign.team_member_context and "conducted by" in campaign.team_member_context.lower():
@@ -121,6 +130,7 @@ async def show_bolna_payload():
             "preliminary_questions": ", ".join(questions_list) if questions_list else "None",
             "incentive": incentive_val,
             "execution_window": window_str,
+            "call_length_planned": _human_readable_duration(campaign.call_duration or 600),
             "startTime": start_iso,
             "endTime": end_iso,
         }
@@ -170,6 +180,24 @@ async def show_bolna_payload():
             print(f"  {count}. {l.customer_name:20} → First Name: {l_customer_fn:10} | Cohort: {l.cohort:15}")
             print(f"      Qs: {', '.join(l_qs) if l_qs else 'None'}")
             print(f"      Incentive: {l_inc}")
+
+def _human_readable_duration(seconds: int) -> str:
+    """Converts seconds into a natural-sounding string like '10 minutes'."""
+    if not seconds or seconds <= 0:
+        return "0 seconds"
+        
+    minutes = seconds // 60
+    remaining_seconds = seconds % 60
+    
+    parts = []
+    if minutes > 0:
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+    if remaining_seconds > 0:
+        parts.append(f"{remaining_seconds} second{'s' if remaining_seconds != 1 else ''}")
+        
+    if len(parts) == 0:
+        return "0 seconds"
+    return " and ".join(parts)
 
 if __name__ == "__main__":
     asyncio.run(show_bolna_payload())

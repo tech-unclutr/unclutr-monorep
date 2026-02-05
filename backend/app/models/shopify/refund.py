@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import BigInteger, DECIMAL, ForeignKey
+
+from sqlalchemy import BigInteger, ForeignKey
 from sqlalchemy.dialects import postgresql
+from sqlmodel import Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class ShopifyRefund(UserTrackedModel, SQLModel, table=True):
     __tablename__ = "shopify_refund"
@@ -29,10 +31,10 @@ class ShopifyRefund(UserTrackedModel, SQLModel, table=True):
     
     # Snapshot of items refunded (simplified)
     # [{"line_item_id": 123, "quantity": 1, "restock_type": "return"}]
-    refund_line_items: List[dict] = Field(default=[], sa_column=Column(postgresql.JSONB))
+    refund_line_items: List[dict] = Field(default=[], sa_column=Column(postgresql.JSON))
     
     # Store the latest raw data
-    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSONB))
+    raw_payload: Dict = Field(default={}, sa_column=Column(postgresql.JSON))
     
     # Timestamps
     processed_at: datetime = Field(index=True)

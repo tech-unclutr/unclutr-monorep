@@ -1,12 +1,13 @@
 from datetime import date
-from typing import Optional, Dict
-from uuid import UUID, uuid4
 from decimal import Decimal
-from sqlmodel import Field, SQLModel, Column
-from sqlalchemy import UniqueConstraint, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from typing import Dict
+from uuid import UUID, uuid4
+
+from sqlalchemy import JSON, ForeignKey, UniqueConstraint
+from sqlmodel import Column, Field, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class IntegrationDailyMetric(UserTrackedModel, SQLModel, table=True):
     """
@@ -52,4 +53,4 @@ class IntegrationDailyMetric(UserTrackedModel, SQLModel, table=True):
     
     # Snapshot Metadata
     currency: str = Field(default="USD")
-    meta_data: Dict = Field(default={}, sa_column=Column(JSONB))
+    meta_data: Dict = Field(default={}, sa_column=Column(JSON))

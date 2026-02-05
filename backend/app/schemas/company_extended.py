@@ -1,6 +1,8 @@
 from typing import List
 from uuid import UUID
-from app.models.company import CompanyBase, Brand
+
+from app.models.company import Brand, CompanyBase
+
 
 class CompanyReadWithBrands(CompanyBase):
     id: UUID

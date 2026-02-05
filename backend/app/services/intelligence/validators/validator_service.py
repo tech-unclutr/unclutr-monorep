@@ -9,8 +9,9 @@ Purpose:
 """
 
 import re
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 from loguru import logger
 
 

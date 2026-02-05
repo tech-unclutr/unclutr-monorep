@@ -1,11 +1,11 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+import logging
+
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import sessionmaker
+
 from app.core.config import settings
-import app.models # Ensure all models are registered
-import app.core.stamping # Ensure event listeners are registered
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ async def init_db():
     """Initialize database tables and repair constraints"""
     async with engine.begin() as conn:
         # Tables should be created via Alembic migrations, not automatically.
-        # await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
         pass
     
     # Automated healing of integration constraints (Once For All fix)

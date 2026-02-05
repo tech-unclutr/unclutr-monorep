@@ -1,11 +1,12 @@
-from typing import Optional, List, Dict, Any
-from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import UniqueConstraint, Column, JSON, Text
-from datetime import datetime
 import uuid
-from enum import Enum
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import JSON, Column, Text, UniqueConstraint
+from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base_mixins import UserTrackedModel
+
 
 class CompanyBase(SQLModel):
     brand_name: str = Field(index=True)
@@ -78,5 +79,6 @@ class Workspace(UserTrackedModel, SQLModel, table=True):
 
 # Forward references for type hinting (imported here to avoid circularity if split)
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from app.models.iam import CompanyMembership, WorkspaceMembership

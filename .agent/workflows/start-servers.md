@@ -14,8 +14,7 @@ cd backend
 ```bash
 # In a new terminal tab/window
 cd backend
-# Using /tmp/venv_unclutr due to project dir permissions
-/tmp/venv_unclutr/bin/uvicorn app.main:app --reload
+./scripts/start_backend.sh
 ```
 
 3. Start the Frontend Server.

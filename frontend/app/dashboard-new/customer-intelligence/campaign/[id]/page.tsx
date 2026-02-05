@@ -22,6 +22,7 @@ import {
 
     ShieldAlert,
     Pause,
+    Play,
     AlertTriangle
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -51,8 +52,9 @@ import {
 
 import { CsvUploadCard } from "@/components/customer-intelligence/CsvUploadCard";
 import { CampaignComposer } from "@/components/customer-intelligence/CampaignComposer";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { ExecutionPanel } from "@/components/customer-intelligence/ExecutionPanel";
-import { CampaignStats } from "@/components/customer-intelligence/CampaignStats";
+
 import { getUniqueCohortAvatars } from "@/lib/avatar-utils";
 import { useAuth } from "@/context/auth-context";
 import { useCampaignData } from "@/hooks/use-campaign-data-websocket";
@@ -72,11 +74,13 @@ export default function CampaignPage() {
     const [isPauseConfirmOpen, setIsPauseConfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isPausing, setIsPausing] = useState(false);
+    const [initialComposerStep, setInitialComposerStep] = useState<'IDENTITY' | 'STRATEGY' | 'EXECUTION'>('IDENTITY');
 
     // Dirty state tracking for leads management
     const [isLeadsDirty, setIsLeadsDirty] = useState(false);
     const [wasLeadsUpdated, setWasLeadsUpdated] = useState(false);
     const [isLeadsExitConfirmOpen, setIsLeadsExitConfirmOpen] = useState(false);
+    const [isSecondaryMetricsExpanded, setIsSecondaryMetricsExpanded] = useState(false);
 
     // Removed isScheduleModalOpen as polling is no longer used
 
@@ -159,6 +163,33 @@ export default function CampaignPage() {
         }
     }, [wsCampaign, campaignId]);
 
+    // [NEW] Auto-pause campaign on page reload/close
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            // Only attempt to pause if we know it's active
+            if (campaign?.status === 'ACTIVE' || campaign?.status === 'IN_PROGRESS') {
+                // Use fetch with keepalive to ensure request survives page unload
+                // Payload must be small
+                const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/execution/campaign/${campaignId}/pause`;
+
+                // We need to use SendBeacon or fetch with keepalive
+                // fetch with keepalive is more reliable for JSON
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Add auth token if available in localStorage or cookies
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                    },
+                    keepalive: true
+                }).catch(err => console.error("Auto-pause failed", err));
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [campaignId, campaign?.status]);
+
     const handleBack = () => {
         if (campaign?.status === 'IN_PROGRESS' || campaign?.status === 'WARMUP') {
             setIsPauseConfirmOpen(true);
@@ -189,7 +220,14 @@ export default function CampaignPage() {
     };
 
     const handleEdit = () => {
+        setInitialComposerStep('IDENTITY');
         setIsEditing(true);
+    };
+
+    const handleEditStrategy = () => {
+        setInitialComposerStep('STRATEGY');
+        setIsEditing(true);
+        setComposerKey(prev => prev + 1);
     };
 
     const handleDeleteClick = () => {
@@ -261,6 +299,8 @@ export default function CampaignPage() {
         total_call_target
     } = campaign;
 
+    const isMissionAccomplished = status === 'COMPLETED';
+
     // Derived metrics
     const totalTargets = Object.values(cohort_config as Record<string, number>).reduce((a, b) => a + b, 0) || total_call_target || 0;
     const activeCohortCount = selected_cohorts?.length || Object.keys(cohort_config).length || 0;
@@ -275,7 +315,8 @@ export default function CampaignPage() {
         'FAILED': { label: 'Attention', color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: ShieldAlert },
         'DRAFT': { label: 'Draft', color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: Pencil },
         'SCHEDULED': { label: 'Scheduled', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: Calendar },
-        'PAUSED': { label: 'Paused', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Pause }
+        'PAUSED': { label: 'Paused', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Pause },
+        'READY': { label: 'Ready', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Play },
     };
 
     const currentStatus = statusConfig[status] || statusConfig['DRAFT'];
@@ -287,18 +328,18 @@ export default function CampaignPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-black">
-            <div className="max-w-7xl mx-auto p-6 md:p-8">
+            <div className={cn("max-w-7xl mx-auto p-6 md:p-8 transition-all duration-500", isMissionAccomplished && "py-4 md:py-6")}>
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="mb-8"
+                    className={cn("mb-8", isMissionAccomplished && "mb-4")}
                 >
                     <Button
                         variant="ghost"
                         onClick={handleBack}
-                        className="mb-6 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 -ml-2"
+                        className={cn("mb-6 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 -ml-2", isMissionAccomplished && "mb-2 transform scale-90 origin-left")}
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Intelligence Lab
@@ -306,7 +347,7 @@ export default function CampaignPage() {
 
                     <div className="flex items-start justify-between mb-6">
                         <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-4">
+                            <div className={cn("flex items-center gap-3 mb-4", isMissionAccomplished && "mb-2")}>
                                 <div className={cn(
                                     "flex items-center gap-2 pl-1 pr-3 py-1 rounded-full transition-all duration-300 border backdrop-blur-md",
                                     currentStatus.bg, currentStatus.border
@@ -355,20 +396,25 @@ export default function CampaignPage() {
                                 </div>
                             </div>
 
-                            <h1 className="text-5xl md:text-6xl font-black text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-[-0.04em] mb-6 bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-500 dark:from-white dark:via-zinc-100 dark:to-zinc-400">
+                            <h1 className={cn(
+                                "text-5xl md:text-6xl font-black text-zinc-900 dark:text-zinc-50 leading-[1.05] tracking-[-0.04em] mb-6 bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-500 dark:from-white dark:via-zinc-100 dark:to-zinc-400 transition-all duration-500",
+                                isMissionAccomplished && "text-3xl md:text-4xl mb-2"
+                            )}>
                                 {name}
                             </h1>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={handleEdit}
-                                className="rounded-xl h-11 border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                            >
-                                <Pencil className="w-4 h-4 mr-2" />
-                                Edit Campaign
-                            </Button>
+                            {/* Edit Button - Only if Paused/Draft/Ready/Scheduled */}
+                            {['PAUSED', 'DRAFT', 'READY', 'SCHEDULED'].includes(status) && (
+                                <Button
+                                    onClick={handleEdit}
+                                    className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-sm font-semibold rounded-xl"
+                                >
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Edit Campaign
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 onClick={handleDeleteClick}
@@ -382,26 +428,97 @@ export default function CampaignPage() {
                 </motion.div>
 
                 {/* Performance Metrics (Bolna Style) */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.05 }}
-                    className="mb-8"
-                >
-                    <CampaignStats campaignId={campaignId} />
-                </motion.div>
+                <AnimatePresence>
+                    {(!isMissionAccomplished || isSecondaryMetricsExpanded) && (
+                        <motion.div
+                            initial={isMissionAccomplished ? { height: 0, opacity: 0 } : false}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                        >
+
+
+                            {/* Metrics Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+                                {/* Metric 1: Targets */}
+                                <div className="flex items-center gap-4 bg-white/50 dark:bg-zinc-900/30 p-6 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-100">
+                                    <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-indigo-500 transition-colors">
+                                        <Target className="w-6 h-6" strokeWidth={1.5} />
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
+                                            {totalTargets}
+                                        </div>
+                                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                            Total Targets
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Metric 2: Call Duration */}
+                                <div className="flex items-center gap-4 bg-white/50 dark:bg-zinc-900/30 p-6 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-orange-500/5 hover:border-orange-100">
+                                    <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-orange-500 transition-colors">
+                                        <Clock className="w-6 h-6" strokeWidth={1.5} />
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
+                                            {maxDurationMins}m
+                                        </div>
+                                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                            Calls
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Metric 3: Active Slots */}
+                                <div className="flex items-center gap-4 bg-white/50 dark:bg-zinc-900/30 p-6 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-emerald-500/5 hover:border-emerald-100">
+                                    <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-emerald-500 transition-colors">
+                                        <Calendar className="w-6 h-6" strokeWidth={1.5} />
+                                    </div>
+                                    <div>
+                                        <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
+                                            {activeWindows} Slots
+                                        </div>
+                                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                                            Schedule
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {isMissionAccomplished && (
+                    <div className="flex justify-center mb-8 -mt-4">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsSecondaryMetricsExpanded(!isSecondaryMetricsExpanded)}
+                            className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors gap-2"
+                        >
+                            {isSecondaryMetricsExpanded ? (
+                                <>Hide Detailed Stats <Layers className="w-3 h-3 rotate-180" /></>
+                            ) : (
+                                <>View Detailed Campaign Stats <Layers className="w-3 h-3" /></>
+                            )}
+                        </Button>
+                    </div>
+                )}
 
                 {/* EXECUTION PANEL (Guided Flow) */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.05 }}
-                    className="mb-8"
+                    className={cn("mb-8", isMissionAccomplished && "mb-4")}
                 >
                     <ExecutionPanel
                         campaignId={campaignId}
                         campaignStatus={status}
                         hasStrategy={!!(selected_cohorts?.length > 0 || (cohort_data && Object.keys(cohort_data).length > 0))}
+                        wasLeadsUpdated={wasLeadsUpdated}
                         onStatusChange={async (newStatus) => {
                             if (campaign.status === newStatus) return;
 
@@ -413,64 +530,8 @@ export default function CampaignPage() {
                             // status transitions because the ExecutionPanel's specific 
                             // endpoints (/start, /pause, /reset) already handle DB persistence.
                         }}
-                    // onModalStateChange callback is no longer strictly needed for polling guards,
-                    // but can be kept if we want to track modal state for other reasons.
-                    // Removing it for cleanup as the polling interference issue is solved structurally.
-                    // onModalStateChange={(isOpen) => setIsScheduleModalOpen(isOpen)}
+                        onEditStrategy={handleEditStrategy}
                     />
-                </motion.div>
-
-                {/* Metrics Grid */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12"
-                >
-                    {/* Metric 1: Targets */}
-                    <div className="flex items-center gap-4 bg-white/50 dark:bg-zinc-900/30 p-6 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-100">
-                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-indigo-500 transition-colors">
-                            <Target className="w-6 h-6" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
-                                {totalTargets}
-                            </div>
-                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                Total Targets
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Metric 2: Call Duration */}
-                    <div className="flex items-center gap-4 bg-white/50 dark:bg-zinc-900/30 p-6 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-orange-500/5 hover:border-orange-100">
-                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-orange-500 transition-colors">
-                            <Clock className="w-6 h-6" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
-                                {maxDurationMins}m
-                            </div>
-                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                Calls
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Metric 3: Active Slots */}
-                    <div className="flex items-center gap-4 bg-white/50 dark:bg-zinc-900/30 p-6 rounded-[24px] border border-zinc-100/50 dark:border-zinc-800/30 group/metric transition-all duration-300 hover:bg-white hover:shadow-lg hover:shadow-emerald-500/5 hover:border-emerald-100">
-                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-400 group-hover/metric:text-emerald-500 transition-colors">
-                            <Calendar className="w-6 h-6" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
-                                {activeWindows} Slots
-                            </div>
-                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                Schedule
-                            </div>
-                        </div>
-                    </div>
                 </motion.div>
 
                 {/* Context Matrix */}
@@ -618,12 +679,13 @@ export default function CampaignPage() {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="w-full h-full max-w-7xl mx-auto p-6"
+                            className="w-full max-w-5xl mx-auto max-h-[95vh] flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <CampaignComposer
                                 key={composerKey}
                                 campaignId={campaignId}
+                                initialStep={initialComposerStep}
                                 onComplete={() => {
                                     setIsEditing(false);
                                     setWasLeadsUpdated(false);
@@ -642,7 +704,7 @@ export default function CampaignPage() {
                                     console.error("Campaign update error:", error);
                                     toast.error(error?.message || "Failed to update campaign");
                                 }}
-                                className="h-full"
+                                isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                             />
                         </motion.div>
                     </motion.div>
@@ -671,16 +733,18 @@ export default function CampaignPage() {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="w-full h-full max-w-7xl mx-auto p-6"
+                            className="w-full max-w-5xl mx-auto max-h-[95vh] flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <CsvUploadCard
                                 mode="edit"
                                 campaignId={campaignId}
+                                isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                                 onSuccess={() => {
                                     setIsManagingLeads(false);
-                                    setIsLeadsDirty(false); // Reset dirty state on success
-                                    setWasLeadsUpdated(true); // Flag as updated
+                                    setIsLeadsDirty(false);
+                                    setWasLeadsUpdated(true);
+                                    setComposerKey(prev => prev + 1);
                                     fetchCampaign();
                                     toast.success("Leads updated successfully");
                                 }}
@@ -691,21 +755,37 @@ export default function CampaignPage() {
                                         setIsManagingLeads(false);
                                     }
                                 }}
-                                onLeadsUpdated={() => {
-                                    setIsManagingLeads(false);
-                                    setIsLeadsDirty(false); // Reset dirty state
-                                    setWasLeadsUpdated(true); // Flag as updated
-                                    setComposerKey(k => k + 1);
-                                    // Move back to strategy step in local state too
+                                onLeadsUpdated={async () => {
+                                    // Update local state to DRAFT and clear cohort mappings
                                     setCampaign((prev: any) => ({
                                         ...prev,
+                                        status: 'DRAFT',
                                         selected_cohorts: [],
-                                        cohort_data: {}
+                                        cohort_data: {},
+                                        cohort_config: {},
+                                        cohort_questions: {},
+                                        cohort_incentives: {}
                                     }));
+
+                                    // Persist status change to backend
+                                    try {
+                                        await api.patch(`/intelligence/campaigns/${campaignId}`, {
+                                            status: 'DRAFT'
+                                        });
+                                        lastActionTimeRef.current = Date.now();
+                                        toast.info("Campaign status changed to DRAFT. Please complete the cohort strategy mapping to activate.", {
+                                            duration: 5000
+                                        });
+                                    } catch (error: any) {
+                                        console.error("Failed to update campaign status:", error);
+                                        toast.error("Failed to update campaign status. Please refresh and try again.");
+                                    }
+
+                                    setComposerKey(prev => prev + 1);
                                     fetchCampaign();
                                 }}
                                 onDirtyChange={(isDirty) => setIsLeadsDirty(isDirty)}
-                                className="h-full"
+                                className="flex-1 min-h-0"
                             />
                         </motion.div>
                     </motion.div>
@@ -810,7 +890,6 @@ export default function CampaignPage() {
                                 setIsManagingLeads(false);
                                 setIsEditing(false);
                                 setIsLeadsDirty(false);
-                                setWasLeadsUpdated(false);
                             }}
                             className="rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold h-12 px-8 shadow-lg shadow-red-500/20 border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
                         >

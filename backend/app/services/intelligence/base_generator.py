@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
+
 from pydantic import BaseModel
+
 
 class InsightObject(BaseModel):
     id: str  # Unique slug for the insight type

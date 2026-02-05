@@ -1,6 +1,8 @@
 import logging
-from datetime import datetime, time as dt_time
-from typing import List, Dict, Any, Optional
+from datetime import datetime
+from datetime import time as dt_time
+from typing import Any, Dict, List
+
 import pytz
 
 logger = logging.getLogger(__name__)

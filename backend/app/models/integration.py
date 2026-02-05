@@ -1,12 +1,13 @@
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
-from sqlmodel import Field, SQLModel, Relationship, JSON, Column
-from sqlalchemy.dialects.postgresql import JSONB, JSON as PG_JSON
-from datetime import datetime, timezone
-from pydantic import validator
 import uuid
+from datetime import datetime, timezone
 from enum import Enum
-from .datasource import DataSource
+from typing import TYPE_CHECKING, Dict, Optional
+
+from pydantic import validator
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+
 from .company import Workspace
+from .datasource import DataSource
 
 if TYPE_CHECKING:
     from .company import Company
@@ -19,6 +20,7 @@ class IntegrationStatus(str, Enum):
     DISCONNECT_REQUESTED = "DISCONNECT_REQUESTED"
 
 from sqlalchemy import DateTime, String
+
 
 class Integration(SQLModel, table=True):
     __tablename__ = "integration"
@@ -36,7 +38,7 @@ class Integration(SQLModel, table=True):
     # Note: In production, 'credentials' should be encrypted at rest or stored in a secrets manager
     credentials: Dict = Field(default={}, sa_column=Column(JSON)) 
     config: Dict = Field(default={}, sa_column=Column(JSON))
-    metadata_info: Dict = Field(default={}, sa_column=Column(JSONB)) # Use JSONB for PG optimization
+    metadata_info: Dict = Field(default={}, sa_column=Column(JSON)) # Use JSON for PG optimization
     
     # Track which version of the app was installed
     app_version: Optional[str] = Field(default=None)
@@ -56,6 +58,14 @@ class Integration(SQLModel, table=True):
     def ensure_utc(cls, v):
         if v and isinstance(v, datetime) and not v.tzinfo:
             return v.replace(tzinfo=timezone.utc)
+        return v
+
+    @validator("status", pre=True)
+    def parse_status(cls, v):
+        if isinstance(v, str):
+            # Allow case-insensitive string input by converting to uppercase
+            # This handles "inactive", "Inactive", "INACTIVE" -> IntegrationStatus.INACTIVE
+            return v.upper()
         return v
 
     class Config:

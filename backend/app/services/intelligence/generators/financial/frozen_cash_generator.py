@@ -6,19 +6,20 @@ Impact: High (7-10) - cash optimization opportunity
 Category: Financial
 """
 
-from datetime import date, timedelta, datetime
-from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
+from typing import Optional
 from uuid import UUID
-from sqlalchemy import select, func, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
-from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
-from app.models.shopify.inventory import ShopifyInventoryLevel, ShopifyInventoryItem
-from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
-from app.models.shopify.order import ShopifyOrder, ShopifyLineItem
-from app.models.integration import Integration
+from loguru import logger
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.company import Workspace
+from app.models.integration import Integration
+from app.models.shopify.inventory import ShopifyInventoryItem, ShopifyInventoryLevel
+from app.models.shopify.order import ShopifyLineItem, ShopifyOrder
+from app.models.shopify.product import ShopifyProduct, ShopifyProductVariant
+from app.services.intelligence.base_generator import BaseInsightGenerator, InsightObject
 
 
 class FrozenCashGenerator(BaseInsightGenerator):
@@ -183,7 +184,7 @@ class FrozenCashGenerator(BaseInsightGenerator):
         if total_frozen_value > 20000:
             recommendation = f"Run a clearance sale (30-50% off) to free up ${total_frozen_value * 0.7:,.0f} in cash within 30 days"
         else:
-            recommendation = f"Bundle slow movers with bestsellers or run targeted promotions"
+            recommendation = "Bundle slow movers with bestsellers or run targeted promotions"
         
         return InsightObject(
             id="frozen_cash",

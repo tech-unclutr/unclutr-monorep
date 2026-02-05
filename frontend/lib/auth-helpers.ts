@@ -44,7 +44,7 @@ export const syncUserWithBackend = async (user: User) => {
 
     try {
         const token = await user.getIdToken(); // Use cached token by default for speed
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
         // Remove trailing slash if present
         if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
 

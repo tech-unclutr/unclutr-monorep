@@ -10,6 +10,9 @@
         ],
         "staging": [
           "squareup-staging"
+        ],
+        "development": [
+          "unclutr-monorep"
         ]
       }
     }

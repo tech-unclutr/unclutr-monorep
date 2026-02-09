@@ -55,6 +55,34 @@
           "type": 301
         }
       ]
+    },
+    {
+      "target": "development",
+      "source": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "us-central1"
+      },
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "squareup-backend-dev",
+            "region": "us-central1"
+          }
+        }
+      ],
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/dashboard",
+          "type": 301
+        }
+      ]
     }
   ],
   "emulators": {

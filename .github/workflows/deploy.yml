@@ -31,7 +31,7 @@ jobs:
             echo "SERVICE=squareup-backend-dev" >> $GITHUB_OUTPUT
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "ENV_NAME=development" >> $GITHUB_OUTPUT
-            echo "FIREBASE_TARGET=preview" >> $GITHUB_OUTPUT
+            echo "FIREBASE_TARGET=development" >> $GITHUB_OUTPUT
           fi
 
       - name: Authenticate with Google Cloud

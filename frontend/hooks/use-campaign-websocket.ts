@@ -24,6 +24,7 @@ interface CampaignStatusData {
     execution_windows?: any[]; // Added for scheduling
     campaign_metadata?: any; // Added to fix build error
     user_queue?: any[]; // Added for User Action Panel
+    event?: string;
 }
 
 interface WebSocketMessage {
@@ -127,7 +128,7 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
                     if (ws.readyState === WebSocket.OPEN) {
                         ws.send('ping');
                     }
-                }, 30000); // Ping every 30 seconds
+                }, 10000); // Ping every 10 seconds
             };
 
             ws.onmessage = (event) => {

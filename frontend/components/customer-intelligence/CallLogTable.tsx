@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { format } from 'date-fns';
 import { CallDetailsModal } from './CallDetailsModal';
-import { Download, Filter, CheckCircle2, XCircle, Phone, Clock, PhoneCall } from 'lucide-react';
+import { Download, Filter, CheckCircle2, XCircle, Phone, Clock, PhoneCall, ChevronRight, ThumbsUp, ThumbsDown, CalendarCheck } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -37,6 +37,7 @@ interface CallLog {
     transcript_summary?: string;
     full_transcript?: string;
     extracted_data?: any;
+    raw_data?: any;
     recording_url?: string;
     usage_metadata?: any;
     telephony_provider?: string;
@@ -287,7 +288,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                             type="button"
                             onClick={() => setViewMode('live')}
                             className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'live'
-                                ? 'bg-indigo-500/20 text-indigo-300 shadow-sm'
+                                ? 'bg-orange-500/20 text-orange-300 shadow-sm'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
@@ -297,7 +298,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                             type="button"
                             onClick={() => setViewMode('history')}
                             className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'history'
-                                ? 'bg-indigo-500/20 text-indigo-300 shadow-sm'
+                                ? 'bg-orange-500/20 text-orange-300 shadow-sm'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
@@ -368,6 +369,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                             <th className="px-6 py-3 tracking-wider">Outcome</th>
                             <th className="px-6 py-3 tracking-wider">Context</th>
                             <th className="px-6 py-3 tracking-wider text-right">Cost (INR)</th>
+                            <th className="px-6 py-3 tracking-wider"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -404,6 +406,41 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap">
                                     {(() => {
+                                        // Priority Logic
+                                        if (log.agreement_status?.status === 'yes') {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded text-xs border flex items-center gap-1 w-fit text-green-400 bg-green-400/10 border-green-400/20">
+                                                    <ThumbsUp className="w-3 h-3" />
+                                                    Agreed
+                                                </span>
+                                            );
+                                        }
+                                        if (log.agreement_status?.status === 'no') {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded text-xs border flex items-center gap-1 w-fit text-red-400 bg-red-400/10 border-red-400/20">
+                                                    <ThumbsDown className="w-3 h-3" />
+                                                    Declined
+                                                </span>
+                                            );
+                                        }
+                                        if (log.outcome === 'Scheduled') {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded text-xs border flex items-center gap-1 w-fit text-orange-400 bg-orange-400/10 border-orange-400/20">
+                                                    <CalendarCheck className="w-3 h-3" />
+                                                    Scheduled
+                                                </span>
+                                            );
+                                        }
+                                        if (log.outcome === 'Interested') {
+                                            return (
+                                                <span className="px-2 py-0.5 rounded text-xs border flex items-center gap-1 w-fit text-green-400 bg-green-400/10 border-green-400/20">
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    Interested
+                                                </span>
+                                            );
+                                        }
+
+                                        // Fallback to Technical Status if no high-priority outcome
                                         const { color, Icon } = getStatusInfo(log.status);
                                         return (
                                             <span className={`px-2 py-0.5 rounded text-xs border flex items-center gap-1 w-fit ${color}`}>
@@ -422,7 +459,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                 <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-400">
                                     <span className={`px-2 py-0.5 rounded text-xs border ${log.outcome === 'Interested' ? 'text-green-400 bg-green-400/10 border-green-400/20' :
                                         log.outcome === 'Not Interested' ? 'text-red-400 bg-red-400/10 border-red-400/20' :
-                                            log.outcome === 'Scheduled' ? 'text-purple-400 bg-purple-400/10 border-purple-400/20' :
+                                            log.outcome === 'Scheduled' ? 'text-orange-400 bg-orange-400/10 border-orange-400/20' :
                                                 'text-gray-400 bg-gray-400/10 border-gray-400/20'
                                         }`}>
                                         {log.outcome || '-'}
@@ -464,7 +501,7 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                         {log.should_copy_to_queue && !log.copied_to_queue_at && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleCopyToQueue(log); }}
-                                                className="px-2 py-1 text-xs bg-indigo-500/20 text-indigo-400 rounded hover:bg-indigo-500/30 transition-colors border border-indigo-500/30 w-fit"
+                                                className="px-2 py-1 text-xs bg-orange-500/20 text-orange-400 rounded hover:bg-orange-500/30 transition-colors border border-orange-500/30 w-fit"
                                             >
                                                 📋 Copy to Queue
                                             </button>
@@ -490,6 +527,9 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
                                 </td>
                                 <td className="px-6 py-3 whitespace-nowrap text-sm text-right text-gray-400 font-mono">
                                     ₹{(log.total_cost * 0.9).toFixed(2)}
+                                </td>
+                                <td className="px-6 py-3 whitespace-nowrap text-right">
+                                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
                                 </td>
                             </tr>
                         ))}

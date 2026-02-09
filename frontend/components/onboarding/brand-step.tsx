@@ -46,9 +46,9 @@ export function BrandStep({ initialData, onNext }: BrandStepProps) {
                             placeholder="Brand Name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full bg-transparent border-b border-white/10 py-4 text-2xl outline-none focus:border-indigo-500 transition-colors placeholder:text-white/10"
+                            className="w-full bg-transparent border-b border-white/10 py-4 text-2xl outline-none focus:border-orange-500 transition-colors placeholder:text-white/10"
                         />
-                        <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-indigo-500 transition-all duration-500 group-focus-within:w-full" />
+                        <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-orange-500 transition-all duration-500 group-focus-within:w-full" />
                     </div>
 
                     <div className="space-y-4">
@@ -74,7 +74,7 @@ export function BrandStep({ initialData, onNext }: BrandStepProps) {
                 <button
                     type="submit"
                     disabled={!name || !category}
-                    className="group flex items-center gap-2 bg-white text-black px-8 py-4 rounded-2xl font-medium transition-all hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-white"
+                    className="group flex items-center gap-2 bg-white text-black px-8 py-4 rounded-2xl font-medium transition-all hover:bg-orange-50 disabled:opacity-30 disabled:hover:bg-white"
                 >
                     Next Step
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

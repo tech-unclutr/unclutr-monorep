@@ -107,7 +107,7 @@ export function StackStep({ initialSelected, onNext, onBack }: StackStepProps) {
                                     key={item.id}
                                     onClick={() => toggleItem(item.id)}
                                     className={`px-4 py-3 rounded-xl text-left text-sm transition-all border ${selected.includes(item.id)
-                                        ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-100 shadow-[0_0_20px_rgba(99,102,241,0.1)]"
+                                        ? "bg-orange-500/10 border-orange-500/50 text-orange-100 shadow-[0_0_20px_rgba(99,102,241,0.1)]"
                                         : "bg-transparent border-white/5 text-white/40 hover:border-white/10 hover:bg-white/[0.02]"
                                         }`}
                                 >
@@ -130,7 +130,7 @@ export function StackStep({ initialSelected, onNext, onBack }: StackStepProps) {
                 <button
                     onClick={handleSubmit}
                     disabled={selected.length === 0}
-                    className="group flex items-center gap-2 bg-white text-black px-8 py-4 rounded-2xl font-medium transition-all hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-white"
+                    className="group flex items-center gap-2 bg-white text-black px-8 py-4 rounded-2xl font-medium transition-all hover:bg-orange-50 disabled:opacity-30 disabled:hover:bg-white"
                 >
                     Confirm Stack
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

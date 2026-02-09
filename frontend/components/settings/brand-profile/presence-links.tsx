@@ -16,7 +16,7 @@ interface PresenceLinksProps {
 const getIcon = (type: string) => {
     switch (type) {
         case 'website': return <Globe className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
-        case 'instagram': return <Instagram className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+        case 'instagram': return <Instagram className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors" />
         case 'amazon': return <div className="w-5 h-5 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xs">A</div>
         case 'nykaa': return <div className="w-5 h-5 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xs">N</div>
         default: return <LinkIcon className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-blue-500 transition-colors" />

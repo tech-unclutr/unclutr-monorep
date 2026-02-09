@@ -157,7 +157,7 @@ export function ShopifySetupModal({ isOpen, onClose, companyId }: ShopifySetupMo
                                     <Button
                                         onClick={handleConnect}
                                         disabled={!shopDomain.trim() || step !== "input"}
-                                        className="h-12 w-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-xl font-bold text-base shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        className="h-12 w-full bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 rounded-xl font-bold text-base shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     >
                                         Initialize Handshake
                                     </Button>

@@ -8,7 +8,7 @@ import { AnimatedShieldCheck } from "@/components/ui/AnimatedShieldCheck";
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneInput } from "@/components/ui/phone-input";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatPhoneNumber } from "@/lib/utils";
 
 interface ContactDetailsCardProps {
     contactDetails: {
@@ -369,7 +369,7 @@ export function ContactDetailsCard({ contactDetails, onChange, isSaved, isLoadin
                                         "w-full h-12 rounded-xl font-bold text-sm tracking-wide shadow-xl transition-all duration-500 text-white relative overflow-hidden",
                                         viewState === 'Unlocking'
                                             ? "bg-emerald-500 cursor-wait"
-                                            : "bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-white dark:to-gray-200 dark:text-zinc-950 hover:shadow-orange-500/10"
+                                            : "bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-white dark:to-gray-200 dark:text-black hover:shadow-orange-500/10"
                                     )}
                                     onClick={handleSave}
                                     disabled={viewState === 'Unlocking'}
@@ -420,7 +420,7 @@ export function ContactDetailsCard({ contactDetails, onChange, isSaved, isLoadin
                                     <div
                                         className="text-sm sm:text-base lg:text-lg font-mono font-bold text-gray-900 dark:text-emerald-400/90 tracking-tight whitespace-nowrap"
                                     >
-                                        {contactDetails.phone}
+                                        {formatPhoneNumber(contactDetails.phone)}
                                     </div>
                                 </div>
                                 <div className="space-y-2">

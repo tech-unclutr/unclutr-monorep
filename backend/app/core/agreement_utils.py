@@ -11,15 +11,17 @@ from typing import Dict, Optional
 def detect_agreement_status(
     user_intent: str,
     outcome: str,
-    extracted_data: Optional[Dict] = None
+    extracted_data: Optional[Dict] = None,
+    transcript_text: Optional[str] = None
 ) -> Dict[str, any]:
     """
-    Detect agreement status from call data.
+    Detect agreement status from call data, prioritizing transcript analysis.
     
     Args:
         user_intent: Enriched user intent from call
         outcome: Call outcome
         extracted_data: Optional extracted data from Bolna
+        transcript_text: Full transcript text (SOURCE OF TRUTH)
     
     Returns:
         Dict with agreement status:
@@ -29,8 +31,179 @@ def detect_agreement_status(
             "confidence": str  # "high" | "medium" | "low"
         }
     """
-    if not user_intent and not outcome:
+    if not user_intent and not outcome and not transcript_text:
         return _get_unclear_status("low")
+    
+    # ========== TRANSCRIPT ANALYSIS (PRIMARY SOURCE OF TRUTH) ==========
+    if transcript_text:
+        transcript_lower = transcript_text.lower()
+        
+        # Extract customer responses (lines starting with "user:" or "customer:")
+        customer_lines = []
+        for line in transcript_lower.split('\n'):
+            line = line.strip()
+            if line.startswith('user:') or line.startswith('customer:'):
+                # Remove the prefix and get the actual response
+                response = line.split(':', 1)[1].strip() if ':' in line else line
+                customer_lines.append(response)
+        
+        customer_text = ' '.join(customer_lines)
+        
+        # Minimum engagement check - allow shorter affirmative responses for Hinglish
+        if len(customer_lines) < 2 or len(customer_text) < 10:
+            # Not enough conversation to determine agreement
+            return _get_unclear_status("low")
+        
+        # ========== NEGATION DETECTION (HIGHEST PRIORITY) ==========
+        # These patterns indicate clear rejection and should override everything
+        hard_rejection_patterns = [
+            "not interested", "no thanks", "no thank you",
+            "don't call", "do not call", "stop calling", "remove me",
+            "take me off", "unsubscribe", "harassment",
+            "not interested", "no thanks", "no thank you",
+            "don't call", "do not call", "stop calling", "remove me",
+            "take me off", "unsubscribe", "harassment",
+            "wrong number", "wrong person",
+            # Hindi / Hinglish Rejections
+            "nahi", "koi interest nahi", "not interested", "mat karo",
+            "नॉट इंट्रेस्टेड", "नहीं चाहिए", "नहीं"
+        ]
+        
+        # Check for hard rejections
+        for pattern in hard_rejection_patterns:
+            if pattern in customer_text:
+                return {
+                    "agreed": False,
+                    "status": "no",
+                    "confidence": "high"
+                }
+        
+        # ========== SOFT REJECTION PATTERNS ==========
+        soft_rejection_patterns = [
+            "maybe later", "not now", "too busy", "not the right time",
+            "already have", "not looking", "not needed", "not right now",
+            "busy", "call back later"
+        ]
+        
+        soft_rejection_count = sum(1 for pattern in soft_rejection_patterns if pattern in customer_text)
+        
+        if soft_rejection_count >= 1:
+            return {
+                "agreed": False,
+                "status": "no",
+                "confidence": "medium"
+            }
+        
+        # ========== STRONG POSITIVE SIGNALS ==========
+        # These indicate clear interest
+        strong_interest_patterns = [
+            "i'm interested", "i am interested", "interested",
+            "sounds good", "that works", "perfect", "great idea",
+            "let's do it", "let's go", "sign me up",
+            "book it", "schedule", "when can", "how do i",
+            "tell me more", "i want", "i'd like", "i would like",
+            "send me", "email me", "what's the next step",
+            # Hinglish / Hindi Strong Signals
+            "kar do", "kardo", "kaardo", "bhejo", "laga do", 
+            "book kar", "schedule kar", "fix kar",
+            "कर दो", "कॉल करो", "बुक करो", "हाँ", "हा", "हूँ"
+        ]
+        
+        # ========== MODERATE POSITIVE SIGNALS ==========
+        moderate_interest_patterns = [
+            "maybe", "possibly", "might be", "could be",
+            "thinking about", "considering", "sounds interesting",
+            "call me back", "follow up", 
+            "more information", "pricing", "cost", "how much",
+            "what does it include", "tell me about"
+        ]
+        
+        # Count pattern matches
+        strong_interest_count = sum(1 for pattern in strong_interest_patterns if pattern in customer_text)
+        moderate_interest_count = sum(1 for pattern in moderate_interest_patterns if pattern in customer_text)
+        
+        # ========== SIMPLE AFFIRMATIVE ANALYSIS ==========
+        # Only count simple yes/no words if they appear in proper context
+        simple_yes_words = [
+            "yes", "yeah", "yep", "sure", "absolutely", "definitely", "okay", "ok",
+            # Hindi / Devanagari
+            "हाँ", "हा", "जी", "शुर", "येस", "सही", "achha"
+        ]
+        simple_no_words = [
+            "no", "nope", "nah",
+            # Hindi
+            "नहीं", "ना", "mat", "nhi", "nahi"
+        ]
+        
+        affirmative_count = 0
+        negative_count = 0
+        
+        for line in customer_lines:
+            # Strip standard punctuation AND Hindi danda (।)
+            line_stripped = line.strip().rstrip('.,!?।|')
+            
+            # Check for standalone affirmatives
+            if line_stripped in simple_yes_words:
+                affirmative_count += 1
+            # Check for affirmatives at start of sentence (not in questions)
+            elif any(line_stripped.startswith(word + " ") for word in simple_yes_words):
+                # Make sure it's not negated (e.g., "yes, don't call")
+                if not any(neg in line for neg in ["don't", "do not", "stop", "not"]):
+                    affirmative_count += 1
+            
+            # Check for standalone negatives
+            if line_stripped in simple_no_words:
+                negative_count += 1
+            elif any(line_stripped.startswith(word + " ") for word in simple_no_words):
+                negative_count += 1
+        
+        # ========== QUESTION DETECTION (REDUCES FALSE POSITIVES) ==========
+        # Questions like "how much?" shouldn't count as strong interest without confirmation
+        question_indicators = ["?", "how", "what", "when", "where", "why", "who"]
+        question_count = sum(1 for line in customer_lines if any(q in line for q in question_indicators))
+        
+        # If most responses are questions, reduce confidence
+        is_mostly_questions = question_count > len(customer_lines) / 2
+        
+        # ========== DECISION LOGIC ==========
+        
+        # Strong YES: Multiple strong signals OR strong signal + affirmatives
+        if strong_interest_count >= 2 or (strong_interest_count >= 1 and affirmative_count >= 2):
+            return {
+                "agreed": True,
+                "status": "yes",
+                "confidence": "high"
+            }
+        
+        # Medium YES: Single strong signal + affirmative OR multiple moderate signals
+        if (strong_interest_count >= 1 and affirmative_count >= 1) or moderate_interest_count >= 2:
+            # Downgrade if mostly questions
+            confidence = "medium" if not is_mostly_questions else "low"
+            if confidence == "low":
+                return _get_unclear_status("low")
+            return {
+                "agreed": True,
+                "status": "yes",
+                "confidence": confidence
+            }
+        
+        # Low YES: Single moderate signal + affirmative
+        if moderate_interest_count >= 1 and affirmative_count >= 1 and not is_mostly_questions:
+            return {
+                "agreed": True,
+                "status": "yes",
+                "confidence": "medium"
+            }
+        
+        # NO: Any negative signals
+        if negative_count >= 1:
+            return {
+                "agreed": False,
+                "status": "no",
+                "confidence": "high"
+            }
+    
+    # ========== FALLBACK TO EXISTING LOGIC ==========
     
     intent_lower = (user_intent or "").lower()
     outcome_upper = (outcome or "").upper()

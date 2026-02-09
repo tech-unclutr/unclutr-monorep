@@ -213,7 +213,7 @@ const CampaignCardBase = ({
                                             </span>
                                         </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="bottom" className="text-xs bg-zinc-900 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 px-4 py-2 rounded-xl shadow-xl space-y-1">
+                                    <TooltipContent side="bottom" className="text-xs bg-zinc-900 text-zinc-50 border-zinc-800 dark:bg-zinc-50 dark:text-black px-4 py-2 rounded-xl shadow-xl space-y-1">
                                         <div className="flex items-center gap-2">
                                             <Calendar className="w-3 h-3 text-zinc-400" />
                                             <p className="font-medium">Created: <span className="text-zinc-400 font-normal">{created_at ? formatToIST(created_at) : 'N/A'}</span></p>
@@ -302,10 +302,10 @@ const CampaignCardBase = ({
                         </div>
                         <div>
                             <div className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-1">
-                                {activeWindows} Slots
+                                {activeWindows}
                             </div>
                             <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                Schedule
+                                Campaign Slots
                             </div>
                         </div>
                     </div>
@@ -413,7 +413,7 @@ const CampaignCardBase = ({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     {[
                                         { title: "Brand Identity", icon: Briefcase, text: brand_context, color: "text-indigo-600", bg: "bg-indigo-50/50", border: "border-indigo-100/50", darkBg: "dark:bg-indigo-500/10", darkBorder: "dark:border-indigo-500/20" },
-                                        { title: "Target Audience", icon: User, text: customer_context, color: "text-purple-600", bg: "bg-purple-50/50", border: "border-purple-100/50", darkBg: "dark:bg-purple-500/10", darkBorder: "dark:border-purple-500/20" },
+                                        { title: "Target Audience", icon: User, text: customer_context, color: "text-orange-600", bg: "bg-orange-50/50", border: "border-orange-100/50", darkBg: "dark:bg-orange-500/10", darkBorder: "dark:border-orange-500/20" },
                                         { title: "Agent Persona", icon: BrainCircuit, text: team_member_context, color: "text-emerald-600", bg: "bg-emerald-50/50", border: "border-emerald-100/50", darkBg: "dark:bg-emerald-500/10", darkBorder: "dark:border-emerald-500/20" }
                                     ].map((ctx, i) => (
                                         <motion.div
@@ -449,7 +449,7 @@ const CampaignCardBase = ({
                                             </h4>
                                             <p className="text-sm text-zinc-400 font-medium pl-12">Segmented execution plan and individual goals</p>
                                         </div>
-                                        <Badge className="bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 px-5 py-2 text-xs font-bold rounded-full">
+                                        <Badge className="bg-zinc-900 text-white dark:bg-white dark:text-black px-5 py-2 text-xs font-bold rounded-full">
                                             {activeCohortCount} ACTIVE SEGMENTS
                                         </Badge>
                                     </div>
@@ -568,7 +568,9 @@ const CampaignCardBase = ({
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Edit Campaign
                                         </Button>
-                                        {['DRAFT', 'READY'].includes(status) && (
+
+                                        {/* [NEW] Delete Policy: Only DRAFT or campaigns with 0 calls */}
+                                        {(status === 'DRAFT' || (campaign.stats?.execution_count === 0)) && (
                                             <Button
                                                 variant="ghost"
                                                 className="rounded-xl h-11 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10 transition-all duration-300"

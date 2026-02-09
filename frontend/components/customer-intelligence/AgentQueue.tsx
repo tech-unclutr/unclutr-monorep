@@ -14,7 +14,17 @@ export interface AgentStatus {
     lead_id: string;
     duration: number;
     agent_name?: string;
+    cohort?: string;
 }
+
+export const AGENT_PERSONAS = [
+    { name: "Alex", seed: "Alex", tagline: "Customer Screening Specialist" },
+    { name: "Sarah", seed: "Sarah", tagline: "Customer Screening Specialist" },
+    { name: "Rohan", seed: "Rohan", tagline: "Customer Screening Specialist" },
+    { name: "Maya", seed: "Maya", tagline: "Customer Screening Specialist" },
+    { name: "Jordan", seed: "Jordan", tagline: "Customer Screening Specialist" },
+    { name: "Priya", seed: "Priya", tagline: "Customer Screening Specialist" }
+];
 
 export interface UpcomingLead {
     lead_id: string;
@@ -33,6 +43,8 @@ export interface HistoryItem {
     avatar_seed: string;
     outcome?: string;
     duration?: number; // Optional as legacy items might not have it
+    phone_number?: string;
+    cohort?: string;
 }
 
 export interface ExecutionEvent {
@@ -62,13 +74,8 @@ export function AgentQueue({ activeAgents, upcomingLeads, historyItems = [], eve
     const lanes = Array.from({ length: maxConcurrency }, (_, i) => {
         const agent = activeAgents[i] || null;
 
-        // Realistic name pool for idle lanes
-        const FRONTEND_NAMES = [
-            "Alex", "Sarah", "Rohan", "Maya",
-            "Jordan", "Priya", "Vikram", "Tara",
-            "Leo", "Elena", "Marcus", "Skylar"
-        ];
-        const defaultName = FRONTEND_NAMES[i % FRONTEND_NAMES.length];
+        const persona = AGENT_PERSONAS[i % AGENT_PERSONAS.length];
+        const defaultName = persona.name;
 
         // Simple distribution: Leads index % maxConcurrency === lane index
         const laneLeads = upcomingLeads.filter((_, idx) => idx % maxConcurrency === i);
@@ -92,14 +99,14 @@ export function AgentQueue({ activeAgents, upcomingLeads, historyItems = [], eve
                         onViewFullQueue ? "cursor-pointer hover:opacity-80" : ""
                     )}
                 >
-                    <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
-                        <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg group-hover:bg-orange-100 dark:group-hover:bg-orange-900/50 transition-colors">
+                        <Bot className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Agent Team</h3>
                             {onViewFullQueue && (
-                                <Badge className="bg-indigo-500/10 text-indigo-500 border-0 text-[10px] px-1.5 py-0 h-4 font-black uppercase tracking-widest">Q</Badge>
+                                <Badge className="bg-orange-500/10 text-orange-500 border-0 text-[10px] px-1.5 py-0 h-4 font-black uppercase tracking-widest">Q</Badge>
                             )}
                         </div>
                         <p className="text-xs text-zinc-500">Autonomous Dialing Lanes</p>
@@ -109,7 +116,7 @@ export function AgentQueue({ activeAgents, upcomingLeads, historyItems = [], eve
                 {onViewFullQueue && (
                     <button
                         onClick={onViewFullQueue}
-                        className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-indigo-500 transition-colors flex items-center gap-1.5"
+                        className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-orange-500 transition-colors flex items-center gap-1.5"
                     >
                         Full Queue
                         <ChevronRight className="w-3 h-3" />
@@ -158,7 +165,7 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
             onClick={onClick}
             className={cn(
                 "relative flex items-center justify-between h-24 bg-zinc-50/50 dark:bg-zinc-900/30 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 px-4 overflow-hidden transition-all",
-                isActive ? "cursor-pointer hover:border-indigo-500/50 hover:bg-white dark:hover:bg-zinc-900" : "opacity-70"
+                isActive ? "cursor-pointer hover:border-orange-500/50 hover:bg-white dark:hover:bg-zinc-900" : "opacity-70"
             )}
         >
             {/* --- HISTORY STREAM (Left Side) --- */}
@@ -251,11 +258,11 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
                             exit={{ opacity: 0, y: 5, scale: 0.9, x: '-50%' }}
                             className="absolute -top-16 left-1/2 w-[200px] pointer-events-none z-50"
                         >
-                            <div className="relative bg-white dark:bg-zinc-800 rounded-2xl p-3 shadow-xl border border-indigo-100 dark:border-zinc-700">
+                            <div className="relative bg-white dark:bg-zinc-800 rounded-2xl p-3 shadow-xl border border-orange-100 dark:border-zinc-700">
                                 <p className="text-[10px] text-zinc-600 dark:text-zinc-300 leading-tight line-clamp-2 italic font-medium">
                                     "{latestEvent.message}"
                                 </p>
-                                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-zinc-800 border-b border-r border-indigo-100 dark:border-zinc-700 rotate-45" />
+                                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-zinc-800 border-b border-r border-orange-100 dark:border-zinc-700 rotate-45" />
                             </div>
                         </motion.div>
                     )}
@@ -263,10 +270,10 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
 
                 <div className={cn(
                     "relative flex flex-col items-center justify-center w-20 h-20 rounded-full transition-all duration-300",
-                    isActive ? "bg-white dark:bg-zinc-900 shadow-xl shadow-indigo-500/20 border-2 border-indigo-100" : "opacity-70 grayscale border-2 border-transparent"
+                    isActive ? "bg-white dark:bg-zinc-900 shadow-xl shadow-orange-500/20 border-2 border-orange-100" : "opacity-70 grayscale border-2 border-transparent"
                 )}>
                     {isActive && (
-                        <div className="absolute inset-0 bg-indigo-500 rounded-full blur-lg animate-pulse opacity-30" />
+                        <div className="absolute inset-0 bg-orange-500 rounded-full blur-lg animate-pulse opacity-30" />
                     )}
 
                     <HoverCard>
@@ -276,8 +283,8 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
                                     <Avatar
                                         className="w-12 h-12 border-2 border-white dark:border-zinc-950 shadow-md mb-1"
                                     >
-                                        <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${agent?.lead_name || agentName}&backgroundColor=e0e7ff`} />
-                                        <AvatarFallback>{(agent?.agent_name || agentName).slice(0, 2).toUpperCase()}</AvatarFallback>
+                                        <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${agent?.agent_name || agentName}&backgroundColor=e0e7ff`} />
+                                        <AvatarFallback className="bg-orange-50 text-orange-600">{(agent?.agent_name || agentName).slice(0, 2).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                 </motion.div>
                             </div>
@@ -306,7 +313,7 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
 
                     <div className={cn(
                         "absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-zinc-950 flex items-center justify-center text-[10px] text-white shadow-sm z-20",
-                        agent?.status === 'speaking' ? "bg-indigo-500" :
+                        agent?.status === 'speaking' ? "bg-orange-500" :
                             agent?.status === 'connected' ? "bg-emerald-500" :
                                 agent?.status === 'ringing' ? "bg-amber-500" :
                                     agent?.status === 'initiated' ? "bg-blue-500" :
@@ -324,7 +331,7 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
                         </span>
                         <span className={cn(
                             "text-[8px] font-medium uppercase tracking-[0.1em] transition-colors",
-                            isActive ? "text-indigo-500 font-bold" : "text-zinc-500"
+                            isActive ? "text-orange-500 font-bold" : "text-zinc-500"
                         )}>
                             {isActive && agent?.lead_name ? `Calling ${agent.lead_name.split(' ')[0]}` : "AI Agent"}
                         </span>
@@ -352,7 +359,7 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
                                                 className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm transition-transform hover:scale-110"
                                             >
                                                 <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${lead.avatar_seed}`} />
-                                                <AvatarFallback className="text-[10px] bg-indigo-50 text-indigo-600">
+                                                <AvatarFallback className="text-[10px] bg-orange-50 text-orange-600">
                                                     {lead.name.slice(0, 2).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
@@ -391,5 +398,6 @@ function AgentLane({ agent, agentName, leads, history, events, index, onClick, o
 function formatDuration(seconds: number) {
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
-    return `${min}:${sec.toString().padStart(2, '0')}`;
+    if (min === 0) return `${sec}s`;
+    return `${min}m ${sec.toString().padStart(2, '0')}s`;
 }

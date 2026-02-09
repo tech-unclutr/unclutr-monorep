@@ -7,7 +7,24 @@ from app.models.iam import CompanyMembership
 from app.models.user import User, UserCreate, UserRead
 
 
+
+from sqlalchemy.exc import IntegrityError
+import asyncio
+
 async def sync_user(session: AsyncSession, user_in: UserCreate) -> UserRead:
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            return await _sync_user_attempt(session, user_in)
+        except IntegrityError:
+            await session.rollback()
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(0.1 + (0.1 * attempt)) # Jitter
+            continue
+
+async def _sync_user_attempt(session: AsyncSession, user_in: UserCreate) -> UserRead:
+
     # 1. Try to find by ID (Standard Case)
     statement = select(User).where(User.id == user_in.id)
     result = await session.exec(statement)

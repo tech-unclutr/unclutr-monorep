@@ -1,4 +1,4 @@
-# Unclutr.ai
+# SquareUp
 
 **The Decision & Control Layer for D2C Brands.**
 Truth-First. AI-Native. Deterministic Financials.

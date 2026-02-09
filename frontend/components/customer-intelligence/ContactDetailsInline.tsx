@@ -3,7 +3,7 @@ import { Phone, Pencil, Check, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { cn } from "@/lib/utils";
+import { cn, formatPhoneNumber } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ContactDetailsInlineProps {
@@ -49,7 +49,7 @@ export function ContactDetailsInline({
                     >
                         <Phone className="w-3.5 h-3.5 text-emerald-500" />
                         <span className="text-gray-600 dark:text-gray-400">
-                            We'll call <span className="font-mono font-medium text-gray-900 dark:text-white">{contactDetails.phone}</span> to get your priorities
+                            We'll call <span className="font-mono font-medium text-gray-900 dark:text-white">{formatPhoneNumber(contactDetails.phone)}</span> to get your priorities
                         </span>
                         <Button
                             variant="ghost"

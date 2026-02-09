@@ -50,6 +50,7 @@ class UserQueueItem(SQLModel, table=True):
     
     # Priority (for dynamic sorting)
     priority_score: int = Field(default=0, index=True)
+    manual_priority_boost: int = Field(default=0)  # For manual swapping/promotion
     
     # User Preferences (extracted from AI calls)
     user_preferences: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))

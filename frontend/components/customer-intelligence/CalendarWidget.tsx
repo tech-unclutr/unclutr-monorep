@@ -102,7 +102,7 @@ export function CalendarWidget({ executionWindows, busySlots = [] }: CalendarWid
                         </span>
                         <span className={cn(
                             "text-xs font-black",
-                            i === 0 ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md" : "text-zinc-900 dark:text-white"
+                            i === 0 ? "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-md" : "text-zinc-900 dark:text-white"
                         )}>
                             {day.format('DD')}
                         </span>

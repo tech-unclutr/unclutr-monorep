@@ -196,7 +196,7 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
                                                 onConnect(integration.datasource.slug);
                                             }}
                                             size="sm"
-                                            className="flex-1 h-9 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 font-bold text-xs shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all active:translate-y-0 active:shadow-sm cursor-pointer"
+                                            className="flex-1 h-9 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 font-bold text-xs shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all active:translate-y-0 active:shadow-sm cursor-pointer"
                                         >
                                             Connect
                                         </Button>

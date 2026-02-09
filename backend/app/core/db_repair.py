@@ -73,8 +73,11 @@ async def heal_integration_constraints(engine):
     try:
         async with engine.begin() as conn:
             await ensure_column_exists(conn, 'shopify_product_variant', 'inventory_quantity', 'INTEGER', '0')
+            # Add missing campaign cohort columns
+            await ensure_column_exists(conn, 'campaigns', 'cohort_questions', 'JSONB', "'{}'")
+            await ensure_column_exists(conn, 'campaigns', 'cohort_incentives', 'JSONB', "'{}'")
     except Exception as e:
-        logger.error(f"Failed to ensure shopify_product_variant.inventory_quantity: {e}")
+        logger.error(f"Failed to ensure schema consistency: {e}")
 
     # --- 2. Foreign Key Cascades ---
     try:

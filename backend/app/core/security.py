@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 
 import firebase_admin
 from fastapi import Depends, HTTPException, Request, Security, status
@@ -121,7 +122,10 @@ async def get_current_user_no_depends(auth_header: str):
         }
         
     try:
-        decoded_token = auth.verify_id_token(token)
+        # Run blocking auth verification in a thread pool
+        loop = asyncio.get_running_loop()
+        decoded_token = await loop.run_in_executor(None, auth.verify_id_token, token)
+        
         # Normalize User ID
         if "user_id" in decoded_token and "uid" not in decoded_token:
             decoded_token["uid"] = decoded_token["user_id"]

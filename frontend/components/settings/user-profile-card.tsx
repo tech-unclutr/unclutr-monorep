@@ -10,6 +10,7 @@ import { Pencil, Check, X, User, Phone } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth";
 import { updateProfile } from "firebase/auth";
 import { api } from "@/lib/api";
+import { formatPhoneNumber } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface UserProfileCardProps {
@@ -153,7 +154,7 @@ export function UserProfileCard({ workspaceName }: UserProfileCardProps) {
                                     title={contactNumber}
                                 >
                                     <Phone className="w-5 h-5 text-zinc-400 dark:text-zinc-500 shrink-0" />
-                                    <span>{contactNumber}</span>
+                                    <span>{formatPhoneNumber(contactNumber)}</span>
                                 </a>
                             ) : (
                                 <p className="text-xl font-semibold text-zinc-950 dark:text-zinc-50 min-h-[28px]"><span className="text-zinc-400 font-normal italic">Not Set</span></p>

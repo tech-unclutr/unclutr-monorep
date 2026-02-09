@@ -142,7 +142,42 @@ async def bolna_webhook(
         duration=execution_map.call_duration,
         termination_reason=execution_map.termination_reason
     )
+
+    # [NEW] LEAD CLOSURE & PROMOTION LOGIC (Moved Up for Status Override) ---
     
+    # 0. Detect Agreement Status (Shared Logic) - TRANSCRIPT AS SOURCE OF TRUTH
+    from app.core.agreement_utils import detect_agreement_status, should_copy_to_queue
+    
+    # Extract transcript text (source of truth)
+    transcript_data = payload.get("transcript", "")
+    transcript_str = ""
+    
+    if isinstance(transcript_data, list):
+        # Convert list of turns to text format
+        transcript_str = "\n".join([
+            f"{turn.get('role', 'unknown')}: {turn.get('content', '')}"
+            for turn in transcript_data
+        ])
+    elif isinstance(transcript_data, str):
+        transcript_str = transcript_data
+    
+    # Enrich intent if not already done
+    enriched_intent = execution_map.extracted_data.get("user_intent", "")
+    
+    agreement_status = detect_agreement_status(
+        user_intent=str(enriched_intent),
+        outcome=determined_status,
+        extracted_data=execution_map.extracted_data,
+        transcript_text=transcript_str  # PASS TRANSCRIPT AS SOURCE OF TRUTH
+    )
+    
+    # [FIX] CRITICAL OVERRIDE: If Agreement is YES (High/Medium), force status to INTENT_YES
+    # This prevents "Disconnected" or "Ambiguous" from masking a positive lead.
+    if agreement_status.get("agreed") is True and agreement_status.get("status") == "yes":
+        if agreement_status.get("confidence") in ["high", "medium"]:
+             print(f"[BolnaWebhook] Overriding status {determined_status} -> INTENT_YES due to Agreement Detection.")
+             determined_status = "INTENT_YES"
+
     print(f"[BolnaWebhook] Lead {q_item.lead_id} Outcome Analysis: {determined_status}")
 
     # --- SCHEDULING CHECK ---
@@ -182,12 +217,19 @@ async def bolna_webhook(
         determined_status = final_status
 
     # --- RETRY LOGIC FOR EDGE CASES ---
+    # DISCONNECTED is excluded from this list to prevent retries
     RETRIABLE_STATES = ["VOICEMAIL", "NO_ANSWER", "BUSY", "HANGUP", "SILENCE", "LANGUAGE_BARRIER", "FAILED_CONNECT", "AMBIGUOUS", "FAX_ROBOT"]
     
     should_retry = False
     
     if determined_status in RETRIABLE_STATES:
-        if q_item.execution_count < 2:
+        # [NEW] 10-Second Rule:
+        # If the call lasted > 10 seconds, assume legitimate interaction (even if ambiguous)
+        # and DO NOT annoy user with a retry.
+        if execution_map.call_duration > 10:
+             print(f"[BolnaWebhook] Outcome {determined_status} but duration {execution_map.call_duration}s > 10s. Skipping retry to prevent spam.")
+             should_retry = False
+        elif q_item.execution_count < 2:
             should_retry = True
             print(f"[BolnaWebhook] Edge Case '{determined_status}' detected on Attempt #{q_item.execution_count}. Retrying...")
         else:
@@ -209,7 +251,8 @@ async def bolna_webhook(
         "LANGUAGE_BARRIER": "Language Barrier",
         "FAILED_CONNECT": "Connection Failed",
         "FAX_ROBOT": "Fax/Robot",
-        "AMBIGUOUS": "Ambiguous"
+        "AMBIGUOUS": "Ambiguous",
+        "DISCONNECTED": "Disconnected"
     }
     
     human_outcome = human_outcome_map.get(determined_status, determined_status.title())
@@ -231,11 +274,10 @@ async def bolna_webhook(
     session.add(execution_map)
     
     await session.commit()
-
-    # --- [NEW] LEAD CLOSURE & PROMOTION LOGIC ---
     
     # AI Queue Closure (if not retrying and not promoted/rescheduled)
-    if not should_retry and determined_status not in ["INTENT_YES", "SCHEDULED", "READY"]:
+    # We close if it's a hard refusal or technical failure that shouldn't be retried
+    if not should_retry and not should_copy_to_queue(agreement_status) and determined_status not in ["INTENT_YES", "SCHEDULED", "READY"]:
         # Map determined_status to LeadClosure reason
         closure_map = {
             "DNC": LeadClosure.CLOSURE_DNC,
@@ -247,7 +289,14 @@ async def bolna_webhook(
         await LeadClosure.close_ai_queue_lead(session, q_item.lead_id, reason, source="BOLNA_WEBHOOK")
 
     # User Queue Promotion
-    if determined_status == "INTENT_YES":
+    # Promote if Bolna says YES OR if our shared agreement logic says YES (High/Medium Confidence)
+    is_promotable = (
+        determined_status == "INTENT_YES" or 
+        should_copy_to_queue(agreement_status)
+    )
+    
+    if is_promotable:
+        print(f"[BolnaWebhook] Lead {q_item.id} promoted to User Queue via Webhook. Agreement: {agreement_status}")
         await UserQueueWarmer.promote_to_user_queue(session, q_item.id)
     
     # 6. Update Persistent Call Log
@@ -286,7 +335,7 @@ async def bolna_webhook(
             campaign_id=execution_map.campaign_id,
             lead_id=q_item.lead_id if q_item else execution_map.queue_item_id,
             bolna_call_id=bolna_call_id,
-            bolna_agent_id=execution_map.bolna_agent_id,
+            bolna_agent_id=getattr(execution_map, "bolna_agent_id", "unknown"),
             status=payload.get("status", "unknown"),
             duration=execution_map.call_duration,  # Use the same duration we already extracted
             total_cost=float(payload.get("total_cost", 0.0)),
@@ -386,8 +435,19 @@ def _determine_outcome(payload: dict, extracted: dict, call_status: str, duratio
             return "SILENCE"
             
         # If duration > 5s and transcript exists, but no intent found above -> Ambiguous
+        
+        # [NEW] If call was long (e.g. > 10s) but no intent found, mark as DISCONNECTED instead of AMBIGUOUS
+        # This implies we had a conversation but the line might have dropped or we just didn't get a result.
+        # We use DISCONNECTED to prevent retries (as per user rule).
+        if duration > 10:
+            return "DISCONNECTED"
+            
         return "AMBIGUOUS"
         
+    # [NEW] Catch-all for failed/error states with significant duration
+    if call_status in ["failed", "call-disconnected"] and duration > 10:
+        return "DISCONNECTED"
+
     return "AMBIGUOUS"
 
 async def _persist_campaign_events(payload: dict, exec_map: BolnaExecutionMap, session: AsyncSession):
@@ -478,7 +538,8 @@ async def _persist_campaign_events(payload: dict, exec_map: BolnaExecutionMap, s
             message=initial_msg,
             agent_name="SYSTEM",
             status=exec_map.call_status,
-            created_at=base_time
+            created_at=base_time,
+            data={"call_id": exec_map.bolna_call_id}
          )) 
 
     for i, turn in enumerate(final_transcript):
@@ -514,7 +575,8 @@ async def _persist_campaign_events(payload: dict, exec_map: BolnaExecutionMap, s
             message=message,
             agent_name=agent_name,
             status=exec_map.call_status,
-            created_at=turn_time
+            created_at=turn_time,
+            data={"call_id": exec_map.bolna_call_id}
         ))
 
         # Add Neural Thought (Enhanced Heuristic)
@@ -559,7 +621,8 @@ async def _persist_campaign_events(payload: dict, exec_map: BolnaExecutionMap, s
                 message=thought_msg,
                 agent_name=agent_name,
                 status=exec_map.call_status,
-                created_at=thought_time
+                created_at=thought_time,
+                data={"call_id": exec_map.bolna_call_id}
             ))
 
     # Bulk add with conflict resolution

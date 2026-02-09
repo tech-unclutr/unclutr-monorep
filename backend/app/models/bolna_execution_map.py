@@ -16,7 +16,7 @@ class BolnaExecutionMap(SQLModel, table=True):
     
     # External Bolna Logic
     bolna_call_id: str = Field(index=True)
-    bolna_agent_id: str
+    bolna_agent_id: str = Field(default="unknown")
     
     call_status: str = Field(default="initiated") # initiated, ringing, connected, completed, failed
     call_outcome: Optional[str] = Field(default=None) # voicemail, human, machine

@@ -13,42 +13,30 @@ async def reset_user_data():
     session_gen = get_session()
     session = await session_gen.__anext__()
     
-    print("⚠️  STARTING USER DATA RESET ⚠️")
-    print("This will permanently delete all user-generated data.")
+    print("⚠️  STARTING COMPREHENSIVE DATA RESET ⚠️")
+    print("This will permanently delete ALL data in the public schema.")
     print("-" * 50)
 
-    # Tables to explicitly truncate (others will be handled by CASCADE)
-    # Order matters slightly for foreign keys if not using CASCADE, but with CASCADE it's easier.
-    # We target the root user/company tables and specific isolated ones.
+    # Query all tables in the public schema
+    result = await session.exec(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))
+    all_tables = [row[0] for row in result.all()]
     
-    # Core User/Tenant Tables
-    core_tables = [
-        "user",
-        "company",  # Cascades to workspace, brand, integration, memberships
-        "onboarding_state",
-        "audit_trail",
-        "all_requests", # User Requests
-    ]
+    # Filter out alembic_version to preserve migration state
+    tables_to_truncate = [t for t in all_tables if t != 'alembic_version']
     
-    # Find all Shopify tables dynamically to ensure full cleanup
-    # (Though company cascade might catch them, explicit is safer for detached records)
-    result = await session.exec(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename LIKE 'shopify_%'"))
-    shopify_tables = [row[0] for row in result.all()]
-    
-    tables_to_truncate = core_tables + shopify_tables
-    
-    # Use TRUNCATE with CASCADE to handle foreign keys efficiently
-    # We join them to do it in fewer commands or loop.
-    # A single TRUNCATE statement with multiple tables is atomic and handles circular refs better.
-    
+    if not tables_to_truncate:
+        print("⚠️  No tables found to truncate.")
+        await session.close()
+        return
+
     quoted_tables = [f'"{t}"' for t in tables_to_truncate]
     truncate_query = f"TRUNCATE TABLE {', '.join(quoted_tables)} CASCADE;"
     
     try:
-        print(f"Truncating tables: {', '.join(tables_to_truncate)}")
+        print(f"Truncating {len(tables_to_truncate)} tables...")
         await session.exec(text(truncate_query))
         await session.commit()
-        print("✅ User data reset complete.")
+        print("✅ Data reset complete.")
         
     except Exception as e:
         print(f"❌ Error during reset: {e}")

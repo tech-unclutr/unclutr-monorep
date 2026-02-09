@@ -66,7 +66,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                 {/* Header */}
                 <DialogHeader className="px-6 py-4 border-b border-slate-800 flex flex-row items-center justify-between space-y-0">
                     <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold border border-indigo-500/30">
+                        <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold border border-orange-500/30">
                             {call.lead?.name?.charAt(0) || "?"}
                         </div>
                         <div>
@@ -75,7 +75,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                                 <Badge variant="outline" className={`
                    ${call.status === 'completed' ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10' :
                                         call.status === 'failed' ? 'border-red-500 text-red-500 bg-red-500/10' :
-                                            'border-indigo-500 text-indigo-500 bg-indigo-500/10'} capitalize`
+                                            'border-orange-500 text-orange-500 bg-orange-500/10'} capitalize`
                                 }>
                                     {call.outcome || call.status}
                                 </Badge>
@@ -108,13 +108,13 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                     <Tabs defaultValue="transcript" className="flex-1 flex flex-col">
                         <div className="px-6 pt-2 border-b border-slate-800 bg-slate-900/50">
                             <TabsList className="bg-transparent h-10 w-full justify-start gap-6 p-0">
-                                <TabsTrigger value="transcript" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none px-0 pb-2 text-slate-400 data-[state=active]:text-indigo-400 font-medium transition-all">
+                                <TabsTrigger value="transcript" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none px-0 pb-2 text-slate-400 data-[state=active]:text-orange-400 font-medium transition-all">
                                     <MessageSquare className="w-4 h-4 mr-2" /> Transcript
                                 </TabsTrigger>
-                                <TabsTrigger value="analysis" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none px-0 pb-2 text-slate-400 data-[state=active]:text-indigo-400 font-medium transition-all">
+                                <TabsTrigger value="analysis" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none px-0 pb-2 text-slate-400 data-[state=active]:text-orange-400 font-medium transition-all">
                                     <Activity className="w-4 h-4 mr-2" /> Analysis & Extraction
                                 </TabsTrigger>
-                                <TabsTrigger value="technical" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none px-0 pb-2 text-slate-400 data-[state=active]:text-indigo-400 font-medium transition-all">
+                                <TabsTrigger value="technical" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none px-0 pb-2 text-slate-400 data-[state=active]:text-orange-400 font-medium transition-all">
                                     <Cpu className="w-4 h-4 mr-2" /> Technical Metadata
                                 </TabsTrigger>
                             </TabsList>
@@ -149,7 +149,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                                         <Card className="bg-slate-950 border-slate-800 shadow-sm">
                                             <CardHeader className="pb-2">
                                                 <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                    <Activity className="w-3 h-3 text-indigo-400" /> Executive Summary
+                                                    <Activity className="w-3 h-3 text-orange-400" /> Executive Summary
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent>
@@ -174,7 +174,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                                                         {Object.entries(call.extracted_data).map(([key, value]) => (
                                                             <div key={key} className="bg-slate-900/50 p-3 rounded-md border border-slate-800/50 flex flex-col gap-1">
                                                                 <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{key.replace(/_/g, " ")}</span>
-                                                                <span className="text-sm text-indigo-300 font-medium">{String(value)}</span>
+                                                                <span className="text-sm text-orange-300 font-medium">{String(value)}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -248,7 +248,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                                                             <span className="text-xs text-slate-500 capitalize">{key}</span>
                                                             <div className="text-right">
                                                                 <div className="text-[10px] text-slate-400">{value.units} {value.unit_type || "units"}</div>
-                                                                <div className="text-xs text-indigo-400 font-mono">${value.cost?.toFixed(4)}</div>
+                                                                <div className="text-xs text-orange-400 font-mono">${value.cost?.toFixed(4)}</div>
                                                             </div>
                                                         </div>
                                                     ))
@@ -301,7 +301,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                         <Button
                             size="icon"
                             variant="outline"
-                            className="h-10 w-10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10 hover:text-indigo-300 rounded-full"
+                            className="h-10 w-10 text-orange-400 border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300 rounded-full"
                             onClick={togglePlay}
                         >
                             {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
@@ -322,7 +322,7 @@ export function CallDetailsModal({ isOpen, onClose, call }: CallDetailsModalProp
                             />
                             <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                                 {/* Mock progress bar for visual style - actual progress binding would need onTimeUpdate */}
-                                <div className={`h-full bg-indigo-500 transition-all duration-300 ${isPlaying ? 'w-2/3 animate-pulse' : 'w-0'}`} />
+                                <div className={`h-full bg-orange-500 transition-all duration-300 ${isPlaying ? 'w-2/3 animate-pulse' : 'w-0'}`} />
                             </div>
                             <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono uppercase">
                                 <span>Wait to buffer...</span>

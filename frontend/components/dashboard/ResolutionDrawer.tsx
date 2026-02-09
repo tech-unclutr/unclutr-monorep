@@ -102,7 +102,7 @@ export function ResolutionDrawer({ insight, isOpen, onClose, onFeedback, company
                 <div className="p-6 border-b border-white/10 flex justify-between items-start bg-slate-900 z-10">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="border-indigo-500/30 text-indigo-400 bg-indigo-500/10 text-[10px] px-2 py-0.5">
+                            <Badge variant="outline" className="border-orange-500/30 text-orange-400 bg-orange-500/10 text-[10px] px-2 py-0.5">
                                 STRATEGIC ADVISOR
                             </Badge>
                             <span className="text-white/40 text-xs">AI-Generated Playbook</span>
@@ -190,7 +190,7 @@ export function ResolutionDrawer({ insight, isOpen, onClose, onFeedback, company
                                                             href={step.link}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1 mt-2 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                                                            className="inline-flex items-center gap-1 mt-2 text-xs text-orange-400 hover:text-orange-300 font-medium"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             {step.action_label || "Open Link"} <ExternalLink className="h-3 w-3" />
@@ -206,7 +206,7 @@ export function ResolutionDrawer({ insight, isOpen, onClose, onFeedback, company
                         {/* 4. Chat Advisor */}
                         <div className="space-y-4 pt-4 border-t border-white/10">
                             <h4 className="text-sm font-semibold text-white flex items-center gap-2">
-                                <span className="bg-indigo-500/20 text-indigo-400 p-1 rounded">
+                                <span className="bg-orange-500/20 text-orange-400 p-1 rounded">
                                     AI
                                 </span>
                                 Ask Unclutr
@@ -215,7 +215,7 @@ export function ResolutionDrawer({ insight, isOpen, onClose, onFeedback, company
                             <div className="bg-black/20 rounded-lg p-3 min-h-[100px] text-xs text-white/70 space-y-3">
                                 {chatHistory.map((msg, i) => (
                                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`rounded-lg px-3 py-2 max-w-[85%] ${msg.role === 'user' ? 'bg-indigo-500/20 text-indigo-200' : 'bg-white/10 text-white/80'}`}>
+                                        <div className={`rounded-lg px-3 py-2 max-w-[85%] ${msg.role === 'user' ? 'bg-orange-500/20 text-orange-200' : 'bg-white/10 text-white/80'}`}>
                                             {msg.content}
                                         </div>
                                     </div>
@@ -225,7 +225,7 @@ export function ResolutionDrawer({ insight, isOpen, onClose, onFeedback, company
 
                             <div className="flex gap-2">
                                 <input
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500/50"
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500/50"
                                     placeholder="Ask 'Why is this happening?'..."
                                     onKeyDown={async (e) => {
                                         if (e.key === 'Enter' && e.currentTarget.value) {

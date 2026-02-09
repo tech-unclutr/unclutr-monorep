@@ -89,7 +89,7 @@ export function CustomersList() {
                         <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
                         Refresh
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleExport} className="bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400">
+                    <Button variant="outline" size="sm" onClick={handleExport} className="bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/20 text-orange-400">
                         <Download className="w-4 h-4 mr-2" />
                         Export CSV
                     </Button>

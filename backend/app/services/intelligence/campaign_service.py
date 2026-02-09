@@ -812,6 +812,21 @@ class CampaignService:
             print(f"DEBUG: Company mismatch: {campaign.company_id} != {company_id}")
             return False
             
+        # [NEW] Check for existing calls before allowing deletion
+        # "only drafts are allowed to delete or campaigns with no calls so far are allowed to delete"
+        if campaign.status != "DRAFT":
+            from app.models.call_log import CallLog
+            from sqlalchemy import func
+            
+            # Count call logs
+            stmt_calls = select(func.count(CallLog.id)).where(CallLog.campaign_id == campaign_id)
+            calls_count = (await session.execute(stmt_calls)).scalar() or 0
+            
+            if calls_count > 0:
+                logger.warning(f"Blocked deletion of campaign {campaign_id}: Status={campaign.status}, Calls={calls_count}")
+                # Raise explicit error instead of returning False (which becomes 404)
+                raise ValueError("Cannot delete a campaign that has call history. Please archive it instead.")
+            
         try:
             # 2. Fetch Goal Details for archiving
             stmt_goals = select(CampaignGoalDetail).where(CampaignGoalDetail.campaign_id == campaign_id)
@@ -903,21 +918,22 @@ class CampaignService:
                 {"campaign_id": campaign_id}
             )
 
-            # 2. Delete queue items (references leads)
-            await session.execute(
-                text("DELETE FROM queue_items WHERE campaign_id = :campaign_id"),
-                {"campaign_id": campaign_id}
-            )
-
-            # 3. Delete call logs (references leads & campaigns)
+            # 2. Delete call logs (references leads & campaigns & queue_items[optional])
+            # Moved up to avoid FK constraint with queue_items
             await session.execute(
                 text("DELETE FROM call_logs WHERE campaign_id = :campaign_id"),
                 {"campaign_id": campaign_id}
             )
 
-            # 3b. Delete call raw data
+            # 2b. Delete call raw data
             await session.execute(
                 text("DELETE FROM call_raw_data WHERE campaign_id = :campaign_id"),
+                {"campaign_id": campaign_id}
+            )
+
+            # 3. Delete queue items (references leads)
+            await session.execute(
+                text("DELETE FROM queue_items WHERE campaign_id = :campaign_id"),
                 {"campaign_id": campaign_id}
             )
 

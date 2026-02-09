@@ -86,8 +86,8 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
     };
 
     const isActive = (path: string) => {
-        if (path === "/dashboard-new" && pathname === "/dashboard-new") return true;
-        if (path !== "/dashboard-new" && pathname?.startsWith(path)) return true;
+        if (path === "/dashboard" && pathname === "/dashboard") return true;
+        if (path !== "/dashboard" && pathname?.startsWith(path)) return true;
         return false;
     };
 
@@ -105,7 +105,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         <Leaf className="w-5 h-5 fill-white" />
                     </div>
                     <div className={cn("flex flex-col transition-opacity duration-200", isCollapsed ? "hidden opacity-0 w-0" : "flex opacity-100")}>
-                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">Unclutr</span>
+                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">SquareUp</span>
                         <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Your Brand OS</span>
                     </div>
                 </div>
@@ -162,10 +162,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
 
 
                         <Link
-                            href="/dashboard-new/customer-intelligence"
+                            href="/dashboard"
                             className={cn(
                                 "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
-                                isActive("/dashboard-new/customer-intelligence")
+                                isActive("/dashboard")
                                     ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
                                     : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
                                 isCollapsed ? "justify-center" : ""
@@ -205,10 +205,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         </h3>
                     )}
                     <Link
-                        href="/dashboard-new/integrations"
+                        href="/dashboard/integrations"
                         className={cn(
                             "flex items-center px-3 py-2.5 rounded-lg transition-colors group relative",
-                            isActive("/dashboard-new/integrations")
+                            isActive("/dashboard/integrations")
                                 ? "bg-[#FF8A4C] text-white shadow-[0_0_20px_rgba(255,138,76,0.3)]"
                                 : "text-gray-500 dark:text-[#A1A1AA] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
                             isCollapsed ? "justify-center" : "justify-between"
@@ -311,7 +311,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             <div className="p-1">
 
                                 <DropdownMenuItem asChild>
-                                    <Link href="/dashboard-new/my-account/settings" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-700 dark:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A] cursor-pointer rounded-md outline-none">
+                                    <Link href="/dashboard/my-account/settings" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-700 dark:text-[#E4E4E7] hover:bg-gray-50 dark:hover:bg-[#27272A] cursor-pointer rounded-md outline-none">
                                         <Settings className="w-3.5 h-3.5" />
                                         Settings
                                     </Link>

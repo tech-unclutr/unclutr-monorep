@@ -10,7 +10,7 @@ import {
     ShieldCheck,
     Server
 } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn, formatPhoneNumber } from "@/lib/utils";
 
 interface ProcessingLogProps {
     data: any[];
@@ -60,7 +60,8 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                     "Alex: Securing these contact details in the vault...",
                     "Sarah: Quick check on the phone formats for global reach...",
                     "Rohan: Mapping out the best paths for outreach...",
-                    "Maya: Our intelligence engine is now processing the batch..."
+                    "Maya: Our intelligence engine is now processing the batch...",
+                    `Alex: Formatted ${formatPhoneNumber("919876543210")} for display...`
                 ];
                 newLog = {
                     id: `sys-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -143,7 +144,7 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                                 <div className={cn(
                                     "p-1.5 rounded-lg transition-colors border",
                                     log.type === 'record'
-                                        ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/20"
+                                        ? "bg-orange-50 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400 border-orange-100 dark:border-orange-500/20"
                                         : log.type === 'system'
                                             ? "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-500/20"
                                             : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700"
@@ -172,7 +173,7 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
                         initial={{ width: "0%" }}
                         animate={{ width: "100%" }}
                         transition={{ duration: 8, ease: "linear", repeat: Infinity }}
-                        className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 w-full opacity-80"
+                        className="h-full bg-gradient-to-r from-orange-500 via-orange-500 to-orange-500 w-full opacity-80"
                     />
                 </div>
             </div>
@@ -180,8 +181,8 @@ export function ProcessingLog({ data, mapping, className }: ProcessingLogProps) 
             <div className="text-center mt-6 space-y-2">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-2">
                     <div className="relative">
-                        <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                        <div className="absolute inset-0 bg-indigo-500/20 blur-md animate-pulse" />
+                        <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                        <div className="absolute inset-0 bg-orange-500/20 blur-md animate-pulse" />
                     </div>
                     <span>Success Team is on it</span>
                 </h3>

@@ -23,7 +23,7 @@ interface AgentQueueModalProps {
 export function AgentQueueModal({ isOpen, onClose, activeAgents, upcomingLeads, historyItems, allLeadsByCohort, allEvents, maxConcurrency, isPaused, isResetting, onReset, onLeadAction, onRefreshQueue }: AgentQueueModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-7xl w-[98vw] h-[90vh] bg-transparent border-0 p-0 overflow-hidden shadow-2xl shadow-indigo-500/10 dark:shadow-indigo-500/20 flex flex-col transition-colors duration-300">
+            <DialogContent className="max-w-7xl w-[98vw] h-[90vh] bg-transparent border-0 p-0 overflow-hidden shadow-2xl shadow-orange-500/10 dark:shadow-orange-500/20 flex flex-col transition-colors duration-300">
                 <VisuallyHidden>
                     <DialogTitle>AI Agent Queue Control</DialogTitle>
                     <DialogDescription>

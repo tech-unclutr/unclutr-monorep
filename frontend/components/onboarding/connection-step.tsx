@@ -85,7 +85,7 @@ export function ConnectionStep({ selectedStack, brandName, onBack }: ConnectionS
                     {supported.map((key) => (
                         <div
                             key={key}
-                            className="flex items-center justify-between p-6 rounded-3xl bg-white/[0.03] border border-white/10 group hover:border-indigo-500/50 transition-all"
+                            className="flex items-center justify-between p-6 rounded-3xl bg-white/[0.03] border border-white/10 group hover:border-orange-500/50 transition-all"
                         >
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-xl font-bold">
@@ -97,7 +97,7 @@ export function ConnectionStep({ selectedStack, brandName, onBack }: ConnectionS
                                 </div>
                             </div>
                             <div className="flex flex-col gap-2">
-                                <button className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-6 py-3 rounded-xl font-medium hover:bg-indigo-500 hover:text-white transition-all">
+                                <button className="flex items-center gap-2 bg-orange-500/10 text-orange-400 px-6 py-3 rounded-xl font-medium hover:bg-orange-500 hover:text-white transition-all">
                                     Connect API
                                     <ExternalLink className="w-4 h-4" />
                                 </button>
@@ -111,7 +111,7 @@ export function ConnectionStep({ selectedStack, brandName, onBack }: ConnectionS
                     {requested.length > 0 && (
                         <div className="mt-8 space-y-4">
                             <div className="flex items-center gap-2 text-white/30 uppercase tracking-[0.2em] text-[10px] font-bold">
-                                <Sparkles className="w-3 h-3 text-indigo-400" />
+                                <Sparkles className="w-3 h-3 text-orange-400" />
                                 Early Access Needed
                             </div>
                             <div className="grid grid-cols-2 gap-4">

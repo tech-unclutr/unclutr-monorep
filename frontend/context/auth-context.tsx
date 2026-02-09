@@ -30,6 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [companyId, setCompanyId] = useState<string | null>(null);
     const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const loadingRef = useRef(true);
+
+    // Wrapper to keep ref in sync with state
+    const updateLoading = (val: boolean) => {
+        setLoading(val);
+        loadingRef.current = val;
+    };
     const [isSyncing, setIsSyncing] = useState(false);
     const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
     const router = useRouter();
@@ -67,6 +74,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }
                     syncInProgress.current = firebaseUser.uid;
 
+                    // Debounce Sync: Check if we just synced this user (prevents HMR spam)
+                    const lastSyncKey = `unclutr_last_sync_${firebaseUser.uid}`;
+                    const lastSyncTime = sessionStorage.getItem(lastSyncKey);
+                    const now = Date.now();
+
+                    if (lastSyncTime && (now - parseInt(lastSyncTime)) < 2000) {
+                        console.log("DEBUG: AuthProvider [Sync] Debounced (HMR protection). Skipping.");
+                        setIsSyncing(false);
+                        if (isMounted && loadingRef.current) updateLoading(false);
+                        return;
+                    }
+
+                    // Update timestamp immediately to block concurrent HMR triggers
+                    sessionStorage.setItem(lastSyncKey, now.toString());
+
                     console.log("DEBUG: AuthProvider [Sync] Starting background sync for", firebaseUser.email);
                     setIsSyncing(true);
                     try {
@@ -99,9 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setIsSyncing(false);
 
                         // Clear loading state AFTER sync completes if it was the first load
-                        if (isMounted && loading) {
+                        if (isMounted && loadingRef.current) {
                             console.log("DEBUG: AuthProvider [Init] Clearing loading state after sync.");
-                            setLoading(false);
+                            updateLoading(false);
                         }
                     }
                 } else {
@@ -113,9 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.removeItem('unclutr_company_id');
                     syncInProgress.current = null;
 
-                    if (isMounted && loading) {
+                    if (isMounted && loadingRef.current) {
                         console.log("DEBUG: AuthProvider [Init] Clearing loading state (no session).");
-                        setLoading(false);
+                        updateLoading(false);
                     }
                 }
             });
@@ -137,9 +159,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Safety timeout: Increased to 15s to allow for slower backend cold starts
             const safetyTimer = setTimeout(() => {
-                if (isMounted && loading) {
+                if (isMounted && loadingRef.current) {
                     console.warn("DEBUG: AuthProvider [Init] Safety timeout clearing loading (15s). Context may be inconsistent.");
-                    setLoading(false);
+                    updateLoading(false);
                 }
             }, 15000);
 

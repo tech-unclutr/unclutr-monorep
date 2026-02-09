@@ -1076,7 +1076,9 @@ async def list_campaigns(
             Campaign,
             func.count(CampaignLead.id).label("total"),
             func.sum(case((CampaignLead.status == "COMPLETED", 1), else_=0)).label("completed"),
-            func.sum(case((CampaignLead.status.in_(["INITIATED", "RINGING", "IN_PROGRESS"]), 1), else_=0)).label("in_progress")
+            func.sum(case((CampaignLead.status.in_(["INITIATED", "RINGING", "IN_PROGRESS"]), 1), else_=0)).label("in_progress"),
+            # [NEW] Count "started" leads (not pending/queued/scheduled) to determine if campaign can be deleted
+            func.sum(case((CampaignLead.status.not_in(["PENDING", "QUEUED", "READY", "SCHEDULED"]), 1), else_=0)).label("execution_count")
         )
         .outerjoin(CampaignLead, CampaignLead.campaign_id == Campaign.id)
         .where(Campaign.company_id == company_id)
@@ -1102,14 +1104,15 @@ async def list_campaigns(
     enriched_campaigns = []
     
     for row in rows:
-        campaign, total, completed, in_progress = row
+        campaign, total, completed, in_progress, execution_count = row
         
         # Convert SQLModel to dict
         campaign_dict = campaign.dict()
         campaign_dict["stats"] = {
             "total_leads": total or 0,
             "completed_leads": completed or 0,
-            "in_progress_leads": in_progress or 0
+            "in_progress_leads": in_progress or 0,
+            "execution_count": execution_count or 0
         }
         enriched_campaigns.append(campaign_dict)
 
@@ -1134,12 +1137,17 @@ async def delete_campaign(
         print(f"DEBUG: Invalid Company ID: {x_company_id}")
         raise HTTPException(status_code=400, detail="Invalid company ID")
         
-    success = await campaign_service.delete_campaign(session, campaign_id, company_id)
-    print(f"DEBUG: Service returned success={success}")
-    
-    if not success:
-        print("DEBUG: Raising 404")
-        raise HTTPException(status_code=404, detail="Campaign not found or access denied")
+    try:
+        success = await campaign_service.delete_campaign(session, campaign_id, company_id)
+        print(f"DEBUG: Service returned success={success}")
+        
+        if not success:
+            print("DEBUG: Raising 404")
+            raise HTTPException(status_code=404, detail="Campaign not found or access denied")
+    except ValueError as e:
+        # Catch specific business logic errors (e.g. "Cannot delete campaign with history")
+        logger.warning(f"Deletion blocked: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
         
     return {"status": "success", "message": "Campaign and related data deleted & archived"}
 
@@ -1403,12 +1411,15 @@ async def create_full_campaign(
     if not request.leads:
         raise HTTPException(status_code=400, detail="No leads provided")
 
-    # 1. Compute Hash for Deduplication (Same logic as create-from-csv)
+    # 1. Optimized "Fingerprint" Hash (O(1) instead of O(N))
+    # Hash: count + first_lead + last_lead + campaign_name
     import hashlib
-    import json
-    leads_dicts = [l.dict() for l in request.leads]
-    leads_json = json.dumps(leads_dicts, sort_keys=True)
-    source_hash = hashlib.sha256(leads_json.encode()).hexdigest()
+    
+    first_lead_sig = str(request.leads[0].contact_number) if request.leads else ""
+    last_lead_sig = str(request.leads[-1].contact_number) if request.leads else ""
+    
+    fingerprint = f"{len(request.leads)}|{first_lead_sig}|{last_lead_sig}|{request.campaign_name}"
+    source_hash = hashlib.sha256(fingerprint.encode()).hexdigest()
     
     # Check for duplicates (if not force_create)
     if not request.force_create:

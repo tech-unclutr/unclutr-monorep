@@ -45,7 +45,7 @@ export function OverviewMetrics() {
                 value={data?.total_users?.toLocaleString() || "0"}
                 subValue={`${data?.active_users_7d || 0} active (7d)`}
                 icon={Users}
-                color="indigo"
+                color="orange"
                 loading={loading}
                 trend={5} // Placeholder trend
                 trendLabel="vs last month"

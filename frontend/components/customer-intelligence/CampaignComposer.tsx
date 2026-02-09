@@ -261,6 +261,8 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
     const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
     const [isAvailabilityPopupOpen, setIsAvailabilityPopupOpen] = useState(false);
     const [isExitWarningOpen, setIsExitWarningOpen] = useState(false);
+    const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
+    const [duplicateCampaignInfo, setDuplicateCampaignInfo] = useState<{ id: string; name: string } | null>(null);
 
     const hasInitializedRef = React.useRef(false);
     const isReadyToSave = React.useRef(false);
@@ -622,7 +624,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
 
     const isSubmittingRef = React.useRef(false);
 
-    const finalizeCampaign = async (shouldComplete: boolean = true) => {
+    const finalizeCampaign = async (shouldComplete: boolean = true, forceCreate: boolean = false) => {
         // Prevent duplicate submission
         if (isSubmittingRef.current) return null;
 
@@ -642,6 +644,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                 const payload = {
                     campaign_name: campaignName,
                     leads: initialLeads || [], // We expect leads to be passed or stored. 
+                    force_create: forceCreate,
                     settings: {
                         name: campaignName,
                         brand_context: brandContext,
@@ -724,8 +727,18 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
             } else {
                 return campaignId;
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to save campaign:", error);
+
+            if (error?.status === 409 && error?.data?.code === 'DUPLICATE_UPLOAD') {
+                setDuplicateCampaignInfo({
+                    id: error.data.campaign_id,
+                    name: error.data.campaign_name
+                });
+                setIsDuplicateAlertOpen(true);
+                return null;
+            }
+
             toast.error("Failed to save campaign settings");
             if (onError) onError(error);
         } finally {
@@ -916,7 +929,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                 {/* Immersive Background Elements */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[100px] rounded-full" />
-                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 blur-[100px] rounded-full" />
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/10 blur-[100px] rounded-full" />
                 </div>
 
 
@@ -946,7 +959,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                         {onEditLeads && (
                             <Button
                                 onClick={onEditLeads}
-                                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-2xl h-12 px-6 font-bold shadow-lg shadow-purple-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-3"
+                                className="bg-gradient-to-r from-orange-500 to-indigo-600 hover:from-orange-600 hover:to-indigo-700 text-white rounded-2xl h-12 px-6 font-bold shadow-lg shadow-orange-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-3"
                             >
                                 <Users className="w-5 h-5" />
                                 <div className="flex flex-col items-start">
@@ -1349,7 +1362,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
 
                         <Button
                             onClick={handleSaveAndNext}
-                            className="bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-full h-14 px-12 font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all group"
+                            className="bg-zinc-950 dark:bg-white text-white dark:text-black rounded-full h-14 px-12 font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all group"
                         >
                             {step === 'EXECUTION' ? 'Launch Magic' : 'Continue'}
                             <ArrowRightIcon className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
@@ -1552,7 +1565,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                 value={teamMemberContext}
                                                 onChange={(e) => setPersistedState(prev => ({ ...prev, teamMemberContext: e.target.value }))}
                                                 placeholder="Describe who will be conducting the interviews..."
-                                                className="min-h-[140px] rounded-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500/20 resize-none transition-all duration-300 text-[14px] leading-relaxed p-4 shadow-sm placeholder:text-zinc-400 [&::-webkit-scrollbar]:hidden caret-indigo-500"
+                                                className="min-h-[140px] rounded-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-orange-500/10 focus:border-orange-500/20 resize-none transition-all duration-300 text-[14px] leading-relaxed p-4 shadow-sm placeholder:text-zinc-400 [&::-webkit-scrollbar]:hidden caret-indigo-500"
                                             />
                                         </motion.div>
                                     </motion.div>
@@ -2196,7 +2209,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
 
                                                 <Button
                                                     size="sm"
-                                                    className="flex-1 h-12 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-500 dark:to-purple-500 text-white hover:from-indigo-700 hover:to-purple-700 dark:hover:from-indigo-600 dark:hover:to-purple-600 font-bold text-sm gap-2 transition-all duration-300 shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98]"
+                                                    className="flex-1 h-12 px-6 rounded-xl bg-gradient-to-r from-indigo-600 to-orange-600 dark:from-indigo-500 dark:to-orange-500 text-white hover:from-indigo-700 hover:to-orange-700 dark:hover:from-indigo-600 dark:hover:to-orange-600 font-bold text-sm gap-2 transition-all duration-300 shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98]"
                                                     onClick={() => setPersistedState(prev => ({
                                                         ...prev,
                                                         executionWindows: [...(prev.executionWindows || []), getNextTimeSlot()]
@@ -2273,7 +2286,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                 onClick={handleSaveAndNext}
                                 disabled={isLoading}
                                 size="lg"
-                                className="rounded-xl h-14 px-10 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-black dark:hover:bg-zinc-200 font-black text-xs uppercase tracking-[0.2em] group relative shadow-2xl"
+                                className="rounded-xl h-14 px-10 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-black dark:hover:bg-zinc-200 font-black text-xs uppercase tracking-[0.2em] group relative shadow-2xl"
                             >
                                 <span className="relative z-10 flex items-center gap-3">
                                     {isLoading ? "Processing" : step === 'EXECUTION' ? "Initialize" : "Proceed"}

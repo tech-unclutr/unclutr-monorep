@@ -309,7 +309,7 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                 <DialogContent className="sm:max-w-[900px] h-[85vh] border-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-0 overflow-hidden flex flex-col shadow-2xl">
                     <DialogHeader className="relative p-6 pb-4 border-b border-gray-100 dark:border-zinc-800 bg-gradient-to-r from-white via-orange-50/30 to-white dark:from-zinc-900 dark:via-orange-950/20 dark:to-zinc-900 z-10 shrink-0">
                         {/* Decorative gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-orange-500/5 pointer-events-none" />
 
                         <DialogTitle className="relative text-2xl font-bold font-display tracking-tight bg-gradient-to-r from-zinc-900 via-orange-600 to-zinc-900 dark:from-zinc-50 dark:via-orange-400 dark:to-zinc-50 bg-clip-text text-transparent">
                             Manage Toolkit
@@ -341,7 +341,7 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                                 {Object.entries(filteredDatasources).map(([category, items]) => (
                                     <div key={category} className="space-y-4">
                                         <div className="flex items-center gap-3 sticky top-0 bg-gradient-to-r from-gray-50/95 via-white/95 to-gray-50/95 dark:from-zinc-950/95 dark:via-zinc-900/95 dark:to-zinc-950/95 backdrop-blur-md py-3 z-10 border-b border-orange-100/30 dark:border-orange-900/20">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-purple-500 shadow-lg shadow-orange-500/50" />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/50" />
                                             <h3 className="text-xs font-bold text-transparent bg-gradient-to-r from-gray-700 to-gray-500 dark:from-zinc-300 dark:to-zinc-500 bg-clip-text uppercase tracking-widest">
                                                 {CATEGORY_LABELS[category] || category}
                                             </h3>
@@ -362,8 +362,8 @@ export const AddSourceDialog: React.FC<AddSourceDialogProps> = ({
                                                     >
                                                         {/* Gradient overlay on hover */}
                                                         <div className={cn(
-                                                            "absolute inset-0 bg-gradient-to-br from-orange-500/0 via-purple-500/0 to-orange-500/0 opacity-0 transition-opacity duration-500 pointer-events-none",
-                                                            isSelected ? "from-orange-500/5 via-purple-500/5 to-orange-500/5 opacity-100" : "group-hover:opacity-100 group-hover:from-orange-500/3 group-hover:via-purple-500/3 group-hover:to-orange-500/3"
+                                                            "absolute inset-0 bg-gradient-to-br from-orange-500/0 via-orange-500/0 to-orange-500/0 opacity-0 transition-opacity duration-500 pointer-events-none",
+                                                            isSelected ? "from-orange-500/5 via-orange-500/5 to-orange-500/5 opacity-100" : "group-hover:opacity-100 group-hover:from-orange-500/3 group-hover:via-orange-500/3 group-hover:to-orange-500/3"
                                                         )} />
 
                                                         <div className="flex items-start justify-between w-full relative z-10">

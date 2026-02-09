@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import httpx
 import pytz
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select, desc 
 
 from app.core.config import settings
 from app.models.bolna_execution_map import BolnaExecutionMap
@@ -14,6 +15,7 @@ from app.models.campaign_lead import CampaignLead
 from app.models.company import Company
 from app.models.queue_item import QueueItem
 from app.models.user import User
+from app.models.call_log import CallLog
 
 
 class BolnaCaller:
@@ -169,6 +171,31 @@ class BolnaCaller:
                 "startTime": start_iso,
                 "endTime": end_iso,
             }
+
+            # [CONTEXT LOGIC] If this is a follow-up call (execution_count > 1), fetch previous call transcript
+            if q_item and q_item.execution_count > 1:
+                try:
+                    # Fetch the latest call log for this lead and campaign
+                    statement = (
+                        select(CallLog)
+                        .where(CallLog.lead_id == lead.id)
+                        .where(CallLog.campaign_id == campaign.id)
+                        .order_by(desc(CallLog.created_at))
+                        .limit(1)
+                    )
+                    result = await session.exec(statement)
+                    last_call = result.first()
+                    
+                    if last_call:
+                        # Prefer full_transcript, fallback to transcript_summary
+                        previous_transcript = last_call.full_transcript or last_call.transcript_summary or "No transcript available."
+                        variables["last_call_context"] = previous_transcript
+                        print(f"[BolnaCaller] Injected last_call_context for lead {lead.id}: {previous_transcript[:50]}...")
+                    else:
+                         print(f"[BolnaCaller] Warning: Execution count is {q_item.execution_count} but no previous CallLog found for lead {lead.id}")
+                except Exception as e:
+                    print(f"[BolnaCaller] Error fetching previous context: {e}")
+
             
             # --- Normalize Phone Number ---
             raw_number = lead.contact_number or ""
@@ -332,7 +359,6 @@ class BolnaCaller:
                 session.add(execution_map)
 
                 # 5. Create Persistent Call Log
-                from app.models.call_log import CallLog
                 current_lead_id = lead_ids[i]
 
                 call_log = CallLog(

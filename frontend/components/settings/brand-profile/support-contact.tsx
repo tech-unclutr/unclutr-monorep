@@ -43,7 +43,7 @@ export function SupportContact({ data: initialData, onUpdate }: SupportContactPr
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <h3 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Support & Contact</h3>
-                        <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100/50 rounded-lg shadow-sm">
+                        <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider text-orange-600 bg-orange-50 border border-orange-100/50 rounded-lg shadow-sm">
                             Recommended
                         </span>
                     </div>

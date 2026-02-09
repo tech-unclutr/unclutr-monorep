@@ -101,13 +101,13 @@ export function AddSourcesDrawer({
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                             <div className="relative group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-orange-500 transition-colors" size={18} />
                                 <Input
                                     autoFocus
                                     placeholder="Search specific tools..."
                                     value={search}
                                     onChange={(e: { target: { value: React.SetStateAction<string>; }; }) => setSearch(e.target.value)}
-                                    className="pl-11 h-12 bg-zinc-50 border-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all rounded-xl text-base shadow-sm"
+                                    className="pl-11 h-12 bg-zinc-50 border-zinc-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all rounded-xl text-base shadow-sm"
                                 />
                             </div>
 

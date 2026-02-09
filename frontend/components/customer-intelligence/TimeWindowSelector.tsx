@@ -132,15 +132,15 @@ function MagicalDatePicker({ value, onChange }: { value: string, onChange: (date
                             className={cn(
                                 "h-9 w-9 rounded-[14px] text-xs font-bold transition-all relative flex items-center justify-center border-2 border-transparent",
                                 isPast ? "text-zinc-200 dark:text-zinc-800 cursor-not-allowed opacity-30" :
-                                    isSelected ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 border-indigo-400/20" :
+                                    isSelected ? "bg-orange-600 text-white shadow-lg shadow-orange-500/40 border-orange-400/20" :
                                         isCurrentMonth ? "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700" :
                                             "text-zinc-300 dark:text-zinc-600",
-                                isToday(day) && !isSelected && !isPast && "border-indigo-200 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400"
+                                isToday(day) && !isSelected && !isPast && "border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400"
                             )}
                         >
                             {format(day, 'd')}
                             {isToday(day) && !isSelected && (
-                                <div className="absolute bottom-1 w-1 h-1 bg-indigo-500 rounded-full" />
+                                <div className="absolute bottom-1 w-1 h-1 bg-orange-500 rounded-full" />
                             )}
                         </motion.button>
                     );
@@ -218,7 +218,7 @@ function MagicalTimeRangePicker({
                 {/* START TIME */}
                 <div className="w-52">
                     <div className="mb-4 px-2">
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Start Time</p>
+                        <p className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em]">Start Time</p>
                     </div>
                     <div className="flex gap-3">
                         {/* Hours */}
@@ -251,14 +251,14 @@ function MagicalTimeRangePicker({
                                         className={cn(
                                             "w-full py-2.5 px-3 rounded-xl text-sm font-bold transition-all text-left flex items-center justify-between group/hour",
                                             isPast ? "opacity-30 cursor-not-allowed text-zinc-300 dark:text-zinc-700" :
-                                                isSelected ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400",
-                                            parseInt(hour) === currentHour && isSelectedDateToday && !isSelected && "ring-1 ring-inset ring-indigo-500/20 bg-indigo-50/10"
+                                                isSelected ? "bg-orange-600 text-white shadow-lg shadow-orange-500/30" : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400",
+                                            parseInt(hour) === currentHour && isSelectedDateToday && !isSelected && "ring-1 ring-inset ring-orange-500/20 bg-orange-50/10"
                                         )}
                                     >
                                         <div className="flex items-center gap-2">
                                             <span className={cn(isSelected ? "scale-110" : "group-hover/hour:translate-x-0.5 transition-transform")}>{hour}</span>
                                             {parseInt(hour) === currentHour && isSelectedDateToday && (
-                                                <span className="text-[7px] font-black uppercase tracking-widest text-indigo-500/60">Now</span>
+                                                <span className="text-[7px] font-black uppercase tracking-widest text-orange-500/60">Now</span>
                                             )}
                                         </div>
                                         {isSelected && !isPast && <Check className="w-3.5 h-3.5" />}
@@ -292,7 +292,7 @@ function MagicalTimeRangePicker({
                                         className={cn(
                                             "w-full py-2.5 px-3 rounded-xl text-sm font-black transition-all text-center border-2 border-transparent",
                                             isPast ? "opacity-30 cursor-not-allowed text-zinc-300 dark:text-zinc-700" :
-                                                isSelected ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 border-indigo-400/20" : "bg-indigo-50/50 dark:bg-indigo-950/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
+                                                isSelected ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 border-orange-400/20" : "bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400"
                                         )}
                                     >
                                         {min}
@@ -403,7 +403,7 @@ function MagicalTimeRangePicker({
             <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
                 <Button
                     onClick={() => onSave(tempStart, tempEnd)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl px-6 font-bold shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-all active:scale-95"
+                    className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl px-6 font-bold shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all active:scale-95"
                 >
                     <Check className="w-4 h-4" />
                     Done
@@ -560,7 +560,7 @@ export const TimeWindowSelector: React.FC<TimeWindowSelectorProps> = ({
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="flex items-center gap-1.5 px-1.5 py-1 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors outline-none group/date whitespace-nowrap">
-                            <CalendarIcon className="w-3.5 h-3.5 text-zinc-400 group-hover/date:text-indigo-500 transition-colors shrink-0" />
+                            <CalendarIcon className="w-3.5 h-3.5 text-zinc-400 group-hover/date:text-orange-500 transition-colors shrink-0" />
                             <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200 tabular-nums">
                                 {formattedDate}
                             </span>

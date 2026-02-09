@@ -55,7 +55,7 @@ export function UnifiedSyncStatus({ integrationId, status, metadata, open }: Uni
     const statsItems = [
         { icon: ShoppingBag, label: 'Orders', count: syncStats.orders_count || 0, color: "text-blue-500" },
         { icon: Box, label: 'Products', count: syncStats.products_count || 0, color: "text-orange-500" },
-        { icon: Percent, label: 'Discounts', count: syncStats.discounts_count || 0, color: "text-purple-500" },
+        { icon: Percent, label: 'Discounts', count: syncStats.discounts_count || 0, color: "text-orange-500" },
     ];
 
     // Ticker Effect (Cycle every 3s)

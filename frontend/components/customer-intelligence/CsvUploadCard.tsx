@@ -14,7 +14,7 @@ import {
     RefreshCcw,
     AlertTriangle
 } from 'lucide-react';
-import { cn, formatToIST, formatRelativeTime } from "@/lib/utils";
+import { cn, formatToIST, formatRelativeTime, formatPhoneNumber } from "@/lib/utils";
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
@@ -66,10 +66,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         ? `csv_upload_edit_${propCampaignId}`
         : `csv_upload_state_${authCompanyId || 'default'}`;
 
+    const [csvData, setCsvData] = useState<any[]>([]);
+
     const [persistedState, setPersistedState, removePersistedState] = useSessionStorage(storageKey, {
         stage: 'UPLOAD' as Stage,
         headers: [] as string[],
-        data: [] as any[],
+        // data removed from session storage to prevent quota limits
         mapping: {
             customer_name: '',
             contact_number: '',
@@ -86,9 +88,9 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         // We consider it dirty if we are in MAPPING, UPLOADING, or ORCHESTRATION stage
         // OR if we have parsed data but haven't finished
         const isDirty = (persistedState.stage === 'MAPPING' || persistedState.stage === 'UPLOADING' || persistedState.stage === 'ORCHESTRATION') ||
-            (persistedState.data.length > 0 && persistedState.stage !== 'DONE' && persistedState.stage !== 'UPLOAD');
+            (csvData.length > 0 && persistedState.stage !== 'DONE' && persistedState.stage !== 'UPLOAD');
         onDirtyChange(isDirty);
-    }, [persistedState.stage, persistedState.data.length, onDirtyChange]);
+    }, [persistedState.stage, csvData.length, onDirtyChange]);
 
     // Force reset to UPLOAD stage when mode or campaignId changes to ensure fresh start
     // This is critical for edit mode to work on first attempt
@@ -128,10 +130,10 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
             setPersistedState(prev => ({
                 ...prev,
                 stage: 'UPLOAD',
-                data: [],
                 headers: [],
                 mapping: { customer_name: '', contact_number: '', cohort: '' }
             }));
+            setCsvData([]);
         }
     }, [mode]);
 
@@ -139,12 +141,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     // Cleanup on unmount removed to prevents accidental state loss during re-renders.
     // We will rely on explicit Cancel/Success actions to clean up.
 
-    const { stage, headers, data, mapping, campaignName, campaignId } = persistedState;
+    const { stage, headers, mapping, campaignName, campaignId } = persistedState;
 
     // Memoize leads generation for passing to Composer
     const mappedLeads = React.useMemo(() => {
         if (!mapping.customer_name || !mapping.contact_number) return [];
-        return data.map(row => {
+        return csvData.map(row => {
             const lead: any = {
                 customer_name: row[mapping.customer_name],
                 contact_number: String(row[mapping.contact_number]).trim(),
@@ -155,7 +157,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
             }
             return lead;
         });
-    }, [data, mapping]);
+    }, [csvData, mapping]);
 
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -188,10 +190,10 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                     if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
                 });
 
+                setCsvData(jsonData);
                 setPersistedState(prev => ({
                     ...prev,
                     headers: detectedHeaders,
-                    data: jsonData,
                     mapping: newMapping,
                     stage: 'MAPPING'
                 }));
@@ -224,10 +226,10 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                             if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
                         });
 
+                        setCsvData(results.data);
                         setPersistedState(prev => ({
                             ...prev,
                             headers: detectedHeaders,
-                            data: results.data,
                             mapping: newMapping,
                             stage: 'MAPPING'
                         }));
@@ -312,7 +314,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         try {
             setPersistedState(prev => ({ ...prev, stage: 'UPLOADING' }));
 
-            const leads = data.map(row => {
+            const leads = csvData.map(row => {
                 const lead: any = {
                     customer_name: row[mapping.customer_name],
                     contact_number: String(row[mapping.contact_number]).trim(),
@@ -439,6 +441,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
     const reset = useCallback(() => {
         removePersistedState();
+        setCsvData([]);
         setFile(null);
         setErrorResult(null);
         setIsProcessing(false);
@@ -475,7 +478,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
     const handleCancel = () => {
         const isDirty = (persistedState.stage === 'MAPPING' || persistedState.stage === 'UPLOADING' || persistedState.stage === 'ORCHESTRATION') ||
-            (persistedState.data.length > 0 && persistedState.stage !== 'DONE' && persistedState.stage !== 'UPLOAD');
+            (csvData.length > 0 && persistedState.stage !== 'DONE' && persistedState.stage !== 'UPLOAD');
 
         if (isDirty) {
             setIsExitWarningOpen(true);
@@ -656,7 +659,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                         {/* Header */}
                         <div className="flex items-center justify-between mb-8 pr-12">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                                <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-orange-500/10 dark:from-indigo-500/20 dark:to-orange-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
                                     <TableIcon className="w-5 h-5" />
                                 </div>
                                 <div className="space-y-1">
@@ -783,12 +786,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                     </label>
                                     <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-100 dark:border-emerald-500/20">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        {data.length} RECORDS READY
+                                        {csvData.length} RECORDS READY
                                     </div>
                                 </div>
 
                                 {/* Premium Table Container */}
-                                <div className="flex-1 rounded-2xl border border-gray-200/60 dark:border-white/[0.08] bg-white dark:bg-zinc-900/50 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col relative group">
+                                <div className="h-[400px] rounded-2xl border border-gray-200/60 dark:border-white/[0.08] bg-white dark:bg-zinc-900/50 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col relative group">
                                     {/* Table Decor */}
                                     <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -802,7 +805,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50 dark:divide-white/[0.02]">
-                                                {data.slice(0, 50).map((row, i) => {
+                                                {csvData.slice(0, 50).map((row, i) => {
                                                     const name = mapping.customer_name ? row[mapping.customer_name] : null;
                                                     const phone = mapping.contact_number ? row[mapping.contact_number] : null;
                                                     const cohort = mapping.cohort && mapping.cohort !== 'none' ? row[mapping.cohort] : null;
@@ -818,7 +821,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                                                             </td>
                                                             <td className="px-5 py-2.5">
                                                                 {phone ? (
-                                                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 font-mono tracking-tight">{phone}</span>
+                                                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 font-mono tracking-tight">{formatPhoneNumber(phone)}</span>
                                                                 ) : (
                                                                     <span className="text-[10px] text-gray-300 dark:text-gray-600 font-medium italic">-</span>
                                                                 )}
@@ -894,7 +897,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
                 {stage === 'UPLOADING' && (
                     <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in duration-500 w-full">
-                        <ProcessingLog data={data} mapping={mapping} />
+                        <ProcessingLog data={csvData} mapping={mapping} />
                     </div>
                 )}
 
@@ -954,8 +957,8 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                             </h3>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
                                 {mode === 'edit'
-                                    ? <>{data.length} customer records have been successfully updated.</>
-                                    : <>{data.length} customers have been successfully added. You can now use this dataset for high-intent interviews.</>
+                                    ? <>{csvData.length} customer records have been successfully updated.</>
+                                    : <>{csvData.length} customers have been successfully added. You can now use this dataset for high-intent interviews.</>
                                 }
                             </p>
                         </div>

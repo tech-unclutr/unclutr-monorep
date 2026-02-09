@@ -16,7 +16,7 @@ class CallLog(SQLModel, table=True):
     
     # External Bolna Call ID
     bolna_call_id: str = Field(index=True, unique=True)
-    bolna_agent_id: str = Field(index=True)
+    bolna_agent_id: str = Field(index=True, default="unknown")
     
     # Call Metadata
     status: str = Field(default="initiated")  # initiated, completed, failed, etc.

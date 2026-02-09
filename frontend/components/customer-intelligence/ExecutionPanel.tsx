@@ -37,7 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn, parseAsUTC } from "@/lib/utils";
 // import { ActiveAgentCard } from "./ActiveAgentCard"; // Replaced
-import { ExecutionFeed } from "./ExecutionFeed";
+// import { ExecutionFeed } from "./ExecutionFeed";
 import { AgentQueue, AgentStatus, UpcomingLead } from "./AgentQueue";
 import { AgentLiveUpdateModal } from "./AgentLiveUpdateModal";
 import { AgentQueueModal } from "./AgentQueueModal";
@@ -64,6 +64,7 @@ interface ExecutionPanelProps {
     onStatusChange: (newStatus: string) => void;
     onModalStateChange?: (isOpen: boolean) => void; // Notify parent when schedule modal opens/closes
     onEditStrategy?: () => void;
+    onScheduleUpdate?: (windows: any[]) => void;
 }
 
 // --- Sub-components ---
@@ -136,7 +137,7 @@ const AgentActivityBar = ({ status, activeAgents, executionWindows }: { status: 
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                     <div className="relative">
-                        <Bot className="w-5 h-5 text-indigo-500" />
+                        <Bot className="w-5 h-5 text-orange-500" />
                         {(status === 'WARMUP' || (status as string).includes('ACTIVE')) && (
                             <span className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full animate-pulse border-2 border-white dark:border-zinc-950" />
                         )}
@@ -172,7 +173,7 @@ const AgentActivityBar = ({ status, activeAgents, executionWindows }: { status: 
                         </span>
                     )}
                     {status === 'PAUSED' && (
-                        <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                        <span className="text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
                             <Bot className="w-3 h-3" />
                             Standby Mode. Agents primed and ready.
                         </span>
@@ -184,7 +185,7 @@ const AgentActivityBar = ({ status, activeAgents, executionWindows }: { status: 
             {currentWindowText && (
                 <div className="flex flex-col items-end sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-2 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                        <div className="p-1.5 rounded-md bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
                             <Clock className="w-3.5 h-3.5" />
                         </div>
                         <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Booking Window</span>
@@ -201,7 +202,7 @@ const AgentActivityBar = ({ status, activeAgents, executionWindows }: { status: 
 
 // --- Main Component ---
 
-export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true, wasLeadsUpdated = false, onStatusChange, onModalStateChange, onEditStrategy }: ExecutionPanelProps) {
+export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true, wasLeadsUpdated = false, onStatusChange, onModalStateChange, onEditStrategy, onScheduleUpdate }: ExecutionPanelProps) {
     const { user, companyId: authCompanyId, loading: authLoading } = useAuth();
     console.log("DEBUG: ExecutionPanel Render", { campaignId, campaignStatus, hasStrategy, wasLeadsUpdated });
     const [state, setState] = useState<ExecutionState>('IDLE');
@@ -213,6 +214,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
     const [maxConcurrency, setMaxConcurrency] = useState(2);
     const [allEvents, setAllEvents] = useState<any[]>([]); // Consolidated events
     const [isCompleted, setIsCompleted] = useState(false);
+    const [isExhausted, setIsExhausted] = useState(false); // [NEW] Track exhausted state
     const [isInitializationRequiredAlertOpen, setIsInitializationRequiredAlertOpen] = useState(false);
     const [completionData, setCompletionData] = useState<any>(null);
     const [executionWindows, setExecutionWindows] = useState<any[]>([]);
@@ -241,8 +243,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
     // User Queue Modal State
     const [selectedUserQueueItem, setSelectedUserQueueItem] = useState<any>(null);
     const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+    const [userQueueRefreshTrigger, setUserQueueRefreshTrigger] = useState<number>(0);
     const [contextLead, setContextLead] = useState<{ id: string, item_id: string, name: string } | null>(null);
     const [isContextModalOpen, setIsContextModalOpen] = useState(false);
+    const [hasStartedSession, setHasStartedSession] = useState(false); // New: Track if user clicked Play in this session
 
     // Track the time of the last manual action (Start/Pause/Resume)
     // This prevents stale prop updates from parent polling from immediately overwriting
@@ -451,7 +455,41 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
         if (state === 'WARMUP' && (wsData.agents || []).length > 0) {
             setState('ACTIVE_READY');
         }
+
+        // 10. User Queue & History Sync
     }, [wsData, state, onStatusChange]);
+
+    // 10. User Queue & History Sync - Separated to stabilize dependencies
+    useEffect(() => {
+        if (wsData?.event === 'user_queue_update') {
+            console.log("[Execution] Received user_queue_update event. Refreshing data...");
+            refreshCampaignData();
+            setUserQueueRefreshTrigger(Date.now());
+        }
+    }, [wsData?.event, refreshCampaignData]);
+
+    // [NEW] Fallback: Fetch completion data via REST API if WebSocket fails
+    useEffect(() => {
+        const fetchCompletionDataFallback = async () => {
+            if (!user || !authCompanyId) return;
+
+            // Only fetch if campaign is completed but we don't have completion data
+            if ((isCompleted || campaignStatus === 'COMPLETED') && !completionData) {
+                try {
+                    console.log('[ExecutionPanel] Fetching completion data via REST API fallback...');
+                    const data = await api.get(`/execution/campaign/${campaignId}/completion-data`, { "X-Company-ID": authCompanyId });
+                    if (data && Object.keys(data).length > 0) {
+                        setCompletionData(data);
+                        console.log('[ExecutionPanel] Completion data fetched successfully:', data);
+                    }
+                } catch (error) {
+                    console.error('[ExecutionPanel] Failed to fetch completion data:', error);
+                }
+            }
+        };
+
+        fetchCompletionDataFallback();
+    }, [isCompleted, campaignStatus, completionData, campaignId, user, authCompanyId]);
 
     // Auto-Pause Logic: Automatically pause campaign when completed or targets achieved to preserve credits
     useEffect(() => {
@@ -601,6 +639,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
             toast.success("AI Agents Initialized", {
                 description: "Session is ready. Agents are standing by and lead buffer is being prepared."
             });
+            setHasStartedSession(true);
             onStatusChange('PAUSED');
             setState('PAUSED');
         } catch (e: any) {
@@ -673,6 +712,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
         try {
             // Re-use start endpoint to resume
             await api.post(`/execution/campaign/${campaignId}/start`);
+            setHasStartedSession(true);
             onStatusChange('IN_PROGRESS');
             setState('ACTIVE_READY');
         } catch (e: any) {
@@ -720,6 +760,11 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                 if (statusData.history) setHistoryItems(statusData.history);
                 if (statusData.all_leads_by_cohort) setAllLeadsByCohort(statusData.all_leads_by_cohort);
 
+                // Explicitly update exhausted state if provided
+                if (statusData.is_exhausted !== undefined) {
+                    setIsExhausted(statusData.is_exhausted);
+                }
+
                 // Reset completion flags
                 setIsCompleted(false);
                 setCompletionData(null);
@@ -756,8 +801,9 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                     await api.post(`/intelligence/campaigns/${campaignId}/calendar-sync`, {
                         timezone: userTimezone
                     });
-                    toast.success(shouldAutoStart ? "Schedule Saved & Starting..." : "Schedule Updated", {
-                        description: shouldAutoStart ? 'Agents are starting now.' : 'Campaign is queued for the next window.'
+                    const actuallyStarting = shouldAutoStart && !!pendingAction;
+                    toast.success(actuallyStarting ? "Schedule Saved & Starting..." : "Schedule Updated", {
+                        description: actuallyStarting ? 'Agents are starting now.' : 'Campaign is queued for the next window.'
                     });
                 } catch (syncErr) {
                     console.error("Calendar sync failed", syncErr);
@@ -766,14 +812,20 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                     });
                 }
             } else {
-                toast.success(shouldAutoStart ? "Schedule Saved & Starting..." : "Schedule Updated", {
-                    description: shouldAutoStart ? 'Agents are starting now.' : 'Campaign is queued for the next window.'
+                const actuallyStarting = shouldAutoStart && !!pendingAction;
+                toast.success(actuallyStarting ? "Schedule Saved & Starting..." : "Schedule Updated", {
+                    description: actuallyStarting ? 'Agents are starting now.' : 'Campaign is queued for the next window.'
                 });
             }
 
             setIsExtendModalOpen(false);
             setIsOutsideWindowAlertOpen(false); // Close alert if open
             setShowWarningView(false); // Reset warning view
+
+            // Notify parent
+            if (onScheduleUpdate) {
+                onScheduleUpdate(editingWindows);
+            }
 
             // Auto-Start Logic
             if (shouldAutoStart && pendingAction) {
@@ -912,11 +964,11 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
                         transition={{ duration: 0.5, ease: "easeOut" }}
-                        className="relative w-full overflow-hidden rounded-[32px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl shadow-indigo-500/10"
+                        className="relative w-full overflow-hidden rounded-[32px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl shadow-orange-500/10"
                     >
                         {/* Background Gradients */}
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-white to-white dark:from-indigo-950/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
-                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none mix-blend-multiply dark:mix-blend-screen" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-50/50 via-white to-white dark:from-orange-950/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
+                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-500/5 blur-[120px] rounded-full pointer-events-none mix-blend-multiply dark:mix-blend-screen" />
 
                         <div className="relative z-10 px-12 py-16 flex flex-col md:flex-row items-center justify-between gap-12">
                             <div className="flex-1 space-y-8 max-w-2xl">
@@ -928,8 +980,8 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                         className="flex items-center gap-3"
                                     >
                                         <div className="relative">
-                                            <div className="absolute inset-0 bg-indigo-500 blur-lg opacity-20 animate-pulse" />
-                                            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 ring-4 ring-indigo-50 dark:ring-indigo-900/20">
+                                            <div className="absolute inset-0 bg-orange-500 blur-lg opacity-20 animate-pulse" />
+                                            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/25 ring-4 ring-orange-50 dark:ring-orange-900/20">
                                                 <Sparkles className="w-6 h-6" />
                                             </div>
                                         </div>
@@ -944,7 +996,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                             className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white mb-4 tracking-tight leading-[1.1]"
                                         >
                                             {hasStrategy ? (
-                                                <>Ready to <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">Execute?</span></>
+                                                <>Ready to <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-violet-600 dark:from-orange-400 dark:to-violet-400">Execute?</span></>
                                             ) : (
                                                 <>Strategy <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600 dark:from-amber-400 dark:to-orange-400">Required</span></>
                                             )}
@@ -956,7 +1008,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                             className="text-lg text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed max-w-lg"
                                         >
                                             {hasStrategy ? (
-                                                <>Initializing this session will spin up <span className="font-bold text-zinc-900 dark:text-zinc-200 border-b-2 border-indigo-500/20">{maxConcurrency} AI Agents</span> to autonomously dial, qualify, and transfer high-intent prospects from your list.</>
+                                                <>Initializing this session will spin up <span className="font-bold text-zinc-900 dark:text-zinc-200 border-b-2 border-orange-500/20">{maxConcurrency} AI Agents</span> to autonomously dial, qualify, and transfer high-intent prospects from your list.</>
                                             ) : (
                                                 <>Your campaign leads have changed. You must re-configure your <span className="font-bold text-zinc-900 dark:text-zinc-200 border-b-2 border-amber-500/20">Campaign Strategy</span> (cohorts and targets) before executing.</>
                                             )}
@@ -974,10 +1026,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                         {Array.from({ length: maxConcurrency }).map((_, i) => (
                                             <div key={i} className="w-10 h-10 rounded-full border-2 border-white dark:border-zinc-950 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden">
                                                 <Bot className="w-5 h-5 text-zinc-400" />
-                                                <div className="absolute inset-0 bg-indigo-500/10" />
+                                                <div className="absolute inset-0 bg-orange-500/10" />
                                             </div>
                                         ))}
-                                        <div className="w-10 h-10 rounded-full border-2 border-white dark:border-zinc-950 bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-bold">
+                                        <div className="w-10 h-10 rounded-full border-2 border-white dark:border-zinc-950 bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-xs font-bold">
                                             +{maxConcurrency}
                                         </div>
                                     </div>
@@ -986,16 +1038,16 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                             </div>
 
                             <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
+                                <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-violet-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
                                 <Button
                                     size="lg"
                                     onClick={(!hasStrategy || campaignStatus === 'DRAFT') ? onEditStrategy : handleStartSession}
                                     className={cn(
                                         "relative h-20 px-12 text-xl rounded-full transition-all shadow-2xl font-bold flex items-center gap-4 overflow-hidden",
-                                        "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 hover:scale-[1.02] shadow-indigo-500/20"
+                                        "bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 hover:scale-[1.02] shadow-orange-500/20"
                                     )}
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/10 to-indigo-500/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-white/10 to-orange-500/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
                                     <div className={cn(
                                         "w-12 h-12 rounded-full flex items-center justify-center bg-white/10"
                                     )}>
@@ -1032,6 +1084,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                         <Button
                             variant="outline"
                             className="h-14 px-8 text-base rounded-full border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 font-bold"
+                            onClick={() => {
+                                setEditingWindows(JSON.parse(JSON.stringify(executionWindows)));
+                                setIsExtendModalOpen(true);
+                            }}
                         >
                             View Schedule
                         </Button>
@@ -1047,17 +1103,17 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="w-full bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl rounded-[32px] border border-zinc-200/50 dark:border-zinc-800/50 p-6 shadow-2xl shadow-indigo-500/5"
+                        className="w-full bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl rounded-[32px] border border-zinc-200/50 dark:border-zinc-800/50 p-6 shadow-2xl shadow-orange-500/5"
                     >
                         {/* Header Bar: Controls + Activity */}
                         <div className="flex items-center gap-4 mb-6">
                             <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={state === 'PAUSED' ? handleResumeSession : handlePauseSession}
+                                onClick={(state === 'PAUSED' || state === 'COMPLETED') ? handleResumeSession : handlePauseSession}
                                 className="h-12 w-12 rounded-2xl border-2 border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 shrink-0"
                             >
-                                {state === 'PAUSED' ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+                                {(state === 'PAUSED' || state === 'COMPLETED') ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
                             </Button>
 
                             <div className="flex-1">
@@ -1077,7 +1133,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                     allLeadsByCohort={allLeadsByCohort}
                                     allEvents={allEvents}
                                     maxConcurrency={maxConcurrency}
-                                    isCompleted={isCompleted}
+                                    isCompleted={state === 'COMPLETED' || isCompleted}
                                     isPaused={state === 'PAUSED'}
                                     isResetting={isResetting}
                                     completionData={completionData}
@@ -1085,12 +1141,47 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                     isExhausted={wsData?.is_exhausted}
                                     onReplenish={handleReplenishCalls}
                                     onLeadAction={handleLeadAction}
+                                    onUserQueueRefresh={() => setUserQueueRefreshTrigger(Date.now())}
+                                    feedEvents={filteredEvents}
+                                    onClearFeed={handleClearFeed}
+                                    feedViewMode={viewMode}
+                                    onFeedViewModeChange={setViewMode}
                                     className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 min-h-[500px]"
                                 />
                             </div>
 
-                            {/* 1. AGENT QUEUE */}
-                            <AgentQueue
+                            {/* 1. USER ACTION PIPELINE (Replaces HumanQueue) */}
+                            <UserActionPanel
+                                campaignId={campaignId}
+                                campaignStatus={state === 'ACTIVE_READY' || state === 'WARMUP' || state === 'IN_CALL' ? 'ACTIVE' : 'PAUSED'}
+                                isStarted={hasStartedSession}
+                                refreshTrigger={userQueueRefreshTrigger}
+                                historyItems={historyItems}
+                                maxConcurrency={maxConcurrency}
+                                onStart={handleStartSession}
+                                onCallClick={(item) => {
+                                    setSelectedUserQueueItem(item);
+                                    setIsStatusDialogOpen(true);
+                                }}
+                                onContextClick={(item) => {
+                                    setContextLead({
+                                        id: item.lead_id,
+                                        item_id: item.id,
+                                        name: item.lead_name
+                                    });
+                                    setIsContextModalOpen(true);
+                                }}
+                            />
+
+                            {/* Visual Connector / Flow Indicator HIDDEN */}
+                            {/* <div className="flex justify-center -my-2 relative z-10 opacity-50">
+                                <div className="bg-zinc-200 dark:bg-zinc-800 rounded-full p-1.5 border-4 border-white dark:border-zinc-950">
+                                    <ArrowRight className="w-4 h-4 text-zinc-400 rotate-90" />
+                                </div>
+                            </div> */}
+
+                            {/* 2. AGENT QUEUE HIDDEN */}
+                            {/* <AgentQueue
                                 activeAgents={activeAgentsList}
                                 upcomingLeads={upcomingLeads}
                                 historyItems={historyItems}
@@ -1110,42 +1201,8 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                 }}
                                 onViewFullQueue={() => setIsQueueModalOpen(true)}
                                 onLeadAction={handleLeadAction}
-                            />
-
-                            {/* Visual Connector / Flow Indicator */}
-                            <div className="flex justify-center -my-2 relative z-10 opacity-50">
-                                <div className="bg-zinc-200 dark:bg-zinc-800 rounded-full p-1.5 border-4 border-white dark:border-zinc-950">
-                                    <ArrowRight className="w-4 h-4 text-zinc-400 rotate-90" />
-                                </div>
-                            </div>
-
-                            {/* 2. USER ACTION PIPELINE (Replaces HumanQueue) */}
-                            <UserActionPanel
-                                campaignId={campaignId}
-                                onCallClick={(item) => {
-                                    setSelectedUserQueueItem(item);
-                                    setIsStatusDialogOpen(true);
-                                }}
-                                onContextClick={(item) => {
-                                    setContextLead({
-                                        id: item.lead_id,
-                                        item_id: item.id,
-                                        name: item.lead_name
-                                    });
-                                    setIsContextModalOpen(true);
-                                }}
-                            />
+                            /> */}
                         </div>
-
-                        {/* Mission Control Feed (BTS) */}
-                        <ExecutionFeed
-                            campaignId={campaignId}
-                            isActive={state !== 'PAUSED' && state !== 'IDLE'}
-                            events={filteredEvents} // Pass filtered events
-                            onClear={handleClearFeed}
-                            viewMode={viewMode}
-                            onViewModeChange={setViewMode}
-                        />
 
                         {/* Agent Live Update Modal */}
                         <AgentLiveUpdateModal
@@ -1190,10 +1247,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                             onRefreshQueue={refreshCampaignData}
                         />
 
-                        {/* Persistent Call Logs */}
-                        <div className="mt-8">
+                        {/* Persistent Call Logs HIDDEN */}
+                        {/* <div className="mt-8">
                             {authCompanyId && <CallLogTable campaignId={campaignId} />}
-                        </div>
+                        </div> */}
                     </motion.div>
                 )}
 
@@ -1206,7 +1263,12 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => !isExtending && setIsExtendModalOpen(false)}
+                            onClick={() => {
+                                if (!isExtending) {
+                                    setIsExtendModalOpen(false);
+                                    setPendingAction(null);
+                                }
+                            }}
                             className="absolute inset-0 bg-zinc-950/60 backdrop-blur-xl"
                         />
                         <motion.div
@@ -1230,7 +1292,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-center gap-6">
-                                                    <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-indigo-500/10 to-violet-500/5 dark:from-indigo-500/20 dark:to-violet-500/10 flex items-center justify-center text-indigo-500 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-500/20 shadow-sm">
+                                                    <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500/10 to-violet-500/5 dark:from-orange-500/20 dark:to-violet-500/10 flex items-center justify-center text-orange-500 dark:text-orange-400 border border-orange-200/50 dark:border-orange-500/20 shadow-sm">
                                                         <Clock className="w-8 h-8" />
                                                     </div>
                                                     <div className="space-y-1">
@@ -1253,6 +1315,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                                     disabled={isExtending}
                                                     onClick={() => {
                                                         setIsExtendModalOpen(false);
+                                                        setPendingAction(null);
                                                         setShowWarningView(false);
                                                     }}
                                                     className="w-12 h-12 rounded-2xl hover:bg-zinc-100 dark:hover:bg-white/10 hover:rotate-90 transition-all duration-300"
@@ -1282,7 +1345,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={handleConnectCalendar}
-                                                            className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full px-4 h-8 gap-2 border border-indigo-100 dark:border-indigo-900/40"
+                                                            className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-full px-4 h-8 gap-2 border border-orange-100 dark:border-orange-900/40"
                                                         >
                                                             <Calendar className="w-3 h-3" />
                                                             Connect to Block
@@ -1333,8 +1396,8 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                                             <>
                                                                 {current.length > 0 && (
                                                                     <div className="mb-6">
-                                                                        <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2.5">
-                                                                            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                                                                        <h4 className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2.5">
+                                                                            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
                                                                             Current Window
                                                                         </h4>
                                                                         <div className="space-y-4">
@@ -1432,7 +1495,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                                             const end = format(endDt, 'HH:00');
                                                             setEditingWindows([...editingWindows, { day, start, end }]);
                                                         }}
-                                                        className="w-full h-16 rounded-[1.5rem] border-2 border-dashed border-zinc-100 dark:border-zinc-800/60 flex items-center justify-center gap-3 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-all font-black text-sm uppercase tracking-widest"
+                                                        className="w-full h-16 rounded-[1.5rem] border-2 border-dashed border-zinc-100 dark:border-zinc-800/60 flex items-center justify-center gap-3 text-zinc-400 hover:text-orange-500 hover:bg-orange-50/30 dark:hover:bg-orange-950/20 transition-all font-black text-sm uppercase tracking-widest"
                                                     >
                                                         <div className="w-6 h-6 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center border border-zinc-100 dark:border-zinc-700">
                                                             <Plus className="w-3.5 h-3.5" />
@@ -1446,9 +1509,9 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                                 <Button
                                                     onClick={handleSaveSchedule}
                                                     disabled={isExtending || editingWindows.length === 0}
-                                                    className="h-16 rounded-[1.5rem] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black text-lg hover:scale-[1.02] active:scale-[0.98] transition-all gap-3 relative overflow-hidden group shadow-2xl shadow-indigo-500/20"
+                                                    className="h-16 rounded-[1.5rem] bg-zinc-900 dark:bg-white text-white dark:text-black font-black text-lg hover:scale-[1.02] active:scale-[0.98] transition-all gap-3 relative overflow-hidden group shadow-2xl shadow-orange-500/20"
                                                 >
-                                                    {isExtending ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Sparkles className="w-5 h-5" />Save & Start Session</>}
+                                                    {isExtending ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Sparkles className="w-5 h-5" />{pendingAction ? "Save & Start Session" : "Save Schedule"}</>}
                                                 </Button>
                                             </div>
                                         </motion.div>
@@ -1485,7 +1548,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                                 <Button
                                                     onClick={() => commitSchedule(false)}
                                                     disabled={isExtending}
-                                                    className="h-16 rounded-[1.5rem] bg-indigo-600 hover:bg-indigo-700 text-white font-black shadow-xl shadow-indigo-600/20 transition-all active:scale-[0.98]"
+                                                    className="h-16 rounded-[1.5rem] bg-orange-600 hover:bg-orange-700 text-white font-black shadow-xl shadow-orange-600/20 transition-all active:scale-[0.98]"
                                                 >
                                                     Schedule for Later
                                                 </Button>
@@ -1522,7 +1585,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                 setIsStrategyMissingAlertOpen(false);
                                 if (onEditStrategy) onEditStrategy();
                             }}
-                            className="rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold h-12 px-8 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            className="rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black font-bold h-12 px-8 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                         >
                             Configure Strategy
                         </AlertDialogAction>
@@ -1535,7 +1598,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                 <AlertDialogContent className="rounded-[3rem] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-2xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-3">
-                            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                            <div className="p-2.5 bg-orange-100 dark:bg-orange-900/30 rounded-2xl text-orange-600 dark:text-orange-400">
                                 <Sparkles className="w-5 h-5" />
                             </div>
                             Initialization Required
@@ -1553,7 +1616,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                 setIsInitializationRequiredAlertOpen(false);
                                 if (onEditStrategy) onEditStrategy();
                             }}
-                            className="rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold h-12 px-8 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            className="rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black font-bold h-12 px-8 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                         >
                             Finalize Strategy
                         </AlertDialogAction>
@@ -1574,6 +1637,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                     }}
                     onSuccess={() => {
                         refreshCampaignData();
+                        setUserQueueRefreshTrigger(Date.now());
                     }}
                 />
             )}

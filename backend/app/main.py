@@ -79,9 +79,9 @@ async def run_reconciliation_worker():
             await asyncio.sleep(60) # Fail-safe sleep
 
 app = FastAPI(
-    title="Unclutr.ai API",
+    title="SquareUp API",
     description="""
-Backend for Unclutr.ai - The Decision & Control Layer for D2C.
+Backend for SquareUp - The Decision & Control Layer for D2C.
 
 ### 🔐 Authorization
 To test protected endpoints, click the **Authorize** button:
@@ -205,7 +205,7 @@ async def root(request: Request):
     return f"""
     <html>
         <head>
-            <title>Unclutr.ai - Shopify App</title>
+            <title>SquareUp - Shopify App</title>
             <style>
                 body {{ font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }}
                 .container {{ text-align: center; padding: 3rem; background: white; border-radius: 16px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); max-width: 500px; }}
@@ -221,7 +221,7 @@ async def root(request: Request):
         </head>
         <body>
             <div class="container">
-                <h1>🎯 Unclutr</h1>
+                <h1>🎯 SquareUp</h1>
                 <p>Shopify Integration Active</p>
                 <div class="version">Last Installed: {display_info}</div>
                 <div class="status">● Connected</div>
@@ -388,7 +388,7 @@ app.mount(f"{settings.API_V1_STR}/integrations/shopify", shopify_app)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "Unclutr.ai Backend", "version": "v2-root-fix"}
+    return {"status": "ok", "service": "SquareUp Backend", "version": "v2-root-fix"}
 
 
 

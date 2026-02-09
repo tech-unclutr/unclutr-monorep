@@ -134,7 +134,7 @@ export function OnboardingSummary({ data }: OnboardingSummaryProps) {
                 {Object.values(data.stack).some(arr => arr && arr.length > 0) && (
                     <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <ShoppingCart className="w-4 h-4 text-purple-500" /> Tech Stack
+                            <ShoppingCart className="w-4 h-4 text-orange-500" /> Tech Stack
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
                             {renderSection("Order Management", data.stack.orders)}

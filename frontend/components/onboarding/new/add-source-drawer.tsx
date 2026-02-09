@@ -549,7 +549,7 @@ function EmptyState({ searchQuery, onRequestClick }: { searchQuery: string; onRe
             {searchQuery && (
                 <button
                     onClick={onRequestClick}
-                    className="text-sm text-indigo-600 font-medium mt-2 hover:underline"
+                    className="text-sm text-orange-600 font-medium mt-2 hover:underline"
                 >
                     Request "{searchQuery}" here
                 </button>

@@ -304,8 +304,8 @@ export default function ChannelsPage() {
                     summary={renderSummary('qcom')}
                 >
                     <div className="space-y-6">
-                        <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100/50 mb-4">
-                            <p className="text-sm text-purple-900 leading-relaxed">
+                        <div className="bg-orange-50/50 rounded-xl p-4 border-orange-100/50 mb-4">
+                            <p className="text-sm text-orange-900 leading-relaxed">
                                 <span className="font-semibold">Tip:</span> Only active channels.
                             </p>
                         </div>

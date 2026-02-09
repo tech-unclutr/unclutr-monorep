@@ -37,11 +37,11 @@ export default function ControlTower() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500/30 font-sans p-6 overflow-hidden flex flex-col">
+        <div className="min-h-screen bg-[#050505] text-white selection:bg-orange-500/30 font-sans p-6 overflow-hidden flex flex-col">
             {/* Header */}
             <header className="max-w-[1600px] mx-auto w-full flex items-center justify-between mb-8 shrink-0">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 to-orange-400 flex items-center justify-center shadow-lg shadow-orange-500/20">
                         <Zap className="w-6 h-6 text-white" />
                     </div>
                     <div>

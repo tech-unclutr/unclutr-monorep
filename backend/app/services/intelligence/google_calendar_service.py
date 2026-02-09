@@ -198,11 +198,7 @@ class GoogleCalendarService:
             raise
 
     async def get_availability(self, conn: CalendarConnection) -> List[Dict[str, Any]]:
-        """Fetches free/busy status for the next 7 days across ALL calendars in parallel."""
-        # 1. Create Service (Blocking, so run in executor if heavy, but usually fast enough. 
-        # However, for pure async correctness, we'll keep it simple for now as build() is local mostly if not doing discovery)
-        # Actually discovery IS network. So let's wrap the whole interaction in executors.
-        
+        """Fetches free/busy status for the next 7 days across ALL calendars using Batch API."""
         import asyncio
         
         loop = asyncio.get_running_loop()
@@ -216,9 +212,10 @@ class GoogleCalendarService:
                 client_secret=settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
+            # Use cache_discovery=False to avoid issues with dynamic path discovery in some environments
+            # but usually it's better to build once. 
             return build('calendar', 'v3', credentials=creds)
 
-        # Offload service creation (discovery)
         service = await loop.run_in_executor(None, _build_service)
 
         # Ensure ISO format with 'Z'
@@ -227,13 +224,13 @@ class GoogleCalendarService:
         time_max = (today_start + timedelta(days=7)).isoformat().replace('+00:00', 'Z')
 
         try:
-            # 2. Get List of Calendars (Blocking Network Call)
+            # 1. Get List of Calendars (Blocking Network Call)
             def _fetch_calendar_list():
                 return service.calendarList().list().execute()
 
             calendar_list = await loop.run_in_executor(None, _fetch_calendar_list)
 
-            # STRICT FIX: User requested "Shared Team Calendars" (Reader/Writer) as well.
+            # Filter calendars (Owner, Writer, Reader)
             calendar_ids = [
                 c.get('id') for c in calendar_list.get('items', []) 
                 if c.get('accessRole') in ['owner', 'writer', 'reader']
@@ -244,43 +241,34 @@ class GoogleCalendarService:
             if not calendar_ids:
                 calendar_ids = ['primary']
             
-            # 3. Fetch Events in Parallel (Fan-out)
-            def _fetch_events(cal_id):
-                try:
-                    # Create a new service instance for this thread
-                    # This is crucial for thread safety as the googleapiclient service object is not thread-safe
-                    creds = google.oauth2.credentials.Credentials(
-                        token=conn.credentials.get("token"),
-                        refresh_token=conn.credentials.get("refresh_token"),
-                        token_uri=conn.credentials.get("token_uri"),
-                        client_id=settings.GOOGLE_CLIENT_ID,
-                        client_secret=settings.GOOGLE_CLIENT_SECRET,
-                        scopes=conn.credentials.get("scopes"),
-                    )
-                    service = build('calendar', 'v3', credentials=creds, cache_discovery=False)
-                    
-                    return service.events().list(
-                        calendarId=cal_id,
-                        timeMin=time_min,
-                        timeMax=time_max,
-                        singleEvents=True,
-                        orderBy='startTime'
-                    ).execute()
-                except Exception as cal_err:
-                    logger.warning(f"Error fetching events for calendar {cal_id}: {cal_err}")
-                    return None
-
-            # Create coroutines for each calendar
-            tasks = [
-                loop.run_in_executor(None, _fetch_events, cal_id)
-                for cal_id in calendar_ids
-            ]
+            # 2. Fetch Events using Batch API (Safe and Fast)
+            batch = service.new_batch_http_request()
+            batch_results = {}
             
-            # Gather results
-            results = await asyncio.gather(*tasks)
+            def callback(request_id, response, exception):
+                if exception is not None:
+                    logger.warning(f"Error fetching events for calendar {request_id}: {exception}")
+                else:
+                    batch_results[request_id] = response
+
+            for cal_id in calendar_ids:
+                batch.add(service.events().list(
+                    calendarId=cal_id,
+                    timeMin=time_min,
+                    timeMax=time_max,
+                    singleEvents=True,
+                    orderBy='startTime'
+                ), callback=callback, request_id=cal_id)
+
+            # Execute batch in executor to not block async loop
+            # We use a 20s timeout for the batch execution itself
+            await asyncio.wait_for(
+                loop.run_in_executor(None, batch.execute),
+                timeout=20.0
+            )
 
             all_busy = []
-            for events_result in results:
+            for cal_id, events_result in batch_results.items():
                 if not events_result:
                     continue
 
@@ -298,7 +286,6 @@ class GoogleCalendarService:
                     e_dt = end.get('dateTime')
 
                     # Fallback to date (All-Day events)
-                    # All-day events have 'date' but no 'dateTime'
                     if not s_dt and 'date' in start:
                         s_dt = f"{start['date']}T00:00:00Z"
                         e_dt = f"{end['date']}T00:00:00Z"
@@ -316,19 +303,11 @@ class GoogleCalendarService:
             # Sort by start time
             all_busy.sort(key=lambda x: x.get('start'))
             
-            # Debug log to file
-            diag_info = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "mode": "parallel_async",
-                "calendars": calendar_ids,
-                "busy_slots_count": len(all_busy)
-            }
-            # Optional: Comment out file logging if performance is critical, but good for verification
-            # with open("/button/backend/calendar_debug.log", "a") as f:
-            #     f.write(json.dumps(diag_info) + "\n")
-                
             return all_busy
 
+        except asyncio.TimeoutError:
+            logger.error("Timeout fetching calendar availability after 20s (Batch API)")
+            raise Exception("Calendar availability fetch timed out. Please try again.")
         except Exception as e:
             logger.error(f"Error in get_availability: {e}")
             raise
@@ -388,12 +367,9 @@ class GoogleCalendarService:
         logger.info(f"Full windows data: {execution_windows}")
         
         # STEP 1: Delete all existing events for this campaign
-        # This ensures Google Calendar matches the current database state exactly
         event_summary_prefix = f'{campaign.name} powered by SquareUp'
         
         def _delete_existing_campaign_events():
-            # Search for all events with this campaign's summary
-            # Look 30 days back and 90 days forward to catch all possible events
             time_min = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
             time_max = (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()
             
@@ -453,7 +429,6 @@ class GoogleCalendarService:
                 target_day = day_map.get(day_str.lower())
                 if target_day is not None:
                     current_day = today.weekday()
-                    # Calculate days until next occurrence
                     days_ahead = target_day - current_day
                     if days_ahead < 0:
                         days_ahead += 7
@@ -467,12 +442,10 @@ class GoogleCalendarService:
                 start_h, start_m = map(int, start_time_str.split(':'))
                 end_h, end_m = map(int, end_time_str.split(':'))
 
-                # Use the provided timezone for localization
                 tz = pytz.timezone(timezone_str or "UTC")
                 start_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=start_h, minute=start_m)))
                 end_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=end_h, minute=end_m)))
                 
-                # Convert to UTC for consistency in API calls
                 start_dt = start_dt_local.astimezone(pytz.utc)
                 end_dt = end_dt_local.astimezone(pytz.utc)
 
@@ -541,11 +514,8 @@ class GoogleCalendarService:
              return
 
         try:
-            # Parse the date string (YYYY-MM-DD)
             event_date = datetime.strptime(day_str, "%Y-%m-%d").date()
         except ValueError:
-            # Fallback for legacy "Day Name" (Monday, etc.) support if needed, or just strict fail
-            # For now, let's just log and fail if format is wrong, assuming frontend sends YYYY-MM-DD
             logger.warning(f"Invalid date format: {day_str}. Expected YYYY-MM-DD")
             return
 
@@ -553,12 +523,10 @@ class GoogleCalendarService:
             start_h, start_m = map(int, start_time_str.split(':'))
             end_h, end_m = map(int, end_time_str.split(':'))
 
-            # Use the provided timezone for localization
             tz = pytz.timezone(timezone_str or "UTC")
             start_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=start_h, minute=start_m)))
             end_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=end_h, minute=end_m)))
             
-            # Convert to UTC for consistency in API calls
             start_dt = start_dt_local.astimezone(pytz.utc)
             end_dt = end_dt_local.astimezone(pytz.utc)
 
@@ -588,5 +556,3 @@ class GoogleCalendarService:
             raise
 
 google_calendar_service = GoogleCalendarService()
-
-

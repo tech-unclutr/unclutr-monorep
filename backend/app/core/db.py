@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 # Database URL from settings (supports both SQLite and PostgreSQL)
 DATABASE_URL = settings.DATABASE_URL
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    DATABASE_URL = DATABASE_URL.replace("sslmode=require", "ssl=require")
 
 # Engine configuration
 engine_kwargs = {
@@ -25,6 +28,7 @@ if DATABASE_URL.startswith("postgresql"):
         "max_overflow": 20,  # Max connections beyond pool_size
         "pool_pre_ping": True,  # Verify connections before using
         "pool_recycle": 3600,  # Recycle connections after 1 hour
+        "connect_args": {"statement_cache_size": 0}, # Required for Supabase Transaction Pooler
     })
     logger.info("Using PostgreSQL with connection pooling")
 else:

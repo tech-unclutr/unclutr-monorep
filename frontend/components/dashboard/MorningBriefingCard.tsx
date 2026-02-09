@@ -21,7 +21,7 @@ export function MorningBriefingCard({ briefing, isActive }: MorningBriefingCardP
             transition={{ duration: 0.4 }}
             className={cn(
                 "relative overflow-hidden p-6 rounded-2xl border transition-all duration-500 h-full flex flex-col",
-                "bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent",
+                "bg-gradient-to-br from-indigo-500/20 via-orange-500/10 to-transparent",
                 isActive ? "border-indigo-500/30 shadow-2xl shadow-indigo-500/10" : "border-white/5 opacity-50"
             )}
         >

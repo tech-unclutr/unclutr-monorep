@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Unclutr.ai"
+    PROJECT_NAME: str = "SquareUp"
     API_V1_STR: str = "/api/v1"
     
     # Environment
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_LOCATION: str = "us-central1"
     
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://param@localhost:5432/postgres"  # Updated for Data Connect / Local Postgres
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://param@localhost:5432/postgres")
     
     # Security - Dev Auth (DISABLE IN PRODUCTION!)
     ENABLE_DEV_AUTH: bool = True  # Set to False in production

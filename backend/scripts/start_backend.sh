@@ -28,6 +28,8 @@ lsof -t -i :8000 | xargs kill -9 2>/dev/null || true
 pkill -f "uvicorn app.main:app" || true
 
 # 4. Start Server
+# 4. Start Server
 echo "⚡ Starting Uvicorn Server..."
+export PYTHONPATH=$PYTHONPATH:.
 # We use standard mode (no --reload) for stability, but you can change it if needed.
-"$VENV_UVICORN" app.main:app --port 8000 --reload
+"$VENV_UVICORN" app.main:app --port 8000 --reload > backend.log 2>&1

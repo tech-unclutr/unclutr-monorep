@@ -27,7 +27,7 @@ import {
     Loader2,
     Info
 } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn, formatPhoneNumber } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow, format } from "date-fns";
@@ -63,15 +63,27 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
             const data = await api.get(`/user-queue/${itemId}/context`);
             setContext(data);
         } catch (error) {
-            console.error("Failed to fetch lead context:", error);
+            const err = error as any;
+            console.error("Failed to fetch lead context:", err);
+            if (err.response) {
+                console.error("Error Response:", err.response.status, err.response.data);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        if (isOpen && itemId) {
-            fetchContext();
+        console.log("CallContextModal Effect Triggered:", { isOpen, itemId, leadId });
+        if (isOpen) {
+            if (itemId) {
+                console.log("Fetching context for item:", itemId);
+                fetchContext();
+            } else {
+                console.error("Missing itemId for CallContextModal", { leadId, leadName });
+                setIsLoading(false); // Stop loading so we don't spin forever
+                setContext(null); // Ensure context is null to trigger empty/error state if any
+            }
         }
     }, [isOpen, itemId]);
 
@@ -79,15 +91,21 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
     if (context) {
         // AI History
         if (context.ai_call_history) {
-            context.ai_call_history.forEach((call: any, idx: number) => {
+            const rawHistory = Array.isArray(context.ai_call_history)
+                ? context.ai_call_history
+                : [context.ai_call_history];
+
+            rawHistory.forEach((call: any, idx: number) => {
+                if (!call || Object.keys(call).length === 0) return;
+
                 timeline.push({
                     id: `ai-${idx}`,
                     type: 'AI_CALL',
-                    timestamp: call.timestamp,
-                    duration: call.duration,
+                    timestamp: call.created_at || call.timestamp,
+                    duration: call.call_duration || call.duration,
                     agent_name: call.agent_id || 'Maya',
-                    summary: call.summary,
-                    outcome: call.outcome,
+                    summary: call.transcript_summary || call.summary,
+                    outcome: call.call_status || call.outcome,
                     transcript: call.transcript
                 });
             });
@@ -107,14 +125,22 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
             });
         }
         // Sort by timestamp
-        timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        timeline.sort((a, b) => {
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+        });
     }
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-3xl rounded-[3rem] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-0 overflow-hidden h-[85vh] flex flex-col">
+                <DialogTitle className="sr-only">Call Context for {leadName}</DialogTitle>
+                <DialogDescription className="sr-only">
+                    View execution history and details for this lead.
+                </DialogDescription>
                 {/* Header Section */}
-                <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 text-white">
+                <div className="bg-gradient-to-br from-orange-600 to-orange-800 p-8 text-white">
                     <div className="flex items-center gap-6">
                         <Avatar className="w-20 h-20 border-4 border-white/20 shadow-2xl">
                             <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${leadId}`} />
@@ -124,11 +150,11 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                             <h2 className="text-4xl font-black tracking-tight">{leadName}</h2>
                             <div className="flex items-center gap-4">
                                 <Badge className="bg-white/20 hover:bg-white/30 text-white border-white/10 font-black">
-                                    {context?.lead?.contact_number || "No Phone"}
+                                    {formatPhoneNumber(context?.lead?.contact_number)}
                                 </Badge>
-                                <div className="flex items-center gap-1.5 text-indigo-100 text-sm font-bold">
+                                <div className="flex items-center gap-1.5 text-orange-100 text-sm font-bold">
                                     <Sparkles className="w-4 h-4" />
-                                    {context?.user_queue_item?.intent_strength || 0}% Intent Strength
+                                    {Math.round((context?.user_queue_item?.intent_strength || 0) * 100)}% Intent Strength
                                 </div>
                             </div>
                         </div>
@@ -139,7 +165,7 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                 <div className="flex-1 overflow-hidden flex flex-col">
                     {isLoading ? (
                         <div className="flex-1 flex items-center justify-center">
-                            <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+                            <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
                         </div>
                     ) : (
                         <div className="flex-1 flex flex-col md:flex-row divide-x divide-zinc-100 dark:divide-zinc-800">
@@ -197,7 +223,7 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                             {/* Right: Timeline */}
                             <div className="flex-1 p-6 overflow-hidden flex flex-col">
                                 <div className="flex items-center gap-3 mb-6">
-                                    <History className="w-5 h-5 text-indigo-500" />
+                                    <History className="w-5 h-5 text-orange-500" />
                                     <h4 className="text-base font-black text-zinc-900 dark:text-white tracking-tight">Timeline & Interactions</h4>
                                 </div>
 
@@ -208,7 +234,7 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                                                 {/* Point */}
                                                 <div className={cn(
                                                     "absolute -left-[45px] top-4 w-8 h-8 rounded-full border-4 border-white dark:border-zinc-950 flex items-center justify-center shadow-lg transition-transform group-hover:scale-110",
-                                                    event.type === 'AI_CALL' ? "bg-indigo-500" : "bg-emerald-500"
+                                                    event.type === 'AI_CALL' ? "bg-orange-500" : "bg-emerald-500"
                                                 )}>
                                                     {event.type === 'AI_CALL' ? <Bot className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
                                                 </div>
@@ -219,15 +245,26 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                                                             <span className="text-sm font-black text-zinc-900 dark:text-white">{event.agent_name}</span>
                                                             <Badge variant="secondary" className={cn(
                                                                 "text-[9px] font-black uppercase tracking-widest px-2 py-0",
-                                                                event.type === 'AI_CALL' ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600"
+                                                                event.type === 'AI_CALL' ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"
                                                             )}>
                                                                 {event.type === 'AI_CALL' ? "AI Agent" : "Human Agent"}
                                                             </Badge>
                                                         </div>
-                                                        <span className="text-[10px] font-bold text-zinc-400">{format(new Date(event.timestamp), "MMM d, h:mm a")}</span>
+                                                        <span className="text-[10px] font-bold text-zinc-400">
+                                                            {(() => {
+                                                                try {
+                                                                    if (!event.timestamp) return "N/A";
+                                                                    const date = new Date(event.timestamp);
+                                                                    if (isNaN(date.getTime())) return "Invalid Date";
+                                                                    return format(date, "MMM d, h:mm a");
+                                                                } catch {
+                                                                    return "N/A";
+                                                                }
+                                                            })()}
+                                                        </span>
                                                     </div>
 
-                                                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-5 border border-zinc-100 dark:border-zinc-800 group-hover:border-indigo-500/20 transition-colors">
+                                                    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-5 border border-zinc-100 dark:border-zinc-800 group-hover:border-orange-500/20 transition-colors">
                                                         <div className="flex items-start justify-between mb-4">
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center gap-2">
@@ -243,7 +280,7 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    className="h-8 rounded-xl text-indigo-500 font-bold text-[10px]"
+                                                                    className="h-8 rounded-xl text-orange-500 font-bold text-[10px]"
                                                                     onClick={() => setExpandedCallId(expandedCallId === event.id ? null : event.id)}
                                                                 >
                                                                     {expandedCallId === event.id ? "Hide Transcript" : "View Details"}
@@ -290,7 +327,7 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                     </p>
                     <div className="flex gap-3">
                         <Button variant="ghost" className="rounded-2xl font-bold h-12 px-6" onClick={onClose}>Close</Button>
-                        <Button className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 px-8 shadow-xl shadow-indigo-500/20">
+                        <Button className="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black h-12 px-8 shadow-xl shadow-orange-500/20">
                             <PhoneCall className="w-4 h-4 mr-2" />
                             RESUME CALL FLOW
                         </Button>

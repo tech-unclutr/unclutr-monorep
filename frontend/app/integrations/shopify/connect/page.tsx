@@ -33,7 +33,7 @@ export default function ShopifyConnectPage() {
             icon: TrendingUp,
             title: "Product Analytics",
             description: "SKU-level performance insights",
-            color: "purple"
+            color: "orange"
         }
     ];
 

@@ -38,7 +38,7 @@ export function ConfirmExitDialog({
             <AlertDialogContent className="max-w-md border-none bg-transparent p-0 shadow-none overflow-visible">
                 <div className="relative p-[1px] rounded-[2.5rem] overflow-hidden">
                     {/* Magical Gradient Border - Using Orange/Indigo for Warning */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/50 via-indigo-500/20 to-purple-500/50 animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/50 via-indigo-500/20 to-orange-500/50 animate-pulse" />
 
                     {/* Content Container */}
                     <div className="relative bg-white dark:bg-[#09090B] rounded-[2.5rem] p-8 md:p-10 backdrop-blur-xl border border-white/10 shadow-2xl">
@@ -92,7 +92,7 @@ export function ConfirmExitDialog({
                                     e.preventDefault();
                                     onConfirm();
                                 }}
-                                className="flex-1 rounded-2xl h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold transition-all text-lg shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 border-none flex items-center justify-center gap-2"
+                                className="flex-1 rounded-2xl h-14 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold transition-all text-lg shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 border-none flex items-center justify-center gap-2"
                             >
                                 {confirmLabel}
                             </AlertDialogAction>

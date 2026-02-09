@@ -87,3 +87,31 @@ export function formatRelativeTime(date: Date | string | number): string {
         .replace(" years", "y")
         .replace(" year", "y");
 }
+
+/**
+ * Formats a phone number for readability.
+ * Specifically handles Indian numbers (10 digits with optional +91).
+ * Example: 919737149414 -> +91 97371 49414
+ */
+export function formatPhoneNumber(phone: string | number | null | undefined): string {
+    if (!phone) return "No Phone";
+
+    // Convert to string and clean
+    let cleaned = String(phone).replace(/\D/g, '');
+
+    // Handle Indian numbers
+    if (cleaned.length === 12 && cleaned.startsWith('91')) {
+        return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`;
+    }
+
+    if (cleaned.length === 10) {
+        return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`;
+    }
+
+    // Fallback for other formats: just return as is if it doesn't match
+    if (cleaned.length > 10) {
+        return `+${cleaned}`;
+    }
+
+    return cleaned;
+}

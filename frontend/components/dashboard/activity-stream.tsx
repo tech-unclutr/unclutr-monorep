@@ -47,7 +47,7 @@ export function ActivityStream() {
             <CardHeader className="p-6 shrink-0 border-b border-white/5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                        <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                             <Activity className="w-5 h-5" />
                         </div>
                         <div>
@@ -58,10 +58,10 @@ export function ActivityStream() {
                     <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                             {[1, 2, 3].map(i => (
-                                <div key={i} className="w-1 h-3 bg-indigo-500/50 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+                                <div key={i} className="w-1 h-3 bg-orange-500/50 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
                             ))}
                         </div>
-                        <span className="text-[10px] text-indigo-400 uppercase font-bold tracking-widest leading-none">Live</span>
+                        <span className="text-[10px] text-orange-400 uppercase font-bold tracking-widest leading-none">Live</span>
                     </div>
                 </div>
             </CardHeader>
@@ -81,7 +81,7 @@ export function ActivityStream() {
                                     className="p-4 hover:bg-white/[0.02] transition-colors flex items-start gap-4"
                                 >
                                     <div className="mt-1">
-                                        <div className={`w-2 h-2 rounded-full ${log.action.includes('created') ? 'bg-indigo-500' :
+                                        <div className={`w-2 h-2 rounded-full ${log.action.includes('created') ? 'bg-orange-500' :
                                             log.action.includes('deleted') ? 'bg-rose-500' :
                                                 log.action.includes('updated') ? 'bg-amber-500' : 'bg-white/20'}`} />
                                     </div>

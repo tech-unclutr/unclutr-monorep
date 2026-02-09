@@ -1,4 +1,8 @@
+"use client";
+
 import React, { useState, useRef, memo } from 'react';
+// ... rest of imports are fine until line 61
+
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -53,11 +57,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, parseAsUTC } from "@/lib/utils";
-import { AgentStatus, UpcomingLead, HistoryItem } from "./AgentQueue";
+import { AgentStatus, UpcomingLead, HistoryItem, AGENT_PERSONAS } from "./AgentQueue";
 import { AgentLiveStream } from "./AgentLiveStream";
 import { CampaignActivityLog } from "@/components/campaign-activity/CampaignActivityLog";
 import { CampaignActivityModal } from "@/components/campaign-activity/CampaignActivityModal";
-import { CampaignSuccessPopup } from "./CampaignSuccessPopup";
+import { CohortBadge } from "./CohortBadge";
+import { ExecutionFeed } from "./ExecutionFeed";
+
 
 interface AgentIntelligenceDashboardProps {
     activeAgents: AgentStatus[];
@@ -87,6 +93,11 @@ interface AgentIntelligenceDashboardProps {
     onReplenish?: () => Promise<void>;
     onLeadAction?: (action: 'approve' | 'reschedule' | 'retry', leadId: string) => void;
     onRefreshQueue?: () => void | Promise<void>;
+    onUserQueueRefresh?: () => void;
+    feedEvents?: any[];
+    onClearFeed?: () => void;
+    feedViewMode?: 'live' | 'all';
+    onFeedViewModeChange?: (mode: 'live' | 'all') => void;
     className?: string;
 }
 
@@ -107,6 +118,11 @@ export default function AgentIntelligenceDashboard({
     onReplenish,
     onLeadAction,
     onRefreshQueue,
+    onUserQueueRefresh,
+    feedEvents = [],
+    onClearFeed,
+    feedViewMode = 'live',
+    onFeedViewModeChange,
     className
 }: AgentIntelligenceDashboardProps) {
     const [selectedActivityCall, setSelectedActivityCall] = useState<any>(null);
@@ -126,8 +142,10 @@ export default function AgentIntelligenceDashboard({
     const hasFailures = failedLeads.length > 0;
     const hasPendingLeads = allLeads.some(l => ['BACKLOG', 'READY', 'NEXT'].includes(l.status)) || upcomingLeads.length > 0;
     const isQueueEmpty = !hasPendingLeads && activeAgents.length === 0;
-    const isTargetAchieved = completionData ? completionData.total_completed >= completionData.total_targets : false;
-    const showCompletionUI = isCompleted || isTargetAchieved || isExhausted;
+    const isTargetAchieved = completionData ? (completionData.total_targets > 0 && completionData.total_completed >= completionData.total_targets) : false;
+    // Check for actual progress to prevent premature "Mission Accomplished" on empty campaigns
+    const hasProgress = completionData ? ((completionData.total_completed || 0) > 0 || (completionData.total_calls || 0) > 0) : false;
+    const showCompletionUI = isTargetAchieved || ((isCompleted || isExhausted) && hasProgress);
 
     // Extract Campaign ID from URL (since it's not passed as prop currently)
     // URL pattern: .../campaign/[id]
@@ -481,113 +499,117 @@ export default function AgentIntelligenceDashboard({
                             </div>
                         </div>
 
-                        <ScrollArea className="flex-1 bg-white dark:bg-zinc-900/30 rounded-[28px] border border-zinc-200 dark:border-zinc-800/50 p-4 shadow-sm">
-                            <div className="space-y-2">
-                                <AnimatePresence mode="popLayout">
-                                    {upcomingLeads
-                                        .filter(l => !hiddenLeadIds.has(l.lead_id))
-                                        .slice(0, 7) // Show only latest top 7 leads as requested
-                                        .map((lead, idx) => {
-                                            const isWaitlist = idx < maxConcurrency;
-                                            const isScheduled = lead.scheduled_for;
-                                            const scheduledTime = isScheduled ? new Date(lead.scheduled_for!).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit' }) : '';
+                        <ScrollArea className="flex-1 bg-white dark:bg-zinc-900/30 rounded-[28px] border border-zinc-200 dark:border-zinc-800/50 shadow-sm">
+                            <div className={cn("p-4 min-h-full flex flex-col", upcomingLeads.filter(l => !hiddenLeadIds.has(l.lead_id)).length === 0 && "items-center justify-center")}>
+                                {upcomingLeads.filter(l => !hiddenLeadIds.has(l.lead_id)).length > 0 ? (
+                                    <div className="space-y-2 w-full">
+                                        <AnimatePresence mode="popLayout">
+                                            {upcomingLeads
+                                                .filter(l => !hiddenLeadIds.has(l.lead_id))
+                                                .slice(0, 7)
+                                                .map((lead, idx) => {
+                                                    const isWaitlist = idx < maxConcurrency;
+                                                    const isScheduled = lead.scheduled_for;
+                                                    const scheduledTime = isScheduled ? new Date(lead.scheduled_for!).toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit' }) : '';
 
-                                            return (
-                                                <motion.div
-                                                    key={`upcoming-${lead.lead_id}-${idx}`}
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    exit={{ opacity: 0, x: -10, height: 0 }}
-                                                    className={cn(
-                                                        "group relative flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-default",
-                                                        isWaitlist
-                                                            ? "bg-white dark:bg-zinc-800/80 border-indigo-500/20 shadow-sm"
-                                                            : "bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800/80"
-                                                    )}
-                                                >
-                                                    <motion.div layoutId={`upcoming-avatar-${lead.lead_id}`}>
-                                                        <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm shrink-0">
-                                                            <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${lead.avatar_seed}`} />
-                                                            <AvatarFallback>{lead.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                                        </Avatar>
-                                                    </motion.div>
-                                                    <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-4 items-center">
-                                                        {/* Identity Column */}
-                                                        <div className="flex flex-col gap-0.5 overflow-hidden">
-                                                            <p className="text-[13px] font-bold text-zinc-800 dark:text-zinc-200 truncate leading-tight">
-                                                                {lead.name}
-                                                            </p>
-                                                            {lead.cohort && (
-                                                                <div className="flex items-center gap-1.5 overflow-hidden">
-                                                                    <div className="min-w-[4px] h-[4px] rounded-full bg-zinc-300 dark:bg-zinc-600 shrink-0" />
-                                                                    <span className="text-[9px] text-zinc-500 dark:text-zinc-500 font-medium uppercase tracking-wide truncate">
-                                                                        {lead.cohort}
-                                                                    </span>
-                                                                </div>
+                                                    return (
+                                                        <motion.div
+                                                            key={`upcoming-${lead.lead_id}-${idx}`}
+                                                            initial={{ opacity: 0, x: -10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -10, height: 0 }}
+                                                            className={cn(
+                                                                "group relative flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-default",
+                                                                isWaitlist
+                                                                    ? "bg-white dark:bg-zinc-800/80 border-indigo-500/20 shadow-sm"
+                                                                    : "bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800/80"
                                                             )}
-                                                        </div>
-
-                                                        {/* Status Column */}
-                                                        <div className="shrink-0 flex items-center justify-end">
-                                                            <Badge className={cn(
-                                                                "text-[8px] px-2 py-0 h-5 border-0 uppercase font-black tracking-widest text-center min-w-[70px]",
-                                                                isScheduled
-                                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-500"
-                                                                    : isWaitlist
-                                                                        ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                                                                        : "bg-zinc-500/10 text-zinc-500 dark:text-zinc-500"
-                                                            )}>
-                                                                {isScheduled ? (
-                                                                    <TooltipProvider>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <span className="flex items-center gap-1 cursor-help">
-                                                                                    <Clock className="w-2.5 h-2.5" />
-                                                                                    {scheduledTime}
-                                                                                </span>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent className="z-[9999]" side="top">
-                                                                                <p>{new Date(lead.scheduled_for!).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
-                                                                            </TooltipContent>
-                                                                        </Tooltip>
-                                                                    </TooltipProvider>
-                                                                ) : (isWaitlist ? 'Up Next' : 'Queue')}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-100 z-20">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleRemoveLead(lead.lead_id);
-                                                            }}
-                                                            className="p-2 bg-white dark:bg-zinc-900 text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl shadow-lg border border-zinc-100 dark:border-zinc-800 transition-all"
-                                                            title="Remove from queue"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })}
-                                </AnimatePresence>
-                                {upcomingLeads.length === 0 && (
-                                    <div className="h-48 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30 dark:bg-zinc-900/10 rounded-[28px] border border-dashed border-zinc-200 dark:border-zinc-800/50 mt-2">
+                                                            <motion.div layoutId={`upcoming-avatar-${lead.lead_id}`}>
+                                                                <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm shrink-0">
+                                                                    <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${lead.avatar_seed}`} />
+                                                                    <AvatarFallback>{lead.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                                                </Avatar>
+                                                            </motion.div>
+                                                            <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-4 items-center">
+                                                                <div className="flex flex-col gap-0.5 overflow-hidden">
+                                                                    <p className="text-[13px] font-bold text-zinc-800 dark:text-zinc-200 truncate leading-tight">
+                                                                        {lead.name}
+                                                                    </p>
+                                                                    {lead.cohort && (
+                                                                        <CohortBadge cohort={lead.cohort} variant="mini" />
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="shrink-0 flex items-center justify-end">
+                                                                    <Badge className={cn(
+                                                                        "text-[8px] px-2 py-0 h-5 border-0 uppercase font-black tracking-widest text-center min-w-[70px]",
+                                                                        isScheduled
+                                                                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-500"
+                                                                            : isWaitlist
+                                                                                ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                                                                                : "bg-zinc-500/10 text-zinc-500 dark:text-zinc-500"
+                                                                    )}>
+                                                                        {isScheduled ? (
+                                                                            <TooltipProvider>
+                                                                                <Tooltip>
+                                                                                    <TooltipTrigger asChild>
+                                                                                        <span className="flex items-center gap-1 cursor-help">
+                                                                                            <Clock className="w-2.5 h-2.5" />
+                                                                                            {scheduledTime}
+                                                                                        </span>
+                                                                                    </TooltipTrigger>
+                                                                                    <TooltipContent className="z-[9999]" side="top">
+                                                                                        <p>{new Date(lead.scheduled_for!).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                                                                                    </TooltipContent>
+                                                                                </Tooltip>
+                                                                            </TooltipProvider>
+                                                                        ) : (isWaitlist ? 'Up Next' : 'Queue')}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-100 z-20">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRemoveLead(lead.lead_id);
+                                                                    }}
+                                                                    className="p-2 bg-white dark:bg-zinc-900 text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl shadow-lg border border-zinc-100 dark:border-zinc-800 transition-all"
+                                                                    title="Remove from queue"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                        </AnimatePresence>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-8 text-center flex-1">
                                         <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
                                             transition={{ duration: 0.5, ease: "easeOut" }}
-                                            className="flex flex-col items-center gap-4"
+                                            className="relative p-8 flex flex-col items-center gap-4 max-w-[280px]"
                                         >
-                                            <div className="relative p-5 bg-white dark:bg-zinc-900 rounded-full border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden group">
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                <Sparkles className="w-8 h-8 text-indigo-400/60 animate-pulse" strokeWidth={1.5} />
+                                            <div className="relative mb-2">
+                                                <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
+                                                <div className="relative w-16 h-16 bg-gradient-to-tr from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 rounded-full border border-white/50 dark:border-zinc-700 shadow-sm flex items-center justify-center">
+                                                    <Sparkles className="w-7 h-7 text-indigo-500 dark:text-indigo-400" strokeWidth={1.5} />
+                                                </div>
+                                                <div className="absolute -top-1 -right-1">
+                                                    <div className="w-4 h-4 bg-white dark:bg-zinc-900 rounded-full flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-400 mb-2">Queue Clear</p>
-                                                <p className="text-[13px] font-bold text-zinc-600 dark:text-zinc-400 italic max-w-[200px] leading-relaxed">
-                                                    "Everyone's taken care of. Take a breath, we're all caught up."
+
+                                            <div className="space-y-1">
+                                                <h3 className="text-xs font-black tracking-[0.2em] text-zinc-900 dark:text-zinc-100 uppercase">Queue Clear</h3>
+                                                <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-[200px]">
+                                                    All leads processed. System standing by for new entries.
                                                 </p>
                                             </div>
                                         </motion.div>
@@ -602,26 +624,22 @@ export default function AgentIntelligenceDashboard({
                         <div className="flex items-center gap-2 px-2">
                             <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                             <h3 className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em]">Real-time Engagement Matrix</h3>
-                            {!isCompleted && <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse ml-1" />}
+                            {!isCompleted && !isPaused && <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse ml-1" />}
+                            {isPaused && <div className="w-2 h-2 bg-amber-500 rounded-full ml-1" />}
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-2 relative">
-                            {showCompletionUI && completionData ? (
-                                <CampaignSuccessPopup
-                                    isOpen={true}
-                                    onClose={() => { }}
-                                    stats={{
-                                        success_rate: completionData.completion_rate,
-                                        completed: completionData.total_completed,
-                                        cohort_progress: completionData.cohort_progress,
-                                        total_calls: completionData.total_calls,
-                                        call_distribution: completionData.call_distribution
-                                    }}
-                                    onReset={handleResetCampaign}
-                                    isExhausted={isExhausted}
-                                    onReplenish={onReplenish}
-                                />
-                            ) : (activeAgents && activeAgents.length > 0) ? ( // CHANGED: Render grid if array exists, even if full of nulls
+                            {isPaused ? (
+                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
+                                    <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center mb-4">
+                                        <Coffee className="w-5 h-5 text-amber-500" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Agents Waiting</h3>
+                                    <p className="text-xs text-zinc-500 max-w-[200px] mt-1">
+                                        Campaign is currently paused. Resuming will re-activate neural mesh uplinks.
+                                    </p>
+                                </div>
+                            ) : (activeAgents && activeAgents.length > 0) ? (
                                 <div className="h-full overflow-y-auto pr-2 scrollbar-hide">
                                     <div className="flex flex-col h-full">
                                         {/* Active Agents Grid - Always render maxConcurrency slots */}
@@ -633,13 +651,21 @@ export default function AgentIntelligenceDashboard({
                                                 const agent = activeAgents[idx];
 
                                                 if (agent) {
+                                                    // Find cohort for this lead
+                                                    const allLeads = Object.values(allLeadsByCohort).flat();
+                                                    const leadData = allLeads.find(l => l.lead_id === agent.lead_id);
+                                                    const agentWithCohort = {
+                                                        ...agent,
+                                                        cohort: leadData?.cohort || agent.cohort
+                                                    };
+
                                                     return (
                                                         <div
                                                             key={agent.agent_id || `active-${idx}`}
                                                             className="min-h-[400px] h-full transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
                                                         >
                                                             <AgentLiveStream
-                                                                agent={agent}
+                                                                agent={agentWithCohort}
                                                                 events={allEvents.filter(e => e.agent_id ? e.agent_id === agent.agent_id : e.agent_name === agent.agent_name)}
                                                                 index={idx}
                                                             />
@@ -648,30 +674,64 @@ export default function AgentIntelligenceDashboard({
                                                 }
 
                                                 // Placeholder Card
+                                                const persona = AGENT_PERSONAS[idx % AGENT_PERSONAS.length];
                                                 return (
                                                     <div
                                                         key={`placeholder-${idx}`}
-                                                        className="min-h-[400px] h-full rounded-[24px] border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/10 flex flex-col items-center justify-center p-8 text-center transition-all"
+                                                        className="min-h-[400px] h-full rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/10 flex flex-col items-center justify-center p-8 text-center transition-all group hover:bg-white/60 dark:hover:bg-zinc-900/20"
                                                     >
-                                                        <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-4 border border-zinc-200 dark:border-zinc-800/50">
-                                                            <div className="relative">
-                                                                <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full animate-pulse" />
-                                                                <Bot className="w-6 h-6 text-zinc-400 dark:text-zinc-600 relative z-10" />
+                                                        <div className="relative mb-6">
+                                                            <div className="absolute inset-0 bg-indigo-500/10 blur-2xl rounded-full scale-150 animate-pulse" />
+                                                            <Avatar className="w-20 h-20 border-2 border-white dark:border-zinc-800 shadow-xl relative z-10 transition-transform group-hover:scale-105 duration-500">
+                                                                <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${persona.seed}&backgroundColor=e0e7ff`} />
+                                                                <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{persona.name.slice(0, 2)}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-zinc-950 rounded-full border border-zinc-100 dark:border-zinc-800 flex items-center justify-center z-20 shadow-sm">
+                                                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                                                             </div>
                                                         </div>
-                                                        <h3 className="text-sm font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-2">Agent {idx + 1} Ready</h3>
-                                                        <p className="text-xs text-zinc-400 dark:text-zinc-600 font-medium">
-                                                            Waiting for next lead sequence...
+
+                                                        <div className="space-y-1">
+                                                            <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Agent {persona.name}</h3>
+                                                            <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-[0.2em]">{persona.tagline}</p>
+                                                        </div>
+
+                                                        <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium max-w-[180px] mt-4 leading-relaxed">
+                                                            System online and awaiting next lead sequence...
                                                         </p>
-                                                        <div className="flex items-center gap-1.5 mt-6 px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800/50">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 animate-pulse" />
-                                                            <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-wide">System Online</span>
+
+                                                        <div className="mt-8 px-4 py-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 flex items-center gap-2">
+                                                            <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                                                            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Autonomous Standby</span>
                                                         </div>
                                                     </div>
                                                 );
                                             })}
                                         </div>
                                     </div>
+                                </div>
+                            ) : (isCompleted || isExhausted) ? (
+                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
+                                    <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                                        <CheckCircle2 className="w-5 h-5 text-zinc-400" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                                        {hasFailures ? "Campaign Suspended" : "Campaign Ended"}
+                                    </h3>
+                                    <p className="text-xs text-zinc-500 max-w-[200px] mt-1 mb-6">
+                                        {hasFailures
+                                            ? `${failedLeads.length} leads failed to connect.`
+                                            : "No valid leads remaining in queue."}
+                                    </p>
+                                    <Button
+                                        onClick={() => setShowResetConfirm(true)}
+                                        disabled={isResetting}
+                                        variant="outline"
+                                        className="h-9 px-6 rounded-full border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400 font-bold text-[10px] uppercase tracking-widest gap-2"
+                                    >
+                                        {isResetting ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                                        {isResetting ? "Resetting..." : "Reset Metrics"}
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
@@ -713,6 +773,17 @@ export default function AgentIntelligenceDashboard({
                             </div>
                             <div className="flex items-center gap-4">
                                 <h4 className="text-[9px] font-black text-zinc-300 dark:text-zinc-600 uppercase tracking-tighter">Outcome Ledger</h4>
+                                {campaignId && historyItems.length > 0 && (
+                                    <a
+                                        href={`/campaigns/${campaignId}/history`}
+                                        className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-50 to-orange-50 dark:from-indigo-950/30 dark:to-orange-950/30 border border-indigo-100 dark:border-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all hover:shadow-md hover:scale-105"
+                                    >
+                                        <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                            See all {historyItems.length.toLocaleString()}
+                                        </span>
+                                        <ChevronRight className="w-3 h-3 text-indigo-500 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
+                                    </a>
+                                )}
                             </div>
                         </div>
 
@@ -720,7 +791,7 @@ export default function AgentIntelligenceDashboard({
                             <CampaignActivityLog
                                 history={historyItems.map(item => ({
                                     ...item,
-                                    phone_number: "Unknown",
+                                    phone_number: (item as any).phone_number || "Unknown",
                                     timestamp: (item as any).timestamp || new Date().toISOString(),
                                     duration: item.duration || 0,
                                     outcome: item.outcome || "Pending"
@@ -729,12 +800,13 @@ export default function AgentIntelligenceDashboard({
                                     setSelectedActivityCall(call);
                                     setIsActivityModalOpen(true);
                                 }}
+                                onCopyToQueue={onUserQueueRefresh}
                             />
                         </ScrollArea>
                     </div>
 
                     {/* Right: FULL ROSTER */}
-                    <div className="w-[360px] flex flex-col gap-4">
+                    <div className="w-[360px] flex flex-col gap-4 h-[450px]">
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-2">
@@ -915,6 +987,18 @@ export default function AgentIntelligenceDashboard({
                         </ScrollArea>
                     </div>
                 </div>
+
+                {/* FOLD 3: MISSION CONTROL FEED (Renamed to Processing Last Calls) */}
+                <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800/50 pt-6 pb-4">
+                    <ExecutionFeed
+                        campaignId={campaignId || ""}
+                        isActive={!isPaused && !isCompleted}
+                        events={feedEvents}
+                        onClear={onClearFeed}
+                        viewMode={feedViewMode}
+                        onViewModeChange={onFeedViewModeChange}
+                    />
+                </div>
             </div>
 
             {/* Footer Status Bar */}
@@ -939,6 +1023,7 @@ export default function AgentIntelligenceDashboard({
                 call={selectedActivityCall}
                 isOpen={isActivityModalOpen}
                 onClose={() => setIsActivityModalOpen(false)}
+                campaignId={campaignId || undefined}
             />
         </div>
     );

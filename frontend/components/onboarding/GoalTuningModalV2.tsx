@@ -39,9 +39,9 @@ const CARDS = [
         icon: Rocket,
         title: "Growth Hacker",
         desc: "Scale my best VIPs & Channels.",
-        color: "text-purple-400",
-        bg: "bg-purple-500/10",
-        border: "border-purple-500/20"
+        color: "text-orange-400",
+        bg: "bg-orange-500/10",
+        border: "border-orange-500/20"
     }
 ]
 
@@ -71,7 +71,7 @@ export function GoalTuningModalV2({ open, onOpenChange, onSave }: GoalTuningModa
                 <DialogHeader className="mb-4">
                     <h2 className="text-2xl text-center font-bold">What is your North Star this month?</h2>
                     <p className="text-center text-muted-foreground text-lg">
-                        Unclutr will re-calibrate its AI to find the insights that matter most to you.
+                        SquareUp will re-calibrate its AI to find the insights that matter most to you.
                     </p>
                 </DialogHeader>
 

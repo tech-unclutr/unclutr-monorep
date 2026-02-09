@@ -11,6 +11,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CohortBadge } from "./CohortBadge";
 
 interface LeadStatusCardProps {
     lead: {
@@ -95,6 +96,8 @@ export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
     const retriableStates = ['failed', 'voicemail', 'no_answer', 'busy', 'cancelled', 'hangup', 'silence', 'ambiguous', 'language_barrier', 'failed_connect'];
     const isRetriable = retriableStates.includes(lead.status?.toLowerCase() || '');
 
+    const { color: statusColor, Icon: StatusIcon } = getStatusInfo(lead.status || 'Waiting');
+
     return (
         <div className="w-[320px] p-1 flex flex-col gap-4">
             {/* Header */}
@@ -106,61 +109,16 @@ export function LeadStatusCard({ lead, type, onAction }: LeadStatusCardProps) {
                 <div className="flex-1 min-w-0">
                     <h4 className="text-base font-bold text-zinc-900 dark:text-white truncate">{lead.name}</h4>
                     <div className="flex items-center gap-2 mt-1">
-                        {(() => {
-                            const { color: statusColor, Icon: StatusIcon } = getStatusInfo(lead.status || 'Waiting');
-                            return (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Badge variant="outline" className={`text-[10px] px-2 py-0.5 h-6 rounded-full border flex items-center gap-1.5 cursor-default transition-all hover:scale-105 active:scale-95 ${statusColor}`}>
-                                                <StatusIcon className="w-3 h-3 shrink-0" />
-                                                <span className="truncate">
-                                                    {lead.status === 'PENDING_AVAILABILITY' ? 'Review Required' :
-                                                        lead.status === 'AMBIGUOUS' ? 'Unclear Outcome' :
-                                                            (lead.status || 'In Queue')}
-                                                </span>
-                                            </Badge>
-                                        </TooltipTrigger>
-                                        {(lead.outcome || lead.status === 'AMBIGUOUS') && (
-                                            <TooltipContent
-                                                side="top"
-                                                className="z-[100] bg-zinc-950/90 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-4 rounded-2xl max-w-[240px]"
-                                            >
-                                                <div className="flex flex-col gap-2.5">
-                                                    <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-                                                        {(() => {
-                                                            const statusKey = lead.status?.toLowerCase();
-                                                            const isError = statusKey === 'failed' || statusKey === 'intent_no' || statusKey === 'dnc' || statusKey === 'failed_connect';
-                                                            const isAmbiguous = statusKey === 'ambiguous' || statusKey === 'pending_availability';
-
-                                                            return (
-                                                                <div className={cn(
-                                                                    "p-1 rounded-md",
-                                                                    isError ? "bg-red-500/20 text-red-400" :
-                                                                        isAmbiguous ? "bg-amber-500/20 text-amber-400" : "bg-indigo-500/20 text-indigo-400"
-                                                                )}>
-                                                                    <AlertCircle className="w-3 h-3" />
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                        <span className="font-black uppercase tracking-[0.2em] text-[9px] text-white/50">
-                                                            {lead.status?.toLowerCase() === 'ambiguous' ? 'Neural Insight' : 'Status Detail'}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] leading-relaxed font-semibold text-white/90">
-                                                        {lead.outcome || (lead.status === 'AMBIGUOUS' ? 'AI connected but intent was unclear. Manual review suggested.' : '')}
-                                                    </p>
-                                                </div>
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
-                                </TooltipProvider>
-                            );
-                        })()}
-                        {lead.cohort && (
-                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md">
-                                {lead.cohort}
+                        <Badge variant="outline" className={`text-[10px] px-2 py-0.5 h-6 rounded-full border flex items-center gap-1.5 cursor-default transition-all hover:scale-105 active:scale-95 ${statusColor}`}>
+                            <StatusIcon className="w-3 h-3 shrink-0" />
+                            <span className="truncate">
+                                {lead.status === 'PENDING_AVAILABILITY' ? 'Review Required' :
+                                    lead.status === 'AMBIGUOUS' ? 'Unclear Outcome' :
+                                        (lead.status || 'In Queue')}
                             </span>
+                        </Badge>
+                        {lead.cohort && (
+                            <CohortBadge cohort={lead.cohort} variant="mini" />
                         )}
                     </div>
                 </div>

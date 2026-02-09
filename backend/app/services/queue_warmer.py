@@ -41,12 +41,30 @@ class QueueWarmer:
             # [FIX] Delete associated BolnaExecutionMap records first to avoid ForeignKeyViolationError
             # Although READY items shouldn't have maps, this provides a safety layer for stale/resumed state.
             from sqlalchemy import delete
+            from app.models.user_queue_item import UserQueueItem
+            
+            # 1. Identify which items are referenced by UserQueueItems (PROTECTED)
+            protected_stmt = select(UserQueueItem.original_queue_item_id).where(
+                UserQueueItem.original_queue_item_id.in_(item_ids)
+            )
+            protected_result = await session.execute(protected_stmt)
+            protected_ids = set(protected_result.scalars().all())
+            
+            # 2. Filter out protected items
+            items_to_delete = [item for item in items if item.id not in protected_ids]
+            ids_to_delete = [item.id for item in items_to_delete]
+            
+            if not ids_to_delete:
+                print(f"[QueueWarmer] All {len(items)} READY items are protected by UserQueue. Skipping cleanup.")
+                return
+
+            # 3. Delete Execution Maps for the items we ARE deleting
             await session.execute(
-                delete(BolnaExecutionMap).where(BolnaExecutionMap.queue_item_id.in_(item_ids))
+                delete(BolnaExecutionMap).where(BolnaExecutionMap.queue_item_id.in_(ids_to_delete))
             )
                 
-            print(f"[QueueWarmer] Clearing {len(items)} READY items for fresh start...")
-            for item in items:
+            print(f"[QueueWarmer] Clearing {len(items_to_delete)} READY items (Protected: {len(protected_ids)})...")
+            for item in items_to_delete:
                 await session.delete(item)
                 
             # Flush to ensure deletions happen before we try to create new ones
@@ -237,6 +255,8 @@ class QueueWarmer:
             .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
             .where(QueueItem.campaign_id == campaign.id)
             .where(QueueItem.status == "READY")
+            # [FIX] Do not dial items that are already promoted to the User Queue
+            .where(QueueItem.promoted_to_user_queue == False) 
             .order_by(QueueItem.priority_score.desc(), QueueItem.created_at.asc())
             .limit(slots * 5) # Fetch plenty of candidates
         )

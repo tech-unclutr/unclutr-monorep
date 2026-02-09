@@ -42,7 +42,7 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden rounded-[32px] shadow-2xl shadow-indigo-500/20">
+            <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden rounded-[32px] shadow-2xl shadow-orange-500/20">
                 <VisuallyHidden>
                     <DialogTitle>{agentName} Live Update</DialogTitle>
                     <DialogDescription>
@@ -58,7 +58,7 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
                             <div className="relative">
                                 <div className={cn(
                                     "absolute inset-0 blur-2xl opacity-40 rounded-full",
-                                    isActive ? "bg-indigo-500 animate-pulse" : "bg-zinc-500"
+                                    isActive ? "bg-orange-500 animate-pulse" : "bg-zinc-500"
                                 )} />
                                 <Avatar className="w-20 h-20 border-2 border-zinc-800 relative z-10 shadow-xl">
                                     <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${agentName}&backgroundColor=e0e7ff`} />
@@ -87,11 +87,11 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
                                 </div>
                                 <div className="flex items-center gap-4 text-xs font-medium text-zinc-400">
                                     <div className="flex items-center gap-1.5">
-                                        <Cpu className="w-3.5 h-3.5 text-indigo-500" />
+                                        <Cpu className="w-3.5 h-3.5 text-orange-500" />
                                         <span>Neural Model v4.2</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <Shield className="w-3.5 h-3.5 text-indigo-500" />
+                                        <Shield className="w-3.5 h-3.5 text-orange-500" />
                                         <span>Secure Uplink</span>
                                     </div>
                                 </div>
@@ -110,7 +110,7 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
                 <div className="mx-8 p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 backdrop-blur-sm flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
-                            <User className="w-5 h-5 text-indigo-400" />
+                            <User className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Active Target</p>
@@ -121,7 +121,7 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
                         <div className="flex items-center gap-3">
                             <div className="text-right">
                                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Duration</p>
-                                <p className="text-sm font-mono text-indigo-400">{Math.floor(agent.duration / 60)}:{(agent.duration % 60).toString().padStart(2, '0')}</p>
+                                <p className="text-sm font-mono text-orange-400">{Math.floor(agent.duration / 60)}:{(agent.duration % 60).toString().padStart(2, '0')}</p>
                             </div>
                             <div className="w-px h-8 bg-zinc-800 mx-2" />
                             <div className="flex items-center gap-1">
@@ -136,12 +136,12 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
                 <div className="p-8">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                            <Terminal className="w-4 h-4 text-indigo-500" />
+                            <Terminal className="w-4 h-4 text-orange-500" />
                             <h3 className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em]">Neural Logs & Thoughts</h3>
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
                                 <span className="text-[9px] font-bold text-zinc-500 uppercase">Syncing</span>
                             </div>
                         </div>
@@ -176,7 +176,7 @@ export function AgentLiveUpdateModal({ isOpen, onClose, agent, agentName, leadNa
                                             <div className="flex-1">
                                                 <span className={cn(
                                                     "font-bold mr-2 uppercase",
-                                                    event.type === 'system' ? "text-indigo-400" : event.type === 'thought' ? "text-amber-500" : "text-emerald-500"
+                                                    event.type === 'system' ? "text-orange-400" : event.type === 'thought' ? "text-amber-500" : "text-emerald-500"
                                                 )}>
                                                     {event.type === 'system' ? ">> CORE" : event.type === 'thought' ? ">> THOUGHT" : `>> ${agentName.split(' ')[0]}`}:
                                                 </span>

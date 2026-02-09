@@ -10,8 +10,8 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, and_, func
-
+from sqlmodel import select, and_, or_, func, desc
+from app.services.intelligence.llm_service import llm_service
 from app.models.queue_item import QueueItem
 from app.models.user_queue_item import UserQueueItem
 from app.models.bolna_execution_map import BolnaExecutionMap
@@ -24,18 +24,20 @@ logger = logging.getLogger(__name__)
 from app.models.campaign_event import CampaignEvent
 from app.services.websocket_manager import manager
 from app.models.campaign import Campaign
+from app.core.intelligence_utils import enrich_user_intent
 
 
 class UserQueueWarmer:
     """Service for managing the user action queue."""
     
-    MAX_USER_QUEUE_SIZE = 3
-    RESUME_USER_QUEUE_SIZE = 2
+    MAX_USER_QUEUE_SIZE = 4
+    RESUME_USER_QUEUE_SIZE = 3
     
     @staticmethod
     async def promote_to_user_queue(
         session: AsyncSession,
-        queue_item_id: UUID
+        queue_item_id: UUID,
+        manual_override: bool = False
     ) -> Optional[UserQueueItem]:
         """
         Promote a yes-intent lead from AI queue to user queue.
@@ -48,9 +50,9 @@ class UserQueueWarmer:
             Created UserQueueItem or None if already promoted
         """
         try:
-            # Get the queue item
+            # Get the queue item with row locking to prevent race conditions
             queue_item_result = await session.execute(
-                select(QueueItem).where(QueueItem.id == queue_item_id)
+                select(QueueItem).where(QueueItem.id == queue_item_id).with_for_update()
             )
             queue_item = queue_item_result.scalar_one_or_none()
             
@@ -62,6 +64,28 @@ class UserQueueWarmer:
             if queue_item.promoted_to_user_queue:
                 logger.info(f"Queue item {queue_item_id} already promoted")
                 return None
+
+            # [FIX] Check if a UserQueueItem already exists for this lead (Race Condition Guard)
+            # Even if promoted_to_user_queue is False (in race), checking the table ensures uniqueness.
+            existing_uqi_result = await session.execute(
+                select(UserQueueItem).where(
+                    and_(
+                        UserQueueItem.lead_id == queue_item.lead_id,
+                        UserQueueItem.campaign_id == queue_item.campaign_id,
+                        UserQueueItem.status != "CLOSED"
+                    )
+                )
+            )
+            existing_uqi = existing_uqi_result.scalars().first()
+            
+            if existing_uqi:
+                logger.info(f"UserQueueItem already exists for lead {queue_item.lead_id} (ID: {existing_uqi.id})")
+                # Mark as promoted to stop retrying
+                queue_item.promoted_to_user_queue = True
+                queue_item.promoted_at = datetime.utcnow()
+                session.add(queue_item)
+                await session.commit()
+                return existing_uqi
             
             # Get the lead
             lead_result = await session.execute(
@@ -77,7 +101,7 @@ class UserQueueWarmer:
             bolna_result = await session.execute(
                 select(BolnaExecutionMap).where(
                     BolnaExecutionMap.queue_item_id == queue_item_id
-                )
+                ).order_by(desc(BolnaExecutionMap.created_at)).limit(1)
             )
             bolna_map = bolna_result.scalar_one_or_none()
             
@@ -86,6 +110,11 @@ class UserQueueWarmer:
             ai_summary = "Lead expressed interest"
             intent_strength = 0.8  # Default
             confirmation_slot = None
+            
+            if manual_override:
+                ai_summary = "Manually selected for contact"
+                intent_strength = 1.0 # Treat as high intent to ensure visibility
+
             
             if bolna_map:
                 extracted_data = bolna_map.extracted_data or {}
@@ -114,7 +143,12 @@ class UserQueueWarmer:
                         logger.warning(f"Could not parse callback_time: {callback_time}, error: {e}")
                 
                 # Generate AI summary
-                if bolna_map.transcript_summary:
+                found_transcript = bolna_map.transcript or bolna_map.full_transcript
+                
+                if found_transcript:
+                     # Use LLM for concise summary
+                     ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                elif bolna_map.transcript_summary:
                     # Take first 200 chars as summary
                     ai_summary = bolna_map.transcript_summary[:200]
                 elif extracted_data.get("interested"):
@@ -124,7 +158,8 @@ class UserQueueWarmer:
             priority_score = UserQueueWarmer._calculate_priority_score(
                 confirmation_slot=confirmation_slot,
                 intent_strength=intent_strength,
-                retry_count=0
+                retry_count=0,
+                manual_priority_boost=0
             )
             
             # Create user queue item
@@ -171,6 +206,7 @@ class UserQueueWarmer:
         confirmation_slot: Optional[datetime],
         intent_strength: float,
         retry_count: int,
+        manual_priority_boost: int = 0,
         detected_at: Optional[datetime] = None
     ) -> int:
         """
@@ -230,6 +266,9 @@ class UserQueueWarmer:
         # 4. Retry Penalty (-100 per retry)
         score -= (retry_count * 100)
         
+        # 5. Manual Priority Boost
+        score += manual_priority_boost
+        
         return max(0, score)
     
     @staticmethod
@@ -268,6 +307,7 @@ class UserQueueWarmer:
                     confirmation_slot=item.confirmation_slot,
                     intent_strength=item.intent_strength,
                     retry_count=item.retry_count,
+                    manual_priority_boost=item.manual_priority_boost,
                     detected_at=item.detected_at
                 )
                 
@@ -359,11 +399,17 @@ class UserQueueWarmer:
         """
         try:
             # Find highest priority READY item
+            # [FIX] Respect retry cooldowns or future scheduled times
+            now = datetime.utcnow()
             result = await session.execute(
                 select(UserQueueItem).where(
                     and_(
                         UserQueueItem.campaign_id == campaign_id,
-                        UserQueueItem.status == "READY"
+                        UserQueueItem.status == "READY",
+                        or_(
+                            UserQueueItem.retry_scheduled_for.is_(None),
+                            UserQueueItem.retry_scheduled_for <= now
+                        )
                     )
                 ).order_by(
                     UserQueueItem.priority_score.desc(),
@@ -372,11 +418,32 @@ class UserQueueWarmer:
             )
             item = result.scalar_one_or_none()
             
+
             if not item:
-                return None
+                # [FALLBACK] Check for raw QueueItems (Open Leads)
+                # If the user is asking for a lead and none are in the User Queue, 
+                # we grab from the AI/Open Queue.
+                raw_result = await session.execute(
+                    select(QueueItem).where(
+                        and_(
+                            QueueItem.campaign_id == campaign_id,
+                            QueueItem.promoted_to_user_queue == False,
+                            QueueItem.status.in_(["ELIGIBLE", "READY", "COMPLETED"])
+                        )
+                    ).limit(1)
+                )
+                raw_item = raw_result.scalar_one_or_none()
+                
+                if raw_item:
+                    logger.info(f"Fallback: Auto-promoting raw lead {raw_item.lead_id} for user {user_id}")
+                    item = await UserQueueWarmer.promote_to_user_queue(session, raw_item.id, manual_override=True)
+                
+                if not item:
+                    return None
             
             # Lock for user (15 min timeout)
             item.status = "LOCKED"
+
             item.locked_by_user_id = user_id
             item.locked_at = datetime.utcnow()
             item.lock_expires_at = datetime.utcnow() + timedelta(minutes=15)
@@ -387,6 +454,14 @@ class UserQueueWarmer:
             await session.refresh(item)
             
             logger.info(f"Locked user queue item {item.id} for user {user_id}")
+            
+            logger.info(f"Locked user queue item {item.id} for user {user_id}")
+            
+            # Reset manual priority boost once locked/handled
+            if item.manual_priority_boost > 0:
+                item.manual_priority_boost = 0
+                session.add(item)
+                await session.commit()
             
             return item
             
@@ -468,3 +543,107 @@ class UserQueueWarmer:
         except Exception as e:
             logger.error(f"Error checking backpressure for campaign {campaign_id}: {e}")
             await session.rollback()
+
+    @staticmethod
+    async def poll_missed_promotions(
+        session: AsyncSession,
+        campaign_id: UUID
+    ) -> int:
+        """
+        Sweep for leads that SHOULD be in user queue but aren't.
+        Checks for:
+        1. BolnaExecutionMap has interested=true
+        2. QueueItem.promoted_to_user_queue is False
+        3. Campaign matches
+        """
+        print(f"DEBUG: poll_missed_promotions called for {campaign_id}")
+        try:
+            # Join QueueItem -> BolnaExecutionMap
+            # We want items that HAVE a bolna execution map indicating interest
+            # BUT have NOT been promoted yet.
+            
+            # Note: We filter in Python for the JSON logic to be safe/simple, 
+            # or we can try to do it in SQL if the dialect supports it.
+            # For now, let's fetch candidates and filter.
+            
+            query = select(QueueItem, BolnaExecutionMap).join(
+                BolnaExecutionMap, QueueItem.id == BolnaExecutionMap.queue_item_id
+            ).where(
+                and_(
+                    QueueItem.campaign_id == campaign_id,
+                    QueueItem.promoted_to_user_queue == False
+                )
+            )
+            
+            result = await session.execute(query)
+            candidates = result.all()
+            print(f"DEBUG: Found {len(candidates)} candidates for promotion check")
+            
+            promoted_count = 0
+            
+            for q_item, b_map in candidates:
+                try:
+                    # Check interest condition using robust agreement detection
+                    is_interested = False
+                    extracted = b_map.extracted_data or {}
+                    
+                    if not isinstance(extracted, dict):
+                        logger.warning(f"Malformed extracted_data for BolnaMap {b_map.id}")
+                        continue
+
+                    # [FIX] Use shared agreement logic instead of just "interested" flag
+                    # to match webhook behavior and dashboard fallback
+                    from app.core.agreement_utils import detect_agreement_status
+                    
+                    # Extract transcript from BolnaExecutionMap
+                    transcript_data = b_map.transcript or b_map.full_transcript or ""
+                    transcript_str = ""
+                    
+                    if isinstance(transcript_data, list):
+                        transcript_str = "\n".join([
+                            f"{turn.get('role', 'unknown')}: {turn.get('content', '')}"
+                            for turn in transcript_data
+                        ])
+                    elif isinstance(transcript_data, str):
+                        transcript_str = transcript_data
+
+                    # We need determined status - we can infer it or pass raw checks
+                    # Since we don't have the exact determined status here easily without re-running logic,
+                    # we rely on the extracted intent and the fact the call is essentially done/mapped.
+                    # [FIX] Align with Dashboard Logic: execution.py uses enriched intent and NO transcript text
+                    # This ensures that what the user sees as "OPEN" in Dashboard is exactly what gets promoted.
+                    raw_intent = str(extracted.get("user_intent", ""))
+                    call_outcome = b_map.call_outcome or b_map.call_status
+                    
+                    enriched_intent = enrich_user_intent(
+                        raw_intent=raw_intent,
+                        outcome=call_outcome,
+                        duration=b_map.call_duration or 0,
+                        transcript=transcript_str
+                    )
+
+                    agreement = detect_agreement_status(
+                        user_intent=enriched_intent,
+                        outcome=call_outcome,
+                        extracted_data=extracted,
+                        # transcript_text=transcript_str  <-- INTENTIONALLY OMITTED to match Dashboard logic
+                    )
+                    
+                    # Promotion Condition: Agreed with High/Medium confidence OR explicit interested flag
+                    if (agreement.get("agreed") and agreement.get("confidence") in ["high", "medium"]) or extracted.get("interested") is True:
+                        is_interested = True
+                    
+                    if is_interested:
+                        # Promote it!
+                        logger.info(f"Polling found missed promotion: Lead {q_item.lead_id} (Agreement: {agreement})")
+                        await UserQueueWarmer.promote_to_user_queue(session, q_item.id)
+                        promoted_count += 1
+                except Exception as e:
+                    logger.error(f"Error processing candidate promotion for Log {b_map.id}: {e}")
+                    continue
+            
+            return promoted_count
+            
+        except Exception as e:
+            logger.error(f"Error polling missed promotions for campaign {campaign_id}: {e}")
+            return 0

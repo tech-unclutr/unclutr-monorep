@@ -189,7 +189,7 @@ export function CallAnalysisSummary({ campaign, onClose, onViewCampaign }: CallA
                     <Button
                         onClick={onViewCampaign}
                         size="lg"
-                        className="rounded-xl px-8 h-14 bg-gray-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-100 shadow-xl shadow-gray-900/10 dark:shadow-white/5 transition-all group"
+                        className="rounded-xl px-8 h-14 bg-gray-900 dark:bg-white text-white dark:text-black font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-100 shadow-xl shadow-gray-900/10 dark:shadow-white/5 transition-all group"
                     >
                         <FileText className="w-5 h-5 mr-2" />
                         View Full Campaign Strategy

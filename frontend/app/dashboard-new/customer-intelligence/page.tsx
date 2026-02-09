@@ -34,7 +34,7 @@ import { CallAnalysisSummary } from "@/components/customer-intelligence/CallAnal
 import { ContactDetailsCard } from "@/components/customer-intelligence/ContactDetailsCard";
 import { CsvUploadCard } from "@/components/customer-intelligence/CsvUploadCard";
 import { CampaignComposer } from "@/components/customer-intelligence/CampaignComposer";
-import { CampaignSuccessPopup } from "@/components/customer-intelligence/CampaignSuccessPopup"; // [NEW]
+
 
 import { useAuth } from "@/context/auth-context"; // [NEW]
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
@@ -65,7 +65,6 @@ export default function CustomerIntelligencePage() {
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
     const [composerView, setComposerView] = useState<'composer' | 'leads'>('composer');
-    const [showSuccessPopup, setShowSuccessPopup] = useState(false); // [NEW]
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null); // [NEW] Track expanded card
     const [showGlance, setShowGlance] = useState(true); // [NEW] Start true to prevent flash
     const [glanceStarted, setGlanceStarted] = useState(false); // [NEW] Prevent re-triggering glance
@@ -692,16 +691,12 @@ export default function CustomerIntelligencePage() {
                                 <div className="lg:col-span-3">
                                     <CsvUploadCard
                                         className="h-full min-h-[400px] shadow-sm border-gray-200/80 dark:border-white/[0.08]"
-                                        onSuccess={() => setShowSuccessPopup(true)}
-                                        isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
-                                    />
-                                    <CampaignSuccessPopup
-                                        isOpen={showSuccessPopup}
-                                        onClose={() => setShowSuccessPopup(false)}
-                                        onComplete={() => {
+                                        onSuccess={() => {
                                             fetchCampaigns(0, false, latestCampaigns.length + 1);
                                         }}
+                                        isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                                     />
+
                                 </div>
 
                                 {/* 2. Calendar Sync Card - Subtle Quick Check (25% on desktop) */}

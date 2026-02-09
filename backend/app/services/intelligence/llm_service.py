@@ -181,6 +181,46 @@ class LLMService:
             logger.error(f"LLM Briefing failed: {e}")
             return f"Good morning, {user_name}. Here is your daily intelligence deck."
 
+    async def generate_concise_summary(self, transcript: str) -> str:
+        """
+        Generates a concise (max 20 words) summary of the call transcript for the user queue card.
+        """
+        if not self.model:
+            logger.warning("LLM model not available for summary generation")
+            return "Lead found by AI."
+
+        if not transcript or len(transcript) < 50:
+            return "Lead found by AI (Short call)."
+
+        # Cache key based on transcript hash
+        cache_key = f"convex_summary_{hash(transcript)}"
+        if cached := self._get_from_cache(cache_key):
+            return cached
+
+        prompt = f"""
+        You are a sales assistant. 
+        TRANSCRIPT:
+        {transcript}
+        
+        Task: Summarize this call for the agent who is about to call this lead. 
+        Focus on the lead's specific interest and any key constraints (time, budget, etc).
+        
+        Constraint: Max 20 words. No filler. Be direct.
+        Example: "Interested in premium plan, wants demo Tuesday. Budget approved."
+        """
+
+        try:
+            summary = await self._generate(prompt, model_type="flash")
+            # Enforce length just in case
+            if len(summary.split()) > 25:
+                 summary = " ".join(summary.split()[:25]) + "..."
+            
+            self._set_cache(cache_key, summary, ttl=86400) # 24h cache
+            return summary
+        except Exception as e:
+            logger.error(f"LLM Summary generation failed: {e}")
+            return "Lead found by AI. Check transcript."
+
     async def validate_and_fix(self, text: str, source_metrics: Dict[str, Any], error_msg: str, attempt: int = 1) -> str:
         """
         Self-Healing Mechanism:

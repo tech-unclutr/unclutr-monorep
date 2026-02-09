@@ -92,7 +92,7 @@ const HEADER_OPTIONS = [
     "that Drives Growth.",
     "that Sees Everything.",
     "that Just Works.",
-    "that Unclutrs Data."
+    "that Squares Up Data."
 ];
 
 export default function LoginPage() {

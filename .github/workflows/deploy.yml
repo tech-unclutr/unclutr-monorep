@@ -1,0 +1,66 @@
+name: Deploy SquareUp
+
+on:
+  push:
+    branches:
+      - squareup-dev
+      - squareup-almost
+      - squareup-live
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Environment Variables
+        id: env_setup
+        run: |
+          if [[ "${{ github.ref_name }}" == "squareup-live" ]]; then
+            echo "SERVICE=squareup-backend" >> $GITHUB_OUTPUT
+            echo "DB_SECRET=PROD_DATABASE_URL" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=production" >> $GITHUB_OUTPUT
+            echo "FIREBASE_TARGET=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == "squareup-almost" ]]; then
+            echo "SERVICE=squareup-backend-staging" >> $GITHUB_OUTPUT
+            echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+            echo "FIREBASE_TARGET=staging" >> $GITHUB_OUTPUT
+          else
+            echo "SERVICE=squareup-backend-dev" >> $GITHUB_OUTPUT
+            echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
+            echo "ENV_NAME=development" >> $GITHUB_OUTPUT
+            echo "FIREBASE_TARGET=preview" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy Frontend to Firebase
+        working-directory: ./frontend
+        run: |
+          firebase experiments:enable webframeworks
+          # Note: This assumes you have different hosting targets or projects set up
+          firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Backend to Cloud Run
+        working-directory: ./backend
+        run: |
+          # Fetch the secret dynamically based on branch
+          DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
+          
+          gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \
+            --source . \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }}"

@@ -9,10 +9,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 interface CampaignSuccessStats {
+    // Legacy fields
     total_leads?: number;
     completed: number;
     targets_met?: number;
     success_rate: number;
+    completion_rate?: number;
+
+    // New high-value metrics
+    hot_leads?: number;
+    agreed_leads?: number;
+    engaged_conversations?: number;
+    action_required?: number;
+    avg_call_duration?: number;
+    positive_sentiment_rate?: number;
+
+    // Existing
     cohort_progress?: Record<string, {
         target: number;
         completed: number;
@@ -57,7 +69,13 @@ export function CampaignSuccessPopup({ isOpen, onClose, stats, onReset, onComple
         }
     }
 
-    if (!stats) return null;
+    const defaultStats: CampaignSuccessStats = {
+        completed: 0,
+        success_rate: 0,
+        cohort_progress: {}
+    };
+
+    const activeStats = stats || defaultStats;
 
     // Theme Configuration
     const theme = isExhausted
@@ -198,66 +216,100 @@ export function CampaignSuccessPopup({ isOpen, onClose, stats, onReset, onComple
                     </motion.p>
                 </div>
 
-                {/* High Impact Metrics */}
+                {/* Hero Metrics - Only the numbers that matter */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="flex gap-3 w-full max-w-md"
+                    className="flex gap-4 w-full max-w-lg justify-center"
                 >
-                    <div className="flex-1 p-3 rounded-2xl bg-white/50 dark:bg-zinc-800/30 border border-white/50 dark:border-white/5 shadow-sm">
-                        <div className={cn("text-2xl font-black leading-none mb-1 tabular-nums", theme.successRateColor)}>
-                            {Math.round(stats.success_rate)}%
+                    {/* Hot Leads - Primary CTA */}
+                    <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-2xl bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200/50 dark:border-orange-800/30 shadow-lg">
+                        <div className="text-4xl font-black leading-none tabular-nums text-orange-600 dark:text-orange-400">
+                            {activeStats.hot_leads || 0}
                         </div>
-                        <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.1em]">Efficiency</p>
+                        <p className="text-[10px] font-black text-orange-500/70 uppercase tracking-wider">🔥 Hot Leads</p>
                     </div>
 
-                    <div className="flex-1 p-3 rounded-2xl bg-white/50 dark:bg-zinc-800/30 border border-white/50 dark:border-white/5 shadow-sm">
-                        <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 leading-none mb-1 tabular-nums">
-                            {stats.completed}
+                    {/* Scheduled Follow-ups - Secondary outcome */}
+                    <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200/50 dark:border-emerald-800/30 shadow-lg">
+                        <div className="text-4xl font-black leading-none tabular-nums text-emerald-600 dark:text-emerald-400">
+                            {activeStats.agreed_leads || 0}
                         </div>
-                        <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.1em]">Conversions</p>
+                        <p className="text-[10px] font-black text-emerald-500/70 uppercase tracking-wider">📅 Scheduled</p>
                     </div>
+
+                    {/* Action Queue - Direct CTA (only show if > 0) */}
+                    {(activeStats.action_required || 0) > 0 && (
+                        <div className="flex flex-col items-center gap-1 px-6 py-4 rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200/50 dark:border-amber-800/30 shadow-lg animate-pulse">
+                            <div className="text-4xl font-black leading-none tabular-nums text-amber-600 dark:text-amber-400">
+                                {activeStats.action_required}
+                            </div>
+                            <p className="text-[10px] font-black text-amber-500/70 uppercase tracking-wider">⚡ In Queue</p>
+                        </div>
+                    )}
                 </motion.div>
 
-                {/* Second Row: Calls Stats */}
+                {/* Expandable Campaign Summary */}
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="flex gap-3 w-full max-w-md mt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    className="w-full max-w-lg mt-4"
                 >
-                    <div className="flex-1 p-3 rounded-2xl bg-white/50 dark:bg-zinc-800/30 border border-white/50 dark:border-white/5 shadow-sm flex items-center justify-between px-6">
-                        <div>
-                            <div className="text-2xl font-black text-zinc-800 dark:text-zinc-200 leading-none mb-1 tabular-nums">
-                                {stats.total_calls || 0}
+                    <details className="group">
+                        <summary className="flex items-center justify-center gap-2 cursor-pointer text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors py-2 px-4 rounded-lg hover:bg-white/30 dark:hover:bg-zinc-800/30 list-none">
+                            <span>Campaign Summary</span>
+                            <svg className="w-3 h-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+
+                        <div className="mt-2 grid grid-cols-3 gap-2 px-2">
+                            {/* Avg Duration */}
+                            <div className="p-2.5 rounded-xl bg-white/40 dark:bg-zinc-800/20 border border-white/30 dark:border-white/5 text-center">
+                                <div className="text-lg font-black text-zinc-700 dark:text-zinc-300 leading-none mb-1 tabular-nums">
+                                    {Math.round(activeStats.avg_call_duration || 0)}s
+                                </div>
+                                <p className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Avg Duration</p>
                             </div>
-                            <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.1em]">Total Calls</p>
+
+                            {/* Positive Sentiment */}
+                            <div className="p-2.5 rounded-xl bg-white/40 dark:bg-zinc-800/20 border border-white/30 dark:border-white/5 text-center">
+                                <div className="text-lg font-black text-zinc-700 dark:text-zinc-300 leading-none mb-1 tabular-nums">
+                                    {Math.round(activeStats.positive_sentiment_rate || 0)}%
+                                </div>
+                                <p className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Positive</p>
+                            </div>
+
+                            {/* Total Calls */}
+                            <div className="p-2.5 rounded-xl bg-white/40 dark:bg-zinc-800/20 border border-white/30 dark:border-white/5 text-center">
+                                <div className="text-lg font-black text-zinc-700 dark:text-zinc-300 leading-none mb-1 tabular-nums">
+                                    {activeStats.total_calls || 0}
+                                </div>
+                                <p className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Total Calls</p>
+                            </div>
+
+                            {/* Engaged Conversations */}
+                            <div className="p-2.5 rounded-xl bg-white/40 dark:bg-zinc-800/20 border border-white/30 dark:border-white/5 text-center col-span-3">
+                                <div className="text-lg font-black text-indigo-600 dark:text-indigo-400 leading-none mb-1 tabular-nums">
+                                    {activeStats.engaged_conversations || 0}
+                                </div>
+                                <p className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">💬 Engaged Conversations</p>
+                            </div>
                         </div>
-                        <div className="h-8 w-px bg-zinc-200 dark:bg-zinc-700/50" />
-                        <div className="flex flex-col gap-1 text-right">
-                            {Object.entries(stats.call_distribution || {})
-                                .sort(([, a], [, b]) => b - a)
-                                .slice(0, 2)
-                                .map(([status, count]) => (
-                                    <div key={status} className="flex items-center gap-1.5 justify-end">
-                                        <span className="text-[9px] font-bold text-zinc-500 lowercase first-letter:uppercase">{status.replace(/_/g, ' ')}</span>
-                                        <Badge variant="secondary" className="h-3.5 px-1 text-[8px] font-black tabular-nums bg-white/50 dark:bg-black/20">{count}</Badge>
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
+                    </details>
                 </motion.div>
 
                 {/* Mini Cohort Distribution */}
-                {stats.cohort_progress && (
+                {activeStats.cohort_progress && (
                     <div className="w-full max-w-md space-y-1.5 mt-2">
                         <div className="flex items-center justify-between px-1">
                             <h5 className="text-[9px] uppercase font-black text-zinc-400 tracking-widest">Targets</h5>
                             <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800 mx-3 opacity-30" />
                         </div>
                         <div className="max-h-[100px] overflow-y-auto pr-1 custom-scrollbar space-y-1">
-                            {Object.entries(stats.cohort_progress).sort(([_, a], [__, b]) => (b.completed / b.target) - (a.completed / a.target)).map(([cohort, progress], idx) => (
+                            {Object.entries(activeStats.cohort_progress).sort(([_, a], [__, b]) => (b.completed / b.target) - (a.completed / a.target)).map(([cohort, progress], idx) => (
                                 <div
                                     key={cohort}
                                     className="flex items-center justify-between px-3 py-1.5 bg-white/40 dark:bg-zinc-800/20 rounded-xl border border-white/30 dark:border-white/5"

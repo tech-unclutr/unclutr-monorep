@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 def enrich_user_intent(raw_intent: str, outcome: str, duration: int, transcript: str) -> str:
     """
     Enriches generic 'no intent' messages with technical context from the call.
@@ -45,3 +47,33 @@ def enrich_user_intent(raw_intent: str, outcome: str, duration: int, transcript:
         return "Call was automatically forwarded to voicemail."
     
     return raw_intent
+
+def extract_next_step(intent: str) -> Tuple[str, Optional[str]]:
+    """
+    Separates the core insight (Observation) from the next step (Action).
+    Returns (insight, next_step).
+    """
+    if not intent:
+        return "", None
+        
+    intent_lower = intent.lower()
+    
+    # Pattern 1: "... and schedule ..."
+    if " and schedule " in intent_lower:
+        parts = intent.split(" and schedule ", 1)
+        return parts[0].strip(), "Schedule " + parts[1].strip()
+        
+    # Pattern 2: "... and wants to schedule ..."
+    if " and wants to schedule " in intent_lower:
+        parts = intent.split(" and wants to schedule ", 1)
+        return parts[0].strip(), "Schedule " + parts[1].strip()
+
+    # Pattern 3: "Schedule a ..." (Imperative start)
+    if intent_lower.startswith("schedule ") or intent_lower.startswith("book "):
+        return "User intends to book a slot.", intent
+        
+    # Pattern 4: "Call back ..."
+    if intent_lower.startswith("call back") or " wants a call back" in intent_lower:
+        return "User requested a callback.", "Call back user"
+
+    return intent, None

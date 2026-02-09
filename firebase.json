@@ -1,15 +1,48 @@
 {
-  "hosting": {
-    "source": "frontend",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "frameworksBackend": {
-      "region": "us-central1"
+  "hosting": [
+    {
+      "target": "production",
+      "source": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "us-central1"
+      },
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "squareup-backend",
+            "region": "us-central1"
+          }
+        }
+      ]
+    },
+    {
+      "target": "staging",
+      "source": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "us-central1"
+      },
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "squareup-backend-staging",
+            "region": "us-central1"
+          }
+        }
+      ]
     }
-  },
+  ],
   "emulators": {
     "dataconnect": {
       "dataDir": "dataconnect/.dataconnect/pgliteData"

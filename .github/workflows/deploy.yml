@@ -49,13 +49,23 @@ jobs:
         working-directory: ./frontend
         run: |
           firebase experiments:enable webframeworks
-          # Note: This assumes you have different hosting targets or projects set up
-          firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
+          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Run Database Migrations
+        working-directory: ./backend
+        run: |
+          # Use the same Python environment/deps as the app
+          pip install alembic psycopg2-binary sqlalchemy sqlmodel pydantic-settings
+          
+          # Fetch the secret dynamically based on branch
+          DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
+          
+          # Execute migration
+          DATABASE_URL="$DB_URL_VAL" ENVIRONMENT="${{ steps.env_setup.outputs.ENV_NAME }}" alembic upgrade head
 
       - name: Deploy Backend to Cloud Run
         working-directory: ./backend
         run: |
-          # Fetch the secret dynamically based on branch
           DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
           
           gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \

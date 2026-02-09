@@ -28,7 +28,10 @@ if DATABASE_URL.startswith("postgresql"):
         "max_overflow": 20,  # Max connections beyond pool_size
         "pool_pre_ping": True,  # Verify connections before using
         "pool_recycle": 3600,  # Recycle connections after 1 hour
-        "connect_args": {"statement_cache_size": 0}, # Required for Supabase Transaction Pooler
+        "connect_args": {
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0
+        }, # Required for Supabase Transaction Pooler
     })
     logger.info("Using PostgreSQL with connection pooling")
 else:

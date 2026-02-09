@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "unclutr-monorep"
-  }
+  },
+  "targets": {
+    "unclutr-monorep": {
+      "hosting": {
+        "production": [
+          "squareup-production"
+        ],
+        "staging": [
+          "squareup-staging"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

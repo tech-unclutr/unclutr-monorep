@@ -49,13 +49,17 @@ jobs:
         working-directory: ./backend
         run: |
           # Use the same Python environment/deps as the app
-          pip install alembic psycopg2-binary sqlalchemy sqlmodel pydantic-settings
+          pip install alembic psycopg2-binary sqlalchemy sqlmodel pydantic-settings asyncpg
           
           # Fetch the secret dynamically based on branch
           DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
           
           # Execute migration
           DATABASE_URL="$DB_URL_VAL" ENVIRONMENT="${{ steps.env_setup.outputs.ENV_NAME }}" alembic upgrade head
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm install
 
       - name: Deploy Frontend to Firebase
         run: |

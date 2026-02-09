@@ -4,10 +4,10 @@ set -e
 # Define paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
-VENV_PIP="/tmp/venv_unclutr/bin/pip"
-VENV_PYTHON="/tmp/venv_unclutr/bin/python"
-VENV_RUFF="/tmp/venv_unclutr/bin/ruff"
-VENV_UVICORN="/tmp/venv_unclutr/bin/uvicorn"
+VENV_PIP="$BACKEND_DIR/venv/bin/pip"
+VENV_PYTHON="$BACKEND_DIR/venv/bin/python"
+VENV_RUFF="$BACKEND_DIR/venv/bin/ruff"
+VENV_UVICORN="$BACKEND_DIR/venv/bin/uvicorn"
 
 echo "🚀 Starting Unclutr Backend..."
 cd "$BACKEND_DIR"

@@ -32,7 +32,7 @@ class Integration(SQLModel, table=True):
     workspace_id: uuid.UUID = Field(foreign_key="workspace.id", index=True)
     datasource_id: uuid.UUID = Field(foreign_key="data_source.id", index=True)
     
-    status: IntegrationStatus = Field(default=IntegrationStatus.INACTIVE, sa_column=Column(String))
+    status: str = Field(default=IntegrationStatus.INACTIVE, sa_column=Column(String))
     
     # Storage for credentials and config
     # Note: In production, 'credentials' should be encrypted at rest or stored in a secrets manager

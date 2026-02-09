@@ -76,6 +76,14 @@ async def heal_integration_constraints(engine):
             # Add missing campaign cohort columns
             await ensure_column_exists(conn, 'campaigns', 'cohort_questions', 'JSONB', "'{}'")
             await ensure_column_exists(conn, 'campaigns', 'cohort_incentives', 'JSONB', "'{}'")
+            
+            # --- 1b. Data Normalization (Enums) ---
+            # Fixes case-sensitivity issues with SQLAlchemy IntegrationStatus Enum
+            await conn.execute(text("""
+                UPDATE integration 
+                SET status = UPPER(status) 
+                WHERE status != UPPER(status)
+            """))
     except Exception as e:
         logger.error(f"Failed to ensure schema consistency: {e}")
 

@@ -67,9 +67,18 @@ jobs:
         run: |
           DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
           
+          # Dynamic URLs based on environment
+          if [[ "${{ steps.env_setup.outputs.ENV_NAME }}" == "production" ]]; then
+            BASE_URL="https://app.joinsquareup.com"
+          elif [[ "${{ steps.env_setup.outputs.ENV_NAME }}" == "staging" ]]; then
+            BASE_URL="https://almost.joinsquareup.com"
+          else
+            BASE_URL="https://unclutr-monorep.web.app" # Default for dev branch
+          fi
+
           gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \
             --source . \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }}"
+            --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }},BACKEND_URL=$BASE_URL,FRONTEND_URL=$BASE_URL,GOOGLE_REDIRECT_URI=$BASE_URL/api/v1/intelligence/calendar/google/callback"

@@ -61,11 +61,6 @@ jobs:
         working-directory: ./frontend
         run: npm install
 
-      - name: Deploy Frontend to Firebase
-        run: |
-          firebase experiments:enable webframeworks
-          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --token ${{ secrets.FIREBASE_TOKEN }}
-
       - name: Deploy Backend to Cloud Run
         working-directory: ./backend
         run: |
@@ -86,3 +81,8 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }},BACKEND_URL=$BASE_URL,FRONTEND_URL=$BASE_URL,GOOGLE_REDIRECT_URI=$BASE_URL/api/v1/intelligence/calendar/google/callback"
+
+      - name: Deploy Frontend to Firebase
+        run: |
+          firebase experiments:enable webframeworks
+          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --token ${{ secrets.FIREBASE_TOKEN }}

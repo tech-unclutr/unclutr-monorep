@@ -19,6 +19,13 @@
             "region": "us-central1"
           }
         }
+      ],
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/dashboard",
+          "type": 301
+        }
       ]
     },
     {
@@ -39,6 +46,13 @@
             "serviceId": "squareup-backend-staging",
             "region": "us-central1"
           }
+        }
+      ],
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/dashboard",
+          "type": 301
         }
       ]
     }

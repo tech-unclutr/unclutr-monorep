@@ -2169,7 +2169,15 @@ async def hard_reset_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    # 0. Delete UserQueueItems (Fix for ForeignKeyViolationError)
+    # 0. Delete UserCallLogs (Depends on UserQueueItems)
+    # Must be deleted first as they reference UserQueueItems
+    from app.models.user_call_log import UserCallLog
+    stmt_user_logs = select(UserCallLog).where(UserCallLog.campaign_id == campaign_id)
+    user_logs = (await session.execute(stmt_user_logs)).scalars().all()
+    for u_log in user_logs:
+        await session.delete(u_log)
+
+    # 1. Delete UserQueueItems (Fix for ForeignKeyViolationError)
     # These reference QueueItems, so they must go first.
     from app.models.user_queue_item import UserQueueItem
     stmt_user_q = select(UserQueueItem).where(UserQueueItem.campaign_id == campaign_id)
@@ -2177,25 +2185,25 @@ async def hard_reset_campaign(
     for u_item in user_items:
         await session.delete(u_item)
 
-    # 1. Delete BolnaExecutionMaps
+    # 2. Delete CallLogs (Depends on QueueItems via user_queue_item_id)
+    stmt_logs = select(CallLog).where(CallLog.campaign_id == campaign_id)
+    logs = (await session.execute(stmt_logs)).scalars().all()
+    for log in logs:
+        await session.delete(log)
+
+    # 3. Delete BolnaExecutionMaps (Depends on QueueItems)
     stmt_maps = select(BolnaExecutionMap).where(BolnaExecutionMap.campaign_id == campaign_id)
     maps = (await session.execute(stmt_maps)).scalars().all()
     for m in maps:
         await session.delete(m)
         
-    # 2. Delete QueueItems
+    # 4. Delete QueueItems (Root of execution data)
     stmt_q = select(QueueItem).where(QueueItem.campaign_id == campaign_id)
     items = (await session.execute(stmt_q)).scalars().all()
     for item in items:
         await session.delete(item)
         
-    # 3. Delete CallLogs
-    stmt_logs = select(CallLog).where(CallLog.campaign_id == campaign_id)
-    logs = (await session.execute(stmt_logs)).scalars().all()
-    for log in logs:
-        await session.delete(log)
-        
-    # 4. Reset Campaign Status
+    # 5. Reset Campaign Status
     campaign.status = "DRAFT"
     campaign.updated_at = datetime.utcnow()
     session.add(campaign)

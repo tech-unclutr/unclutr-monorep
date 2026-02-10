@@ -28,4 +28,6 @@ EXPOSE 8080
 
 # Command to run the application
 # We use uvicorn with 0.0.0.0 to allow external traffic
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Command to run the application
+# Use shell form to expand PORT variable, but exec uvicorn to receive signals
+CMD sh -c "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"

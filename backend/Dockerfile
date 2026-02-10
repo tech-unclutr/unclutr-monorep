@@ -1,5 +1,5 @@
-# Use official Python image
-FROM python:3.10-slim
+# Use official Python image (Full version to avoid missing shared libs for AI/GRPC)
+FROM python:3.10
 
 # Set working directory
 WORKDIR /app

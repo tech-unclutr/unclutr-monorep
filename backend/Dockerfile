@@ -34,5 +34,9 @@ EXPOSE 8080
 COPY scripts/start_prod.sh /app/scripts/start_prod.sh
 RUN chmod +x /app/scripts/start_prod.sh
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()" || exit 1
+
 # Use list syntax for CMD to avoid shell wrapping
 CMD ["/app/scripts/start_prod.sh"]

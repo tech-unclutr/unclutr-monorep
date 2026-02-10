@@ -9,11 +9,31 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+
 # Database URL from settings (supports both SQLite and PostgreSQL)
 DATABASE_URL = settings.DATABASE_URL
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-    DATABASE_URL = DATABASE_URL.replace("sslmode=require", "ssl=require")
+
+if "postgresql+asyncpg" in DATABASE_URL:
+    # Robustly handle sslmode which asyncpg doesn't support directly in the URL
+    parsed_url = urlparse(DATABASE_URL)
+    query_params = parse_qs(parsed_url.query)
+    
+    # If sslmode is present, handle it
+    if "sslmode" in query_params:
+        sslmode = query_params.pop("sslmode")[0]
+        # asyncpg uses 'ssl' parameter instead of 'sslmode'
+        # 'require', 'verify-ca', 'verify-full' usually map to ssl=True or specific contexts
+        # but the simplest fix for "unexpected keyword argument 'sslmode'" is to remove it 
+        # or convert it to 'ssl'
+        if sslmode == "require":
+            query_params["ssl"] = ["require"]
+    
+    # Reconstruct URL without problematic arguments
+    new_query = urlencode(query_params, doseq=True)
+    DATABASE_URL = urlunparse(parsed_url._replace(query=new_query))
 
 # Engine configuration
 engine_kwargs = {

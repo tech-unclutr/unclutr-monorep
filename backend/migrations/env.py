@@ -22,7 +22,22 @@ config = context.config
 
 # Override sqlalchemy.url with our DATABASE_URL from settings
 # Use the full asyncpg URL
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+if "postgresql+asyncpg" in db_url:
+    from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+    parsed_url = urlparse(db_url)
+    query_params = parse_qs(parsed_url.query)
+    if "sslmode" in query_params:
+        sslmode = query_params.pop("sslmode")[0]
+        if sslmode == "require":
+            query_params["ssl"] = ["require"]
+    new_query = urlencode(query_params, doseq=True)
+    db_url = urlunparse(parsed_url._replace(query=new_query))
+
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:

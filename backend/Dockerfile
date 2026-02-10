@@ -30,4 +30,9 @@ EXPOSE 8080
 # We use uvicorn with 0.0.0.0 to allow external traffic
 # Command to run the application
 # Use shell form to expand PORT variable, but exec uvicorn to receive signals
-CMD sh -c "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips '*'"
+# Copy startup script explicitly and make executable
+COPY scripts/start_prod.sh /app/scripts/start_prod.sh
+RUN chmod +x /app/scripts/start_prod.sh
+
+# Use list syntax for CMD to avoid shell wrapping
+CMD ["/app/scripts/start_prod.sh"]

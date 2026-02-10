@@ -57,6 +57,10 @@ if DATABASE_URL.startswith("postgresql"):
 else:
     logger.warning("Using SQLite - NOT recommended for production!")
 
+if not DATABASE_URL:
+    logger.warning("DATABASE_URL is missing! Using cached SQLite for build/startup safety.")
+    DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
 engine: AsyncEngine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 async_session_factory = sessionmaker(

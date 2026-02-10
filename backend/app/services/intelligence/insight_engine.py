@@ -151,6 +151,11 @@ class InsightEngine:
             logger.info("First run: Lazy loading generators...")
             self._load_generators()
 
+        # Lazy Load
+        if not self.generators:
+            logger.info("First run: Lazy loading generators...")
+            self._load_generators()
+
         start_time = time.time()
         logger.info(f"Generating full insight deck for brand_id={brand_id}")
         

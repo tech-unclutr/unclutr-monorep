@@ -49,17 +49,18 @@ class ShopifyOAuthService:
         self.backend_url = settings.BACKEND_URL
         
         # Initialize Fernet Cipher for Token Encryption
+        # Initialize Fernet Cipher for Token Encryption
         if settings.SHOPIFY_ENCRYPTION_KEY:
             try:
                 # Ensure key is bytes
                 key_bytes = settings.SHOPIFY_ENCRYPTION_KEY.encode() if isinstance(settings.SHOPIFY_ENCRYPTION_KEY, str) else settings.SHOPIFY_ENCRYPTION_KEY
                 self.cipher = Fernet(key_bytes)
             except Exception as e:
-                logger.critical(f"Failed to initialize Shopify encryption key: {e}")
-                raise RuntimeError("SHOPIFY_ENCRYPTION_KEY is invalid.")
+                logger.error(f"Failed to initialize Shopify encryption key: {e}")
+                self.cipher = None
         else:
-            logger.critical("SHOPIFY_ENCRYPTION_KEY is missing!")
-            raise RuntimeError("SHOPIFY_ENCRYPTION_KEY must be set.")
+            logger.warning("SHOPIFY_ENCRYPTION_KEY is missing! Shopify integration will not work.")
+            self.cipher = None
 
     # --- Encryption Helpers ---
 

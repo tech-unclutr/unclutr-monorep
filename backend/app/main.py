@@ -25,15 +25,26 @@ from app.services.shopify.oauth_service import shopify_oauth_service
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await init_db()
+    try:
+        await init_db()
+        logger.info("Startup: Database initialized successfully.")
+    except Exception as e:
+        logger.error(f"Startup: Database initialization failed! App continuing in degraded mode. Error: {e}")
     
     # Start Background Reconciliation (Layer 3 - Scheduler)
-    from app.services.scheduler import shutdown_scheduler, start_scheduler
-    start_scheduler()
+    try:
+        from app.services.scheduler import shutdown_scheduler, start_scheduler
+        start_scheduler()
+        logger.info("Startup: Scheduler started successfully.")
+    except Exception as e:
+        logger.error(f"Startup: Scheduler failed to start! Error: {e}")
     
     yield
     # Shutdown
-    shutdown_scheduler()
+    try:
+        shutdown_scheduler()
+    except Exception:
+        pass
 
 async def run_reconciliation_worker():
     """

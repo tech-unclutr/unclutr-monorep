@@ -80,6 +80,9 @@ jobs:
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
+            --memory 2GiB \
+            --cpu 2 \
+            --timeout 600 \
             --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }},BACKEND_URL=$BASE_URL,FRONTEND_URL=$BASE_URL,GOOGLE_REDIRECT_URI=$BASE_URL/api/v1/intelligence/calendar/google/callback,SHOPIFY_ENCRYPTION_KEY=${{ secrets.SHOPIFY_ENCRYPTION_KEY }},SHOPIFY_API_KEY=${{ secrets.SHOPIFY_API_KEY }},SHOPIFY_API_SECRET=${{ secrets.SHOPIFY_API_SECRET }}"
 
       - name: Deploy Frontend to Firebase

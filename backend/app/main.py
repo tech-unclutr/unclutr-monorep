@@ -370,9 +370,9 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from app.middleware.tenant_middleware import TenantMiddleware
 
-if settings.is_production:
-    app.add_middleware(HTTPSRedirectMiddleware)
-    logger.info("HTTPS Enforcement Enabled")
+# if settings.is_production:
+#     app.add_middleware(HTTPSRedirectMiddleware)
+#     logger.info("HTTPS Enforcement Enabled")
 
 app.add_middleware(TenantMiddleware)
 app.add_middleware(RequestLoggingMiddleware)

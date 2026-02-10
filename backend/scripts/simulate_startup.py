@@ -6,6 +6,10 @@ from app.main import lifespan, app
 async def test_startup():
     print("Starting up...")
     try:
+        # Force import of all routers to check for init-time crashes
+        from app.api.v1.api import api_router
+        print(f"Router loaded: {api_router}")
+        
         async with lifespan(app):
             print("Startup successful!")
             # Simulate running for a bit

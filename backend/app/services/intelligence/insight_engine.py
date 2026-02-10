@@ -137,6 +137,8 @@ class InsightEngine:
             }
         """
         # Feature flag check
+        if not feature_flags.is_intelligence_enabled():
+            # logger.info(f"Intelligence Engine disabled for brand_id={brand_id}")
             insight_generation_total.labels(brand_id=str(brand_id), status="disabled").inc()
             return {
                 "insights": [],
@@ -146,11 +148,6 @@ class InsightEngine:
                 "generated_at": datetime.utcnow().isoformat()
             }
         
-        # Lazy Load
-        if not self.generators:
-            logger.info("First run: Lazy loading generators...")
-            self._load_generators()
-
         # Lazy Load
         if not self.generators:
             logger.info("First run: Lazy loading generators...")

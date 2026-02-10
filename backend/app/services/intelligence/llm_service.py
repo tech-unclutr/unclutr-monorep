@@ -30,19 +30,40 @@ class LLMService:
     
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
+        self.model = None
+        self.pro_model = None
+        self._configured = False
+
+    def _ensure_configured(self):
+        """
+        Lazy load the model on first use to prevent startup crashes.
+        """
+        if self._configured:
+            return
+
         if not self.api_key:
             logger.warning("GEMINI_API_KEY not found. LLM features will be disabled.")
-            self.model = None
-        else:
+            self._configured = True # Mark as configured (but failed) to avoid retry spam
+            return
+
+        try:
             genai.configure(api_key=self.api_key)
             # Use 'gemini-2.0-flash' as it is the currently available model
             self.model = genai.GenerativeModel('gemini-2.0-flash')
             self.pro_model = genai.GenerativeModel('gemini-2.0-flash')
+            self._configured = True
+            logger.info("LLM Service initialized lazily.")
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM Service: {e}")
+            self._configured = True # Prevent constant retries impacting performance
 
     async def enrich_context(self, insight: Any) -> str:
         """
         Generate "WHY" context for an insight. Uses 24h cache.
         """
+        if not self._configured:
+            self._ensure_configured()
+            
         if not self.model:
             return ""
 
@@ -75,6 +96,9 @@ class LLMService:
         """
         Generate 3 actionable recommendations. Uses 24h cache.
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
             return []
 
@@ -107,6 +131,9 @@ class LLMService:
         """
         Generates a response to a user's question about a specific insight.
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
             return "AI services are unavailable. Please check your API key."
 
@@ -138,6 +165,9 @@ class LLMService:
         """
         Generate a personalized morning briefing.
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
             return f"Good morning, {user_name}. You have {len(insights)} priority insights to review."
 
@@ -185,6 +215,9 @@ class LLMService:
         """
         Generates a concise (max 20 words) summary of the call transcript for the user queue card.
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
             logger.warning("LLM model not available for summary generation")
             return "Lead found by AI."
@@ -240,6 +273,9 @@ class LLMService:
                 "next_action": "Recommended next step"
             }
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
             logger.warning("LLM model not available for structured context generation")
             return self._fallback_structured_context(extracted_data)
@@ -334,8 +370,11 @@ class LLMService:
         Self-Healing Mechanism:
         If validation fails, retry generation with correction prompt.
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
-            return text 
+            return text
 
         if attempt > 2:
             # If still failing after 2 retries, give up (caller handles fallback)
@@ -394,6 +433,9 @@ class LLMService:
         """
         Extracts structured rigid JSON from an interview transcript.
         """
+        if not self._configured:
+            self._ensure_configured()
+
         if not self.model:
             logger.warning("Mocking LLM extraction due to missing key.")
             return {

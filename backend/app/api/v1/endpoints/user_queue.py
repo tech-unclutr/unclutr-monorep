@@ -4,19 +4,20 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, desc, asc, and_, or_
+from sqlmodel import select, desc, and_, or_
+import logging
 
 from app.api.deps import get_session, get_current_active_user
 from app.models.user import User
 from app.models.user_queue_item import UserQueueItem
 from app.models.user_call_log import UserCallLog
 from app.models.campaign_lead import CampaignLead
-from app.models.queue_item import QueueItem
-from app.models.campaign import Campaign
 
 from app.services.user_queue_warmer import UserQueueWarmer
 from app.services.lead_closure import LeadClosure
 from app.services.websocket_manager import manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -33,7 +34,7 @@ async def get_user_queue(
     
     
     if refresh:
-        print(f"DEBUG: API received refresh request for {campaign_id}")
+        logger.debug(f"API received refresh request for {campaign_id}")
         # Trigger manual sweep for missed promotions
         await UserQueueWarmer.poll_missed_promotions(session, campaign_id)
     
@@ -61,71 +62,64 @@ async def get_user_queue(
     query = query.order_by(desc(UserQueueItem.priority_score), UserQueueItem.detected_at.asc())
     query = query.offset(offset).limit(limit)
     
-    # DEBUG: Log the query and params
-    with open("debug_queue_log.txt", "a") as f:
-        f.write(f"\n--- Request at {datetime.utcnow()} ---\n")
-        f.write(f"Campaign ID: {campaign_id}\n")
-        f.write(f"Status: {status}\n")
-        f.write(f"Refresh: {refresh}\n")
-        # f.write(f"Query: {query}\n") 
+    
 
     result = await session.execute(query)
     items = result.all()
+
+    # [FIX] Deduplicate items by lead_id
+    # We might have multiple UserQueueItems for the same lead due to race conditions.
+    # We want to show the one that is most "active" or "relevant".
+    unique_items_map = {}
     
-    # [FIX] Backfill from Open Leads if queue is empty or low
-    # The user wants to see "Open Leads" immediately.
-    # We maintain a buffer of leads to ensure the user always has work.
-    MIN_QUEUE_SIZE = 10
-    
-    if len(items) < MIN_QUEUE_SIZE:
-        # [FIX] Only backfill if the campaign is actively running.
-        # We fetch the campaign to check its status.
-        campaign = await session.get(Campaign, campaign_id)
-        if campaign and campaign.status in ["ACTIVE", "IN_PROGRESS", "RINGING", "INITIATED"]:
-            needed = MIN_QUEUE_SIZE - len(items)
+    for item, lead in items:
+        # If new lead, add it
+        if lead.id not in unique_items_map:
+            unique_items_map[lead.id] = (item, lead)
+            continue
+            
+        existing_item, _ = unique_items_map[lead.id]
         
-            # Find raw QueueItems that are READY but not promoted
-            # We prioritize those with HIGHEST priority score first (warmer/hotter leads)
-            # and then by age (oldest first)
-            raw_query = select(QueueItem).where(
-                and_(
-                    QueueItem.campaign_id == campaign_id,
-                    QueueItem.promoted_to_user_queue == False,
-                    QueueItem.status.in_(["ELIGIBLE", "READY", "COMPLETED"])
-                )
-            ).order_by(
-                desc(QueueItem.priority_score),
-                asc(QueueItem.created_at)
-            ).limit(needed)
-            
-            raw_result = await session.execute(raw_query)
-            raw_items = raw_result.scalars().all()
-            
-            if raw_items:
-                # Extract IDs to avoid accessing expired ORM objects after commit inside promote_to_user_queue
-                raw_item_ids = [item.id for item in raw_items]
-                print(f"DEBUG: Backfilling {len(raw_item_ids)} raw leads to User Queue")
-                
-                for raw_item_id in raw_item_ids:
-                    # Promote with manual override (creates UserQueueItem)
-                    try:
-                        await UserQueueWarmer.promote_to_user_queue(session, raw_item_id, manual_override=True)
-                    except Exception as e:
-                        print(f"Error backfilling item {raw_item_id}: {e}")
-                
-                # Re-fetch to get the new items with full joins
-                result = await session.execute(query)
-                items = result.all()
+        # Selection Logic:
+        # 1. Prefer LOCKED (currently being worked on) over anything else
+        if item.status == "LOCKED" and existing_item.status != "LOCKED":
+            unique_items_map[lead.id] = (item, lead)
+            continue
+        elif existing_item.status == "LOCKED":
+             continue # Keep existing
+             
+        # 2. Prefer items with higher priority score
+        if item.priority_score > existing_item.priority_score:
+             unique_items_map[lead.id] = (item, lead)
+             continue
+             
+        # 3. Fallback: prefer most recently updated
+        item_updated_at = item.updated_at or datetime.min
+        existing_updated_at = existing_item.updated_at or datetime.min
+        if item_updated_at > existing_updated_at:
+            unique_items_map[lead.id] = (item, lead)
+
+    # Convert back to list and re-sort to ensure order is preserved/correct
+    items = list(unique_items_map.values())
+    # Sort by priority score DESC, then detected_at ASC (matching query sort)
+    # [SAFETY] Handle None values in sort keys
+    items.sort(key=lambda x: (-(x[0].priority_score or 0), x[0].detected_at or datetime.min))
     
-    with open("debug_queue_log.txt", "a") as f:
-        f.write(f"Items found: {len(items)}\n")
-        for item, lead in items:
-            f.write(f"Item ID: {item.id}, Status: {item.status}, Lead: {lead.id}\n")
+
+    
 
     formatted_items = []
     for item, lead in items:
         # Extract last AI call time from history if available
-        last_ai_call_at = item.call_history.get("created_at") if item.call_history else None
+        last_ai_call_at = None
+        if item.call_history:
+            if isinstance(item.call_history, list) and len(item.call_history) > 0:
+                # Assuming the last item is the most recent, or we sort? 
+                # Usually logs are appended, so last might be latest. 
+                # But let's check for 'created_at' in the last item.
+                last_ai_call_at = item.call_history[-1].get("created_at")
+            elif isinstance(item.call_history, dict):
+                last_ai_call_at = item.call_history.get("created_at")
         
         formatted_items.append({
             "id": item.id,
@@ -274,7 +268,7 @@ async def get_lead_context(
             "created_at": log.created_at,
             "duration": log.duration,
             "recording_url": log.recording_url,
-            "full_transcript": log.full_transcript or log.transcript  # Ensure transcript availability
+            "full_transcript": log.full_transcript  # Full transcript from CallLog
         })
         
     for log in user_logs:
@@ -294,9 +288,27 @@ async def get_lead_context(
     history.sort(key=lambda x: x["created_at"], reverse=True)
     
     return {
-        "user_queue_item": item,
+        "user_queue_item": {
+            "id": item.id,
+            "ai_summary": item.ai_summary,
+            "structured_context": item.structured_context,  # [NEW] Structured insights
+            "intent_strength": item.intent_strength,
+            "confirmation_slot": item.confirmation_slot,
+            "detected_at": item.detected_at,
+            "priority_score": item.priority_score,
+            "status": item.status
+        },
         "lead": lead,
         "ai_call_history": item.call_history, # Keep for backward compatibility/quick access
+        "user_call_logs": [
+            {
+                "id": str(log.id),
+                "status": log.status,
+                "notes": log.notes,
+                "created_at": log.created_at,
+                "duration": log.duration
+            } for log in user_logs
+        ],
         "history": history
     }
 

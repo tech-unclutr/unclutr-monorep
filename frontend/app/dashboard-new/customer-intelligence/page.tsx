@@ -73,9 +73,14 @@ export default function CustomerIntelligencePage() {
 
     // Campaign History State
     const [latestCampaigns, setLatestCampaigns] = useState<any[]>([]);
+    const [archivedCampaigns, setArchivedCampaigns] = useState<any[]>([]); // [NEW]
     const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
     const [campaignOffset, setCampaignOffset] = useState(0);
     const [hasMoreCampaigns, setHasMoreCampaigns] = useState(true);
+    // Archived campaigns pagination state
+    const [archivedOffset, setArchivedOffset] = useState(0);
+    const [hasMoreArchived, setHasMoreArchived] = useState(true);
+    const [isArchivedLoading, setIsArchivedLoading] = useState(false);
     // Derived state for readiness - Single Source of Truth is now the LATEST CAMPAIGN or User Settings
     const latestCampaign = latestCampaigns.length > 0 ? latestCampaigns[0] : null;
     const isContactReady = !!(
@@ -128,6 +133,8 @@ export default function CustomerIntelligencePage() {
 
         try {
             setIsLoadingCampaigns(true);
+
+            // 1. Fetch Active Campaigns
             const data = await api.get(`/intelligence/campaigns?limit=${limit}&offset=${offset}`);
 
             if (append) {
@@ -176,6 +183,18 @@ export default function CustomerIntelligencePage() {
                 setCampaignOffset(newCount);
             }
 
+            // 2. Fetch Archived Campaigns (Only on initial load/refresh, not append)
+            if (!append) {
+                try {
+                    const archivedData = await api.get("/intelligence/campaigns/archived?limit=3&offset=0");
+                    setArchivedCampaigns(archivedData || []);
+                    setArchivedOffset(archivedData?.length || 0);
+                    setHasMoreArchived((archivedData?.length || 0) >= 3);
+                } catch (archivedError) {
+                    console.warn("Failed to fetch archived campaigns:", archivedError);
+                }
+            }
+
         } catch (error) {
             console.error("Failed to fetch campaigns:", error);
             toast.error("Failed to load campaign history");
@@ -213,6 +232,24 @@ export default function CustomerIntelligencePage() {
         fetchCampaigns(campaignOffset, true);
     };
 
+    const handleLoadMoreArchived = async () => {
+        if (isArchivedLoading || !hasMoreArchived) return;
+
+        try {
+            setIsArchivedLoading(true);
+            const archivedData = await api.get(`/intelligence/campaigns/archived?limit=10&offset=${archivedOffset}`);
+
+            setArchivedCampaigns(prev => [...prev, ...(archivedData || [])]);
+            setArchivedOffset(prev => prev + (archivedData?.length || 0));
+            setHasMoreArchived((archivedData?.length || 0) >= 10);
+        } catch (error) {
+            console.error("Failed to load more archived campaigns:", error);
+            toast.error("Failed to load more archived campaigns");
+        } finally {
+            setIsArchivedLoading(false);
+        }
+    };
+
     const handleDeleteCampaign = async (campaignId: string) => {
         try {
             await api.delete(`/intelligence/campaigns/${campaignId}`);
@@ -223,6 +260,28 @@ export default function CustomerIntelligencePage() {
             console.error("Failed to delete campaign:", error);
             toast.error(error.message || "Failed to delete campaign");
             throw error; // Re-throw so CampaignCard can handle loading state
+        }
+    };
+
+    const handleArchiveCampaign = async (campaignId: string) => {
+        try {
+            await api.post(`/intelligence/campaigns/${campaignId}/archive`, {});
+
+            // 1. Remove from active list
+            const campaignToMove = latestCampaigns.find(c => c.id === campaignId);
+            setLatestCampaigns(prev => prev.filter(c => c.id !== campaignId));
+
+            // 2. Re-fetch archived list from beginning (reset pagination)
+            const archivedData = await api.get("/intelligence/campaigns/archived?limit=3&offset=0");
+            setArchivedCampaigns(archivedData || []);
+            setArchivedOffset(archivedData?.length || 0);
+            setHasMoreArchived((archivedData?.length || 0) >= 3);
+
+            toast.success("Campaign archived successfully");
+        } catch (error: any) {
+            console.error("Failed to archive campaign:", error);
+            toast.error(error.message || "Failed to archive campaign");
+            throw error;
         }
     };
 
@@ -263,7 +322,6 @@ export default function CustomerIntelligencePage() {
 
         try {
             const data = await api.get("/intelligence/calendar/status");
-            // console.log("Calendar status data:", data);
             setIsCalendarConnected(data.connected);
             setCalendarData(data);
         } catch (error) {
@@ -426,8 +484,10 @@ export default function CustomerIntelligencePage() {
     };
 
     // START REAL PHONE INTERVIEW
-    const handleStartInterview = async () => {
-        if (!contactDetails.phone) {
+    const handleStartInterview = async (campaignOverride?: any) => {
+        const targetPhone = campaignOverride?.bolna_data?.recipient_phone_number || contactDetails.phone;
+
+        if (!targetPhone) {
             toast.error("Phone number is required to start interview");
             return;
         }
@@ -440,15 +500,19 @@ export default function CustomerIntelligencePage() {
 
         try {
             // Normalize phone number to E.164 format (remove spaces)
-            const normalizedPhone = contactDetails.phone.replace(/\s+/g, '');
+            const normalizedPhone = targetPhone.replace(/\s+/g, '');
 
             // 1. Trigger REAL Bolna phone call
             const payload: any = {
                 phone_number: normalizedPhone
             };
 
-            // If retrying a failed campaign, pass the ID to reuse it
-            if (status === 'ERROR' && activeCampaign?.id) {
+            // If campaignOverride is provided, use its ID
+            if (campaignOverride?.id) {
+                payload.campaign_id = campaignOverride.id;
+            }
+            // If retrying a failed campaign (and no override), pass the ID to reuse it
+            else if (status === 'ERROR' && activeCampaign?.id) {
                 payload.campaign_id = activeCampaign.id;
             }
 
@@ -858,6 +922,7 @@ export default function CustomerIntelligencePage() {
                                                             isExpanded={isExpanded}
                                                             onToggleExpand={() => setExpandedCampaignId(isExpanded ? null : campaign.id)}
                                                             onDelete={handleDeleteCampaign}
+                                                            onArchive={handleArchiveCampaign}
                                                             onEditClick={(id) => {
                                                                 setEditingCampaignId(id);
                                                                 setComposerView('composer');
@@ -865,8 +930,9 @@ export default function CustomerIntelligencePage() {
                                                             }}
                                                             onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
                                                             onStartCampaign={() => {
-                                                                window.location.href = `/dashboard-new/customer-intelligence/campaign/${campaign.id}`;
+                                                                router.push(`/dashboard-new/customer-intelligence/campaign/${campaign.id}`);
                                                             }}
+                                                            isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                                                         />
                                                     </motion.div>
                                                 );
@@ -1005,6 +1071,83 @@ export default function CustomerIntelligencePage() {
                         </div>
                     )}
                 </AnimatePresence>
+
+                {/* Archived Campaigns Section */}
+                {archivedCampaigns.length > 0 && !isComposerOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="mt-12 mb-8"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Archived Campaigns</h2>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">View your archived campaign history.</p>
+                            </div>
+                        </div>
+
+                        <motion.div
+                            layout
+                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-75 grayscale hover:grayscale-0 transition-all duration-500"
+                        >
+                            <AnimatePresence>
+                                {archivedCampaigns.map((campaign) => {
+                                    const isExpanded = expandedCampaignId === campaign.id;
+                                    return (
+                                        <motion.div
+                                            layout
+                                            transition={{ layout: { duration: 0.5, type: "spring", stiffness: 100, damping: 20 } }}
+                                            id={`campaign-card-${campaign.id}`}
+                                            key={campaign.id}
+                                            className={cn(
+                                                isExpanded ? "col-span-1 md:col-span-2 lg:col-span-3 order-first" : "col-span-1"
+                                            )}
+                                        >
+                                            <CampaignCard
+                                                campaign={campaign}
+                                                variant="summary"
+                                                isExpanded={isExpanded}
+                                                onToggleExpand={() => setExpandedCampaignId(isExpanded ? null : campaign.id)}
+                                                isArchived={true}
+                                                onDelete={async () => { }} // No delete for archived
+                                                onEdit={async () => { }} // No edit for archived
+                                                onArchive={async () => { }} // Already archived
+                                                onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
+                                                isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
+                                            />
+                                        </motion.div>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </motion.div>
+
+                        {/* Load More Button for Archived Campaigns */}
+                        {hasMoreArchived && (
+                            <div className="flex justify-center mt-6">
+                                <Button
+                                    variant="outline"
+                                    onClick={handleLoadMoreArchived}
+                                    disabled={isArchivedLoading}
+                                    className="gap-2"
+                                >
+                                    {isArchivedLoading ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Loading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            View More Archived
+                                            <ChevronRight className="h-4 w-4" />
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+
             </div>
         </div>
     );

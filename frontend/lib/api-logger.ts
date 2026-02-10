@@ -33,29 +33,11 @@ if (typeof window !== 'undefined') {
  * Firebase SDK Logger - Logs Firebase operations
  */
 export const logFirebaseOperation = (operation: string, data?: any) => {
-    if (typeof window === 'undefined') return;
-
-    console.log('\n' + '='.repeat(80));
-    console.log('🔥 FIREBASE SDK');
-    console.log('='.repeat(80));
-    console.log('Operation:', operation);
-    if (data) {
-        console.log('Data:', data);
-    }
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('='.repeat(80) + '\n');
+    // Disabled for production cleanup
 };
 
 export const logFirebaseError = (operation: string, error: any) => {
-    if (typeof window === 'undefined') return;
-
-    console.log('\n' + '='.repeat(80));
-    console.log('🔴 FIREBASE ERROR');
-    console.log('='.repeat(80));
-    console.log('Operation:', operation);
-    console.log('Error:', error);
-    console.log('Error Code:', error?.code);
-    console.log('Error Message:', error?.message);
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('='.repeat(80) + '\n');
+    // Only log actual errors in console for visibility during dev if needed, 
+    // but for this cleanup we'll make it a standard console.error if not disabled.
+    console.error(`[Firebase Error] ${operation}:`, error);
 };

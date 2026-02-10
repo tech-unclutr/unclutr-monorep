@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const init = async () => {
             console.log("DEBUG: AuthProvider [Init] Starting setup...");
+            const startTime = performance.now();
 
             // 1. Force persistence immediately (Non-blocking as much as possible)
             setPersistence(auth, browserLocalPersistence).catch(e => {
@@ -62,7 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log("DEBUG: AuthProvider [Init] Attaching onAuthStateChanged observer...");
             const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                 if (!isMounted) return;
-                console.log("DEBUG: AuthProvider [State] Update:", firebaseUser?.email || "none");
+                const stateTime = performance.now();
+                console.log(`DEBUG: AuthProvider [State] Update triggered at ${Math.round(stateTime - startTime)}ms. User:`, firebaseUser?.email || "none");
 
                 setUser(firebaseUser);
 
@@ -82,7 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (lastSyncTime && (now - parseInt(lastSyncTime)) < 2000) {
                         console.log("DEBUG: AuthProvider [Sync] Debounced (HMR protection). Skipping.");
                         setIsSyncing(false);
-                        if (isMounted && loadingRef.current) updateLoading(false);
+                        if (isMounted && loadingRef.current) {
+                            console.log(`DEBUG: AuthProvider [Init] Clearing loading (Debounced Sync) at ${Math.round(performance.now() - startTime)}ms`);
+                            updateLoading(false);
+                        }
                         return;
                     }
 
@@ -93,6 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsSyncing(true);
                     try {
                         const syncData = await syncUserWithBackend(firebaseUser);
+                        const syncEndTime = performance.now();
+                        console.log(`DEBUG: AuthProvider [Sync] Completed in ${Math.round(syncEndTime - stateTime)}ms`);
                         console.log("DEBUG: AuthProvider [Sync] Response Data:", JSON.stringify(syncData, null, 2));
                         console.log("DEBUG: AuthProvider [Sync] current_company_id:", syncData.current_company_id);
 
@@ -136,24 +143,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     syncInProgress.current = null;
 
                     if (isMounted && loadingRef.current) {
-                        console.log("DEBUG: AuthProvider [Init] Clearing loading state (no session).");
+                        console.log(`DEBUG: AuthProvider [Init] Clearing loading (No Session) at ${Math.round(performance.now() - startTime)}ms`);
                         updateLoading(false);
                     }
                 }
             });
 
-            // 3. Handle Redirect Result in background (Don't block the observer)
+            // 3. Handle Redirect Result in background (With its own timeout)
             (async () => {
                 console.log("DEBUG: AuthProvider [Init] Checking Redirect Result...");
+                const redirectStart = performance.now();
+
+                // Race the redirect result against a 5s timeout to ensure it doesn't hang the init
+                const redirectPromise = handleAuthRedirect();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Redirect Timeout")), 5000));
+
                 try {
-                    const result = await handleAuthRedirect();
+                    const result = await Promise.race([redirectPromise, timeoutPromise]) as any;
+                    const redirectEnd = performance.now();
+                    console.log(`DEBUG: AuthProvider [Init] Redirect check finished in ${Math.round(redirectEnd - redirectStart)}ms`);
+
                     if (result?.user && isMounted) {
                         console.log("DEBUG: AuthProvider [Init] Redirect Success:", result.user.email);
-                        // The observer will pick this up, but we set it manually for instant UI update
                         setUser(result.user);
                     }
                 } catch (e) {
-                    console.error("DEBUG: AuthProvider [Init] Redirect Error:", e);
+                    console.warn("DEBUG: AuthProvider [Init] Redirect handled (or timed out):", e);
                 }
             })();
 

@@ -2,11 +2,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
+import logging
 
 from app.core import security
 from app.core.db import get_session
 from app.models.user import UserCreate, UserRead
 from app.services import auth_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -101,7 +104,7 @@ async def sync_user_endpoint(
     except Exception as e:
         import traceback
         tb_str = traceback.format_exc()
-        print(f"Sync Error Traceback: {tb_str}")
+        logger.error(f"Sync Error Traceback: {tb_str}")
         # DEBUG: returning full traceback to frontend to capture in user logs
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 

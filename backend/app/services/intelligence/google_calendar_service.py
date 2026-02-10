@@ -443,22 +443,27 @@ class GoogleCalendarService:
                 end_h, end_m = map(int, end_time_str.split(':'))
 
                 tz = pytz.timezone(timezone_str or "UTC")
+                
+                # Combine date and time, then localize to the specified timezone
                 start_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=start_h, minute=start_m)))
                 end_dt_local = tz.localize(datetime.combine(event_date, dt_time(hour=end_h, minute=end_m)))
                 
+                # Convert to UTC for Google Calendar API recommendation (though it accepts other TZs, UTC is safest)
                 start_dt = start_dt_local.astimezone(pytz.utc)
                 end_dt = end_dt_local.astimezone(pytz.utc)
+
+                logger.info(f"[SYNC_DEBUG] Window converted: Local({start_dt_local}) -> UTC({start_dt}) using TZ: {timezone_str}")
 
                 event_summary = f'{campaign.name} powered by SquareUp'
                 event_body = {
                     'summary': event_summary,
                     'description': f'Execution window for campaign: {campaign.name}. Expecting customer calls.',
                     'start': {
-                        'dateTime': start_dt.isoformat(),
+                        'dateTime': start_dt.isoformat().replace('+00:00', 'Z'),
                         'timeZone': 'UTC',
                     },
                     'end': {
-                        'dateTime': end_dt.isoformat(),
+                        'dateTime': end_dt.isoformat().replace('+00:00', 'Z'),
                         'timeZone': 'UTC',
                     },
                     'reminders': {
@@ -471,10 +476,10 @@ class GoogleCalendarService:
 
                 res = await loop.run_in_executor(None, _insert_event)
                 events_created += 1
-                logger.info(f"[SYNC_DEBUG] Created event for {day_str} {start_time_str}. Event ID: {res.get('id')}")
+                logger.info(f"[SYNC_DEBUG] Successfully created event. ID: {res.get('id')} Summary: {event_summary}")
                 
             except Exception as e:
-                logger.error(f"[SYNC_DEBUG] Failed to sync window for {day_str} {start_time_str}: {e}")
+                logger.error(f"[SYNC_DEBUG] Failed to sync window {i+1} ({day_str} {start_time_str}): {e}")
                 import traceback
                 logger.error(traceback.format_exc())
 

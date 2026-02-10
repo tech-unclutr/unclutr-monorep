@@ -31,6 +31,7 @@ import { cn, formatPhoneNumber } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow, format } from "date-fns";
+import { StructuredLeadContext } from "@/components/customer-intelligence/StructuredLeadContext"; // [NEW]
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CallContextModalProps {
@@ -64,25 +65,18 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
             setContext(data);
         } catch (error) {
             const err = error as any;
-            console.error("Failed to fetch lead context:", err);
-            if (err.response) {
-                console.error("Error Response:", err.response.status, err.response.data);
-            }
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        console.log("CallContextModal Effect Triggered:", { isOpen, itemId, leadId });
         if (isOpen) {
             if (itemId) {
-                console.log("Fetching context for item:", itemId);
                 fetchContext();
             } else {
-                console.error("Missing itemId for CallContextModal", { leadId, leadName });
-                setIsLoading(false); // Stop loading so we don't spin forever
-                setContext(null); // Ensure context is null to trigger empty/error state if any
+                setIsLoading(false);
+                setContext(null);
             }
         }
     }, [isOpen, itemId]);
@@ -206,17 +200,10 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
 
                                 <div>
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Extracted Context</h4>
-                                    <ScrollArea className="h-40">
-                                        <div className="space-y-3">
-                                            {context?.user_queue_item?.ai_summary ? (
-                                                <div className="p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 text-[11px] font-medium leading-relaxed">
-                                                    {context.user_queue_item.ai_summary}
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs text-zinc-400 italic">No summary available.</p>
-                                            )}
-                                        </div>
-                                    </ScrollArea>
+                                    <StructuredLeadContext
+                                        structuredContext={context?.user_queue_item?.structured_context}
+                                        aiSummary={context?.user_queue_item?.ai_summary}
+                                    />
                                 </div>
                             </div>
 

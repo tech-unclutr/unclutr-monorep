@@ -1,27 +1,0 @@
-* Host localhost:8000 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8000...
-* connect to ::1 port 8000 from ::1 port 55895 failed: Connection refused
-*   Trying 127.0.0.1:8000...
-* Connected to localhost (127.0.0.1) port 8000
-> GET /api/v1/intelligence/calendar/status HTTP/1.1
-> Host: localhost:8000
-> User-Agent: curl/8.7.1
-> Accept: */*
-> Authorization: Bearer secret
-> X-Company-ID: 944e9ebf-e1bb-48f1-9137-c167c30dd7b5
-> 
-* Request completely sent off
-  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:03 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:04 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:05 --:--:--     0< HTTP/1.1 200 OK
-< date: Thu, 29 Jan 2026 08:56:09 GMT
-< server: uvicorn
-< content-length: 1315
-< content-type: application/json
-< 
-  0  1315    0     0    0     0      0      0 --:--:--  0:00:06 --:--:--     0{ [1315 bytes data]
-100  1315  100  1315    0     0    217      0  0:00:06  0:00:06 --:--:--   343
-* Connection #0 to host localhost left intact
-{"connected":true,"provider":"google","busy_slots":[{"start":"2026-01-29T09:00:00Z","end":"2026-01-29T13:00:00Z"},{"start":"2026-01-29T18:30:00Z","end":"2026-01-30T18:30:00Z"},{"start":"2026-01-30T08:30:00Z","end":"2026-01-30T08:50:00Z"},{"start":"2026-01-31T03:30:00Z","end":"2026-01-31T13:30:00Z"},{"start":"2026-02-01T03:30:00Z","end":"2026-02-01T13:30:00Z"},{"start":"2026-02-01T17:30:00Z","end":"2026-02-01T18:00:00Z"},{"start":"2026-02-02T03:30:00Z","end":"2026-02-02T05:40:00Z"},{"start":"2026-02-02T03:30:00Z","end":"2026-02-02T05:40:00Z"},{"start":"2026-02-02T06:00:00Z","end":"2026-02-02T08:10:00Z"},{"start":"2026-02-02T09:00:00Z","end":"2026-02-02T12:00:00Z"},{"start":"2026-02-02T17:30:00Z","end":"2026-02-02T18:00:00Z"},{"start":"2026-02-03T03:30:00Z","end":"2026-02-03T05:40:00Z"},{"start":"2026-02-03T06:00:00Z","end":"2026-02-03T08:15:00Z"},{"start":"2026-02-03T09:00:00Z","end":"2026-02-03T11:10:00Z"},{"start":"2026-02-03T11:30:00Z","end":"2026-02-03T13:00:00Z"},{"start":"2026-02-04T03:30:00Z","end":"2026-02-04T05:40:00Z"},{"start":"2026-02-04T06:00:00Z","end":"2026-02-04T08:10:00Z"},{"start":"2026-02-04T09:00:00Z","end":"2026-02-04T13:00:00Z"},{"start":"2026-02-05T03:30:00Z","end":"2026-02-05T05:40:00Z"},{"start":"2026-02-05T06:00:00Z","end":"2026-02-05T08:10:00Z"}],"last_synced_at":null}

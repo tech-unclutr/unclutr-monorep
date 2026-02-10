@@ -158,19 +158,14 @@ export default function LoginPage() {
         let isForwarding = false;
 
         if (isAuthenticated) {
-            console.log("DEBUG: LoginPage - Authenticated discovered, initiating force redirection...");
             isForwarding = true;
-
-            // 1. Immediate Next.js router replace
             router.replace("/dashboard");
 
-            // 2. Immediate hard redirect if not moving (Prevents any router hang)
             const forceTimer = setTimeout(() => {
                 if (window.location.pathname.includes("/login")) {
-                    console.warn("DEBUG: Router Replace failed or slow, using window.location.assign('/dashboard')");
                     window.location.assign("/dashboard");
                 }
-            }, 500); // 500ms is more than enough for a local push
+            }, 500);
 
             return () => clearTimeout(forceTimer);
         }
@@ -179,14 +174,11 @@ export default function LoginPage() {
     const isGlobalLoading = authLoading && !isAuthenticated;
 
     const handleGoogleSignIn = async () => {
-        console.log("DEBUG: handleGoogleSignIn clicked");
         setGoogleLoading(true);
         try {
-            console.log("DEBUG: Calling signInWithGoogle()...");
             // Execution will stop here as the page redirects to Google
             await signInWithGoogle();
         } catch (error: any) {
-            console.error("DEBUG: signInWithGoogle error:", error);
             setMessage(getFriendlyErrorMessage(error));
             setGoogleLoading(false);
         }
@@ -194,17 +186,13 @@ export default function LoginPage() {
 
     const handleEmailSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("DEBUG: handleEmailSignIn submitted", email);
         setEmailLoading(true);
         setMessage("");
 
         try {
-            console.log("DEBUG: Calling sendEmailSignInLink()...");
             await sendEmailSignInLink(email);
-            console.log("DEBUG: sendEmailSignInLink() success");
             setMessage("Check your email for the login link!");
         } catch (error: any) {
-            console.error("DEBUG: sendEmailSignInLink error:", error);
             setMessage(getFriendlyErrorMessage(error));
         } finally {
             setEmailLoading(false);

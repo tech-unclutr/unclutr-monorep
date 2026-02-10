@@ -60,6 +60,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR is a websocket
         is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path or is_websocket
         
+        logger.debug(f"TenantMiddleware: path={path}, user_id={user_id}, is_public={is_public}")
+        
         if is_public:
             return await call_next(request)
 

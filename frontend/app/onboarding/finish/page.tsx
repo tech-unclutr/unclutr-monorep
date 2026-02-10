@@ -100,7 +100,7 @@ export default function FinishPage() {
             if (user) {
                 // Call finish endpoint to commit everything
                 const response = await client.onboarding.finishOnboardingApiV1OnboardingFinishPost();
-                console.log('Onboarding completed:', response);
+                // Success
 
                 // CRITICAL: Persist company_id immediately for client.ts headers
                 // The API response type needs to be cast or we trust it has company_id based on backend inspection

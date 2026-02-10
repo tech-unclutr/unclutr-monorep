@@ -68,15 +68,12 @@ function ShopifySetupContent() {
             .replace(/\/$/, "");
 
         if (!cleanDomain.includes(".")) cleanDomain += ".myshopify.com";
-        console.log(`handleContinue: Validating domain ${cleanDomain}`);
 
         try {
             // Optimization: Skip explicit validation to reduce latency.
             // If the shop is invalid, Shopify's OAuth page will handle the 404/error.
-            console.log("handleContinue: Requesting Auth URL directly (Fast Path)...");
 
             const authUrl = await shopifyApi.getAuthUrl(cleanDomain, companyId);
-            console.log(`handleContinue: Redirecting to ${authUrl}`);
             setTargetUrl(authUrl);
 
             // Use assign() which is generally more reliable for cross-origin navigation

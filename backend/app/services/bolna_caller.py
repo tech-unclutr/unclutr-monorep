@@ -7,6 +7,7 @@ import httpx
 import pytz
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc 
+from loguru import logger
 
 from app.core.config import settings
 from app.models.bolna_execution_map import BolnaExecutionMap
@@ -81,11 +82,11 @@ class BolnaCaller:
                     end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
                 else:
                     # No active window found - Prevent call
-                    print(f"[BolnaCaller] ERROR: No active execution window for campaign {campaign.id}. 'Now' is {now_utc.astimezone(tz_ist)}")
+                    logger.error(f"[BolnaCaller] ERROR: No active execution window for campaign {campaign.id}. 'Now' is {now_utc.astimezone(tz_ist)}")
                     return {"status": "error", "error_type": "WINDOW_EXPIRED", "message": "No active execution window found for the current time."}
                     
             except Exception as e:
-                print(f"[BolnaCaller] Error parsing execution windows: {e}")
+                logger.error(f"[BolnaCaller] Error parsing execution windows: {e}")
                 return {"status": "error", "message": f"Error parsing execution windows: {e}"}
         else:
             # No windows defined at all
@@ -106,11 +107,11 @@ class BolnaCaller:
         timezone = "Asia/Kolkata" 
         
         if not settings_api_key:
-             print("[BolnaCaller] ERROR: BOLNA_API_KEY not set in config.")
+             logger.error("[BolnaCaller] ERROR: BOLNA_API_KEY not set in config.")
              return {"status": "error", "message": "Missing API Key"}
 
         if not settings_agent_id:
-             print("[BolnaCaller] ERROR: BOLNA_AGENT_ID not set in config.")
+             logger.error("[BolnaCaller] ERROR: BOLNA_AGENT_ID not set in config.")
              return {"status": "error", "message": "Missing Agent ID"}
 
         # 2. Prepare Batch Payload
@@ -128,7 +129,7 @@ class BolnaCaller:
             # We allow execution_count == 2 (that's the 2nd call), but not more.
             # Note: QueueWarmer increments count BEFORE calling this, so a valid 2nd call will have count=2 here.
             if q_item and q_item.execution_count > 2:
-                print(f"[BolnaCaller] HARD GUARDRAIL: Skipping call for lead {lead.id} - Execution count {q_item.execution_count} exceeds limit.")
+                logger.warning(f"[BolnaCaller] HARD GUARDRAIL: Skipping call for lead {lead.id} - Execution count {q_item.execution_count} exceeds limit.")
                 continue
 
             
@@ -190,11 +191,11 @@ class BolnaCaller:
                         # Prefer full_transcript, fallback to transcript_summary
                         previous_transcript = last_call.full_transcript or last_call.transcript_summary or "No transcript available."
                         variables["last_call_context"] = previous_transcript
-                        print(f"[BolnaCaller] Injected last_call_context for lead {lead.id}: {previous_transcript[:50]}...")
+                        logger.info(f"[BolnaCaller] Injected last_call_context for lead {lead.id}: {previous_transcript[:50]}...")
                     else:
-                         print(f"[BolnaCaller] Warning: Execution count is {q_item.execution_count} but no previous CallLog found for lead {lead.id}")
+                         logger.warning(f"[BolnaCaller] Warning: Execution count is {q_item.execution_count} but no previous CallLog found for lead {lead.id}")
                 except Exception as e:
-                    print(f"[BolnaCaller] Error fetching previous context: {e}")
+                    logger.error(f"[BolnaCaller] Error fetching previous context: {e}")
 
             
             # --- Normalize Phone Number ---
@@ -242,7 +243,7 @@ class BolnaCaller:
                     public_url = next((t["public_url"] for t in tunnels if t["proto"] == "https"), None)
                     if public_url:
                         webhook_url = f"{public_url}/api/v1/integrations/webhook/bolna"
-                        print(f"[BolnaCaller] Auto-detected Ngrok Webhook URL: {webhook_url}")
+                        logger.info(f"[BolnaCaller] Auto-detected Ngrok Webhook URL: {webhook_url}")
         except Exception:
             # Silently fail if ngrok API is not accessible (e.g. prod)
             pass
@@ -251,19 +252,19 @@ class BolnaCaller:
         async def params_trigger_single_call(client, task, original_index, url, headers):
             current_number = task["recipient_phone_number"]
             try:
-                print(f"[BolnaCaller] Triggering call to {current_number} via {url}")
-                print(f"[BolnaCaller] Payload for {current_number}: {task}") 
+                logger.info(f"[BolnaCaller] Triggering call to {current_number} via {url}")
+                logger.info(f"[BolnaCaller] Payload for {current_number}: {task}") 
                 
                 # Using a longer timeout since we are firing many at once, though awaiting them concurrently 
                 # effectively reduces total wait time, individual request might still take a moment.
                 response = await client.post(url, json=task, headers=headers, timeout=15.0)
                 
                 if response.status_code >= 400:
-                        print(f"[BolnaCaller] API Error for {current_number} ({response.status_code}): {response.text}")
+                        logger.error(f"[BolnaCaller] API Error for {current_number} ({response.status_code}): {response.text}")
                 
                 response.raise_for_status()
                 data = response.json()
-                print(f"[BolnaCaller] Success response for {current_number}: {data}")
+                logger.info(f"[BolnaCaller] Success response for {current_number}: {data}")
                 
                 return {
                     "status": "success", 
@@ -284,7 +285,7 @@ class BolnaCaller:
                     except:
                         pass
                 
-                print(f"[BolnaCaller] Failed to trigger call for {current_number}: {error_msg}")
+                logger.error(f"[BolnaCaller] Failed to trigger call for {current_number}: {error_msg}")
                 # [FIX]: Return the actual error message so QueueWarmer can mark it as FAILED outcome
                 return {
                     "status": "error", 
@@ -305,7 +306,7 @@ class BolnaCaller:
                 current_number = task["recipient_phone_number"]
                 
                 if current_number in sent_numbers:
-                    print(f"[BolnaCaller] Safety: Skipping duplicate number {current_number} in batch.")
+                    logger.warning(f"[BolnaCaller] Safety: Skipping duplicate number {current_number} in batch.")
                     results.append({"status": "error", "error": "Duplicate phone number in batch"})
                     continue
                 
@@ -324,14 +325,14 @@ class BolnaCaller:
                  return {"results": results, "count": len(results)}
 
             # Run all network requests concurrently!
-            print(f"[BolnaCaller] Awaiting {len(coros)} concurrent calls...")
+            logger.info(f"[BolnaCaller] Awaiting {len(coros)} concurrent calls...")
             concurrent_results = await asyncio.gather(*coros, return_exceptions=True)
             
             # Process results sequentially to update DB (Session is not thread-safe)
             for res in concurrent_results:
                 if isinstance(res, Exception):
                     # Should be covered by internal try/except but just in case
-                    print(f"[BolnaCaller] Unexpected concurrent error: {res}")
+                    logger.error(f"[BolnaCaller] Unexpected concurrent error: {res}")
                     results.append({"status": "error", "error": str(res)})
                     continue
                     

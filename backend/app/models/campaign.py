@@ -19,18 +19,18 @@ class Campaign(SQLModel, table=True):
     
     # Bolna Execution Data
     source_file_hash: Optional[str] = Field(default=None, index=True) # SHA256 hash of source CSV data
-    # bolna_execution_id: Optional[str] = Field(default=None, index=True, unique=True)
-    # bolna_agent_id: Optional[str] = Field(default=None)
-    # bolna_call_status: Optional[str] = Field(default=None) # completed, failed, no-answer, busy, etc.
-    # bolna_conversation_time: Optional[int] = Field(default=None) # Duration in seconds
-    # bolna_total_cost: Optional[int] = Field(default=None) # Cost in cents
-    # bolna_error_message: Optional[str] = Field(default=None)
-    # bolna_transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
-    # bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    # bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    # bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON)) # Full raw webhook payload
-    # bolna_created_at: Optional[datetime] = Field(default=None)
-    # bolna_updated_at: Optional[datetime] = Field(default=None)
+    bolna_execution_id: Optional[str] = Field(default=None, index=True, unique=True)
+    bolna_agent_id: Optional[str] = Field(default=None)
+    bolna_call_status: Optional[str] = Field(default=None) # completed, failed, no-answer, busy, etc.
+    bolna_conversation_time: Optional[int] = Field(default=None) # Duration in seconds
+    bolna_total_cost: Optional[float] = Field(default=None) # Cost 
+    bolna_error_message: Optional[str] = Field(default=None)
+    bolna_transcript: Optional[str] = Field(default=None, sa_column=Column(Text))
+    bolna_extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    bolna_telephony_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    bolna_raw_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON)) # Full raw webhook payload
+    bolna_created_at: Optional[datetime] = Field(default=None)
+    bolna_updated_at: Optional[datetime] = Field(default=None)
     
     # Legacy fields (for backward compatibility with simulation)
     decision_context: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))

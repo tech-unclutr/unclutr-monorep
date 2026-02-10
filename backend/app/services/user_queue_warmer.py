@@ -108,6 +108,7 @@ class UserQueueWarmer:
             # Extract AI context
             call_history = {}
             ai_summary = "Lead expressed interest"
+            structured_context = None  # [NEW] Structured insights
             intent_strength = 0.8  # Default
             confirmation_slot = None
             
@@ -142,12 +143,28 @@ class UserQueueWarmer:
                     except Exception as e:
                         logger.warning(f"Could not parse callback_time: {callback_time}, error: {e}")
                 
-                # Generate AI summary
+                # Generate AI summary and structured context
                 found_transcript = bolna_map.transcript or bolna_map.full_transcript
                 
                 if found_transcript:
-                     # Use LLM for concise summary
+                     # [NEW] Generate structured context for rich UI display
+                     try:
+                         structured_context = await llm_service.generate_structured_lead_context(
+                             transcript=str(found_transcript),
+                             extracted_data=extracted_data
+                         )
+                         logger.info(f"Generated structured context for lead {queue_item.lead_id}")
+                     except Exception as e:
+                         logger.warning(f"Failed to generate structured context: {e}")
+                         structured_context = None
+                     
+                     # Use LLM for concise summary (backwards compatibility)
                      ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                     
+                     # [IMPROVED] Fallback to Bolna's native summary if Gemini returns generic text
+                     if (not ai_summary or "found by AI" in ai_summary.lower()) and bolna_map.transcript_summary:
+                         logger.info(f"Generic LLM summary detected, falling back to Bolna native summary for lead {queue_item.lead_id}")
+                         ai_summary = bolna_map.transcript_summary[:200]
                 elif bolna_map.transcript_summary:
                     # Take first 200 chars as summary
                     ai_summary = bolna_map.transcript_summary[:200]
@@ -169,6 +186,7 @@ class UserQueueWarmer:
                 original_queue_item_id=queue_item.id,
                 call_history=call_history,
                 ai_summary=ai_summary,
+                structured_context=structured_context,  # [NEW]
                 intent_strength=intent_strength,
                 confirmation_slot=confirmation_slot,
                 detected_at=datetime.utcnow(),
@@ -556,7 +574,7 @@ class UserQueueWarmer:
         2. QueueItem.promoted_to_user_queue is False
         3. Campaign matches
         """
-        print(f"DEBUG: poll_missed_promotions called for {campaign_id}")
+        logger.debug(f"poll_missed_promotions called for {campaign_id}")
         try:
             # Join QueueItem -> BolnaExecutionMap
             # We want items that HAVE a bolna execution map indicating interest
@@ -577,7 +595,7 @@ class UserQueueWarmer:
             
             result = await session.execute(query)
             candidates = result.all()
-            print(f"DEBUG: Found {len(candidates)} candidates for promotion check")
+            logger.debug(f"Found {len(candidates)} candidates for promotion check")
             
             promoted_count = 0
             

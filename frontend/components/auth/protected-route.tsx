@@ -22,10 +22,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         // We only redirect if we are DEFINITELY not loading
         if (!loading) {
             if (!isAuthenticated) {
-                console.log(`DEBUG: ProtectedRoute - Unauthenticated access to ${pathname}, redirecting to /login`);
                 router.push("/login");
             } else if (onboardingCompleted === false && !hasSkippedOnboarding && !pathname?.startsWith('/onboarding')) {
-                console.log(`DEBUG: ProtectedRoute - Onboarding incomplete, redirecting to /onboarding/basics`);
                 router.push("/onboarding/basics");
             }
         }

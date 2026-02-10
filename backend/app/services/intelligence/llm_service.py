@@ -221,6 +221,114 @@ class LLMService:
             logger.error(f"LLM Summary generation failed: {e}")
             return "Lead found by AI. Check transcript."
 
+    async def generate_structured_lead_context(self, transcript: str, extracted_data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Generates structured, actionable context from a call transcript.
+        Returns high-signal insights for quick decision-making.
+        
+        Args:
+            transcript: Full call transcript
+            extracted_data: Optional pre-extracted data from Bolna
+            
+        Returns:
+            Dict with structured context:
+            {
+                "intent": "Why they're interested (1 sentence)",
+                "key_needs": ["Specific need 1", "Specific need 2"],
+                "timeline": "When they want to move forward",
+                "constraints": ["Budget limit", "Other constraints"],
+                "next_action": "Recommended next step"
+            }
+        """
+        if not self.model:
+            logger.warning("LLM model not available for structured context generation")
+            return self._fallback_structured_context(extracted_data)
+
+        if not transcript or len(transcript) < 50:
+            return self._fallback_structured_context(extracted_data)
+
+        # Cache key based on transcript hash
+        cache_key = f"structured_context_{hash(transcript)}"
+        if cached := self._get_from_cache(cache_key):
+            return cached
+
+        prompt = f"""
+        You are a sales intelligence analyst. Extract actionable insights from this call transcript.
+        
+        TRANSCRIPT:
+        {transcript}
+        
+        Task: Extract structured, high-signal information that helps a sales agent quickly understand this lead.
+        
+        Return ONLY valid JSON with this exact schema:
+        {{
+          "intent": "One sentence explaining WHY they're interested (their pain point or goal)",
+          "key_needs": ["Specific requirement 1", "Specific requirement 2"],
+          "timeline": "When they want to move forward (e.g., 'This week', 'Next month', 'Urgent', 'Flexible')",
+          "constraints": ["Budget: $X", "Must have feature Y", "Other limitations"],
+          "next_action": "Specific recommended next step (e.g., 'Send pricing for Enterprise plan', 'Schedule demo for Tuesday 2pm')"
+        }}
+        
+        Guidelines:
+        - Be specific and actionable
+        - Extract actual details from the transcript, don't make assumptions
+        - If information is missing, use "Not mentioned" or omit the field
+        - Keep each item concise (max 10 words)
+        - Focus on what the sales agent NEEDS to know
+        """
+
+        try:
+            text = await self._generate(prompt, model_type="flash")
+            # Clean up potential markdown code blocks
+            text = text.replace("```json", "").replace("```", "").strip()
+            structured = json.loads(text)
+            
+            # Validate structure
+            if not isinstance(structured, dict):
+                raise ValueError("Invalid structure returned")
+            
+            # Ensure all expected keys exist with defaults
+            result = {
+                "intent": structured.get("intent", "Lead expressed interest"),
+                "key_needs": structured.get("key_needs", []),
+                "timeline": structured.get("timeline", "Not specified"),
+                "constraints": structured.get("constraints", []),
+                "next_action": structured.get("next_action", "Follow up to discuss requirements")
+            }
+            
+            self._set_cache(cache_key, result, ttl=86400)  # 24h cache
+            return result
+            
+        except Exception as e:
+            logger.error(f"LLM Structured Context generation failed: {e}")
+            return self._fallback_structured_context(extracted_data)
+
+    def _fallback_structured_context(self, extracted_data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Fallback structured context when LLM is unavailable or fails.
+        Uses extracted_data if available.
+        """
+        result = {
+            "intent": "Lead found by AI",
+            "key_needs": [],
+            "timeline": "Not specified",
+            "constraints": [],
+            "next_action": "Review call transcript and follow up"
+        }
+        
+        if extracted_data and isinstance(extracted_data, dict):
+            # Try to populate from extracted_data
+            if extracted_data.get("interested"):
+                result["intent"] = "Lead confirmed interest"
+            
+            if extracted_data.get("user_intent"):
+                result["intent"] = str(extracted_data["user_intent"])[:100]
+            
+            if extracted_data.get("callback_time"):
+                result["timeline"] = f"Requested callback: {extracted_data['callback_time']}"
+        
+        return result
+
     async def validate_and_fix(self, text: str, source_metrics: Dict[str, Any], error_msg: str, attempt: int = 1) -> str:
         """
         Self-Healing Mechanism:

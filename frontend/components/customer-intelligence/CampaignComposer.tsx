@@ -84,7 +84,7 @@ interface CampaignComposerProps {
     campaignId?: string | null;
     initialLeads?: any[];
     initialName?: string;
-    onComplete: () => void;
+    onComplete: (campaignId?: string) => void;
     onBack?: () => void;
     onEditLeads?: () => void;
     onError?: (error: any) => void;
@@ -165,7 +165,6 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
         if (!campaignId && persistedState.draftCreatedAt) {
             const oneDay = 24 * 60 * 60 * 1000;
             if (Date.now() - persistedState.draftCreatedAt > oneDay) {
-                console.log("Draft expired, clearing...");
                 removePersistedState();
                 if (onBack) onBack();
             }
@@ -282,9 +281,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
 
     const checkCalendarStatus = async () => {
         try {
-            console.log("DEBUG: Checking calendar status for campaign:", campaignId);
             const status = await api.get('/intelligence/calendar/status');
-            console.log("DEBUG: Calendar Status Response:", status);
             setCalendarStatus(status);
         } catch (error) {
             console.error("Failed to check calendar status:", error);
@@ -573,13 +570,8 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
     const handleSaveAndNext = async () => {
         if (isLoading || isSubmittingRef.current) return;
 
-        console.log("DEBUG: handleSaveAndNext clicked", { step, customerContext });
-        // toast.info("Debug: Button Clicked"); // Temporary debug
-
-
         if (step === 'IDENTITY') {
             if (!customerContext) {
-                console.log("DEBUG: Validation Failed - Missing customerContext");
                 toast.error("Customer context is mandatory");
                 return;
             }
@@ -588,8 +580,6 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
             const isSampleBrand = brandContext?.trim() === SAMPLE_BRAND_CONTEXT.trim();
             const isSampleTeam = teamMemberContext?.trim() === SAMPLE_TEAM_CONTEXT.trim();
             const isSampleCustomer = customerContext?.trim() === SAMPLE_CUSTOMER_CONTEXT.trim();
-
-            console.log("DEBUG: Sample Checks", { isSampleBrand, isSampleTeam, isSampleCustomer });
 
             if (isSampleBrand || isSampleTeam || isSampleCustomer) {
                 toast.error("Please customize the sample context for your brand. It cannot be exactly the same as the Faasos example.");
@@ -686,7 +676,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                     }
 
                     if (shouldComplete) {
-                        onComplete();
+                        onComplete(newCampaignId);
                     }
                     return newCampaignId;
                 }
@@ -723,7 +713,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
 
                 toast.success("Alex: Mission initiated! Your campaign is now live and the team is ready.");
                 removePersistedState();
-                onComplete();
+                onComplete(campaignId || undefined);
             } else {
                 return campaignId;
             }
@@ -2163,7 +2153,6 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                                 // Improved Guard: Automatically save and create campaign if in Draft Mode
                                                                 let activeCampaignId = campaignId;
                                                                 if (!activeCampaignId || activeCampaignId === 'null' || activeCampaignId === 'undefined') {
-                                                                    console.log("DEBUG: Syncing draft - creating campaign first");
                                                                     activeCampaignId = await finalizeCampaign(false);
                                                                     if (!activeCampaignId) return; // Creation failed
                                                                 }
@@ -2178,7 +2167,6 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                                         end: w.end
                                                                     })).filter(w => w.day && w.start && w.end);
 
-                                                                    console.log("DEBUG: Syncing to Calendar", { campaignId: activeCampaignId, windowCount: cleanedWindows.length });
 
                                                                     await api.patch(`/intelligence/campaigns/${activeCampaignId}/settings`, {
                                                                         execution_windows: cleanedWindows

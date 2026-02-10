@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4-stable] - 2026-02-10
+### MVP v1 - High Intent Call Scheduler
+
+#### Backend
+- **Scheduler**: Implemented `QueueWarmer` for dynamic, concurrency-aware lead orchestration.
+- **Callbacks**: Added robust "Call me back" detection and automated scheduling system.
+- **Priority Engine**: Scheduled leads automatically receive high priority (`Score: 999`) upon wake-up.
+- **Campaign Control**: Introduced `Reset Campaign` logic that protects `INTENT_YES`, `SCHEDULED`, and `CONSUMED` states while retrying failures.
+- **Dispositions**: Standardized granular call states across the entire ecosystem.
+- **Service Layer**: Deep refactoring of `campaign_service`, `user_queue_service`, and `execution_service` for high-throughput stability.
+
+#### Frontend
+- **Execution Panel**: Premium real-time oversight for active campaigns with live status updates.
+- **Campaign Management**: Integrated "Reset" and "Pause/Resume" controls with state safety.
+- **UI/UX**: Refined `CampaignCard` and `CallLogTable` for better information density and visual clarity.
+- **Auth & Onboarding**: Fixed flickering and timeout issues in `AuthProvider` and `OnboardingGuard`.
+- **Transitions**: Polished page transitions and loading states for a premium "15/10" feel.
+
 ## [1.1.3-stable] - 2026-02-05
 ### Behind the Scene Execution Panel - Fully Working
 

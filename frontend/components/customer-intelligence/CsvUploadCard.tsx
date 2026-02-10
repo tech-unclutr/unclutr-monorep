@@ -126,7 +126,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     useEffect(() => {
         // In create mode, if we are in a stale mapping/orchestration state but have no file (e.g. fresh mount), reset to UPLOAD
         if (mode === 'create' && !file && persistedState.stage !== 'UPLOAD' && persistedState.stage !== 'DONE') {
-            console.log("CsvUpload: Resetting stale create state");
             setPersistedState(prev => ({
                 ...prev,
                 stage: 'UPLOAD',
@@ -205,7 +204,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     }, [persistedState.mapping, setPersistedState]);
 
     const handleFileSelect = useCallback((file: File) => {
-        console.log("CsvUpload: Handling file selection", file.name);
         setFile(file);
 
         if (file.name.endsWith('.csv')) {
@@ -213,7 +211,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    console.log("CsvUpload: Parse complete", { rows: results.data.length, fields: results.meta.fields });
                     if (results.data && results.data.length > 0) {
                         const detectedHeaders = Object.keys(results.data[0] as object);
 
@@ -267,7 +264,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         try {
             // 1. Check if user is logged in
             if (!user) {
-                console.error("CsvUpload: No user validated during pre-flight check");
                 toast.error("Authentication check failed. Please refresh page.");
                 return false;
             }
@@ -275,27 +271,22 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
             // 2. Check if company ID is available
             // If authCompanyId is missing, try to fetch it or wait a moment
             if (!authCompanyId) {
-                console.warn("CsvUpload: Company ID missing in context. Attempting to retrieve...");
                 // Just a fallback check on localStorage directly as a hail mary
                 const storedCompanyId = localStorage.getItem('unclutr_company_id');
                 if (!storedCompanyId) {
-                    console.error("CsvUpload: Company ID completely missing.");
                     toast.error("Organization context missing. Please refresh page.");
                     return false;
                 }
-                console.log("CsvUpload: Recovered Company ID from storage:", storedCompanyId);
                 return true;
             }
 
             return true;
         } catch (err) {
-            console.error("CsvUpload: Auth validation error", err);
             return false;
         }
     };
 
     const handleCreateCampaign = async (forceCreate = false) => {
-        console.log("CsvUpload: Starting campaign creation/update", { mode, campaignId: propCampaignId });
 
         if (!mapping.customer_name || !mapping.contact_number) {
             toast.error("Please map at least Name and Contact Number");
@@ -328,15 +319,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
             // [FIX] Consolidate campaign ID logic to handle both direct edit (propCampaignId)
             // and resumed create (persistedState.campaignId). 
+            const targetCampaignId = propCampaignId || persistedState.campaignId;
             // If forceCreate is true, we skip update and POST a new one.
-            const targetCampaignId = propCampaignId || campaignId;
-
             if (targetCampaignId && !forceCreate) {
                 // UPDATE MODE: Update leads directly
-                console.log(`CsvUpload: Updating leads for campaign ${targetCampaignId}`);
                 const payload = { leads };
                 const response = await api.put(`/intelligence/campaigns/${targetCampaignId}/leads`, payload);
-                console.log("CsvUpload: Update response", response);
 
                 if (response.status === 'success') {
                     toast.success("The Success Team has updated your leads. We're ready when you are.");
@@ -346,7 +334,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                         stage: 'DONE'
                     }));
                 } else {
-                    console.error("CsvUpload: Non-success status", response);
                     throw new Error(response.message || "Failed to update leads (Unknown error)");
                 }
             } else {
@@ -354,7 +341,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 // We do NOT call the API here anymore. We just transition to ORCHESTRATION state.
                 // The CampaignComposer will handle the creation on "Finish".
 
-                console.log("CsvUpload: Draft mode -> Orchestration", { leadCount: leads.length });
                 if (forceCreate) {
                     // If force create was requested (after duplicate check), we just proceed.
                     // The composer check will happen on final submit (create-full), which also duplicates check?
@@ -451,7 +437,6 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         if (stage === 'DONE') {
             const timer = setTimeout(() => {
                 if (mode === 'edit' && onLeadsUpdated) {
-                    console.log("CsvUpload: Auto-returning to composer after edit");
                     onLeadsUpdated();
                     reset();
                 } else if (mode === 'create') {
@@ -500,11 +485,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 initialName={campaignName}
                 onBack={() => setPersistedState(prev => ({ ...prev, stage: 'MAPPING' }))}
                 onCampaignIdGenerated={(id) => setPersistedState(prev => ({ ...prev, campaignId: id }))}
-                onComplete={() => {
-                    if (mode === 'create' && onSuccess && campaignId) {
+                onComplete={(createdId) => {
+                    if (mode === 'create' && onSuccess) {
                         // Critical: Reset state first to return to "Upload" screen behind the popup
                         reset();
-                        onSuccess(campaignId);
+                        // Use the ID returned from composer (newly created) or the one in state
+                        onSuccess(createdId || campaignId || '');
                     } else {
                         // Edit mode: Show internal success state
                         setPersistedState(prev => ({ ...prev, stage: 'DONE' }));

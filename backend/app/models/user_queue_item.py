@@ -20,6 +20,7 @@ class UserQueueItem(SQLModel, table=True):
     # AI Call Context (from AI agent interactions)
     call_history: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     ai_summary: Optional[str] = Field(default=None)  # 2-line summary of why they're interested
+    structured_context: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))  # Structured insights (intent, needs, timeline, constraints, next_action)
     intent_strength: float = Field(default=0.0)  # 0.0 to 1.0
     
     # Commitment Tracking

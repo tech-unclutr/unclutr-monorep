@@ -1,6 +1,6 @@
-import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict
+import logging
 
 import dateutil.parser
 from fastapi import APIRouter, Depends
@@ -18,6 +18,8 @@ from app.services.intelligence.scheduling_service import scheduling_service
 from app.services.user_queue_warmer import UserQueueWarmer
 from app.services.lead_closure import LeadClosure
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.post("/webhook/bolna")
@@ -25,7 +27,7 @@ async def bolna_webhook(
     payload: Dict[str, Any],
     session: AsyncSession = Depends(get_session),
 ) -> Any:
-    print(f"[BolnaWebhook] Received payload: {payload}")
+    logger.info(f"[BolnaWebhook] Received payload: {payload}")
     
     with open("webhook_live.log", "a") as f:
         f.write(f"[{datetime.now()}] Webhook Received: {payload}\n")
@@ -41,7 +43,7 @@ async def bolna_webhook(
     execution_map = result.scalars().first()
     
     if not execution_map:
-        print(f"[BolnaWebhook] No execution map found for {bolna_call_id}")
+        logger.warning(f"[BolnaWebhook] No execution map found for {bolna_call_id}")
         return {"status": "ignored", "reason": "not_found"}
         
     # 2.5 Save Raw Data (New Requirement)
@@ -54,7 +56,7 @@ async def bolna_webhook(
         session.add(raw_entry)
         # We allow this to be committed along with the rest of the updates
     except Exception as e:
-        print(f"[BolnaWebhook] Failed to save raw data: {e}")
+        logger.error(f"[BolnaWebhook] Failed to save raw data: {e}")
 
     # 3. Update Observability Data (BolnaExecutionMap)
     execution_map.last_webhook_payload = payload
@@ -86,7 +88,7 @@ async def bolna_webhook(
                 try:
                     extracted_data = json.loads(custom_extractions)
                 except Exception as e:
-                    print(f"[BolnaWebhook] Failed to parse custom_extractions: {e}")
+                    logger.error(f"[BolnaWebhook] Failed to parse custom_extractions: {e}")
                     extracted_data = {"raw_custom": custom_extractions}
             else:
                 extracted_data = custom_extractions
@@ -107,7 +109,7 @@ async def bolna_webhook(
     # 4. Smart Queue Logic (QueueItem Update)
     q_item = await session.get(QueueItem, execution_map.queue_item_id)
     if not q_item:
-        print(f"[BolnaWebhook] Orphaned execution map {execution_map.id}")
+        logger.error(f"[BolnaWebhook] Orphaned execution map {execution_map.id}")
         await session.commit()
         return {"status": "processed", "warning": "orphaned_map"}
 
@@ -164,6 +166,24 @@ async def bolna_webhook(
     # Enrich intent if not already done
     enriched_intent = execution_map.extracted_data.get("user_intent", "")
     
+    # [FIX] Fallback: If no intent extracted by Bolna, use last user message from transcript
+    if not enriched_intent and transcript_data:
+        user_msgs = []
+        if isinstance(transcript_data, list):
+             user_msgs = [t.get("content") for t in transcript_data if t.get("role") == "user"]
+        
+        if user_msgs:
+            last_msg = user_msgs[-1]
+            logger.info(f"[BolnaWebhook] Fallback: Using last user message as intent: {last_msg}")
+            
+            # Enrich it on the fly for better agreement detection
+            enriched_intent = enrich_user_intent(
+                raw_intent=str(last_msg),
+                outcome=determined_status,
+                duration=execution_map.call_duration,
+                transcript=transcript_str
+            )
+
     agreement_status = detect_agreement_status(
         user_intent=str(enriched_intent),
         outcome=determined_status,
@@ -175,14 +195,23 @@ async def bolna_webhook(
     # This prevents "Disconnected" or "Ambiguous" from masking a positive lead.
     if agreement_status.get("agreed") is True and agreement_status.get("status") == "yes":
         if agreement_status.get("confidence") in ["high", "medium"]:
-             print(f"[BolnaWebhook] Overriding status {determined_status} -> INTENT_YES due to Agreement Detection.")
+             logger.info(f"[BolnaWebhook] Overriding status {determined_status} -> INTENT_YES due to Agreement Detection.")
              determined_status = "INTENT_YES"
 
-    print(f"[BolnaWebhook] Lead {q_item.lead_id} Outcome Analysis: {determined_status}")
+    logger.info(f"[BolnaWebhook] Lead {q_item.lead_id} Outcome Analysis: {determined_status}")
 
     # --- SCHEDULING CHECK ---
-    if determined_status == "SCHEDULED_CHECK":
-        extracted = execution_map.extracted_data or {}
+    # Check if we need to validate scheduling:
+    # 1. If status is SCHEDULED_CHECK (explicit scheduling intent detected)
+    # 2. If status is INTENT_YES but user also provided time info (e.g., "Yes, call me at 3 AM")
+    extracted = execution_map.extracted_data or {}
+    has_time_info = bool(
+        extracted.get("callback_time") or 
+        extracted.get("reschedule_slot") or 
+        extracted.get("preferred_time")
+    )
+    
+    if determined_status == "SCHEDULED_CHECK" or (determined_status == "INTENT_YES" and has_time_info):
         callback_time_str = extracted.get("callback_time") or extracted.get("reschedule_slot") or extracted.get("preferred_time")
         
         final_status = "AMBIGUOUS" # Fallback
@@ -201,20 +230,21 @@ async def bolna_webhook(
                     if is_available:
                         final_status = "SCHEDULED"
                         q_item.scheduled_for = reschedule_dt
-                        print(f"[BolnaWebhook] Reschedule Confirmed: {reschedule_dt}")
+                        logger.info(f"[BolnaWebhook] Reschedule Confirmed: {reschedule_dt}")
                     else:
                         final_status = "PENDING_AVAILABILITY"
                         q_item.scheduled_for = reschedule_dt
-                        print(f"[BolnaWebhook] Reschedule Requested (Out of Window): {reschedule_dt}")
+                        logger.info(f"[BolnaWebhook] Reschedule Requested (Out of Window): {reschedule_dt}")
                 else:
                      final_status = "AMBIGUOUS"
-                     print("[BolnaWebhook] Ignored past callback time")
+                     logger.info("[BolnaWebhook] Ignored past callback time")
             except:
                 final_status = "AMBIGUOUS"
         else:
              final_status = "AMBIGUOUS"
              
         determined_status = final_status
+
 
     # --- RETRY LOGIC FOR EDGE CASES ---
     # DISCONNECTED is excluded from this list to prevent retries
@@ -227,13 +257,13 @@ async def bolna_webhook(
         # If the call lasted > 10 seconds, assume legitimate interaction (even if ambiguous)
         # and DO NOT annoy user with a retry.
         if execution_map.call_duration > 10:
-             print(f"[BolnaWebhook] Outcome {determined_status} but duration {execution_map.call_duration}s > 10s. Skipping retry to prevent spam.")
+             logger.info(f"[BolnaWebhook] Outcome {determined_status} but duration {execution_map.call_duration}s > 10s. Skipping retry to prevent spam.")
              should_retry = False
         elif q_item.execution_count < 2:
             should_retry = True
-            print(f"[BolnaWebhook] Edge Case '{determined_status}' detected on Attempt #{q_item.execution_count}. Retrying...")
+            logger.info(f"[BolnaWebhook] Edge Case '{determined_status}' detected on Attempt #{q_item.execution_count}. Retrying...")
         else:
-            print(f"[BolnaWebhook] Edge Case '{determined_status}' detected. Max retries ({q_item.execution_count}) reached. Finalizing.")
+            logger.info(f"[BolnaWebhook] Edge Case '{determined_status}' detected. Max retries ({q_item.execution_count}) reached. Finalizing.")
 
     # Human Outcome Mapping (Moved Up)
     human_outcome_map = {
@@ -296,7 +326,7 @@ async def bolna_webhook(
     )
     
     if is_promotable:
-        print(f"[BolnaWebhook] Lead {q_item.id} promoted to User Queue via Webhook. Agreement: {agreement_status}")
+        logger.info(f"[BolnaWebhook] Lead {q_item.id} promoted to User Queue via Webhook. Agreement: {agreement_status}")
         await UserQueueWarmer.promote_to_user_queue(session, q_item.id)
     
     # 6. Update Persistent Call Log
@@ -355,9 +385,9 @@ async def bolna_webhook(
     try:
         # Trigger warmer on terminal state to replenish queue if needed
         await get_campaign_realtime_status_internal(q_item.campaign_id, session, trigger_warmer=True)
-        print(f"[BolnaWebhook] Broadcasted terminal update for campaign {q_item.campaign_id}")
+        logger.info(f"[BolnaWebhook] Broadcasted terminal update for campaign {q_item.campaign_id}")
     except Exception as e:
-        print(f"[BolnaWebhook] Failed to broadcast update: {e}")
+        logger.error(f"[BolnaWebhook] Failed to broadcast update: {e}")
 
     return {"status": "processed", "detected_state": determined_status if not should_retry else "RETRYING"}
 

@@ -19,7 +19,6 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
         // Safety timeout to prevent infinite loader
         const timer = setTimeout(() => {
             if (loading || isSyncing || (isAuthenticated && onboardingCompleted === null)) {
-                console.warn("DEBUG: OnboardingGuard - Status check timed out after 5s.");
                 setTimedOut(true);
             }
         }, 5000);
@@ -34,20 +33,9 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
         // If we're already on the onboarding page, don't do anything
         if (pathname?.startsWith("/onboarding")) return;
 
-        console.log("DEBUG: OnboardingGuard - State Check:", {
-            isAuthenticated,
-            onboardingCompleted,
-            loading,
-            isSyncing,
-            hasSkippedOnboarding,
-            pathname,
-            timedOut
-        });
-
         // If authenticated but onboarding is not completed, redirect to onboarding
         // ONLY if we are NOT currently syncing AND NOT skipped
         if (!loading && !isSyncing && isAuthenticated && onboardingCompleted === false && !hasSkippedOnboarding) {
-            console.log("DEBUG: OnboardingGuard - User not onboarded, redirecting to /onboarding");
             router.replace("/onboarding");
         }
     }, [

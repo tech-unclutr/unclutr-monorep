@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from uuid import UUID
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, func, or_, select
@@ -12,6 +13,8 @@ from app.models.campaign_lead import CampaignLead
 from app.models.cohort import Cohort
 from app.models.queue_item import QueueItem
 from app.services.bolna_caller import BolnaCaller
+
+logger = logging.getLogger(__name__)
 
 
 class QueueWarmer:
@@ -55,7 +58,7 @@ class QueueWarmer:
             ids_to_delete = [item.id for item in items_to_delete]
             
             if not ids_to_delete:
-                print(f"[QueueWarmer] All {len(items)} READY items are protected by UserQueue. Skipping cleanup.")
+                logger.info(f"[QueueWarmer] All {len(items)} READY items are protected by UserQueue. Skipping cleanup.")
                 return
 
             # 3. Delete Execution Maps for the items we ARE deleting
@@ -63,14 +66,14 @@ class QueueWarmer:
                 delete(BolnaExecutionMap).where(BolnaExecutionMap.queue_item_id.in_(ids_to_delete))
             )
                 
-            print(f"[QueueWarmer] Clearing {len(items_to_delete)} READY items (Protected: {len(protected_ids)})...")
+            logger.info(f"[QueueWarmer] Clearing {len(items_to_delete)} READY items (Protected: {len(protected_ids)})...")
             for item in items_to_delete:
                 await session.delete(item)
                 
             # Flush to ensure deletions happen before we try to create new ones
             await session.flush()
         except Exception as e:
-            print(f"[QueueWarmer] Error clearing buffer: {e}")
+            logger.error(f"[QueueWarmer] Error clearing buffer: {e}")
 
     @staticmethod
     async def check_and_replenish(campaign_id: UUID, session: AsyncSession):
@@ -90,7 +93,7 @@ class QueueWarmer:
         
         # 0. Status Check - Skip if COMPLETED
         if campaign.status == "COMPLETED":
-            print(f"[QueueWarmer] Campaign {campaign_id} is COMPLETED. Skipping replenishment.")
+            logger.info(f"[QueueWarmer] Campaign {campaign_id} is COMPLETED. Skipping replenishment.")
             return
         
         # Standby Check: We allow replenishment (Backlog -> READY) in PAUSED state,
@@ -125,12 +128,12 @@ class QueueWarmer:
         needed = TARGET_BUFFER - current_buffer
         
         if needed > 0:
-            print(f"[QueueWarmer] Buffer needs replenishment. Needed: {needed}")
+            logger.info(f"[QueueWarmer] Buffer needs replenishment. Needed: {needed}")
             await QueueWarmer._replenish_buffer_strategy(session, campaign, needed)
             # Flush replenishment so promotion can see the new items within the same transaction
             await session.flush()
         else:
-            print(f"[QueueWarmer] Buffer full. Current: {current_buffer}, Target: {TARGET_BUFFER}")
+            logger.info(f"[QueueWarmer] Buffer full. Current: {current_buffer}, Target: {TARGET_BUFFER}")
         
         active_count_result = await session.execute(
             select(func.count(QueueItem.id))
@@ -147,7 +150,7 @@ class QueueWarmer:
         try:
             # Final Commit for the entire transaction block
             await session.commit()
-            print(f"[QueueWarmer] Successfully committed replenishment for campaign {campaign_id}")
+            logger.info(f"[QueueWarmer] Successfully committed replenishment for campaign {campaign_id}")
             
             # --- STAGE 3: COMPLETION CHECK ---
             await QueueWarmer._check_completion(session, campaign)
@@ -155,7 +158,7 @@ class QueueWarmer:
         except Exception as commit_err:
             import traceback
             error_msg = f"[QueueWarmer] COMMIT FAILED: {str(commit_err)}\n{traceback.format_exc()}"
-            print(error_msg)
+            logger.error(error_msg)
             with open("critical_error.log", "a") as f:
                 f.write(f"\n[{datetime.utcnow()}] {error_msg}\n")
             await session.rollback()
@@ -181,10 +184,10 @@ class QueueWarmer:
             if not stale_items:
                 return
 
-            print(f"[QueueWarmer] Found {len(stale_items)} stale DIALING_INTENT items. Cleaning up...")
+            logger.info(f"[QueueWarmer] Found {len(stale_items)} stale DIALING_INTENT items. Cleaning up...")
             
             for item in stale_items:
-                print(f"[QueueWarmer] Failing stale item {item.id} (Lead {item.lead_id})")
+                logger.info(f"[QueueWarmer] Failing stale item {item.id} (Lead {item.lead_id})")
                 item.status = "FAILED"
                 item.outcome = "System Timeout (Stale)"
                 # Allow retry if rules permit
@@ -199,7 +202,7 @@ class QueueWarmer:
             
             await session.flush()    
         except Exception as e:
-            print(f"[QueueWarmer] Error cleaning stale items: {e}")
+            logger.error(f"[QueueWarmer] Error cleaning stale items: {e}")
 
     @staticmethod
     async def _get_busy_phone_numbers(session: AsyncSession, campaign_id: UUID) -> set:
@@ -264,13 +267,13 @@ class QueueWarmer:
         candidates = result.all()
         
         if not candidates:
-            print("[QueueWarmer] No candidates found for promotion. Buffer empty or no READY items.")
+            logger.info("[QueueWarmer] No candidates found for promotion. Buffer empty or no READY items.")
             return
             
         items_to_promote = []
         promoted_numbers = set()
         
-        print(f"[QueueWarmer] Found {len(candidates)} candidates. Inspecting...")
+        logger.info(f"[QueueWarmer] Found {len(candidates)} candidates. Inspecting...")
 
         for q_item, lead in candidates:
             if len(items_to_promote) >= slots:
@@ -278,30 +281,30 @@ class QueueWarmer:
                 
             norm_num = normalize_phone_number(lead.contact_number)
             if not norm_num:
-                print(f"[QueueWarmer] Skipping lead {lead.id} - Invalid number.")
+                logger.warning(f"[QueueWarmer] Skipping lead {lead.id} - Invalid number.")
                 continue # Safety
                 
             # Skip if number is already busy or already in this promotion batch
             if norm_num in busy_numbers or norm_num in promoted_numbers:
-                print(f"[QueueWarmer] Skipping lead {lead.id} ({norm_num}) - Phone number is already busy (in busy_numbers={norm_num in busy_numbers}, in promoted={norm_num in promoted_numbers}).")
+                logger.debug(f"[QueueWarmer] Skipping lead {lead.id} ({norm_num}) - Phone number is already busy.")
                 continue
                 
             # [HARD GUARDRAIL] Max 2 calls per session
             if q_item.execution_count >= 2:
-                print(f"[QueueWarmer] HARD GUARDRAIL: Skipping lead {lead.id} - Max 2 calls reached (count={q_item.execution_count}). Marking FAILED.")
+                logger.warning(f"[QueueWarmer] HARD GUARDRAIL: Skipping lead {lead.id} - Max 2 calls reached. Marking FAILED.")
                 q_item.status = "FAILED"
                 q_item.outcome = "Max Retries Exceeded"
                 session.add(q_item)
                 continue
             
-            print(f"[QueueWarmer] Promoting lead {lead.id} (Count={q_item.execution_count} -> {q_item.execution_count + 1})")
+            logger.info(f"[QueueWarmer] Promoting lead {lead.id} (Count={q_item.execution_count} -> {q_item.execution_count + 1})")
 
                 
             items_to_promote.append(q_item)
             promoted_numbers.add(norm_num)
             
         if not items_to_promote:
-            # print("[QueueWarmer] No items selected for promotion after filtering busy numbers.")
+            # queue_warmer results
             return
             
         # Update status and collect IDs
@@ -336,10 +339,10 @@ class QueueWarmer:
             status_data = await get_campaign_realtime_status_internal(campaign.id, session, trigger_warmer=False)
             await manager.broadcast_status_update(str(campaign.id), status_data)
         except Exception as broadcast_err:
-            print(f"[QueueWarmer] Early broadcast failed: {broadcast_err}")
+            logger.warning(f"[QueueWarmer] Early broadcast failed: {broadcast_err}")
         
         # Trigger Bolna
-        print(f"[QueueWarmer] Promoting {len(items_to_promote)} items to Active Dialing...")
+        logger.info(f"[QueueWarmer] Promoting {len(items_to_promote)} items to Active Dialing...")
         try:
             call_results = await BolnaCaller.create_and_schedule_batch(
                 session=session,
@@ -351,7 +354,7 @@ class QueueWarmer:
             # Handle immediate errors
             if call_results and call_results.get("status") == "error":
                 if call_results.get("error_type") == "WINDOW_EXPIRED":
-                    print(f"[QueueWarmer] Window expired for campaign {campaign.id}. Pausing.")
+                    logger.warning(f"[QueueWarmer] Window expired for campaign {campaign.id}. Pausing.")
                     campaign.status = "PAUSED"
                     meta = campaign.meta_data or {}
                     meta["window_expired"] = True
@@ -382,14 +385,14 @@ class QueueWarmer:
                     
                     # Broadcast
                     await manager.broadcast_status_update(str(campaign.id), status_data)
-                    print(f"[QueueWarmer] Broadcasted state update for campaign {campaign.id}")
+                    logger.info(f"[QueueWarmer] Broadcasted state update for campaign {campaign.id}")
                 except Exception as broadcast_err:
-                    print(f"[QueueWarmer] Failed to broadcast state update: {broadcast_err}")
+                    logger.error(f"[QueueWarmer] Failed to broadcast state update: {broadcast_err}")
                     
         except Exception as e:
             import traceback
             error_msg = f"[QueueWarmer] CRITICAL PROMOTION FAILURE: {str(e)}\n{traceback.format_exc()}"
-            print(error_msg)
+            logger.error(error_msg)
             with open("critical_error.log", "a") as f:
                 f.write(f"\n[{datetime.utcnow()}] {error_msg}\n")
             
@@ -476,7 +479,7 @@ class QueueWarmer:
                 updated_count += 1
         
         if updated_count > 0:
-            print(f"[QueueWarmer] Rebalanced {updated_count} items in buffer based on latest yield gaps.")
+            logger.info(f"[QueueWarmer] Rebalanced {updated_count} items in buffer based on latest yield gaps.")
             await session.flush()
 
     @staticmethod
@@ -508,17 +511,17 @@ class QueueWarmer:
             if completed_count < target_count:
                 eligible_cohorts[cohort_name] = target_count
             else:
-                print(f"[QueueWarmer] Cohort '{cohort_name}' reached target ({completed_count}/{target_count} completed)")
+                logger.info(f"[QueueWarmer] Cohort '{cohort_name}' reached target ({completed_count}/{target_count} completed)")
         
         # If no eligible cohorts, stop replenishment
         # BUT: Still perform rebalancing if we have a buffer!
         if not eligible_cohorts:
             # Check if we have buffer to rebalance anyway?
             # For now, if strategy is done, we might not need to rebalance, but let's be safe.
-            print(f"[QueueWarmer] All targets reached for campaign {campaign.id}. No replenishment. (Progress: {cohort_progress})")
+            logger.info(f"[QueueWarmer] All targets reached for campaign {campaign.id}. No replenishment. (Progress: {cohort_progress})")
             return
         
-        print(f"[QueueWarmer] Eligible cohorts for replenishment: {list(eligible_cohorts.keys())}")
+        logger.info(f"[QueueWarmer] Eligible cohorts for replenishment: {list(eligible_cohorts.keys())}")
         
         # Calculate current buffer composition
         buffer_counts_result = await session.execute(
@@ -577,7 +580,7 @@ class QueueWarmer:
         
         # Optimization: Sort by something? created_at?
         query = query.limit(count)
-        print(f"[QueueWarmer] Fetching up to {count} leads for cohort '{cohort_name}'...")
+        logger.info(f"[QueueWarmer] Fetching up to {count} leads for cohort '{cohort_name}'...")
         
         candidates_result = await session.execute(query)
         candidates = candidates_result.scalars().all()
@@ -588,7 +591,7 @@ class QueueWarmer:
                  await QueueWarmer._fetch_and_queue(session, campaign, None, count)
              return
 
-        print(f"[QueueWarmer] Queueing {len(candidates)} leads (Backlog -> READY)...")
+        logger.info(f"[QueueWarmer] Queueing {len(candidates)} leads (Backlog -> READY)...")
         
         # Resolve cohort_id
         cohort_id = None
@@ -609,7 +612,7 @@ class QueueWarmer:
             existing_item = existing_check.scalars().first()
             
             if existing_item:
-                print(f"[QueueWarmer] Skipping lead {lead.id} - already has queue item (status: {existing_item.status})")
+                logger.info(f"[QueueWarmer] Skipping lead {lead.id} - already has queue item (status: {existing_item.status})")
                 continue
             
             item = QueueItem(
@@ -644,7 +647,7 @@ class QueueWarmer:
         if not items:
             return
 
-        print(f"[QueueWarmer] Waking up {len(items)} scheduled calls...")
+        logger.info(f"[QueueWarmer] Waking up {len(items)} scheduled calls...")
         
         for item in items:
             item.status = "READY"
@@ -671,7 +674,7 @@ class QueueWarmer:
         if not items:
             return
 
-        print(f"[QueueWarmer] Recovering {len(items)} items from PENDING status...")
+        logger.info(f"[QueueWarmer] Recovering {len(items)} items from PENDING status...")
         
         for item in items:
             item.status = "READY"
@@ -774,7 +777,7 @@ class QueueWarmer:
             return
             
         # If we are here: No active items, and either All targets met OR No leads available for remaining targets.
-        print(f"[QueueWarmer] Campaign {campaign.id} execution COMPLETED. (Active={active_count})")
+        logger.info(f"[QueueWarmer] Campaign {campaign.id} execution COMPLETED. (Active={active_count})")
         
         campaign.status = "COMPLETED"
         session.add(campaign)

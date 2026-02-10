@@ -54,9 +54,6 @@ export default function ChannelsPage() {
 
             try {
                 // Explicitly get token to ensure we are authenticated
-                console.log('DEBUG: ChannelsPage - Fetching ID Token for user:', user.email);
-                const token = await user.getIdToken();
-                console.log('DEBUG: ChannelsPage - ID Token retrieved (len):', token?.length);
 
                 const data = await api.get('/datasources', {
                     Authorization: `Bearer ${token}`
@@ -128,14 +125,10 @@ export default function ChannelsPage() {
         const raw = state.channels[section];
         const current = Array.isArray(raw) ? raw : (raw ? [raw] : []);
 
-        console.log(`DEBUG: Toggle ${section} ID:`, id, typeof id);
-        console.log(`DEBUG: Current IDs:`, current);
-
         const next = current.includes(id)
             ? current.filter(i => i !== id)
             : [...current, id];
 
-        console.log(`DEBUG: Next IDs:`, next);
         updateChannels({ [section]: next });
     };
 

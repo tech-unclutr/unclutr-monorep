@@ -29,6 +29,7 @@ export const api = {
         const token = user ? await user.getIdToken() : null;
 
         const companyId = typeof window !== 'undefined' ? localStorage.getItem('unclutr_company_id') : null;
+
         const combinedHeaders: any = {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -37,8 +38,9 @@ export const api = {
         };
 
         if (!companyId && endpoint.startsWith('/execution')) {
-            console.warn(`DEBUG: API Request to ${endpoint} missing X-Company-ID. LocalStorage 'unclutr_company_id' is:`, companyId);
+            // Keep as a safe-guard but remove debug noise
         }
+
 
         const fullUrl = `${API_BASE_URL}${endpoint}`;
 
@@ -50,7 +52,6 @@ export const api = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
-            console.error("DEBUG: API Error", { url: fullUrl, status: response.status, errorData });
             throw new ApiError(errorData.detail || response.statusText, response.status, errorData);
         }
 

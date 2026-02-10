@@ -61268,3 +61268,4578 @@ Campaign ID: 8a211e51-893a-4ce0-b9b2-8dc55a4e3d8f
 Status: None
 Refresh: False
 Items found: 0
+
+--- Request at 2026-02-09 22:10:37.910562 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:10:37.911526 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-09 22:11:07.984368 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:11:37.915874 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:12:07.899732 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:12:37.911464 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:13:08.152916 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:13:38.005268 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:14:07.923656 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:14:37.926787 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:15:07.895379 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:15:37.998881 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:16:07.962479 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:16:38.102752 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:17:07.958563 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:17:37.967760 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:18:08.554895 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:18:37.518077 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:18:37.732767 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-09 22:19:07.534027 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:19:23.008814 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:19:23.036100 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-09 22:19:52.458915 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:20:23.335004 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:20:53.322704 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:21:23.309675 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:21:53.340752 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:22:23.306822 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:22:56.454560 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:23:56.354352 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:24:56.354878 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:26:07.903150 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:26:56.472003 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:27:32.481032 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:27:37.267851 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:27:37.483223 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:28:06.860890 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:28:36.845583 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:29:06.849240 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:29:36.828020 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:30:06.821810 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:34:35.495637 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:34:35.709383 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:34:49.088789 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:34:49.229599 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:35:19.159124 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:35:49.110941 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:36:19.077539 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:36:49.105331 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:37:19.099640 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:37:49.114164 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:38:19.211612 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:39:02.996278 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:39:28.550347 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:39:39.741808 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:39:39.751292 ---
+Campaign ID: 01fafd08-33d7-4330-b149-dfb7d1394aaf
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+Items found: 2
+Item ID: 288349ea-ee32-4ac5-af7d-634d8e0024db, Status: READY, Lead: bd042c5c-fe62-4a09-b8a1-7afc0e1e44e5
+Item ID: e126a221-26be-4e2b-853c-b23eee87284b, Status: READY, Lead: b94572e7-c88a-4857-940c-a3ee08868395
+
+--- Request at 2026-02-09 22:51:12.939700 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 22:51:12.940882 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-09 22:51:58.536014 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:52:12.966429 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 22:52:43.217157 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 1
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+
+--- Request at 2026-02-09 22:53:12.913417 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:53:43.048908 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:54:12.919063 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:54:42.940356 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:55:13.028753 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:55:42.944283 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:56:12.969581 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:56:43.059391 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:57:12.918955 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:57:42.930705 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:58:12.936120 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:58:50.509814 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:59:13.053304 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 22:59:43.053387 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:00:30.255745 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:00:30.415147 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:00:59.628938 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:01:30.416202 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:01:53.424361 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:01:53.530494 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:02:22.603793 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:03:23.996297 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:03:24.016588 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:03:53.331095 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:04:23.169638 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:04:53.187759 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:05:23.186180 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:05:53.255001 ---
+Campaign ID: bb85d3b3-0c91-4912-8013-2f90e51d2ec3
+Status: None
+Refresh: False
+Items found: 2
+Item ID: 6dc6686e-1d60-41ad-9b8a-e03e0b6fe51c, Status: READY, Lead: 20fb3d9b-15b1-4384-a7bf-9890c6d1feea
+Item ID: 0d1eb64e-1e00-4a7b-971c-978991a8d100, Status: READY, Lead: 00fbdb7d-a1b2-4d55-875c-f0586d09e3d5
+
+--- Request at 2026-02-09 23:26:54.993356 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:26:55.001310 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-09 23:27:23.723337 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 23:27:53.221335 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-09 23:28:23.875666 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 1
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+
+--- Request at 2026-02-09 23:28:53.270844 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 1
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+
+--- Request at 2026-02-09 23:29:24.999895 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 1
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+
+--- Request at 2026-02-09 23:29:53.480202 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 1
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+
+--- Request at 2026-02-09 23:30:23.129936 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:30:53.116400 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:31:19.212481 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:31:19.238559 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:31:47.751965 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:34:15.107047 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:34:15.592562 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:34:44.790198 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:35:13.814319 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:35:43.693642 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:36:13.825652 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:36:45.495492 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:37:13.671411 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:37:43.605638 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:38:13.604499 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:38:43.107610 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:38:43.578307 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:39:28.568390 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:39:28.623265 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-09 23:49:01.227944 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:49:01.776300 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:49:29.714139 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:50:00.439124 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:50:29.309023 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:50:59.371235 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:51:30.259106 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:51:59.524378 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:52:29.217128 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:52:59.129308 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-09 23:53:29.131264 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:10:36.661172 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:10:36.891382 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:11:06.641289 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:11:36.646830 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:12:06.659935 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:12:37.137205 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:13:08.306918 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:13:36.783558 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:14:07.317443 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:14:37.073893 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:15:07.516578 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:15:37.567693 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:16:06.944413 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:16:07.861808 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:16:37.604044 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:16:58.363745 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:17:07.228875 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:17:37.133130 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:17:56.897881 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:18:29.237830 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 00:18:29.356750 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:18:57.829757 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:18:59.304785 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:19:29.755264 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:19:57.839820 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:19:59.413138 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:20:29.510215 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:20:56.933407 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:20:59.905523 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:21:29.666290 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:23:44.132103 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 00:23:44.421491 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:24:13.852000 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:24:43.852706 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:25:13.845926 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:25:44.329194 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:26:24.599719 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:26:44.449296 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:27:56.379832 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:28:56.520791 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:29:56.491755 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:30:50.619633 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:31:14.699782 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:31:44.128444 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:32:15.981531 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:32:44.040028 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:33:14.171617 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:33:44.209821 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:34:14.370586 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:34:44.291071 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:35:14.065184 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:35:43.862729 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:36:13.836059 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:36:43.832045 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:37:13.852194 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:37:43.831448 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:38:13.829597 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:38:43.840215 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:39:13.848654 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:39:43.833464 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:40:13.853289 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:40:43.962808 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:41:13.844474 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:41:43.837519 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:42:13.834259 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:42:43.844722 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:43:16.677419 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:43:44.341046 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:44:56.382697 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:45:56.364088 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:46:56.361314 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:47:56.368470 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:48:10.664567 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 00:48:10.759264 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:48:40.587470 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:49:10.389895 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:50:13.117135 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:50:14.489193 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:50:40.453606 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 00:51:11.769650 ---
+Campaign ID: 9bdf2a9a-c58a-4f22-8d9d-65774184fbc4
+Status: None
+Refresh: False
+Items found: 2
+Item ID: d2332a28-9566-45e6-b91a-96262f18ebe6, Status: READY, Lead: 4e87c1de-5262-4b5d-8538-514aa68c3773
+Item ID: 75613d41-6e53-4acd-9845-314b43e6a849, Status: READY, Lead: f41cd24e-9562-41fb-a932-1dc81ba848e0
+
+--- Request at 2026-02-10 01:27:27.624503 ---
+Campaign ID: 692c0bd0-a434-4908-be66-5b027771e43a
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:27:27.625518 ---
+Campaign ID: 692c0bd0-a434-4908-be66-5b027771e43a
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:27:57.589770 ---
+Campaign ID: 692c0bd0-a434-4908-be66-5b027771e43a
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:31:49.991009 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:31:49.992084 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:32:20.048603 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:32:50.736312 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:33:19.980578 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:33:49.959425 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:34:19.971910 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:34:49.963502 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:35:19.969279 ---
+Campaign ID: ee76c59f-3bce-4003-9eda-8121c8495ad0
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:46:49.761981 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:46:49.911622 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:47:19.750722 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:47:49.607017 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:48:12.737721 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:48:12.873375 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:48:38.865018 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:49:08.881224 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:49:38.884145 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:49:57.634084 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:49:57.930024 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:50:27.604796 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:51:28.436117 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:51:28.437630 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:51:57.659613 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:52:19.674208 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:52:19.681871 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:52:27.434902 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:52:27.597145 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:52:57.441933 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:53:27.437347 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:53:59.336963 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:53:59.497508 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 01:54:08.613734 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:54:08.975643 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:54:38.597940 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:55:08.592992 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:55:38.643675 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:56:08.852425 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 01:56:33.349156 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 01:56:33.464952 ---
+Campaign ID: 6cde5596-17e9-4461-91fc-30e74d84bbda
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 02:00:44.688024 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 02:00:44.692718 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 02:01:14.681375 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:01:44.648263 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:02:14.594200 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:02:44.601487 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:03:14.969390 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:03:27.120341 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:03:44.534624 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:04:14.534522 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:04:44.579947 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:05:14.548188 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:05:59.758936 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:06:36.894659 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:06:44.530713 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:07:18.236557 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:07:44.571781 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:08:14.539570 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:08:44.547355 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:09:14.545846 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:09:44.550402 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:10:32.058709 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:10:44.527214 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:11:03.115192 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:11:14.589105 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:11:34.303794 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:11:44.572878 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:12:14.635460 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:12:44.528803 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:13:14.538068 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:13:44.533074 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:14:14.525693 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:15:02.042973 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:15:14.837218 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:15:44.536656 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 1
+Item ID: 4516ed11-549a-4494-89a3-152f78cb7205, Status: READY, Lead: e8d87cf5-024a-4dd3-8682-fbb7ffd69055
+
+--- Request at 2026-02-10 02:16:14.532722 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 1
+Item ID: 4516ed11-549a-4494-89a3-152f78cb7205, Status: READY, Lead: e8d87cf5-024a-4dd3-8682-fbb7ffd69055
+
+--- Request at 2026-02-10 02:16:44.537495 ---
+Campaign ID: 93644dd9-8756-4c83-a8fd-6e2f2c1b341b
+Status: None
+Refresh: False
+Items found: 1
+Item ID: 4516ed11-549a-4494-89a3-152f78cb7205, Status: READY, Lead: e8d87cf5-024a-4dd3-8682-fbb7ffd69055
+
+--- Request at 2026-02-10 02:20:45.602386 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 02:20:45.612021 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 02:21:16.566277 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:21:45.756932 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:22:22.167164 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:22:45.481084 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:23:15.579944 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:23:35.197842 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: True
+Items found: 1
+Item ID: 3b8f2da2-e2d9-4632-8ebc-746c817d9da4, Status: READY, Lead: 9ab9940a-cc44-4ab8-b739-049c06015f91
+
+--- Request at 2026-02-10 02:23:45.481991 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 1
+Item ID: 3b8f2da2-e2d9-4632-8ebc-746c817d9da4, Status: READY, Lead: 9ab9940a-cc44-4ab8-b739-049c06015f91
+
+--- Request at 2026-02-10 02:23:50.326261 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: True
+Items found: 1
+Item ID: 3b8f2da2-e2d9-4632-8ebc-746c817d9da4, Status: LOCKED, Lead: 9ab9940a-cc44-4ab8-b739-049c06015f91
+
+--- Request at 2026-02-10 02:24:01.197007 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:24:01.340516 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:24:31.151787 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:25:01.152242 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:25:31.148347 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:26:01.148347 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:26:31.361315 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:27:01.240028 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:27:31.152380 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:32:36.964329 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 02:32:36.981808 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 02:33:06.707711 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:33:36.837183 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:34:07.037588 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:34:36.701117 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:35:07.345791 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:35:36.698360 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:36:06.710983 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 1
+Item ID: e9051a8a-8fbe-472b-a1cd-55e081358a19, Status: READY, Lead: a999d0bf-055a-4c4f-804f-35f2e4197f6a
+
+--- Request at 2026-02-10 02:36:21.853075 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: True
+Items found: 1
+Item ID: e9051a8a-8fbe-472b-a1cd-55e081358a19, Status: LOCKED, Lead: a999d0bf-055a-4c4f-804f-35f2e4197f6a
+
+--- Request at 2026-02-10 02:36:38.717360 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:36:39.440755 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 02:37:08.938177 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:37:39.102441 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:38:08.978294 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:38:38.946797 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:39:08.928422 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:39:38.927801 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:40:08.923607 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:40:38.942994 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:41:08.945722 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:41:38.934348 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:42:08.944737 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:42:38.941625 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:43:08.927482 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:43:38.946063 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:44:08.949062 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:44:39.175768 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:45:11.764546 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:45:39.173623 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:46:09.697208 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:46:39.371974 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:47:11.373992 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:47:39.244369 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:48:14.579433 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:48:41.180614 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:49:10.231956 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:49:39.578945 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:50:09.336045 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:50:40.605880 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:51:09.322036 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:51:39.250417 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:52:09.583910 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:52:40.698792 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:53:10.873806 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:53:39.721480 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:54:10.721947 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:54:40.000989 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:55:09.787267 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:55:39.482097 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:56:10.890455 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:56:41.206893 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:57:10.503139 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:57:39.606280 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:58:13.023640 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:58:39.880081 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 02:59:10.473243 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 03:04:38.061166 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.063849 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.066558 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.069720 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.071762 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.077592 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.080640 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.082638 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.084432 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:38.111145 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 03:04:39.466892 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 03:04:45.330138 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:04:45.333666 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 03:05:14.720758 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 03:05:44.851120 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 03:06:24.272017 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 03:06:24.273872 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 04:05:02.051407 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 04:05:02.055772 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 04:18:41.617034 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 04:18:41.839153 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 04:19:10.998174 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 04:41:25.582005 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 04:41:25.628636 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 04:43:10.045599 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 04:43:10.048735 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 04:43:10.076363 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:09:54.209666 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:09:54.308785 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:10:18.867083 ---
+Campaign ID: 8a717b0b-f7ed-4f9a-b384-eb10b1664145
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:11:02.046720 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:11:02.375887 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:11:29.512611 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:11:59.390291 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:12:30.082873 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:12:38.062637 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:12:38.065288 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:12:59.834729 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:13:03.718088 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:13:29.396692 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:13:33.148339 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:13:59.496535 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:14:03.232884 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:15:36.518790 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:15:36.528001 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:15:36.647893 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:15:36.928357 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: True
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:15:59.857529 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:16:29.399747 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:16:59.389220 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:17:29.404613 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:17:59.396312 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:18:29.344642 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:18:59.389675 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:19:29.379601 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:19:59.405788 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:20:29.397826 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:20:59.586404 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:21:29.497849 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:21:59.443510 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:26:05.923093 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:26:06.237545 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:26:35.317587 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:26:47.806881 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:26:47.860208 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:27:17.247273 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:27:42.606604 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: True
+Items found: 0
+
+--- Request at 2026-02-10 05:27:47.210689 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:28:17.272176 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:28:55.168768 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:28:55.194487 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:29:24.496014 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:29:27.208786 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 05:29:27.295494 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 05:29:54.360825 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:29:55.987846 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:30:24.608236 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:30:26.030420 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:30:54.800619 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:30:56.042412 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:31:24.389840 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:31:26.047879 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:31:54.374241 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:31:55.941094 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:32:24.360404 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:32:25.942980 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:32:54.337215 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:32:55.910020 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:33:24.308997 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:33:26.054414 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:33:54.303683 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:33:55.928000 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:34:24.282029 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:34:25.907483 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:34:54.282038 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:34:55.932560 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:35:24.271865 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:35:25.926448 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:35:54.283718 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:35:55.926272 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:36:24.266852 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:36:25.931164 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:36:54.295218 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:36:55.927668 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:37:24.289340 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:37:25.912259 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:37:54.377826 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:37:55.928870 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:38:24.288048 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:38:25.905140 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:38:54.301114 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:38:55.918025 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:39:24.289839 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:39:25.931764 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:39:54.328790 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:39:55.930857 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:40:24.295760 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:40:25.937485 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:40:54.277049 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:40:55.940882 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:41:24.283967 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:41:25.935450 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:41:54.319234 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:41:55.919538 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:42:24.305054 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:42:25.927228 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:42:54.293588 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:42:55.912233 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:43:24.284533 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:43:25.938992 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:43:54.293450 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:43:55.939632 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:44:24.287405 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:44:25.920705 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:44:54.326274 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:44:55.934876 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:45:24.372992 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:45:26.009391 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:45:54.326786 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:45:55.935226 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:46:24.267624 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:46:25.935845 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:46:54.294059 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:46:55.927454 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:47:24.290286 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:47:25.919445 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:47:54.294579 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:47:55.935696 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:48:24.313105 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:48:25.913431 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:48:54.296228 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:48:55.911533 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:49:24.291486 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:49:25.935658 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:49:54.283114 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:49:55.933530 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:50:24.297765 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:50:25.934527 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:50:54.264830 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:50:55.933573 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:51:24.288949 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:51:25.930114 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:51:54.339997 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:51:55.926481 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:52:24.269442 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:52:25.931687 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:52:54.361162 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:52:55.913336 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:53:24.287447 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:53:25.929285 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:53:54.306973 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:53:55.933254 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:54:24.300011 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:54:25.928597 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:54:54.289253 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:54:55.933030 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:55:24.271501 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:55:25.932114 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:55:54.306923 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:55:55.942794 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:56:24.272971 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:56:25.933806 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:56:54.276319 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:56:55.932431 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:57:24.289748 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:57:25.920821 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:57:54.293842 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:57:55.935832 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:58:24.311310 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:58:25.913676 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:58:54.297609 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:58:55.919793 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:59:24.297994 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:59:25.933728 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:59:54.282149 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 05:59:55.955545 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:00:24.292830 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:00:26.057507 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:00:54.289843 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:00:55.937623 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:01:24.322569 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:01:25.937617 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:01:54.324284 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:01:55.922528 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:02:24.275007 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:02:25.930622 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:02:54.325964 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:02:55.907777 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:03:24.341442 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:03:25.952235 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:03:54.293817 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:03:55.938662 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:04:24.299437 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:04:25.920336 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:04:54.286588 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:04:55.935721 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:05:24.300438 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:05:26.332039 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:05:54.293855 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:05:55.953188 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:06:24.295251 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:06:25.934321 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:06:54.295402 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:06:55.933079 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:07:24.287336 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:07:25.920747 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:07:54.316328 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:07:55.942076 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:08:24.309491 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:08:25.917570 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:08:54.298049 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:08:55.919922 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:09:24.297487 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:09:25.957387 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:09:54.316061 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:09:55.932785 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:10:24.298128 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:10:25.940858 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:10:54.294833 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:10:55.935665 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:11:24.296257 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:11:25.935665 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:11:54.316249 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:11:55.948497 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:12:24.281988 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:12:25.973741 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:12:54.297471 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:12:55.916017 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:13:24.305800 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:13:25.935603 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:13:54.349490 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:13:55.942016 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:14:24.303832 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:14:25.922517 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:14:54.303084 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:14:55.942778 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:15:24.694513 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:15:26.214940 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:15:54.309976 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:15:55.937180 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:16:24.287424 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:16:25.936611 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:16:54.287336 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:16:55.937590 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:17:24.293139 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:17:25.926791 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:17:54.325410 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:17:55.936324 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:18:24.289893 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:18:25.963665 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:18:54.289492 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:18:55.914220 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:19:24.291159 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:19:25.922970 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:19:54.294148 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:19:55.938843 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:20:24.272433 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:20:25.938708 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:20:54.303753 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:20:55.917682 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:21:24.340393 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:21:25.935937 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:21:54.315147 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:21:55.943147 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:22:24.281416 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:22:25.947581 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:22:54.297384 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:22:55.943106 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:23:24.296914 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:23:25.920719 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:23:54.302226 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:23:55.949680 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:24:24.277937 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:24:25.939577 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:24:54.293058 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:24:55.921635 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:25:24.302890 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:25:25.931872 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:25:54.298528 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:25:55.942503 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:26:24.307417 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:26:25.942458 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:26:54.795550 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:26:56.397834 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:27:24.350793 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:27:25.972150 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:27:54.402705 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:27:55.955812 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:28:24.625638 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:28:25.973070 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:28:55.360000 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:28:56.031306 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:29:24.411136 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:29:26.747025 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:29:54.412350 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:29:55.992507 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:30:24.409023 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:30:26.030008 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:30:54.472915 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:30:55.962637 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:31:24.297088 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:31:25.933714 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:31:54.285274 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:31:55.914918 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:32:24.300443 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:32:25.940854 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:32:54.517526 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:32:56.170256 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:33:24.281863 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:33:25.933276 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:33:54.305910 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:33:55.913946 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:34:24.300825 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:34:25.941114 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:34:54.292909 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:34:55.948174 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:35:35.545075 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+
+--- Request at 2026-02-10 06:35:35.719265 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+Items found: 0
+
+--- Request at 2026-02-10 06:35:54.301580 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:35:55.939330 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:36:24.319729 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:36:25.959682 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:36:54.276776 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:36:55.995299 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:37:24.327818 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:37:25.949696 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:37:54.304480 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0
+
+--- Request at 2026-02-10 06:37:55.930308 ---
+Campaign ID: 404c3dae-6b40-4358-9115-f6ddfd8deb0b
+Status: None
+Refresh: False
+Items found: 0

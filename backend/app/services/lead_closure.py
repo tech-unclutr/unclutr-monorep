@@ -11,13 +11,13 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-
 from app.models.queue_item import QueueItem
 from app.models.user_queue_item import UserQueueItem
 import logging
 
 logger = logging.getLogger(__name__)
 
+from app.models.campaign_lead import CampaignLead
 
 class LeadClosure:
     """Service for managing lead closure at all lifecycle drop-off points."""
@@ -70,6 +70,20 @@ class LeadClosure:
             queue_item.updated_at = datetime.utcnow()
             
             session.add(queue_item)
+            
+            # [FIX] Also close the CampaignLead to reflect final status
+            lead_result = await session.execute(
+                select(CampaignLead).where(CampaignLead.id == lead_id)
+            )
+            campaign_lead = lead_result.scalar_one_or_none()
+            
+            if campaign_lead:
+                if reason == LeadClosure.CLOSURE_FAILED:
+                     campaign_lead.status = "FAILED"
+                else:
+                     campaign_lead.status = "PROCESSED"
+                session.add(campaign_lead)
+            
             await session.commit()
             await session.refresh(queue_item)
             
@@ -137,6 +151,17 @@ class LeadClosure:
             
             await session.commit()
             await session.refresh(user_queue_item)
+            
+            # [FIX] Also close the CampaignLead to reflect final status
+            lead_result = await session.execute(
+                select(CampaignLead).where(CampaignLead.id == user_queue_item.lead_id)
+            )
+            campaign_lead = lead_result.scalar_one_or_none()
+            
+            if campaign_lead:
+                campaign_lead.status = "PROCESSED"
+                session.add(campaign_lead)
+                await session.commit()
             
             logger.info(
                 f"Closed user queue lead {user_queue_item_id} with reason {reason}"

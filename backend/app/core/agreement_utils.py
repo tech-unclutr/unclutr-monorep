@@ -50,9 +50,11 @@ def detect_agreement_status(
         customer_text = ' '.join(customer_lines)
         
         # Minimum engagement check - allow shorter affirmative responses for Hinglish
+        # Minimum engagement check - allow shorter affirmative responses for Hinglish
         if len(customer_lines) < 2 or len(customer_text) < 10:
-            # Not enough conversation to determine agreement
-            return _get_unclear_status("low")
+            # Not enough conversation to determine agreement exclusively from transcript
+            # Continue to intent-based logic as fallback
+            pass
         
         # ========== NEGATION DETECTION (HIGHEST PRIORITY) ==========
         # These patterns indicate clear rejection and should override everything

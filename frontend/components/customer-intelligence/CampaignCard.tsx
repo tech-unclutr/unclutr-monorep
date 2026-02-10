@@ -35,6 +35,9 @@ interface CampaignCardProps {
     onEdit?: (id: string, updates: any) => Promise<void>;
     onEditClick?: (id: string) => void;
     onDelete?: (id: string) => Promise<void>;
+    onArchive?: (id: string) => Promise<void>; // [NEW]
+    isArchived?: boolean; // [NEW]
+    isMagicUI?: boolean; // [NEW] - adding this too as seen in usage
     className?: string;
 }
 
@@ -45,16 +48,21 @@ const CampaignCardBase = ({
     onEdit,
     onEditClick,
     onDelete,
+    onArchive, // [NEW]
+    isArchived = false, // [NEW]
     className,
     isExpanded: propIsExpanded,
     onToggleExpand,
-    onStartCampaign // [NEW] Prop for "Start Campaign"
+    onStartCampaign,
+    isMagicUI
 }: CampaignCardProps & { isExpanded?: boolean; onToggleExpand?: () => void; onStartCampaign?: () => void }) => {
     const [internalIsExpanded, setInternalIsExpanded] = useState(variant === 'default');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isArchiving, setIsArchiving] = useState(false); // [NEW]
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false); // [NEW]
 
     // Controlled or Uncontrolled
     const isExpanded = propIsExpanded !== undefined ? propIsExpanded : internalIsExpanded;
@@ -139,9 +147,30 @@ const CampaignCardBase = ({
         }
     };
 
+    // [NEW] Archive Handler
+    const handleArchiveClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsArchiveConfirmOpen(true);
+    };
+
+    const confirmArchive = async () => {
+        if (!onArchive) return;
+        console.log("[CampaignCard] Archive requested for campaign:", campaign.id);
+        setIsArchiving(true);
+        try {
+            await onArchive(campaign.id);
+            console.log("[CampaignCard] Archive callback successful");
+            setIsArchiveConfirmOpen(false);
+            // reset archiving state in case the card doesn't unmount
+            setIsArchiving(false);
+        } catch (error) {
+            console.error("[CampaignCard] Archive callback failed:", error);
+            setIsArchiving(false);
+        }
+    };
+
     const handleStartCampaign = (e: React.MouseEvent) => {
         e.stopPropagation();
-        console.log("[CampaignCard] Start Campaign clicked for", campaign.id);
         if (onStartCampaign) {
             onStartCampaign();
         }
@@ -312,28 +341,40 @@ const CampaignCardBase = ({
 
                     {/* New Button: Start Campaign (Only visible when collapsed and not expanded) - Taking 4th slot */}
                     {!isExpanded && (
-                        <div
-                            className={cn(
-                                "flex items-center justify-center p-4 rounded-[24px] text-white shadow-lg transition-all duration-300 cursor-pointer group/btn",
-                                status === 'DRAFT'
-                                    ? "bg-zinc-600 hover:bg-zinc-700 active:bg-zinc-800 shadow-zinc-500/30 hover:shadow-zinc-500/50"
-                                    : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/30 hover:shadow-indigo-500/50"
-                            )}
-                            onClick={handleStartCampaign}
-                        >
-                            <span className="text-sm font-bold tracking-wide mr-2">
-                                {status === 'DRAFT' ? 'Resume Setup' :
-                                    status === 'PAUSED' ? 'Resume' :
-                                        status === 'READY' ? 'Start' :
-                                            'Open'}
-                            </span>
-                            {status === 'DRAFT' ? (
-                                <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
-                            ) : (
-                                <Play className="w-4 h-4 transition-transform group-hover/btn:scale-110" />
-                            )}
-                        </div>
+                        isArchived ? (
+                            <div
+                                className="flex items-center justify-center p-4 rounded-[24px] bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 cursor-not-allowed"
+                            >
+                                <span className="text-sm font-bold tracking-wide text-zinc-400 dark:text-zinc-500">
+                                    Archived
+                                </span>
+                                <Layers className="w-4 h-4 ml-2 text-zinc-400 dark:text-zinc-500" />
+                            </div>
+                        ) : (
+                            <div
+                                className={cn(
+                                    "flex items-center justify-center p-4 rounded-[24px] text-white shadow-lg transition-all duration-300 cursor-pointer group/btn",
+                                    status === 'DRAFT'
+                                        ? "bg-zinc-600 hover:bg-zinc-700 active:bg-zinc-800 shadow-zinc-500/30 hover:shadow-zinc-500/50"
+                                        : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/30 hover:shadow-indigo-500/50"
+                                )}
+                                onClick={handleStartCampaign}
+                            >
+                                <span className="text-sm font-bold tracking-wide mr-2">
+                                    {status === 'DRAFT' ? 'Resume Setup' :
+                                        status === 'PAUSED' ? 'Resume' :
+                                            status === 'READY' ? 'Start' :
+                                                'Open'}
+                                </span>
+                                {status === 'DRAFT' ? (
+                                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                                ) : (
+                                    <Play className="w-4 h-4 transition-transform group-hover/btn:scale-110" />
+                                )}
+                            </div>
+                        )
                     )}
+
                 </div>
 
                 {/* Tags (Bottom Row): Cohort Avatars */}
@@ -393,6 +434,38 @@ const CampaignCardBase = ({
                                 disabled={isDeleting}
                             >
                                 {isDeleting ? "Deleting..." : "Delete Campaign"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                {/* ARCHIVE Confirmation Dialog */}
+                <AlertDialog open={isArchiveConfirmOpen} onOpenChange={setIsArchiveConfirmOpen}>
+                    <AlertDialogContent className="rounded-[2rem] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400">
+                                    <Layers className="w-5 h-5" />
+                                </div>
+                                Archive Campaign
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 text-base py-2">
+                                Are you sure you want to archive <span className="font-bold text-zinc-900 dark:text-zinc-100">&quot;{name || primaryGoal}&quot;</span>? This will move it to the Archived Campaigns section. You can still access its data, but it will no longer be active.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="gap-3 sm:gap-0">
+                            <AlertDialogCancel className="rounded-2xl border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-900 h-12 px-6">
+                                Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    confirmArchive();
+                                }}
+                                className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold h-12 px-8 shadow-lg shadow-amber-500/20 border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                disabled={isArchiving}
+                            >
+                                {isArchiving ? "Archiving..." : "Archive Campaign"}
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -520,7 +593,7 @@ const CampaignCardBase = ({
                                 </div>
 
                                 {/* Action Footer for Expanded Mode */}
-                                <div className="flex items-center justify-between gap-3 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
+                                {(!isArchived) && <div className="flex items-center justify-between gap-3 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
                                     <Button
                                         className={cn(
                                             "rounded-xl h-11 text-white shadow-lg transition-all font-bold",
@@ -570,7 +643,7 @@ const CampaignCardBase = ({
                                         </Button>
 
                                         {/* [NEW] Delete Policy: Only DRAFT or campaigns with 0 calls */}
-                                        {(status === 'DRAFT' || (campaign.stats?.execution_count === 0)) && (
+                                        {(status === 'DRAFT' || (campaign.stats?.execution_count === 0)) ? (
                                             <Button
                                                 variant="ghost"
                                                 className="rounded-xl h-11 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-500/10 transition-all duration-300"
@@ -583,9 +656,23 @@ const CampaignCardBase = ({
                                                 <Trash2 className="w-4 h-4 mr-2" />
                                                 Delete
                                             </Button>
+                                        ) : (
+                                            // Show Archive Option if calls exist
+                                            <Button
+                                                variant="ghost"
+                                                className="rounded-xl h-11 text-amber-500 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-500/10 transition-all duration-300"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleArchiveClick(e);
+                                                }}
+                                                title="Archive campaign"
+                                            >
+                                                <Layers className="w-4 h-4 mr-2" />
+                                                Archive
+                                            </Button>
                                         )}
                                     </div>
-                                </div>
+                                </div>}
                             </div>
                         </motion.div>
                     )}
@@ -596,5 +683,5 @@ const CampaignCardBase = ({
 };
 
 export const CampaignCard = React.memo(CampaignCardBase, (prev, next) => {
-    return prev.campaign.id === next.campaign.id && prev.isExpanded === next.isExpanded && prev.campaign === next.campaign;
+    return prev.campaign.id === next.campaign.id && prev.isExpanded === next.isExpanded && prev.campaign === next.campaign && prev.isArchived === next.isArchived;
 });

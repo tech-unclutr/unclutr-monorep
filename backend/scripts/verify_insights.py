@@ -17,8 +17,10 @@ from app.models.company import Workspace, Brand
 # Use the same setup as before
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
+from loguru import logger
+
 async def main():
-    print("Verifying VelocityGenerator...")
+    logger.info("Verifying VelocityGenerator...")
     
     async_session = sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
@@ -30,22 +32,22 @@ async def main():
         brand = (await session.execute(stmt)).scalar_one_or_none()
         
         if not brand:
-            print("No brand found!")
+            logger.error("No brand found!")
             return
             
-        print(f"Testing for Brand: {brand.id}")
+        logger.info(f"Testing for Brand: {brand.id}")
         
         gen = VelocityGenerator()
         insight = await gen.run(session, brand.id)
         
         if insight:
-            print("✅ SUCCESS: Insight Generated!")
-            print(f"Title: {insight.title}")
-            print(f"Description: {insight.description}")
-            print(f"Impact Score: {insight.impact_score}")
-            print(f"Cold Start: {insight.meta.get('days_analyzed') < 14}")
+            logger.success("SUCCESS: Insight Generated!")
+            logger.info(f"Title: {insight.title}")
+            logger.info(f"Description: {insight.description}")
+            logger.info(f"Impact Score: {insight.impact_score}")
+            logger.info(f"Cold Start: {insight.meta.get('days_analyzed') < 14}")
         else:
-            print("❌ FAILURE: No insight generated.")
+            logger.error("FAILURE: No insight generated.")
 
     await engine.dispose()
 

@@ -462,7 +462,6 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
     // 10. User Queue & History Sync - Separated to stabilize dependencies
     useEffect(() => {
         if (wsData?.event === 'user_queue_update') {
-            console.log("[Execution] Received user_queue_update event. Refreshing data...");
             refreshCampaignData();
             setUserQueueRefreshTrigger(Date.now());
         }
@@ -476,11 +475,9 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
             // Only fetch if campaign is completed but we don't have completion data
             if ((isCompleted || campaignStatus === 'COMPLETED') && !completionData) {
                 try {
-                    console.log('[ExecutionPanel] Fetching completion data via REST API fallback...');
                     const data = await api.get(`/execution/campaign/${campaignId}/completion-data`, { "X-Company-ID": authCompanyId });
                     if (data && Object.keys(data).length > 0) {
                         setCompletionData(data);
-                        console.log('[ExecutionPanel] Completion data fetched successfully:', data);
                     }
                 } catch (error) {
                     console.error('[ExecutionPanel] Failed to fetch completion data:', error);
@@ -497,7 +494,6 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
             const isTargetAchieved = completionData ? completionData.total_completed >= completionData.total_targets : false;
 
             if ((isCompleted || isTargetAchieved) && (state === 'ACTIVE_READY' || state === 'IN_CALL' || state === 'WARMUP')) {
-                console.log(`[Execution] ${isCompleted ? 'Campaign complete' : 'Targets achieved'} detected. Initiating auto-pause...`);
                 try {
                     await handlePauseSession();
                 } catch (e) {
@@ -583,7 +579,6 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
 
     const checkIsWithinWindow = () => {
         const { isInWindow } = getActiveWindowStatus(executionWindowsRef.current);
-        console.log("[Execution] Window check:", isInWindow, "Windows:", executionWindowsRef.current);
         return isInWindow;
     };
 
@@ -594,14 +589,12 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
 
         // 1. Block if leads were updated but not finalized
         if (wasLeadsUpdated) {
-            console.log("[Execution] Start blocked: Lead updates pending initialization");
             setIsInitializationRequiredAlertOpen(true);
             return;
         }
 
         // 2. Block if campaign is still in DRAFT
         if (campaignStatus === 'DRAFT') {
-            console.log("[Execution] Start blocked: Campaign is in DRAFT");
             setIsInitializationRequiredAlertOpen(true);
             return;
         }
@@ -609,7 +602,6 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
         // 3. Pre-validate execution window
         // Force a check against the local data first
         if (!bypassNextWindowCheck.current && !checkIsWithinWindow()) {
-            console.log("[Execution] Opening extension modal due to expired window");
             setPendingAction(() => handleStartSession);
             // Ensure we pass a clean copy of the windows
             setEditingWindows(JSON.parse(JSON.stringify(executionWindows)));
@@ -653,12 +645,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
 
             if (isWindowError) {
                 // If it somehow bypassed the frontend check, handle it gracefully
-                console.log("[Execution] Backend reported window error. Opening modal.");
                 setPendingAction(() => handleStartSession);
                 setEditingWindows(JSON.parse(JSON.stringify(executionWindows)));
                 setIsExtendModalOpen(true);
             } else if (detailMsg?.toLowerCase().includes("strategy") || errorMsg?.toLowerCase().includes("strategy")) {
-                console.log("[Execution] Backend reported missing strategy.");
                 setIsStrategyMissingAlertOpen(true);
             } else {
                 console.error("Failed to start session", e);
@@ -685,21 +675,18 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
 
         // 1. Block if leads were updated but not finalized
         if (wasLeadsUpdated) {
-            console.log("[Execution] Resume blocked: Lead updates pending initialization");
             setIsInitializationRequiredAlertOpen(true);
             return;
         }
 
         // 2. Block if campaign is still in DRAFT
         if (campaignStatus === 'DRAFT') {
-            console.log("[Execution] Resume blocked: Campaign is in DRAFT");
             setIsInitializationRequiredAlertOpen(true);
             return;
         }
 
         // 3. Pre-validate execution window
         if (!bypassNextWindowCheck.current && !checkIsWithinWindow()) {
-            console.log("[Execution] Resume blocked: Opening extension modal due to expired window");
             setPendingAction(() => handleResumeSession);
             setEditingWindows(JSON.parse(JSON.stringify(executionWindows)));
             setIsExtendModalOpen(true);
@@ -724,12 +711,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                 (typeof detailMsg === 'string' && detailMsg.toLowerCase().includes("execution window"));
 
             if (isWindowError) {
-                console.log("[Execution] Backend blocked resume: Window error");
                 setPendingAction(() => handleResumeSession);
                 setEditingWindows(JSON.parse(JSON.stringify(executionWindows)));
                 setIsExtendModalOpen(true);
             } else if (detailMsg?.toLowerCase().includes("strategy") || errorMsg?.toLowerCase().includes("strategy")) {
-                console.log("[Execution] Backend blocked resume: Missing strategy.");
                 setIsStrategyMissingAlertOpen(true);
             } else {
                 console.error("Failed to resume session", e);
@@ -1154,11 +1139,11 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                             <UserActionPanel
                                 campaignId={campaignId}
                                 campaignStatus={state === 'ACTIVE_READY' || state === 'WARMUP' || state === 'IN_CALL' ? 'ACTIVE' : 'PAUSED'}
-                                isStarted={hasStartedSession}
+                                isStarted={state !== 'PAUSED'}
                                 refreshTrigger={userQueueRefreshTrigger}
                                 historyItems={historyItems}
                                 maxConcurrency={maxConcurrency}
-                                onStart={handleStartSession}
+                                onStart={handleResumeSession}
                                 onCallClick={(item) => {
                                     setSelectedUserQueueItem(item);
                                     setIsStatusDialogOpen(true);

@@ -89,7 +89,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
             # Refresh campaign object as warmer might have updated its status (e.g. to PAUSED)
             await session.refresh(campaign)
         except Exception as e:
-            print(f"[Execution] Warning: QueueWarmer failed in active-status check: {e}")
+            logger.warning(f"[Execution] Warning: QueueWarmer failed in active-status check: {e}")
             # We continue execution so the dashboard still loads (partial degradation)
 
     config = campaign.execution_config or {}
@@ -301,7 +301,9 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     history_stmt = (
         select(CallLog, CampaignLead)
         .join(CampaignLead, CallLog.lead_id == CampaignLead.id)
+        .join(UserQueueItem, CampaignLead.id == UserQueueItem.lead_id)
         .where(CallLog.campaign_id == campaign_id)
+        .where(UserQueueItem.status == "CLOSED")
         .order_by(CallLog.created_at.desc())
         .limit(100)
     )
@@ -313,7 +315,9 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     user_history_stmt = (
         select(UserCallLog, CampaignLead)
         .join(CampaignLead, UserCallLog.lead_id == CampaignLead.id)
+        .join(UserQueueItem, CampaignLead.id == UserQueueItem.lead_id)
         .where(UserCallLog.campaign_id == campaign_id)
+        .where(UserQueueItem.status == "CLOSED")
         .order_by(UserCallLog.created_at.desc())
         .limit(100)
     )
@@ -791,7 +795,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
                 "completed": completed_count,
                 "is_complete": is_cohort_complete
             }
-            print(f"[Execution] Cohort {cohort_name}: Target={target}, Completed={completed_count}, IsComplete={is_cohort_complete}")
+            logger.info(f"[Execution] Cohort {cohort_name}: Target={target}, Completed={completed_count}, IsComplete={is_cohort_complete}")
         
         completion_data["total_targets"] = total_targets
         completion_data["total_completed"] = total_completed
@@ -800,7 +804,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         # Check if all cohorts met their targets
         if all_cohorts_complete and total_targets > 0:
             is_completed = True
-            print(f"[Execution] All cohorts complete. Marking campaign {campaign_id} as COMPLETED.")
+            logger.info(f"[Execution] All cohorts complete. Marking campaign {campaign_id} as COMPLETED.")
     
     # [NEW] Check for leads exhaustion
     total_leads = completion_data["total_targets"]
@@ -966,8 +970,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         # If there are NO call logs and NO agents, but we have leads, we aren't done.
         call_logs_stmt = select(func.count(CallLog.id)).where(CallLog.campaign_id == campaign_id)
         call_logs_count = (await session.execute(call_logs_stmt)).scalar() or 0
-
-        print(f"[Execution] Exhaustion Check: Ready={len(ready_leads)}, Backlog={len(backlog_leads)}, ActiveAgents={len(agents)}, Logs={call_logs_count}")
+        logger.info(f"[Execution] Exhaustion Check: Ready={len(ready_leads)}, Backlog={len(backlog_leads)}, ActiveAgents={len(agents)}, Logs={call_logs_count}")
 
         # If no ready leads, no backlog, and no current active agents, mark as complete
         # BUT only if we've actually tried something (logs > 0) OR if we truly have 0 leads total (already handles)
@@ -977,7 +980,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
                 # Completion = Targets Met (handled above).
                 # Exhaustion = No leads left.
                 is_exhausted = True
-                print(f"[Execution] Campaign {campaign_id} EXHAUSTED (No leads left, targets not necessarily met)")
+                logger.info(f"[Execution] Campaign {campaign_id} EXHAUSTED (No leads left, targets not necessarily met)")
 
     # [NEW] Final Polish: If campaign is completed, mark all cohorts as complete to avoid "In Progress" UI stalemate
     if is_completed or is_exhausted:
@@ -992,7 +995,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         session.add(campaign)
         await session.commit()
         await session.refresh(campaign)
-        print(f"[Execution] Campaign {campaign_id} auto-completed: Criteria met (Completed={is_completed}, Exhausted={is_exhausted})")
+        logger.info(f"[Execution] Campaign {campaign_id} auto-completed: Criteria met (Completed={is_completed}, Exhausted={is_exhausted})")
 
     
     # 9. Fetch Consolidated Data for WebSocket (Events & Next Leads)
@@ -1045,7 +1048,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         from app.services.websocket_manager import manager
         await manager.broadcast_status_update(str(campaign_id), response_data)
     except Exception as e:
-        print(f"[WebSocket] Broadcast error: {e}")
+        logger.error(f"[WebSocket] Broadcast error: {e}")
     
     return response_data
 
@@ -1132,17 +1135,17 @@ async def start_session(
     Starts the execution session for a campaign.
     Triggers the Queue Warmer to start filling the buffer.
     """
-    print(f"[Execution] DEBUG: Starting session for campaign {campaign_id}")
+    logger.info(f"[Execution] Starting session for campaign {campaign_id}")
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
-        print("[Execution] DEBUG: Campaign not found")
+        logger.error("[Execution] Campaign not found")
         raise HTTPException(status_code=404, detail="Campaign not found")
         
-    print(f"[Execution] DEBUG: Campaign found. Status: {campaign.status}")
+    logger.info(f"[Execution] Campaign found. Status: {campaign.status}")
 
     # Check if strategy is defined (selected_cohorts or cohort_data)
     if not campaign.selected_cohorts and not campaign.cohort_data:
-         print("[Execution] DEBUG: Missing strategy")
+         logger.warning("[Execution] Missing strategy")
          raise HTTPException(
              status_code=400, 
              detail="Campaign strategy (cohorts/targets) must be defined before starting execution."
@@ -1175,11 +1178,11 @@ async def start_session(
                             is_in_active_window = True
                             break
                     except Exception as e:
-                        print(f"[Execution] Window parse error for window {w}: {e}")
+                        logger.error(f"[Execution] Window parse error for window {w}: {e}")
                         continue
             
             if not is_in_active_window:
-                print(f"[Execution] Campaign {campaign_id} start blocked. Time: {now_local}, Windows: {campaign.execution_windows}")
+                logger.warning(f"[Execution] Campaign {campaign_id} start blocked. Time: {now_local}, Windows: {campaign.execution_windows}")
                 # Clear window_expired flag first so it doesn't double stack if they try again after updating
                 meta = dict(campaign.meta_data or {})
                 meta["window_expired"] = True
@@ -1198,7 +1201,7 @@ async def start_session(
             raise
         except Exception as e:
             # Fallback error handling for window parsing to prevent 500
-            print(f"[Execution] Critical error in execution window validation: {e}")
+            logger.error(f"[Execution] Critical error in execution window validation: {e}")
             # We don't block start if validation crashes, but we log it. 
             # Or safer: we block start but return a clean 400.
             # Let's err on side of caution and allow start if validation fails purely due to code error, 
@@ -1211,7 +1214,7 @@ async def start_session(
 
     # Enforce Single Active Campaign Rule
     # Pause all other campaigns for this company that are ACTIVE or IN_PROGRESS
-    print("[Execution] DEBUG: Window validation passed. Auto-pausing other campaigns...")
+    logger.info("[Execution] Window validation passed. Auto-pausing other campaigns...")
     # Enforce Single Active Campaign Rule
     # Pause all other campaigns for this company that are ACTIVE or IN_PROGRESS
     try:
@@ -1261,9 +1264,9 @@ async def start_session(
                 for item in items_to_delete:
                     await session.delete(item)
                 
-            print(f"[Execution] Auto-paused campaign {other_camp.id} and cleaned {len(items_to_delete)} queue items.")
+            logger.info(f"[Execution] Auto-paused campaign {other_camp.id} and cleaned {len(items_to_delete)} queue items.")
     except Exception as e:
-         print(f"[Execution] Error auto-pausing other campaigns: {e}")
+         logger.error(f"[Execution] Error auto-pausing other campaigns: {e}")
          # Attempt to rollback but don't crash the main start flow if possible
          # However, if we are in a bad state, maybe we should just log and continue?
          # But the rollback is safer.
@@ -1271,26 +1274,26 @@ async def start_session(
          
          # [FIX] If it was an integrity error, we should probably warn specifically
          if "violates foreign key constraint" in str(e):
-             print(f"[Execution] Critical FK Violation caught during auto-pause cleanup: {e}") 
+             logger.warning(f"[Execution] Critical FK Violation caught during auto-pause cleanup: {e}") 
 
 
 
     # Update status to ACTIVE
-    print("[Execution] DEBUG: Updating status to ACTIVE and committing...")
+    logger.info("[Execution] Updating status to ACTIVE and committing...")
     try:
         campaign.status = "ACTIVE"
         campaign.updated_at = datetime.utcnow()
         session.add(campaign)
         await session.commit()
         await session.refresh(campaign)
-        print("[Execution] DEBUG: Commit successful.")
+        logger.info("[Execution] Commit successful.")
     except Exception as commit_err:
-        print(f"[Execution] CRITICAL: Commit failed: {commit_err}")
+        logger.error(f"[Execution] CRITICAL: Commit failed: {commit_err}")
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Database commit failed: {str(commit_err)}")
     
     # Trigger Warmer
-    print("[Execution] DEBUG: Triggering QueueWarmer...")
+    logger.info("[Execution] Triggering QueueWarmer...")
 
     try:
         # [NEW] Clear old buffer if resuming to ensure we pick fresh top leads
@@ -1299,14 +1302,14 @@ async def start_session(
         
         await QueueWarmer.check_and_replenish(campaign_id, session)
     except Exception as e:
-        print(f"[Execution] CRITICAL: QueueWarmer failed after start: {e}")
+        logger.error(f"[Execution] CRITICAL: QueueWarmer failed after start: {e}")
         import traceback
         traceback.print_exc()
         # Do NOT raise 500 here. The campaign is ACTIVE now, so UI should show it.
         # The user might notice no calls are happening, but at least the UI won't crash.
 
     # [NEW] Sync Execution Windows to Calendar
-    print("[Execution] DEBUG: Syncing to Calendar...")
+    logger.info("[Execution] Syncing to Calendar...")
     try:
         stmt = select(CalendarConnection).where(
             CalendarConnection.company_id == campaign.company_id,
@@ -1315,16 +1318,21 @@ async def start_session(
         result = await session.execute(stmt)
         conn = result.scalars().first()
         if conn:
-            await google_calendar_service.sync_campaign_windows(conn, campaign)
-            print(f"[Execution] Synced windows for campaign {campaign.id} to Google Calendar")
+            # Fetch company for timezone info
+            from app.models.company import Company
+            company = await session.get(Company, campaign.company_id)
+            timezone_str = company.timezone if company else "UTC"
+            
+            await google_calendar_service.sync_campaign_windows(conn, campaign, timezone_str=timezone_str)
+            logger.info(f"[Execution] Synced windows for campaign {campaign.id} to Google Calendar using TZ: {timezone_str}")
         else:
-            print("[Execution] DEBUG: No active calendar connection found.")
+            logger.info("[Execution] No active calendar connection found.")
     except Exception as e:
-        print(f"[Execution] Calendar sync failed: {e}")
+        logger.error(f"[Execution] Calendar sync failed: {e}")
 
 
     # Broadcast new state
-    print("[Execution] DEBUG: Fetching final status data..." )
+    logger.info("[Execution] Fetching final status data..." )
     
     # Log System Event
     session.add(CampaignEvent(
@@ -1337,14 +1345,14 @@ async def start_session(
 
     try:
         status_data = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=False)
-        print("[Execution] DEBUG: Status data fetched successfully.")
+        logger.info("[Execution] Status data fetched successfully.")
     except Exception as e:
-        print(f"[Execution] Warning: Failed to fetch initial status data: {e}")
+        logger.warning(f"[Execution] Warning: Failed to fetch initial status data: {e}")
         import traceback
         traceback.print_exc()
         status_data = {}
     
-    print("[Execution] DEBUG: Returning success response.")
+    logger.info("[Execution] Returning success response.")
     return {"status": "started", "campaign_status": campaign.status, "data": status_data}
 
 @router.post("/campaign/{campaign_id}/pause")
@@ -1377,10 +1385,15 @@ async def pause_session(
         result = await session.execute(stmt)
         conn = result.scalars().first()
         if conn:
-            await google_calendar_service.sync_campaign_windows(conn, campaign)
-            print(f"[Execution] Synced windows for campaign {campaign.id} to Google Calendar")
+            # Fetch company for timezone info
+            from app.models.company import Company
+            company = await session.get(Company, campaign.company_id)
+            timezone_str = company.timezone if company else "UTC"
+            
+            await google_calendar_service.sync_campaign_windows(conn, campaign, timezone_str=timezone_str)
+            logger.info(f"[Execution] Synced windows for campaign {campaign.id} to Google Calendar using TZ: {timezone_str}")
     except Exception as e:
-        print(f"[Execution] Calendar sync failed: {e}")
+        logger.error(f"[Execution] Calendar sync failed: {e}")
     
     # Log System Event
     session.add(CampaignEvent(
@@ -1493,7 +1506,7 @@ async def reset_campaign(
     3. Resets "DIALING_INTENT" to "READY" (clears stuck calls).
     4. Clears execution history references to allow fresh start.
     """
-    print(f"[Execution] Resetting campaign {campaign_id}")
+    logger.info(f"[Execution] Resetting campaign {campaign_id}")
     
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
@@ -1521,7 +1534,7 @@ async def reset_campaign(
     
     count = len(items_to_reset)
     item_ids = [item.id for item in items_to_reset]
-    print(f"[Execution] Found {count} items to reset in states: {RETRIABLE_STATES}")
+    logger.info(f"[Execution] Found {count} items to reset in states: {RETRIABLE_STATES}")
 
     # 2. Invalidate old BolnaExecutionMaps (Optional but good for cleanliness)
     # We mark them as "reset_history" so they don't block dedup logic if we used it
@@ -1546,12 +1559,12 @@ async def reset_campaign(
     for log in logs_to_delete:
         await session.delete(log)
 
-    print(f"[Execution] Deleted {len(logs_to_delete)} call logs for campaign reset.")
+    logger.info(f"[Execution] Deleted {len(logs_to_delete)} call logs for campaign reset.")
         
     # 3. Reset Status to READY
     now = datetime.utcnow()
     for item in items_to_reset:
-        print(f"[Execution] Resetting item {item.id} (Lead {item.lead_id}): Status={item.status}, Count={item.execution_count} -> 0")
+        logger.info(f"[Execution] Resetting item {item.id} (Lead {item.lead_id}): Status={item.status}, Count={item.execution_count} -> 0")
         item.status = "READY"
         item.outcome = None # Clear previous failure reasons
         item.execution_count = 0 # [FIX] Reset retry counter
@@ -1576,7 +1589,7 @@ async def reset_campaign(
     
     # Trigger Warmer Logic - it will see these as "READY" in buffer but will NOT start calling 
     # because campaign.status is now PAUSED.
-    print("[Execution] Triggering Warmer after reset (expecting no promotions as PAUSED)...")
+    logger.info("[Execution] Triggering Warmer after reset (expecting no promotions as PAUSED)...")
     await QueueWarmer.check_and_replenish(campaign_id, session)
     
     # Log System Event
@@ -1608,7 +1621,7 @@ async def retry_lead(
     3. Invalidates any active execution map.
     4. Triggers UI update.
     """
-    print(f"[Execution] Retrying lead {lead_id} in campaign {campaign_id}")
+    logger.info(f"[Execution] Retrying lead {lead_id} in campaign {campaign_id}")
     
     # 1. Fetch QueueItem
     stmt = (
@@ -1663,7 +1676,7 @@ async def replenish_calls(
     Replenish leads that had short calls (e.g. < 10 seconds), resetting them to READY.
     Also switches the campaign back to ACTIVE mode.
     """
-    print(f"[Execution] Replenishing calls < {threshold_seconds}s for campaign {campaign_id}")
+    logger.info(f"[Execution] Replenishing calls < {threshold_seconds}s for campaign {campaign_id}")
     
     # 1. Identify Target Leads
     # We want QueueItems that are effectively 'done' but had a short call log
@@ -1794,10 +1807,15 @@ async def extend_window(
         result = await session.execute(stmt)
         conn = result.scalars().first()
         if conn:
-            await google_calendar_service.sync_campaign_windows(conn, campaign)
-            print(f"[Execution] Synced extended windows for campaign {campaign.id}")
+            # Fetch company for timezone info
+            from app.models.company import Company
+            company = await session.get(Company, campaign.company_id)
+            timezone_str = company.timezone if company else "UTC"
+
+            await google_calendar_service.sync_campaign_windows(conn, campaign, timezone_str=timezone_str)
+            logger.info(f"[Execution] Synced extended windows for campaign {campaign.id} using TZ: {timezone_str}")
     except Exception as e:
-        print(f"[Execution] Calendar sync failed after extension: {e}")
+        logger.error(f"[Execution] Calendar sync failed after extension: {e}")
 
     return {"status": "window_extended", "new_window": new_window, "campaign_status": campaign.status}
 
@@ -1825,7 +1843,7 @@ async def campaign_websocket(
     # 1. Verification
     try:
         if not token:
-            print("[WebSocket] Missing auth token")
+            logger.warning("[WebSocket] Missing auth token")
             await websocket.close(code=4001, reason="Missing auth token")
             return
 
@@ -1833,10 +1851,10 @@ async def campaign_websocket(
         # Decode the token
         decoded_token = await get_current_user_no_depends(f"Bearer {token}")
         user_id = decoded_token.get("uid")
-        print(f"[WebSocket] Authenticated user {user_id} for campaign {campaign_id_str}")
+        logger.info(f"[WebSocket] Authenticated user {user_id} for campaign {campaign_id_str}")
         
     except Exception as e:
-        print(f"[WebSocket] Auth failure: {e}")
+        logger.error(f"[WebSocket] Auth failure: {e}")
         # 4001: Machine-readable error code for Auth Failure
         await websocket.close(code=4001, reason=f"Auth failed: {str(e)}")
         return
@@ -2025,7 +2043,7 @@ async def get_campaign_call_logs(
                 }
             })
         except Exception as e:
-            print(f"[Execution] Error processing log row {execution.id if execution else 'unknown'}: {e}")
+            logger.error(f"[Execution] Error processing log row {execution.id if execution else 'unknown'}: {e}")
             import traceback
             traceback.print_exc()
             continue
@@ -2145,7 +2163,7 @@ async def hard_reset_campaign(
     4. Resets Campaign Status to DRAFT.
     5. Resets all Leads to PENDING (Optional, effectively done by removing QueueItems).
     """
-    print(f"[Execution] HARD RESET initiated for campaign {campaign_id}")
+    logger.info(f"[Execution] HARD RESET initiated for campaign {campaign_id}")
     
     campaign = await session.get(Campaign, campaign_id)
     if not campaign:
@@ -2184,7 +2202,7 @@ async def hard_reset_campaign(
     
     await session.commit()
     
-    print(f"[Execution] HARD RESET COMPLETE for campaign {campaign_id}")
+    logger.info(f"[Execution] HARD RESET COMPLETE for campaign {campaign_id}")
     return {"status": "success", "message": "Campaign data wiped successfully."}
 
 
@@ -2204,7 +2222,7 @@ async def copy_to_queue(
     Manually copies a lead to the user's call queue (QueueItem).
     Sets status to 'PENDING' so it appears in the 'Upcoming' list for the user to call.
     """
-    print(f"[Execution] Copying lead {lead_id} to queue for campaign {campaign_id}")
+    logger.info(f"[Execution] Copying lead {lead_id} to queue for campaign {campaign_id}")
     
     # 1. Validate Campaign
     campaign = await session.get(Campaign, campaign_id)
@@ -2262,7 +2280,7 @@ async def copy_to_queue(
     existing_user_item = user_q_result.scalars().first()
     
     if not existing_user_item:
-        print(f"[Execution] Creating new UserQueueItem for lead {lead_id}...")
+        logger.info(f"[Execution] Creating new UserQueueItem for lead {lead_id}...")
         
         # 3.1 Fetch Context (Call History)
         call_history = {}
@@ -2277,7 +2295,7 @@ async def copy_to_queue(
                 if call_log:
                      # Copy context
                      payload = call_log.webhook_payload or {}
-                     extracted = payload.get("extracted_data") or {}
+                     extracted = payload.get("extracted_data", {}) or {}
                      
                      call_history = {
                         "manual_trigger": True,
@@ -2292,7 +2310,7 @@ async def copy_to_queue(
                      if "user_intent" in extracted:
                          ai_summary = extracted["user_intent"][:200]
             except Exception as e:
-                print(f"[Execution] Warning: Failed to fetch context from call log: {e}")
+                logger.warning(f"[Execution] Warning: Failed to fetch context from call log: {e}")
 
         # 3.2 Create the item
         from app.models.user_queue_item import UserQueueItem
@@ -2347,7 +2365,7 @@ async def copy_to_queue(
                 call_log.copied_to_queue_at = now
                 session.add(call_log)
         except Exception as e:
-            print(f"[Execution] Warning: Failed to update call log {request.call_log_id}: {e}")
+            logger.warning(f"[Execution] Warning: Failed to update call log {request.call_log_id}: {e}")
             
     await session.commit()
     
@@ -2464,11 +2482,11 @@ async def get_campaign_history(
     
     # Calculate comprehensive stats
     total_calls = len(history_items)
-    converted_calls = sum(1 for call_log, _ in history_items if call_log.outcome in ["INTENT_YES", "INTERESTED", "SCHEDULED"])
-    connected_calls = sum(1 for call_log, _ in history_items if call_log.outcome not in ["VOICEMAIL", "NO_ANSWER", "BUSY", "FAILED_CONNECT"])
+    converted_calls = sum(1 for log_item, _, _ in history_items if log_item.outcome in ["INTENT_YES", "INTERESTED", "SCHEDULED"])
+    connected_calls = sum(1 for log_item, _, _ in history_items if log_item.outcome not in ["VOICEMAIL", "NO_ANSWER", "BUSY", "FAILED_CONNECT"])
     
     # Calculate average duration (only for connected calls)
-    durations = [call_log.duration for call_log, _ in history_items if call_log.outcome not in ["VOICEMAIL", "NO_ANSWER", "BUSY", "FAILED_CONNECT"]]
+    durations = [log_item.duration for log_item, _, _ in history_items if log_item.outcome not in ["VOICEMAIL", "NO_ANSWER", "BUSY", "FAILED_CONNECT"]]
     avg_duration = sum(durations) / len(durations) if durations else 0
     
     # Sentiment breakdown

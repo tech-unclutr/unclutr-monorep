@@ -226,6 +226,26 @@ export default function CustomerIntelligencePage() {
         }
     };
 
+    const handleArchiveCampaign = async (campaignId: string) => {
+        try {
+            await api.post(`/intelligence/campaigns/${campaignId}/archive`, {});
+
+            // 1. Remove from active list
+            setLatestCampaigns(prev => prev.filter(c => c.id !== campaignId));
+
+            // 2. If it was expanded, collapse it
+            if (expandedCampaignId === campaignId) {
+                setExpandedCampaignId(null);
+            }
+
+            toast.success("Campaign archived successfully");
+        } catch (error: any) {
+            console.error("[Dashboard] Failed to archive campaign:", error);
+            toast.error(error.message || "Failed to archive campaign");
+            throw error;
+        }
+    };
+
 
 
     // Refresh campaigns when an interview completes
@@ -263,7 +283,6 @@ export default function CustomerIntelligencePage() {
 
         try {
             const data = await api.get("/intelligence/calendar/status");
-            // console.log("Calendar status data:", data);
             setIsCalendarConnected(data.connected);
             setCalendarData(data);
         } catch (error) {
@@ -858,6 +877,7 @@ export default function CustomerIntelligencePage() {
                                                             isExpanded={isExpanded}
                                                             onToggleExpand={() => setExpandedCampaignId(isExpanded ? null : campaign.id)}
                                                             onDelete={handleDeleteCampaign}
+                                                            onArchive={handleArchiveCampaign}
                                                             onEditClick={(id) => {
                                                                 setEditingCampaignId(id);
                                                                 setComposerView('composer');

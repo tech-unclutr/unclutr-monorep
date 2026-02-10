@@ -20,7 +20,6 @@ def _remove_targets_recursively(data: Any, targets: List[str]) -> Any:
     Recursively removes a set of target strings (case-insensitive) from lists within a nested structure.
     """
     targets_lower = [t.lower() for t in targets]
-    # print(f"DEBUG: Recursion level. targets_lower={targets_lower}")
     
     if isinstance(data, list):
         filtered = [
@@ -77,7 +76,6 @@ async def _ensure_integrations_sync(session: AsyncSession, company_id: uuid.UUID
         if isinstance(selected_tools, list):
             identifiers.update([str(i) for i in selected_tools if i])
     
-    print(f"[SYNC DEBUG] Extracted Identifiers: {identifiers}")
 
     if not identifiers:
         return

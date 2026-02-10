@@ -71,7 +71,6 @@ async def flush_shopify_tables():
                 table_exists = result.scalar() > 0
                 
                 if not table_exists:
-                    logger.debug(f"Table {table} does not exist, skipping")
                     continue
                 
                 # Get count before deletion
@@ -79,7 +78,6 @@ async def flush_shopify_tables():
                 count_before = result.scalar()
                 
                 if count_before == 0:
-                    logger.debug(f"Table {table} is already empty")
                     continue
                 
                 # Delete all rows
@@ -103,17 +101,17 @@ async def flush_shopify_tables():
         break
 
 if __name__ == "__main__":
-    print("="*80)
-    print("⚠️  SHOPIFY TABLE FLUSH")
-    print("="*80)
-    print("\nThis will DELETE ALL Shopify data from the database.")
-    print("Integrations and workspace structure will be preserved.")
-    print("\nAre you sure you want to continue? (yes/no): ", end="")
+    logger.warning("="*80)
+    logger.warning("⚠️  SHOPIFY TABLE FLUSH")
+    logger.warning("="*80)
+    logger.warning("This will DELETE ALL Shopify data from the database.")
+    logger.warning("Integrations and workspace structure will be preserved.")
     
+    print("\nAre you sure you want to continue? (yes/no): ", end="")
     confirmation = input().strip().lower()
     
     if confirmation == "yes":
-        print("\n🚀 Starting flush...\n")
+        logger.info("🚀 Starting flush...\n")
         asyncio.run(flush_shopify_tables())
     else:
-        print("\n❌ Flush cancelled.")
+        logger.info("❌ Flush cancelled.")

@@ -53,18 +53,20 @@ export const syncUserWithBackend = async (user: User) => {
             ? `${apiUrl}/auth/sync`
             : `${apiUrl}/api/v1/auth/sync`;
 
-        console.log(`${logPrefix} Fetching ${fullUrl}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for sync
+
         const res = await fetch(fullUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
-            }
+            },
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (!res.ok) {
-            const errorText = await res.text();
-            console.error(`${logPrefix} Sync failed with status ${res.status}:`, errorText);
             throw new Error(`Sync failed: ${res.status}`);
         }
 
@@ -98,7 +100,6 @@ export const signInWithGoogle = async () => {
             const result = await signInWithPopup(auth, provider);
 
             if (result.user) {
-                console.log("DEBUG: Popup Success, forcing immediate redirect to /dashboard");
                 trackAuthEvent('login', { method: 'google', mode: 'popup' });
                 // Using window.location.assign for an absolute, infallible navigation
                 window.location.assign("/dashboard");
@@ -125,18 +126,12 @@ export const signInWithGoogle = async () => {
 
 // Handle redirect result after user returns from Google sign-in
 export const handleAuthRedirect = async () => {
-    console.log("DEBUG: handleAuthRedirect - Awaiting Firebase getRedirectResult()...");
     try {
         const result = await getRedirectResult(auth);
         if (result?.user) {
-            logFirebaseOperation("handleAuthRedirect - Found Result", {
-                uid: result.user.uid,
-                email: result.user.email
-            });
             trackAuthEvent('login', { method: 'google', mode: 'redirect' });
             return result;
         } else {
-            console.log("DEBUG: handleAuthRedirect - No result found in this load.");
             return null;
         }
     } catch (error) {

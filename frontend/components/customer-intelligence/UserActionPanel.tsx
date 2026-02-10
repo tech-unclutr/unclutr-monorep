@@ -463,9 +463,6 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
 
             const data = await api.get(url);
             setQueue(data);
-            if (data.length > 0) {
-                console.log("Queue fetched:", data.length, "items. Top item:", data[0]);
-            }
 
             if (forceRefresh && data.length > 0) {
                 toast.success("Queue Refreshed", {
@@ -477,7 +474,6 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
                 });
             }
         } catch (error) {
-            console.error("Failed to fetch user queue:", error);
             setError("Unable to load queue. Please check your connection.");
             if (forceRefresh) {
                 toast.error("Refresh Failed");
@@ -918,6 +914,70 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
                         )}
                     </Button>
                 </div>
+
+                {/* History Section Persistence */}
+                {!isLoading && historyItems.length > 0 && (
+                    <div className="w-full max-w-4xl mx-auto mt-12 bg-white/50 dark:bg-zinc-950/50 rounded-[3rem] border border-zinc-200/50 dark:border-zinc-800/50 p-8 shadow-sm backdrop-blur-sm z-10">
+                        <div className="flex items-center gap-3 mb-6 px-2">
+                            <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-500">
+                                <History className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-zinc-900 dark:text-white">Conversation History</h3>
+                                <p className="text-xs font-bold text-zinc-400">Your recent interactions</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {historyItems.slice(0, 5).map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800">
+                                            <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${item.lead_id}`} />
+                                            <AvatarFallback>{item.name?.slice(0, 2)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-zinc-900 dark:text-white">{item.name}</p>
+                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-zinc-200 text-zinc-500">
+                                                    {formatPhoneNumber(item.phone_number || "Unknown")}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className={cn(
+                                                    "text-[10px] font-black uppercase tracking-wider",
+                                                    item.status === 'CONNECTED' ? "text-emerald-600" :
+                                                        item.status === 'VOICEMAIL' ? "text-amber-600" : "text-zinc-500"
+                                                )}>
+                                                    {item.status?.replace('_', ' ')}
+                                                </span>
+                                                {item.duration && (
+                                                    <>
+                                                        <span className="text-zinc-300">•</span>
+                                                        <span className="text-[10px] font-medium text-zinc-400 flex items-center gap-1">
+                                                            <Clock4 className="w-3 h-3" />
+                                                            {Math.floor(item.duration / 60)}m {item.duration % 60}s
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Outcome</p>
+                                        <Badge className={cn(
+                                            "font-bold border-0",
+                                            item.outcome?.includes("WON") ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                                "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                        )}>
+                                            {item.outcome?.replace('CLOSE_', '') || "LOGGED"}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

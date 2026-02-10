@@ -41,7 +41,7 @@ export default function BasicsPage() {
     const runAutoDetect = () => {
         try {
             const rawTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            console.log("Detecting region for timezone:", rawTimezone);
+            // Detection Logic
 
             const normalizeTimezone = (tz: string) => {
                 if (tz.includes("Calcutta")) return "Asia/Kolkata";
@@ -81,13 +81,12 @@ export default function BasicsPage() {
 
                 if (newRegion.country !== state.region.country || newRegion.timezone !== state.region.timezone) {
                     updateState({ region: newRegion });
-                    console.log("Auto-detected region:", matchedRegion.country, "Timezone:", safeTimezone);
                 }
             } else {
-                console.warn("No matching region found for timezone:", detectedTimezone);
+                // No matching region found for timezone
             }
         } catch (e) {
-            console.warn("Auto-detect failed", e);
+            // Auto-detect failed
         }
     };
 

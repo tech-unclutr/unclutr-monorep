@@ -8,6 +8,7 @@ with full call context and preferred slot handling.
 from datetime import datetime
 from typing import Dict, Optional
 from uuid import UUID
+import logging
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -15,6 +16,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.call_log import CallLog
 from app.models.campaign_lead import CampaignLead
 from app.models.queue_item import QueueItem
+
+logger = logging.getLogger(__name__)
 
 
 async def copy_lead_to_user_queue(
@@ -54,19 +57,19 @@ async def copy_lead_to_user_queue(
     existing_item = existing_result.scalar_one_or_none()
     
     if existing_item:
-        print(f"[UserQueue] Lead {lead_id} already in user queue, skipping copy")
+        logger.info(f"[UserQueue] Lead {lead_id} already in user queue, skipping copy")
         return None
     
     # 2. Fetch lead details
     lead = await session.get(CampaignLead, lead_id)
     if not lead:
-        print(f"[UserQueue] Lead {lead_id} not found")
+        logger.warning(f"[UserQueue] Lead {lead_id} not found")
         return None
     
     # 3. Fetch call log for context
     call_log = await session.get(CallLog, call_log_id)
     if not call_log:
-        print(f"[UserQueue] Call log {call_log_id} not found")
+        logger.warning(f"[UserQueue] Call log {call_log_id} not found")
         return None
     
     # 4. Prepare metadata with full context
@@ -90,7 +93,7 @@ async def copy_lead_to_user_queue(
         try:
             scheduled_for = datetime.fromisoformat(preferred_slot["start_time"].replace("Z", "+00:00"))
         except (ValueError, AttributeError):
-            print(f"[UserQueue] Invalid preferred slot time: {preferred_slot.get('start_time')}")
+            logger.warning(f"[UserQueue] Invalid preferred slot time: {preferred_slot.get('start_time')}")
     
     # 6. Create queue item with READY status (user queue)
     # Priority will be handled by separate warmer agent as per user request
@@ -114,7 +117,7 @@ async def copy_lead_to_user_queue(
     await session.commit()
     await session.refresh(queue_item)
     
-    print(f"[UserQueue] Successfully copied lead {lead_id} to user queue as {queue_item.id}")
+    logger.info(f"[UserQueue] Successfully copied lead {lead_id} to user queue as {queue_item.id}")
     
     return queue_item
 

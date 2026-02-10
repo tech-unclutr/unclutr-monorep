@@ -122,7 +122,6 @@ export default function CallLogTable({ campaignId }: CallLogTableProps) {
         setLoading(true);
         try {
             const res: any = await api.get(`/execution/campaign/${campaignId}/logs?page=${page}&page_size=20`, { "X-Company-ID": companyId });
-            console.log("CallLogTable: logs response", res);
 
             // Handle different possible response structures
             // 1. { data: [...] } (Standard)

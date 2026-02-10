@@ -8,6 +8,7 @@ who request calls outside execution windows.
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -17,6 +18,8 @@ from app.api.deps import get_current_active_user, get_session
 from app.models.campaign import Campaign
 from app.models.campaign_lead import CampaignLead
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -112,5 +115,5 @@ Campaign: {campaign.name}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[API] Error creating calendar booking: {e}")
+        logger.error(f"[API] Error creating calendar booking: {e}")
         raise HTTPException(status_code=500, detail=str(e))

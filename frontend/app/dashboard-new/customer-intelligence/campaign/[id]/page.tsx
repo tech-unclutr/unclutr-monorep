@@ -23,7 +23,8 @@ import {
     ShieldAlert,
     Pause,
     Play,
-    AlertTriangle
+    AlertTriangle,
+    Archive
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,8 +72,10 @@ export default function CampaignPage() {
     const [isManagingLeads, setIsManagingLeads] = useState(false);
     const [composerKey, setComposerKey] = useState(0);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
     const [isPauseConfirmOpen, setIsPauseConfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isArchiving, setIsArchiving] = useState(false);
     const [isPausing, setIsPausing] = useState(false);
     const [initialComposerStep, setInitialComposerStep] = useState<'IDENTITY' | 'STRATEGY' | 'EXECUTION'>('IDENTITY');
 
@@ -110,7 +113,6 @@ export default function CampaignPage() {
             // Race condition check: If a user action occurred *after* this request started,
             // ignore this stale response to prevent reverting optimistic UI updates.
             if (requestStartTime < lastActionTimeRef.current) {
-                console.log("Ignoring stale campaign data from poll");
                 return;
             }
 
@@ -246,10 +248,37 @@ export default function CampaignPage() {
             }, 500);
         } catch (error: any) {
             console.error("Failed to delete campaign:", error);
-            toast.error(error.message || "Failed to delete campaign");
-            setIsDeleting(false);
-            // Re-throw to maintain error state visibility
-            throw error;
+
+            // Check if error is due to call history
+            if (error.message && error.message.includes("call history")) {
+                // Close delete dialog and open archive dialog
+                setIsDeleteConfirmOpen(false);
+                setIsDeleting(false);
+                setIsArchiveConfirmOpen(true);
+                toast.info("This campaign has call history and must be archived instead");
+            } else {
+                toast.error(error.message || "Failed to delete campaign");
+                setIsDeleting(false);
+            }
+        }
+    };
+
+    const confirmArchive = async () => {
+        console.log("[CampaignDetail] Archive requested for campaign:", campaignId);
+        setIsArchiving(true);
+        try {
+            const response = await api.post(`/intelligence/campaigns/${campaignId}/archive`, {});
+            console.log("[CampaignDetail] Archive response:", response);
+            toast.success("Campaign archived successfully");
+            setIsArchiveConfirmOpen(false);
+            // Small delay to allow toast to show before navigation
+            setTimeout(() => {
+                router.push('/dashboard-new/customer-intelligence');
+            }, 500);
+        } catch (error: any) {
+            console.error("[CampaignDetail] Failed to archive campaign:", error);
+            toast.error(error.message || "Failed to archive campaign");
+            setIsArchiving(false);
         }
     };
 
@@ -808,6 +837,42 @@ export default function CampaignPage() {
                             disabled={isDeleting}
                         >
                             {isDeleting ? "Deleting..." : "Delete Campaign"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Archive Confirmation Dialog */}
+            <AlertDialog open={isArchiveConfirmOpen} onOpenChange={setIsArchiveConfirmOpen}>
+                <AlertDialogContent className="rounded-[2rem] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400">
+                                <Archive className="w-5 h-5" />
+                            </div>
+                            Archive Campaign
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 text-base py-2">
+                            This campaign has call history and cannot be deleted. Would you like to archive it instead?
+                            <br /><br />
+                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                Archived campaigns are moved to a separate section and can be restored later if needed.
+                            </span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3 sm:gap-0">
+                        <AlertDialogCancel className="rounded-2xl border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-900 h-12 px-6">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmArchive();
+                            }}
+                            className="rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold h-12 px-8 shadow-lg shadow-amber-500/20 border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            disabled={isArchiving}
+                        >
+                            {isArchiving ? "Archiving..." : "Archive Campaign"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

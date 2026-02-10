@@ -235,18 +235,6 @@ class InsightEngine:
                 
                 if insight:
                     insights.append(insight)
-                    logger.debug(
-                        f"Generator {gen_name} produced insight",
-                        extra={
-                            "brand_id": str(brand_id),
-                            "insight_id": insight.id,
-                            "impact_score": insight.impact_score,
-                            "duration_ms": gen_duration * 1000
-                        }
-                    )
-                else:
-                    logger.debug(f"Generator {gen_name} returned None")
-                    
             except Exception as e:
                 error_type = type(e).__name__
                 generator_errors.labels(generator=gen_name, error_type=error_type).inc()
@@ -357,11 +345,6 @@ class InsightEngine:
             
             if insight_quality_scorer.should_show(quality):
                 quality_filtered.append(insight)
-            else:
-                logger.debug(
-                    f"Filtered low-quality insight: {insight.id}",
-                    extra={"quality_score": quality.composite_score()}
-                )
         
         return quality_filtered
     

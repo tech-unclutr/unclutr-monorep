@@ -104,11 +104,9 @@ export default function CampaignHistoryPage() {
             // If running strictly separate, might need explicit port 8000
             const wsUrl = `${protocol}//${window.location.hostname}:8000/api/v1/execution/campaign/${campaignId}/ws`;
 
-            console.log(`[History] Connecting to WebSocket: ${wsUrl}`);
             websocket = new WebSocket(wsUrl);
 
             websocket.onopen = () => {
-                console.log("[History] WebSocket connected");
                 retryCount = 0;
             };
 
@@ -117,7 +115,6 @@ export default function CampaignHistoryPage() {
                     const data = JSON.parse(event.data);
                     if (data.type === 'status_update' || data.type === 'call_completed') {
                         // Refresh stats and history when a call completes or status updates
-                        console.log("[History] Received update, refreshing stats...");
                         fetchCampaignHistory();
                     }
                 } catch (e) {
@@ -126,7 +123,6 @@ export default function CampaignHistoryPage() {
             };
 
             websocket.onclose = () => {
-                console.log("[History] WebSocket disconnected");
                 if (retryCount < MAX_RETRIES) {
                     retryCount++;
                     setTimeout(connectWebSocket, 3000 * retryCount);

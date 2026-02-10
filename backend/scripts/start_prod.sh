@@ -26,7 +26,7 @@ fi
 
 # Dump environment (redacting sensitive vars)
 echo "Environment Check:"
-pip list | grep -E "uvicorn|fastapi|asyncpg|sqlalchemy"
+pip list | grep -E "uvicorn|fastapi|asyncpg|sqlalchemy" || echo "Warning: Some packages not found in pip list"
 
 # Verify App Import works ISOLATED from Uvicorn
 echo "Verifying App Import..."
@@ -39,5 +39,5 @@ else
 fi
 
 echo "Starting Uvicorn..."
-# Exec into uvicorn to replace the shell process
-exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips '*'
+# Exec into python module to avoid PATH issues and replace shell
+exec python3 -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips '*' --log-level debug

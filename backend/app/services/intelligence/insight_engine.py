@@ -37,7 +37,8 @@ class InsightEngine:
     
     def __init__(self):
         self.generators = []
-        self._load_generators()
+        # Lazy load generators on first request to prevent startup crash
+        # self._load_generators() 
 
     def _load_generators(self):
         """
@@ -136,8 +137,6 @@ class InsightEngine:
             }
         """
         # Feature flag check
-        if not feature_flags.is_intelligence_enabled():
-            logger.info(f"Intelligence Engine disabled for brand_id={brand_id}")
             insight_generation_total.labels(brand_id=str(brand_id), status="disabled").inc()
             return {
                 "insights": [],
@@ -147,6 +146,11 @@ class InsightEngine:
                 "generated_at": datetime.utcnow().isoformat()
             }
         
+        # Lazy Load
+        if not self.generators:
+            logger.info("First run: Lazy loading generators...")
+            self._load_generators()
+
         start_time = time.time()
         logger.info(f"Generating full insight deck for brand_id={brand_id}")
         

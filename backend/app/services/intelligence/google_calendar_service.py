@@ -287,8 +287,8 @@ class GoogleCalendarService:
 
                     # Fallback to date (All-Day events)
                     if not s_dt and 'date' in start:
-                        s_dt = f"{start['date']}T00:00:00Z"
-                        e_dt = f"{end['date']}T00:00:00Z"
+                        # Skip all-day events to prevent blocking the entire day
+                        continue
                     
                     if not s_dt or not e_dt:
                         continue

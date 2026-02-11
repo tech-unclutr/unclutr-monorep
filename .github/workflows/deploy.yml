@@ -22,16 +22,19 @@ jobs:
             echo "DB_SECRET=PROD_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "ENV_NAME=production" >> $GITHUB_OUTPUT
             echo "FIREBASE_TARGET=production" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=1" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref_name }}" == "squareup-almost" ]]; then
             echo "SERVICE=squareup-backend-staging" >> $GITHUB_OUTPUT
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
             echo "FIREBASE_TARGET=staging" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=1" >> $GITHUB_OUTPUT
           else
             echo "SERVICE=squareup-backend-dev" >> $GITHUB_OUTPUT
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "ENV_NAME=development" >> $GITHUB_OUTPUT
             echo "FIREBASE_TARGET=development" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
           fi
 
       - name: Authenticate with Google Cloud
@@ -77,13 +80,13 @@ jobs:
 
           gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \
             --source . \
-            --region us-central1 \
+            --region asia-south1 \
             --platform managed \
             --allow-unauthenticated \
             --memory 2Gi \
             --cpu 2 \
             --timeout 600 \
-            --min-instances 0 \
+            --min-instances ${{ steps.env_setup.outputs.MIN_INSTANCES }} \
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \

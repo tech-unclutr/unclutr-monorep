@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     
     # Google Cloud
     GOOGLE_CLOUD_PROJECT: str = "unclutr-monorep"
-    GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    GOOGLE_CLOUD_LOCATION: str = "asia-south1"
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://param@localhost:5432/postgres")

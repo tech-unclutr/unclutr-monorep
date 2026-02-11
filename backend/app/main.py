@@ -316,6 +316,7 @@ base_origins = [
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://almost.joinsquareup.com",
 ]
 
 # Development: Broaden CORS
@@ -366,7 +367,6 @@ else:
     logger.warning("Sentry disabled (not production) or DSN not configured")
 
 
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from app.middleware.tenant_middleware import TenantMiddleware
 

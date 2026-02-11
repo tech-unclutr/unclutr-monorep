@@ -21,16 +21,29 @@ if "postgresql+asyncpg" in DATABASE_URL:
     parsed_url = urlparse(DATABASE_URL)
     query_params = parse_qs(parsed_url.query)
     
+    # Check if we are using Unix sockets (Cloud SQL on Cloud Run)
+    is_unix_socket = "/cloudsql/" in DATABASE_URL or parsed_url.path.startswith("/") and not parsed_url.netloc
+    
     # If sslmode is present, handle it
     if "sslmode" in query_params:
         sslmode = query_params.pop("sslmode")[0]
-        # asyncpg uses 'ssl' parameter instead of 'sslmode'
-        # 'require', 'verify-ca', 'verify-full' usually map to ssl=True or specific contexts
-        # but the simplest fix for "unexpected keyword argument 'sslmode'" is to remove it 
-        # or convert it to 'ssl'
-        if sslmode == "require":
+        # Only add SSL if not using unix sockets (SSL is redundant and often causes 
+        # connection refused on unix sockets)
+        if sslmode == "require" and not is_unix_socket:
             query_params["ssl"] = ["require"]
     
+    # Explicitly ensure ssl is False for unix sockets if not otherwise specified
+    if is_unix_socket and "ssl" not in query_params:
+        query_params["ssl"] = ["disable"]
+    
+    if is_unix_socket:
+        # Check if we are using Unix sockets (Cloud SQL on Cloud Run)
+        # We need to disable SSL for Unix sockets as it's not supported/needed and causes connection refused
+        if "ssl" not in query_params:
+            query_params["ssl"] = ["disable"]
+            
+        logger.info(f"Detected Unix socket connection. SSL disabled for: {parsed_url.path.lstrip('/')}")
+
     # Reconstruct URL without problematic arguments
     new_query = urlencode(query_params, doseq=True)
     DATABASE_URL = urlunparse(parsed_url._replace(query=new_query))

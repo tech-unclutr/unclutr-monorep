@@ -67,34 +67,47 @@ jobs:
       - name: Deploy Backend to Cloud Run
         working-directory: ./backend
         run: |
-          DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
-          
           # Dynamic URLs based on environment
           if [[ "${{ steps.env_setup.outputs.ENV_NAME }}" == "production" ]]; then
-            BASE_URL="https://app.joinsquareup.com"
+            export BASE_URL="https://app.joinsquareup.com"
           elif [[ "${{ steps.env_setup.outputs.ENV_NAME }}" == "staging" ]]; then
-            BASE_URL="https://almost.joinsquareup.com"
+            export BASE_URL="https://almost.joinsquareup.com"
           else
-            BASE_URL="https://unclutr-monorep.web.app" # Default for dev branch
+            export BASE_URL="https://unclutr-monorep.web.app" # Default for dev branch
           fi
 
-          # Create env.yaml safely
-          cat > env.yaml <<EOF
-          DATABASE_URL: "$DB_URL_VAL"
-          ENVIRONMENT: "${{ steps.env_setup.outputs.ENV_NAME }}"
-          BACKEND_URL: "$BASE_URL"
-          FRONTEND_URL: "$BASE_URL"
-          GOOGLE_REDIRECT_URI: "$BASE_URL/api/v1/intelligence/calendar/google/callback"
-          SHOPIFY_ENCRYPTION_KEY: "${{ secrets.SHOPIFY_ENCRYPTION_KEY }}"
-          SHOPIFY_API_KEY: "${{ secrets.SHOPIFY_API_KEY }}"
-          SHOPIFY_API_SECRET: "${{ secrets.SHOPIFY_API_SECRET }}"
-          GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
-          EOF
-          
-          # Append Firebase credentials using block scalar to handle any characters
-          echo "FIREBASE_CREDENTIALS_JSON: |" >> env.yaml
-          echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" | sed 's/^/  /' >> env.yaml
+          # Use Python to safely generate the env file without shell expansion issues
+          python3 -c "
+          import os, json
+          env_vars = {
+              'DATABASE_URL': os.environ.get('DATABASE_URL_SECRET'),
+              'ENVIRONMENT': os.environ.get('ENVIRONMENT_NAME'),
+              'BACKEND_URL': os.environ.get('BASE_URL'),
+              'FRONTEND_URL': os.environ.get('BASE_URL'),
+              'GOOGLE_REDIRECT_URI': f\"{os.environ.get('BASE_URL')}/api/v1/intelligence/calendar/google/callback\",
+              'SHOPIFY_ENCRYPTION_KEY': os.environ.get('SHOPIFY_ENCRYPTION_KEY_SECRET'),
+              'SHOPIFY_API_KEY': os.environ.get('SHOPIFY_API_KEY_SECRET'),
+              'SHOPIFY_API_SECRET': os.environ.get('SHOPIFY_API_SECRET_SECRET'),
+              'GEMINI_API_KEY': os.environ.get('GEMINI_API_KEY_SECRET'),
+              'FIREBASE_CREDENTIALS_JSON': os.environ.get('FIREBASE_CREDENTIALS_JSON_SECRET')
+          }
+          # Remove any None values
+          env_vars = {k: v for k, v in env_vars.items() if v is not None}
+          with open('env.json', 'w') as f:
+              json.dump(env_vars, f)
+          "
+        env:
+          DATABASE_URL_SECRET: ${{ secrets[steps.env_setup.outputs.DB_SECRET] }}
+          ENVIRONMENT_NAME: ${{ steps.env_setup.outputs.ENV_NAME }}
+          SHOPIFY_ENCRYPTION_KEY_SECRET: ${{ secrets.SHOPIFY_ENCRYPTION_KEY }}
+          SHOPIFY_API_KEY_SECRET: ${{ secrets.SHOPIFY_API_KEY }}
+          SHOPIFY_API_SECRET_SECRET: ${{ secrets.SHOPIFY_API_SECRET }}
+          GEMINI_API_KEY_SECRET: ${{ secrets.GEMINI_API_KEY }}
+          FIREBASE_CREDENTIALS_JSON_SECRET: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
 
+      - name: Update Cloud Run Service
+        working-directory: ./backend
+        run: |
           gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \
             --source . \
             --region asia-south1 \
@@ -107,7 +120,7 @@ jobs:
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \
-            --env-vars-file env.yaml
+            --env-vars-file env.json
 
       - name: Deploy Frontend to Firebase
         run: |

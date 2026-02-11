@@ -117,6 +117,8 @@ jobs:
             --region asia-south1 \
             --platform managed \
             --allow-unauthenticated \
+            --session-affinity \
+            --use-http2 \
             --memory 2Gi \
             --cpu 2 \
             --timeout 600 \

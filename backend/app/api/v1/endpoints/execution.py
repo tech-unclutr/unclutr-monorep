@@ -1315,8 +1315,7 @@ async def start_session(
         result = await session.execute(stmt)
         conn = result.scalars().first()
         if conn:
-            # Fetch company for timezone info
-            from app.models.company import Company
+            # Fetch company for timezone info (Company imported at module level)
             company = await session.get(Company, campaign.company_id)
             timezone_str = company.timezone if company else "UTC"
             
@@ -1382,8 +1381,7 @@ async def pause_session(
         result = await session.execute(stmt)
         conn = result.scalars().first()
         if conn:
-            # Fetch company for timezone info
-            from app.models.company import Company
+            # Fetch company for timezone info (Company imported at module level)
             company = await session.get(Company, campaign.company_id)
             timezone_str = company.timezone if company else "UTC"
             
@@ -1804,8 +1802,7 @@ async def extend_window(
         result = await session.execute(stmt)
         conn = result.scalars().first()
         if conn:
-            # Fetch company for timezone info
-            from app.models.company import Company
+            # Fetch company for timezone info (Company imported at module level)
             company = await session.get(Company, campaign.company_id)
             timezone_str = company.timezone if company else "UTC"
 

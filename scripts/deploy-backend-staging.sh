@@ -7,7 +7,7 @@ echo "============================================="
 # Configuration
 PROJECT_ID="unclutr-monorep"
 SERVICE_NAME="squareup-backend-staging"
-REGION="us-central1"
+REGION="asia-south1"
 
 # Check if gcloud is authenticated
 if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q .; then
@@ -52,9 +52,9 @@ gcloud run services update $SERVICE_NAME \
 echo ""
 echo "✅ Deployment Complete!"
 echo ""
-echo "Service URL: https://squareup-backend-staging-527397315020.us-central1.run.app"
+echo "Service URL: https://squareup-backend-staging-527397315020.asia-south1.run.app"
 echo ""
 echo "📋 Next Steps:"
 echo "1. Set DATABASE_URL environment variable if not already set"
-echo "2. Verify the deployment: curl https://squareup-backend-staging-527397315020.us-central1.run.app/health"
+echo "2. Verify the deployment: curl https://squareup-backend-staging-527397315020.asia-south1.run.app/health"
 echo "3. Check logs: gcloud run services logs read $SERVICE_NAME --region=$REGION --limit=50"

@@ -110,7 +110,7 @@ jobs:
         run: |
           gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \
             --source . \
-            --region us-central1 \
+            --region asia-south1 \
             --platform managed \
             --allow-unauthenticated \
             --memory 2Gi \

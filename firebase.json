@@ -9,14 +9,14 @@
         "**/node_modules/**"
       ],
       "frameworksBackend": {
-        "region": "us-central1"
+        "region": "asia-south1"
       },
       "rewrites": [
         {
           "source": "/api/**",
           "run": {
             "serviceId": "squareup-backend",
-            "region": "us-central1"
+            "region": "asia-south1"
           }
         }
       ],
@@ -37,14 +37,14 @@
         "**/node_modules/**"
       ],
       "frameworksBackend": {
-        "region": "us-central1"
+        "region": "asia-south1"
       },
       "rewrites": [
         {
           "source": "/api/**",
           "run": {
             "serviceId": "squareup-backend-staging",
-            "region": "us-central1"
+            "region": "asia-south1"
           }
         }
       ],
@@ -65,14 +65,14 @@
         "**/node_modules/**"
       ],
       "frameworksBackend": {
-        "region": "us-central1"
+        "region": "asia-south1"
       },
       "rewrites": [
         {
           "source": "/api/**",
           "run": {
             "serviceId": "squareup-backend-dev",
-            "region": "us-central1"
+            "region": "asia-south1"
           }
         }
       ],

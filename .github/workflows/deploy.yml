@@ -49,10 +49,23 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Start Cloud SQL Auth Proxy
-        uses: google-github-actions/cloud-sql-proxy@v2
-        with:
-          instance_connection_string: 'unclutr-monorep:asia-south1:unclutr-db-india'
-          port: 5432
+        run: |
+          # Download the Cloud SQL Auth Proxy
+          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.21.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          
+          # Start proxy in background
+          ./cloud-sql-proxy --port 5432 unclutr-monorep:asia-south1:unclutr-db-india &
+          
+          # Wait for proxy to be ready
+          for i in $(seq 1 30); do
+            if nc -z 127.0.0.1 5432 2>/dev/null; then
+              echo "Cloud SQL Proxy is ready"
+              break
+            fi
+            echo "Waiting for Cloud SQL Proxy... ($i/30)"
+            sleep 1
+          done
 
       - name: Run Database Migrations
         working-directory: ./backend

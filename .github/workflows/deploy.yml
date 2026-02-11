@@ -28,7 +28,7 @@ jobs:
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
             echo "FIREBASE_TARGET=staging" >> $GITHUB_OUTPUT
-            echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=1" >> $GITHUB_OUTPUT
           else
             echo "SERVICE=squareup-backend-dev" >> $GITHUB_OUTPUT
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
@@ -90,7 +90,7 @@ jobs:
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \
-            --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }},BACKEND_URL=$BASE_URL,FRONTEND_URL=$BASE_URL,GOOGLE_REDIRECT_URI=$BASE_URL/api/v1/intelligence/calendar/google/callback,SHOPIFY_ENCRYPTION_KEY=${{ secrets.SHOPIFY_ENCRYPTION_KEY }},SHOPIFY_API_KEY=${{ secrets.SHOPIFY_API_KEY }},SHOPIFY_API_SECRET=${{ secrets.SHOPIFY_API_SECRET }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"
+            --set-env-vars "DATABASE_URL=$DB_URL_VAL,ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }},BACKEND_URL=$BASE_URL,FRONTEND_URL=$BASE_URL,GOOGLE_REDIRECT_URI=$BASE_URL/api/v1/intelligence/calendar/google/callback,SHOPIFY_ENCRYPTION_KEY=${{ secrets.SHOPIFY_ENCRYPTION_KEY }},SHOPIFY_API_KEY=${{ secrets.SHOPIFY_API_KEY }},SHOPIFY_API_SECRET=${{ secrets.SHOPIFY_API_SECRET }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},FIREBASE_CREDENTIALS_JSON=${{ secrets.FIREBASE_CREDENTIALS_JSON }}"
 
       - name: Deploy Frontend to Firebase
         run: |

@@ -28,7 +28,7 @@ jobs:
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
             echo "FIREBASE_TARGET=staging" >> $GITHUB_OUTPUT
-            echo "MIN_INSTANCES=1" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
           else
             echo "SERVICE=squareup-backend-dev" >> $GITHUB_OUTPUT
             echo "DB_SECRET=DEV_DATABASE_URL" >> $GITHUB_OUTPUT

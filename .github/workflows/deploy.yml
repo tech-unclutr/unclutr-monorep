@@ -48,17 +48,34 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      - name: Start Cloud SQL Auth Proxy
+        uses: google-github-actions/cloud-sql-proxy@v2
+        with:
+          instance_connection_string: 'unclutr-monorep:asia-south1:unclutr-db-india'
+          port: 5432
+
       - name: Run Database Migrations
         working-directory: ./backend
         run: |
           # Use the same Python environment/deps as the app
           pip install alembic psycopg2-binary sqlalchemy sqlmodel pydantic-settings asyncpg
           
-          # Fetch the secret dynamically based on branch
-          DB_URL_VAL="${{ secrets[steps.env_setup.outputs.DB_SECRET] }}"
+          # Rewrite the host to go through the Cloud SQL Auth Proxy on localhost
+          export DATABASE_URL=$(python3 -c "
+          import os
+          from urllib.parse import urlparse, urlunparse
+          url = urlparse(os.environ['DB_URL_SECRET'])
+          user_info = url.username or ''
+          if url.password:
+              user_info += ':' + url.password
+          new_netloc = (user_info + '@' if user_info else '') + '127.0.0.1:5432'
+          print(urlunparse(url._replace(netloc=new_netloc)))
+          ")
           
           # Execute migration
-          DATABASE_URL="$DB_URL_VAL" ENVIRONMENT="${{ steps.env_setup.outputs.ENV_NAME }}" alembic upgrade head
+          ENVIRONMENT="${{ steps.env_setup.outputs.ENV_NAME }}" alembic upgrade head
+        env:
+          DB_URL_SECRET: ${{ secrets[steps.env_setup.outputs.DB_SECRET] }}
 
       - name: Install Frontend Dependencies
         working-directory: ./frontend

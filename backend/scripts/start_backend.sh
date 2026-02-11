@@ -32,4 +32,4 @@ pkill -f "uvicorn app.main:app" || true
 echo "⚡ Starting Uvicorn Server..."
 export PYTHONPATH=$PYTHONPATH:.
 # We use standard mode (no --reload) for stability, but you can change it if needed.
-"$VENV_UVICORN" app.main:app --port 8000 --reload > backend.log 2>&1
+"$VENV_UVICORN" app.main:app --port 8000 --reload --reload-exclude '*.log' > backend.log 2>&1

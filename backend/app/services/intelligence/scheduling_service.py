@@ -24,11 +24,13 @@ class SchedulingService:
 
         # Ensure slot is naive if we are comparing with native combines, 
         # but let's localize everything to the requested timezone for accuracy.
-        tz = pytz.timezone(timezone_str)
+        # Robust timezone handling
         if slot.tzinfo is None:
-            slot_localized = tz.localize(slot)
+            # Assume naive datetime is UTC (standard backend practice)
+            slot_localized = pytz.UTC.localize(slot).astimezone(pytz.timezone(timezone_str))
         else:
-            slot_localized = slot.astimezone(tz)
+            # Already has TZ info, just convert
+            slot_localized = slot.astimezone(pytz.timezone(timezone_str))
 
         slot_date = slot_localized.date()
         slot_time = slot_localized.time()

@@ -219,22 +219,35 @@ async def bolna_webhook(
         if callback_time_str:
             try:
                 reschedule_dt = dateutil.parser.parse(callback_time_str)
-                if reschedule_dt.tzinfo is None:
-                    reschedule_dt = reschedule_dt.replace(tzinfo=None)
-                    
-                if reschedule_dt > datetime.utcnow():
+                if reschedule_dt:
+                    # Fetch company for timezone info
                     campaign = await session.get(Campaign, q_item.campaign_id)
-                    windows = campaign.execution_windows if campaign else []
-                    is_available = scheduling_service.is_slot_in_windows(reschedule_dt, windows)
+                    from app.models.company import Company
+                    company = await session.get(Company, campaign.company_id)
+                    timezone_str = company.timezone if company else "UTC"
+                    import pytz
+                    tz = pytz.timezone(timezone_str)
                     
-                    if is_available:
-                        final_status = "SCHEDULED"
-                        q_item.scheduled_for = reschedule_dt
-                        logger.info(f"[BolnaWebhook] Reschedule Confirmed: {reschedule_dt}")
-                    else:
-                        final_status = "PENDING_AVAILABILITY"
-                        q_item.scheduled_for = reschedule_dt
-                        logger.info(f"[BolnaWebhook] Reschedule Requested (Out of Window): {reschedule_dt}")
+                    # If naive, assume it's in the company's timezone
+                    if reschedule_dt.tzinfo is None:
+                        reschedule_dt = tz.localize(reschedule_dt)
+                    
+                    # Convert to UTC for storage
+                    reschedule_utc = reschedule_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+                    
+                    if reschedule_utc > datetime.utcnow():
+                        windows = campaign.execution_windows if campaign else []
+                        # Pass localized time to window check
+                        is_available = scheduling_service.is_slot_in_windows(reschedule_dt, windows, timezone_str=timezone_str)
+                        
+                        if is_available:
+                            final_status = "SCHEDULED"
+                            q_item.scheduled_for = reschedule_utc
+                            logger.info(f"[BolnaWebhook] Reschedule Confirmed (In Window): {reschedule_dt} (UTC: {reschedule_utc})")
+                        else:
+                            final_status = "PENDING_AVAILABILITY"
+                            q_item.scheduled_for = reschedule_utc
+                            logger.info(f"[BolnaWebhook] Reschedule Requested (Out of Window): {reschedule_dt} (UTC: {reschedule_utc})")
                 else:
                      final_status = "AMBIGUOUS"
                      logger.info("[BolnaWebhook] Ignored past callback time")

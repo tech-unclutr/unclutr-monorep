@@ -103,12 +103,31 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
 
         try {
             // Determine WebSocket URL based on environment
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.host === 'localhost:3000' ? 'localhost:8000' : window.location.host;
+            // Preference: NEXT_PUBLIC_API_URL (Absolute) > relative path (which usually fails for WS in prod)
+            let wsUrl: string;
+
+            if (process.env.NEXT_PUBLIC_API_URL) {
+                // If it's an absolute URL like http://... or https://...
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+                const wsProtocol = baseUrl.startsWith('https') ? 'wss:' : 'ws:';
+
+                // Construct URL from API_BASE_URL (which might have /api/v1)
+                // If API_URL is https://almost.joinsquareup.com/api/v1
+                // We want wss://almost.joinsquareup.com/api/v1/execution/campaign/...
+
+                // Strip protocol
+                const urlWithoutProtocol = baseUrl.replace(/^https?:\/\//, '');
+                wsUrl = `${wsProtocol}//${urlWithoutProtocol}/execution/campaign/${campaignId}/ws`;
+            } else {
+                // Fallback for local development or if env var is missing
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const host = window.location.host === 'localhost:3000' ? 'localhost:8000' : window.location.host;
+                wsUrl = `${protocol}//${host}/api/v1/execution/campaign/${campaignId}/ws`;
+            }
 
             // Get token
             const token = await user.getIdToken();
-            const wsUrl = `${protocol}//${host}/api/v1/execution/campaign/${campaignId}/ws?token=${token}`;
+            wsUrl = `${wsUrl}?token=${token}`;
 
             console.log('[WebSocket] Connecting to:', wsUrl);
             const ws = new WebSocket(wsUrl);

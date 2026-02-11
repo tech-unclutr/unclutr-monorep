@@ -633,7 +633,8 @@ class QueueWarmer:
         Checks for SCHEDULED items that are due (scheduled_for <= Now).
         Promotes them to READY with High Priority.
         """
-        now = datetime.now()
+        # [FIX] Use UTC for consistency with storage
+        now = datetime.utcnow()
         
         stmt = (
             select(QueueItem)

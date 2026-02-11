@@ -161,4 +161,4 @@ jobs:
       - name: Deploy Frontend to Firebase
         run: |
           firebase experiments:enable webframeworks
-          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --token ${{ secrets.FIREBASE_TOKEN }}
+          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --force --token ${{ secrets.FIREBASE_TOKEN }}

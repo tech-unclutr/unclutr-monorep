@@ -55,9 +55,7 @@ export default function ChannelsPage() {
             try {
                 // Explicitly get token to ensure we are authenticated
 
-                const data = await api.get('/datasources', {
-                    Authorization: `Bearer ${token}`
-                });
+                const data = await api.get('/datasources');
                 setDatasources(data);
             } catch (err) {
                 console.error("Failed to load datasources", err);

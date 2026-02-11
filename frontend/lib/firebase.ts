@@ -6,9 +6,27 @@ import { getRemoteConfig, fetchAndActivate, getValue } from "firebase/remote-con
 import { getStorage } from "firebase/storage";
 
 // Hardcoded config to bypass persistent EPERM/Env issues
+// Dynamic authDomain: Use current hostname for custom domains to prevent cross-domain auth state loss
+const getAuthDomain = () => {
+    if (typeof window === 'undefined') {
+        return "unclutr-monorep.firebaseapp.com";
+    }
+
+    const hostname = window.location.hostname;
+
+    // For localhost, use the default Firebase authDomain
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return "unclutr-monorep.firebaseapp.com";
+    }
+
+    // For custom domains (almost.joinsquareup.com, etc.), use the current hostname
+    // This ensures OAuth redirects come back to the same domain
+    return hostname;
+};
+
 const firebaseConfig = {
     apiKey: "AIzaSyBV4-x1knQDLxrUw0A5gJCqpDkGYWtxiQ0",
-    authDomain: "unclutr-monorep.firebaseapp.com",
+    authDomain: getAuthDomain(),
     projectId: "unclutr-monorep",
     storageBucket: "unclutr-monorep.firebasestorage.app",
     messagingSenderId: "527397315020",
@@ -17,6 +35,7 @@ const firebaseConfig = {
 };
 
 console.log("Firebase Config Loaded (Hardcoded Backup)");
+console.log(`[Firebase] Using authDomain: ${firebaseConfig.authDomain}`);
 
 
 

@@ -78,6 +78,23 @@ jobs:
             BASE_URL="https://unclutr-monorep.web.app" # Default for dev branch
           fi
 
+          # Create env.yaml safely
+          cat > env.yaml <<EOF
+          DATABASE_URL: "$DB_URL_VAL"
+          ENVIRONMENT: "${{ steps.env_setup.outputs.ENV_NAME }}"
+          BACKEND_URL: "$BASE_URL"
+          FRONTEND_URL: "$BASE_URL"
+          GOOGLE_REDIRECT_URI: "$BASE_URL/api/v1/intelligence/calendar/google/callback"
+          SHOPIFY_ENCRYPTION_KEY: "${{ secrets.SHOPIFY_ENCRYPTION_KEY }}"
+          SHOPIFY_API_KEY: "${{ secrets.SHOPIFY_API_KEY }}"
+          SHOPIFY_API_SECRET: "${{ secrets.SHOPIFY_API_SECRET }}"
+          GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
+          EOF
+          
+          # Append Firebase credentials using block scalar to handle any characters
+          echo "FIREBASE_CREDENTIALS_JSON: |" >> env.yaml
+          echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" | sed 's/^/  /' >> env.yaml
+
           gcloud run deploy ${{ steps.env_setup.outputs.SERVICE }} \
             --source . \
             --region asia-south1 \
@@ -90,7 +107,7 @@ jobs:
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \
-            --set-env-vars "^|^DATABASE_URL=$DB_URL_VAL|ENVIRONMENT=${{ steps.env_setup.outputs.ENV_NAME }}|BACKEND_URL=$BASE_URL|FRONTEND_URL=$BASE_URL|GOOGLE_REDIRECT_URI=$BASE_URL/api/v1/intelligence/calendar/google/callback|SHOPIFY_ENCRYPTION_KEY=${{ secrets.SHOPIFY_ENCRYPTION_KEY }}|SHOPIFY_API_KEY=${{ secrets.SHOPIFY_API_KEY }}|SHOPIFY_API_SECRET=${{ secrets.SHOPIFY_API_SECRET }}|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|FIREBASE_CREDENTIALS_JSON=${{ secrets.FIREBASE_CREDENTIALS_JSON }}"
+            --env-vars-file env.yaml
 
       - name: Deploy Frontend to Firebase
         run: |

@@ -399,7 +399,7 @@ app.mount(f"{settings.API_V1_STR}/integrations/shopify", shopify_app)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "SquareUp Backend", "version": "v2-root-fix"}
+    return {"status": "ok", "service": "SquareUp Backend", "version": APP_VERSION}
 
 
 

@@ -31,8 +31,10 @@ router = APIRouter()
 from app.models.bolna_execution_map import BolnaExecutionMap
 from app.models.call_log import CallLog
 from app.models.campaign_event import CampaignEvent
+from app.models.company import Company
 from app.models.user_queue_item import UserQueueItem
 from app.models.user_call_log import UserCallLog
+from app.services.intelligence.scheduling_service import scheduling_service
 
 # Timeout constants for stale call detection
 INITIATED_TIMEOUT_MINUTES = 5  # Calls stuck in "initiated" for >5 min are stale
@@ -1155,58 +1157,53 @@ async def start_session(
     # Validate Execution Window
     if campaign.execution_windows:
         try:
-            # Use local time for comparison to match user expectation (assuming server is local to user/business)
-            now_local = datetime.now()
-            is_in_active_window = False
+            # Fetch company for timezone info
+            company = await session.get(Company, campaign.company_id)
+            timezone_str = company.timezone if company else "UTC"
             
-            for w in campaign.execution_windows:
-                day = w.get('day', '')
-                st = w.get('start', '')
-                et = w.get('end', '')
-                
-                if day and st and et:
-                    try:
-                        start_dt = datetime.fromisoformat(f"{day}T{st}:00")
-                        end_dt = datetime.fromisoformat(f"{day}T{et}:00")
-                        
-                        # [FIX] Added a 2-minute grace period to the start time 
-                        # to handle milliseconds/clock jitter or immediate retries
-                        effective_start = start_dt - timedelta(minutes=2)
-                        
-                        # Strictly check if we are CURRENTLY in the window (with grace)
-                        if effective_start <= now_local <= end_dt:
-                            is_in_active_window = True
-                            break
-                    except Exception as e:
-                        logger.error(f"[Execution] Window parse error for window {w}: {e}")
-                        continue
+            # Use SchedulingService for robust timezone-aware validation
+            # We use datetime.utcnow() localized to UTC, as scheduling_service 
+            # correctly translates it to the target timezone.
+            import pytz
+            now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
+            
+            is_in_active_window = scheduling_service.is_slot_in_windows(
+                slot=now_utc, 
+                windows=campaign.execution_windows, 
+                timezone_str=timezone_str
+            )
             
             if not is_in_active_window:
-                logger.warning(f"[Execution] Campaign {campaign_id} start blocked. Time: {now_local}, Windows: {campaign.execution_windows}")
-                # Clear window_expired flag first so it doesn't double stack if they try again after updating
+                # Formatted time for error message (localized to company TZ)
+                tz = pytz.timezone(timezone_str)
+                now_localized = now_utc.astimezone(tz)
+                current_time_str = now_localized.strftime("%I:%M %p")
+                
+                logger.warning(f"[Execution] Manual override: Campaign {campaign_id} started outside window. Time: {current_time_str} ({timezone_str}), Windows: {campaign.execution_windows}")
+                
+                # Set flag to indicate manual override (for analytics/debugging)
                 meta = dict(campaign.meta_data or {})
-                meta["window_expired"] = True
+                meta["manual_start_override"] = True
+                meta["manual_start_time"] = now_utc.isoformat()
+                meta.pop("window_expired", None)  # Clear any previous expiry flag
                 campaign.meta_data = meta
                 session.add(campaign)
                 await session.commit()
                 
-                # Formatted time for error message
-                current_time_str = now_local.strftime("%I:%M %p")
-                
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Campaign cannot start: Current time ({current_time_str}) is outside the scheduled execution window."
-                )
+                # Log event for audit trail
+                session.add(CampaignEvent(
+                    campaign_id=campaign_id,
+                    event_type="SYSTEM",
+                    message=f"Manual start override at {current_time_str} (outside scheduled window)",
+                    status="WARNING"
+                ))
+                await session.commit()
         except HTTPException:
             raise
         except Exception as e:
-            # Fallback error handling for window parsing to prevent 500
             logger.error(f"[Execution] Critical error in execution window validation: {e}")
-            # We don't block start if validation crashes, but we log it. 
-            # Or safer: we block start but return a clean 400.
-            # Let's err on side of caution and allow start if validation fails purely due to code error, 
-            # BUT since this is a restriction feature, maybe we should block.
-            # However, the user issue is a 500 crash. Let's return a 400 with details.
+            import traceback
+            traceback.print_exc()
             raise HTTPException(
                 status_code=400,
                 detail=f"Error validating execution schedule: {str(e)}. Please check your schedule settings."
@@ -1839,22 +1836,23 @@ async def campaign_websocket(
     
     token = websocket.query_params.get("token")
     
+    logger.info(f"[WebSocket] Handshake attempt for campaign {campaign_id_str}. Token present: {bool(token)}")
 
     # 1. Verification
     try:
         if not token:
-            logger.warning("[WebSocket] Missing auth token")
-            await websocket.close(code=4001, reason="Missing auth token")
+            logger.warning(f"[WebSocket] Missing token for campaign {campaign_id_str}")
+            await websocket.close(code=4001, reason="Missing authentication token")
             return
 
         from app.core.security import get_current_user_no_depends
         # Decode the token
-        decoded_token = await get_current_user_no_depends(f"Bearer {token}")
-        user_id = decoded_token.get("uid")
+        user_data = await get_current_user_no_depends(f"Bearer {token}")
+        user_id = user_data.get("uid")
         logger.info(f"[WebSocket] Authenticated user {user_id} for campaign {campaign_id_str}")
         
     except Exception as e:
-        logger.error(f"[WebSocket] Auth failure: {e}")
+        logger.error(f"[WebSocket] Auth failure for campaign {campaign_id_str}: {e}")
         # 4001: Machine-readable error code for Auth Failure
         await websocket.close(code=4001, reason=f"Auth failed: {str(e)}")
         return
@@ -1870,21 +1868,28 @@ async def campaign_websocket(
         # Initial state push
         async with async_session_factory() as session:
             try:
+                logger.info(f"[WebSocket] Fetching initial status for campaign {campaign_id_str}")
                 initial_status = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=True)
+                logger.info(f"[WebSocket] Initial status fetched successfully, sending to client")
                 await ws_manager.send_personal_message({
                     "type": "status_update",
                     "campaign_id": campaign_id_str,
                     "data": initial_status
                 }, websocket)
+                logger.info(f"[WebSocket] Initial state pushed successfully to client")
             except Exception as e:
                 logger.error(f"[WebSocket] Failed to push initial state for {campaign_id_str}: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                # Send error message to client before possible failure
-                await ws_manager.send_personal_message({
-                    "type": "error",
-                    "message": "Failed to load initial campaign state"
-                }, websocket)
+                # Send error message to client with more context
+                try:
+                    await ws_manager.send_personal_message({
+                        "type": "error",
+                        "message": "Failed to load initial campaign state. Please refresh the page.",
+                        "error_code": "INITIAL_STATE_FAILED"
+                    }, websocket)
+                except Exception as send_err:
+                    logger.error(f"[WebSocket] Failed to send error message to client: {send_err}")
         
         while True:
             try:

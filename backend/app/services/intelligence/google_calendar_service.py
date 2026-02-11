@@ -136,9 +136,9 @@ class GoogleCalendarService:
         creds = google.oauth2.credentials.Credentials(
             token=conn.credentials.get("token"),
             refresh_token=conn.credentials.get("refresh_token"),
-            token_uri=conn.credentials.get("token_uri"),
-            client_id=settings.GOOGLE_CLIENT_ID,
-            client_secret=settings.GOOGLE_CLIENT_SECRET,
+            token_uri=conn.credentials.get("token_uri") or "https://oauth2.googleapis.com/token",
+            client_id=conn.credentials.get("client_id") or settings.GOOGLE_CLIENT_ID,
+            client_secret=conn.credentials.get("client_secret") or settings.GOOGLE_CLIENT_SECRET,
             scopes=conn.credentials.get("scopes"),
         )
 
@@ -207,9 +207,9 @@ class GoogleCalendarService:
             creds = google.oauth2.credentials.Credentials(
                 token=conn.credentials.get("token"),
                 refresh_token=conn.credentials.get("refresh_token"),
-                token_uri=conn.credentials.get("token_uri"),
-                client_id=settings.GOOGLE_CLIENT_ID,
-                client_secret=settings.GOOGLE_CLIENT_SECRET,
+                token_uri=conn.credentials.get("token_uri") or "https://oauth2.googleapis.com/token",
+                client_id=conn.credentials.get("client_id") or settings.GOOGLE_CLIENT_ID,
+                client_secret=conn.credentials.get("client_secret") or settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
             # Use cache_discovery=False to avoid issues with dynamic path discovery in some environments
@@ -326,9 +326,9 @@ class GoogleCalendarService:
             creds = google.oauth2.credentials.Credentials(
                 token=conn.credentials.get("token"),
                 refresh_token=conn.credentials.get("refresh_token"),
-                token_uri=conn.credentials.get("token_uri"),
-                client_id=settings.GOOGLE_CLIENT_ID,
-                client_secret=settings.GOOGLE_CLIENT_SECRET,
+                token_uri=conn.credentials.get("token_uri") or "https://oauth2.googleapis.com/token",
+                client_id=conn.credentials.get("client_id") or settings.GOOGLE_CLIENT_ID,
+                client_secret=conn.credentials.get("client_secret") or settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
             return build('calendar', 'v3', credentials=creds)
@@ -497,9 +497,9 @@ class GoogleCalendarService:
             creds = google.oauth2.credentials.Credentials(
                 token=conn.credentials.get("token"),
                 refresh_token=conn.credentials.get("refresh_token"),
-                token_uri=conn.credentials.get("token_uri"),
-                client_id=settings.GOOGLE_CLIENT_ID,
-                client_secret=settings.GOOGLE_CLIENT_SECRET,
+                token_uri=conn.credentials.get("token_uri") or "https://oauth2.googleapis.com/token",
+                client_id=conn.credentials.get("client_id") or settings.GOOGLE_CLIENT_ID,
+                client_secret=conn.credentials.get("client_secret") or settings.GOOGLE_CLIENT_SECRET,
                 scopes=conn.credentials.get("scopes"),
             )
             return build('calendar', 'v3', credentials=creds)

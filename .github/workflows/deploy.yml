@@ -129,7 +129,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --session-affinity \
-
+            --no-use-http2 \
             --memory 2Gi \
             --cpu 2 \
             --timeout 600 \

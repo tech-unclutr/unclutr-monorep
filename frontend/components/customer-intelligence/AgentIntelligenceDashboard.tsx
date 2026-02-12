@@ -639,26 +639,22 @@ export default function AgentIntelligenceDashboard({
                                         Campaign is currently paused. Resuming will re-activate neural mesh uplinks.
                                     </p>
                                 </div>
-                            ) : (activeAgents && activeAgents.length > 0) ? (
+                            ) : (activeAgents && activeAgents.filter(Boolean).length > 0) ? (
                                 <div className="h-full overflow-y-auto pr-2 scrollbar-hide">
                                     <div className="flex flex-col h-full">
-                                        {/* Active Agents Grid - Always render maxConcurrency slots */}
                                         <div className={cn(
                                             "grid gap-6 mb-6",
-                                            "grid-cols-1 lg:grid-cols-2" // Always use 2 columns (or enforce based on maxConcurrency)
+                                            "grid-cols-1 lg:grid-cols-2"
                                         )}>
                                             {Array.from({ length: maxConcurrency }).map((_, idx) => {
                                                 const agent = activeAgents[idx];
-
                                                 if (agent) {
-                                                    // Find cohort for this lead
                                                     const allLeads = Object.values(allLeadsByCohort).flat();
                                                     const leadData = allLeads.find(l => l.lead_id === agent.lead_id);
                                                     const agentWithCohort = {
                                                         ...agent,
                                                         cohort: leadData?.cohort || agent.cohort
                                                     };
-
                                                     return (
                                                         <div
                                                             key={agent.agent_id || `active-${idx}`}
@@ -672,38 +668,17 @@ export default function AgentIntelligenceDashboard({
                                                         </div>
                                                     );
                                                 }
-
-                                                // Placeholder Card
                                                 const persona = AGENT_PERSONAS[idx % AGENT_PERSONAS.length];
                                                 return (
                                                     <div
                                                         key={`placeholder-${idx}`}
-                                                        className="min-h-[400px] h-full rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/10 flex flex-col items-center justify-center p-8 text-center transition-all group hover:bg-white/60 dark:hover:bg-zinc-900/20"
+                                                        className="min-h-[400px] h-full rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/10 flex flex-col items-center justify-center p-8 text-center"
                                                     >
-                                                        <div className="relative mb-6">
-                                                            <div className="absolute inset-0 bg-indigo-500/10 blur-2xl rounded-full scale-150 animate-pulse" />
-                                                            <Avatar className="w-20 h-20 border-2 border-white dark:border-zinc-800 shadow-xl relative z-10 transition-transform group-hover:scale-105 duration-500">
-                                                                <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${persona.seed}&backgroundColor=e0e7ff`} />
-                                                                <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{persona.name.slice(0, 2)}</AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-zinc-950 rounded-full border border-zinc-100 dark:border-zinc-800 flex items-center justify-center z-20 shadow-sm">
-                                                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="space-y-1">
-                                                            <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Agent {persona.name}</h3>
-                                                            <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-[0.2em]">{persona.tagline}</p>
-                                                        </div>
-
-                                                        <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium max-w-[180px] mt-4 leading-relaxed">
-                                                            System online and awaiting next lead sequence...
-                                                        </p>
-
-                                                        <div className="mt-8 px-4 py-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 flex items-center gap-2">
-                                                            <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                                                            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Autonomous Standby</span>
-                                                        </div>
+                                                        <Avatar className="w-20 h-20 mb-6 border-2 border-white dark:border-zinc-800 shadow-xl">
+                                                            <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${persona.seed}&backgroundColor=e0e7ff`} />
+                                                        </Avatar>
+                                                        <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100">Agent {persona.name}</h3>
+                                                        <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Standing By</p>
                                                     </div>
                                                 );
                                             })}
@@ -756,6 +731,50 @@ export default function AgentIntelligenceDashboard({
                                         {isResetting ? <RotateCcw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                                         {hasFailures ? `Retry ${failedLeads.length} Failed Leads` : "Reset Campaign Metrics"}
                                     </Button>
+                                </div>
+                            ) : (activeAgents && activeAgents.length > 0) ? (
+                                <div className="h-full overflow-y-auto pr-2 scrollbar-hide">
+                                    <div className="flex flex-col h-full">
+                                        <div className={cn(
+                                            "grid gap-6 mb-6",
+                                            "grid-cols-1 lg:grid-cols-2"
+                                        )}>
+                                            {Array.from({ length: maxConcurrency }).map((_, idx) => {
+                                                const persona = AGENT_PERSONAS[idx % AGENT_PERSONAS.length];
+                                                return (
+                                                    <div
+                                                        key={`idle-placeholder-${idx}`}
+                                                        className="min-h-[400px] h-full rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/10 flex flex-col items-center justify-center p-8 text-center transition-all group hover:bg-white/60 dark:hover:bg-zinc-900/20"
+                                                    >
+                                                        <div className="relative mb-6">
+                                                            <div className="absolute inset-0 bg-indigo-500/10 blur-2xl rounded-full scale-150 animate-pulse" />
+                                                            <Avatar className="w-20 h-20 border-2 border-white dark:border-zinc-800 shadow-xl relative z-10 transition-transform group-hover:scale-105 duration-500">
+                                                                <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${persona.seed}&backgroundColor=e0e7ff`} />
+                                                                <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{persona.name.slice(0, 2)}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-zinc-950 rounded-full border border-zinc-100 dark:border-zinc-800 flex items-center justify-center z-20 shadow-sm">
+                                                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-1">
+                                                            <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Agent {persona.name}</h3>
+                                                            <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-[0.2em]">{persona.tagline}</p>
+                                                        </div>
+
+                                                        <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium max-w-[180px] mt-4 leading-relaxed">
+                                                            System online and awaiting next lead sequence...
+                                                        </p>
+
+                                                        <div className="mt-8 px-4 py-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 flex items-center gap-2">
+                                                            <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                                                            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Autonomous Standby</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">

@@ -39,7 +39,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         # 2. Bypass check for public endpoints or WebSocket upgrade requests
         path = request.url.path
-        is_websocket = request.headers.get("upgrade") == "websocket"
+        is_websocket = request.headers.get("upgrade", "").lower() == "websocket"
         
         public_paths = [
             "/health", "/docs", "/openapi.json", 

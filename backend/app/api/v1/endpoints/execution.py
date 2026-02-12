@@ -1828,14 +1828,19 @@ async def campaign_websocket(
     """
     campaign_id_str = str(campaign_id)
     
-    # Accept the connection first so we can send close frames with error codes
-    await websocket.accept()
-    
+    # 1. Handshake & Auth
+    try:
+        # Accept the connection first so we can send close frames with error codes
+        await websocket.accept()
+    except Exception as e:
+        logger.warning(f"[WebSocket] Handshake failed for campaign {campaign_id_str}: {e}")
+        return
+
     token = websocket.query_params.get("token")
     
     logger.info(f"[WebSocket] Handshake attempt for campaign {campaign_id_str}. Token present: {bool(token)}")
 
-    # 1. Verification
+    # 2. Token Verification
     try:
         if not token:
             logger.warning(f"[WebSocket] Missing token for campaign {campaign_id_str}")
@@ -1867,13 +1872,13 @@ async def campaign_websocket(
             try:
                 logger.info(f"[WebSocket] Fetching initial status for campaign {campaign_id_str}")
                 initial_status = await get_campaign_realtime_status_internal(campaign_id, session, trigger_warmer=True)
-                logger.info(f"[WebSocket] Initial status fetched successfully, sending to client")
+                logger.info("[WebSocket] Initial status fetched successfully, sending to client")
                 await ws_manager.send_personal_message({
                     "type": "status_update",
                     "campaign_id": campaign_id_str,
                     "data": initial_status
                 }, websocket)
-                logger.info(f"[WebSocket] Initial state pushed successfully to client")
+                logger.info("[WebSocket] Initial state pushed successfully to client")
             except Exception as e:
                 logger.error(f"[WebSocket] Failed to push initial state for {campaign_id_str}: {e}")
                 import traceback
@@ -1891,6 +1896,7 @@ async def campaign_websocket(
         while True:
             try:
                 # Wait for client input with timeout (acts as keepalive/heartbeat checker)
+                # Client sends 'ping' every 10s. If we don't hear for 45s, connection is dead.
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=45.0)
                 if data == "ping":
                     await ws_manager.send_personal_message({
@@ -1898,9 +1904,9 @@ async def campaign_websocket(
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     }, websocket)
             except asyncio.TimeoutError:
-                # No data from client is fine, we just continue the loop
-                # The manager will broadcast periodic updates anyway
-                continue
+                # [FIX]: If we time out, the client is unresponsive. Disconnect to clean up resources.
+                logger.warning(f"[WebSocket] Client {user_id} timed out (45s silence). Closing connection.")
+                break
             except WebSocketDisconnect as e:
                 logger.info(f"[WebSocket] Client {user_id} disconnected from {campaign_id_str}. Code: {e.code}, Reason: {e.reason}")
                 break

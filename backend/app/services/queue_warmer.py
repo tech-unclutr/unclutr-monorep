@@ -557,18 +557,28 @@ class QueueWarmer:
         # Immediately re-sort the existing buffer
         await QueueWarmer._rebalance_buffer(session, campaign.id, scores)
 
-        target_cohort_name = None
-        if scores:
-            target_cohort_name = max(scores, key=scores.get)
+        # [FIX] Multi-Cohort Replenishment
+        # Instead of only picking one cohort, we iterate through eligible cohorts
+        # sorted by score and replenish until the 'count' is satisfied.
+        if count > 0 and scores:
+            sorted_cohorts = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            remaining_needed = count
             
-        # 2. Fetch from Backlog -> READY
-        if count > 0:
-            await QueueWarmer._fetch_and_queue(session, campaign, target_cohort_name, count)
+            for cohort_name, score in sorted_cohorts:
+                if remaining_needed <= 0:
+                    break
+                
+                # Try to fetch for this cohort
+                fetched = await QueueWarmer._fetch_and_queue(session, campaign, cohort_name, remaining_needed)
+                remaining_needed -= fetched
+                
+            # If still needed, fallback to any eligible cohort (already covered by _fetch_and_queue's fallback)
 
     @staticmethod
-    async def _fetch_and_queue(session: AsyncSession, campaign: Campaign, cohort_name: Optional[str], count: int):
+    async def _fetch_and_queue(session: AsyncSession, campaign: Campaign, cohort_name: Optional[str], count: int) -> int:
         """
         Moves Fresh leads -> READY status.
+        Returns the number of leads successfully queued.
         """
         existing_q = select(QueueItem.lead_id).where(QueueItem.campaign_id == campaign.id)
         
@@ -586,10 +596,7 @@ class QueueWarmer:
         candidates = candidates_result.scalars().all()
         
         if not candidates:
-             if cohort_name:
-                 # Fallback to any cohort if target is empty
-                 await QueueWarmer._fetch_and_queue(session, campaign, None, count)
-             return
+             return 0
 
         logger.info(f"[QueueWarmer] Queueing {len(candidates)} leads (Backlog -> READY)...")
         
@@ -626,6 +633,7 @@ class QueueWarmer:
             
             
         await session.flush()
+        return len(candidates)
 
     @staticmethod
     async def _wake_scheduled_items(session: AsyncSession, campaign: Campaign):

@@ -125,11 +125,12 @@ jobs:
               # Safely extract user:pass@ from netloc to preserve encoding
               # netloc is user:pass@host:port
               # We want to keep user:pass@ and remove host:port
+              # modifying to add 'localhost' to ensure sqlalchemy parses it correctly
               if '@' in url.netloc:
                   user_pass = url.netloc.rsplit('@', 1)[0]
-                  new_netloc = user_pass + '@'
+                  new_netloc = user_pass + '@localhost'
               else:
-                  new_netloc = '' # Fallback content
+                  new_netloc = 'localhost' # Fallback content
               
               # Query params for Unix socket
               # host query param tells asyncpg to use the unix socket

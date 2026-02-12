@@ -109,8 +109,51 @@ jobs:
           # Use Python to safely generate the env file without shell expansion issues
           python3 -c "
           import os, json
+          from urllib.parse import urlparse, urlunparse
+
+          # Get base secret
+          db_secret = os.environ.get('DATABASE_URL_SECRET')
+          
+          # Construct Unix Socket URL for Cloud Run
+          # Format: postgresql+asyncpg://user:pass@/dbname?host=/cloudsql/INSTANCE_CONNECTION_NAME
+          try:
+              url = urlparse(db_secret)
+              
+              # Cloud SQL Instance Connection Name
+              instance_connection_name = 'unclutr-monorep:asia-south1:unclutr-db-india'
+              
+              # Safely extract user:pass@ from netloc to preserve encoding
+              # netloc is user:pass@host:port
+              # We want to keep user:pass@ and remove host:port
+              if '@' in url.netloc:
+                  user_pass = url.netloc.rsplit('@', 1)[0]
+                  new_netloc = user_pass + '@'
+              else:
+                  new_netloc = '' # Fallback content
+              
+              # Query params for Unix socket
+              # host query param tells asyncpg to use the unix socket
+              new_query = f'host=/cloudsql/{instance_connection_name}'
+              
+              # Reconstruct URL
+              # Scheme: postgresql+asyncpg (asyncpg requires this scheme in SQLAlchemy)
+              # Netloc: user:pass@ (empty host)
+              # Path: /dbname
+              # Query: host=/cloudsql/...
+              unix_socket_url = urlunparse((
+                  'postgresql+asyncpg',
+                  new_netloc,
+                  url.path,
+                  '',
+                  new_query,
+                  ''
+              ))
+          except Exception as e:
+              print(f'Error parsing DB URL: {e}')
+              unix_socket_url = db_secret # Fallback
+
           env_vars = {
-              'DATABASE_URL': os.environ.get('DATABASE_URL_SECRET'),
+              'DATABASE_URL': unix_socket_url,
               'ENVIRONMENT': os.environ.get('ENVIRONMENT_NAME'),
               'BACKEND_URL': os.environ.get('BASE_URL'),
               'FRONTEND_URL': os.environ.get('BASE_URL'),
@@ -156,6 +199,7 @@ jobs:
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \
+            --add-cloudsql-instances unclutr-monorep:asia-south1:unclutr-db-india \
             --env-vars-file env.json
 
       - name: Deploy Frontend to Firebase

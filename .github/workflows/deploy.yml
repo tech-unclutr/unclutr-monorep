@@ -108,46 +108,41 @@ jobs:
 
           # Use Python to safely generate the env file without shell expansion issues
           python3 -c "
-          import os, json
-          from urllib.parse import urlparse, urlunparse
-
-          # Get base secret
-          db_secret = os.environ.get('DATABASE_URL_SECRET')
+          import os, json, re
           
-          # Construct Unix Socket URL for Cloud Run
-          # Format: postgresql+asyncpg://user:pass@/dbname?host=/cloudsql/INSTANCE_CONNECTION_NAME
-          try:
-              url = urlparse(db_secret)
-              
-              # Cloud SQL Instance Connection Name
-              instance_connection_name = 'unclutr-monorep:asia-south1:unclutr-db-india'
-              
-              # Safely extract user:pass@ from netloc to preserve encoding
-              # netloc is user:pass@host:port
-              # We want to keep user:pass@ and remove host:port
-              # modifying to add 'localhost' to ensure sqlalchemy parses it correctly
-              # Reconstruct URL
-              # Scheme: postgresql+asyncpg (asyncpg requires this scheme in SQLAlchemy)
-              # Netloc: user:pass (no host, no @)
-              # Path: /dbname
-              # Query: host=/cloudsql/...
-              
-              if '@' in url.netloc:
-                  user_pass = url.netloc.rsplit('@', 1)[0]
-              else:
-                  user_pass = url.netloc
+          # Get base secret
+          db_secret = os.environ.get('DATABASE_URL_SECRET', '')
+          
+          # Cloud SQL Instance Connection Name
+          instance_connection_name = 'unclutr-monorep:asia-south1:unclutr-db-india'
+          
+          print(f"DEBUG: Processing DB Secret (Length: {len(db_secret)})")
+          
+          # Robust Regex Parsing to isolate user/pass and dbname
+          # Extract user:pass (everything between // and @)
+          user_pass_match = re.search(r'://([^@]+)@', db_secret)
+          if user_pass_match:
+              user_pass = user_pass_match.group(1)
+          else:
+              print("WARNING: Could not extract user:pass from DB_SECRET, attempting fallback split")
+              try:
+                  # Fallback: simple split if regex fails
+                  user_pass = db_secret.split('://')[1].split('@')[0]
+              except:
+                  user_pass = ""
+                  print("ERROR: Failed to extract user:pass entirely.")
 
-              unix_socket_url = urlunparse((
-                  'postgresql+asyncpg',
-                  user_pass + '@', # trailing @ is needed if user:pass is present, but no host
-                  url.path,
-                  '',
-                  new_query,
-                  ''
-              ))
-          except Exception as e:
-              print(f'Error parsing DB URL: {e}')
-              unix_socket_url = db_secret # Fallback
+          # Force proper asyncpg format with Unix socket
+          # Format: postgresql+asyncpg://USER:PASS@/postgres?host=/cloudsql/INSTANCE
+          unix_socket_url = f"postgresql+asyncpg://{user_pass}@/postgres?host=/cloudsql/{instance_connection_name}"
+          
+          # Mask password for logging
+          masked_url = unix_socket_url
+          if user_pass and ":" in user_pass:
+               p = user_pass.split(':')[1]
+               masked_url = masked_url.replace(p, '***')
+          
+          print(f"Constructed URL: {masked_url}")
 
           env_vars = {
               'DATABASE_URL': unix_socket_url,

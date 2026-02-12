@@ -115,6 +115,8 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
                 // If API_URL is https://almost.joinsquareup.com/api/v1
                 // We want wss://almost.joinsquareup.com/api/v1/execution/campaign/...
 
+                // Strip protocol
+                const urlWithoutProtocol = baseUrl.replace(/^https?:\/\//, '');
                 wsUrl = `${wsProtocol}//${urlWithoutProtocol}/execution/campaign/${campaignId}/ws`;
             } else {
                 // Fallback for local development or if env var is missing

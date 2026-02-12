@@ -1,10 +1,10 @@
 import logging
 import uuid
 
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from sqlmodel import select
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.context import set_company_ctx, set_user_ctx, set_workspace_ctx
 from app.core.db import async_session_factory
@@ -13,15 +13,45 @@ from app.models.iam import CompanyMembership
 
 logger = logging.getLogger(__name__)
 
-class TenantMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+class TenantMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        # 1. IMMEDIATE WEBSOCKET BYPASS
+        # Critical Fix for 1006 Disconnects: 
+        # BaseHTTPMiddleware interferes with WebSocket upgrades.
+        # We explicitly pass through any WebSocket connection immediately.
+        # Auth for WebSockets is handled by the endpoint itself (via Query Param).
+        if scope["type"] == "websocket":
+            await self.app(scope, receive, send)
+            return
+
+        # ------------------------------------------------------------------
+        # HTTP Request Handling
+        # ------------------------------------------------------------------
+        
+        # Use Starlette/FastAPI Request object for convenience
+        request = Request(scope, receive=receive)
+        
+        # Helper to send JSON response directly
+        async def send_response(response: Response):
+            await response(scope, receive, send)
+
         path = request.url.path
-        # Log path for debugging 403
+        
+        # Log path for debugging
         if "/api/v1/companies" in path:
-             logger.info(f"TenantMiddleware: Processing path: {path}")
+             # logger.info(f"TenantMiddleware: Processing path: {path}")
+             pass
              
         if request.method == "OPTIONS":
-            return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
         # 1. Extract and Verify Auth
         auth_header = request.headers.get("Authorization")
@@ -37,9 +67,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
             except Exception:
                 pass
 
-        # 2. Bypass check for public endpoints or WebSocket upgrade requests
-        path = request.url.path
-        is_websocket = request.headers.get("upgrade", "").lower() == "websocket"
+        # 2. Bypass check for public endpoints 
+        # Note: WebSocket check removed here as it's handled above
         
         public_paths = [
             "/health", "/docs", "/openapi.json", 
@@ -57,26 +86,28 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/webhook/bolna"
         ]
         
-        # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR is a websocket OR ends with /ws
-        # [FIX] Cloud Run/GFE often strips Upgrade headers (especially in H2), so is_websocket check is unreliable.
-        # We rely on path-based bypass for WebSockets, as they handle their own Auth via Query Params.
-        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path or is_websocket or path.endswith("/ws")
-        
-        # logger.debug(f"TenantMiddleware: path={path}, user_id={user_id}, is_public={is_public}")
+        # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR ends with /ws
+        # [CRITICAL RESTORATION] We must keep path-based bypass for WebSockets here because 
+        # in some environments (Cloud Run + H2), the ASGI scope type might stay 'http' 
+        # due to stripped Upgrade headers, bypassing the scope['type'] == 'websocket' check above.
+        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path or path.endswith("/ws")
         
         if is_public:
-            return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
         # 3. Validation
         if not auth_header:
-             return JSONResponse(content={"detail": "Unauthorized: Missing Auth Header"}, status_code=401)
+             await send_response(JSONResponse(content={"detail": "Unauthorized: Missing Auth Header"}, status_code=401))
+             return
 
         company_id_str = request.headers.get("X-Company-ID")
         workspace_id_str = request.headers.get("X-Workspace-ID")
 
         if not company_id_str:
             logger.warning(f"TenantMiddleware: Missing X-Company-ID header for path {path} from user {user_id}")
-            return JSONResponse(content={"detail": "Forbidden: Missing X-Company-ID"}, status_code=403)
+            await send_response(JSONResponse(content={"detail": "Forbidden: Missing X-Company-ID"}, status_code=403))
+            return
 
         try:
             company_id = uuid.UUID(company_id_str)
@@ -92,11 +123,13 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 
         except ValueError:
             logger.error(f"TenantMiddleware: Invalid UUID format in X-Company-ID header: {company_id_str} (Path: {path}, User: {user_id})")
-            return JSONResponse(content={"detail": f"Bad Request: Invalid UUID format in headers ({company_id_str})"}, status_code=400)
+            await send_response(JSONResponse(content={"detail": f"Bad Request: Invalid UUID format in headers ({company_id_str})"}, status_code=400))
+            return
 
         # 4. Membership Check
         if not user_id:
-             return JSONResponse(content={"detail": "Unauthorized: Invalid Token (No User ID)"}, status_code=401)
+             await send_response(JSONResponse(content={"detail": "Unauthorized: Invalid Token (No User ID)"}, status_code=401))
+             return
 
         try:
             async with async_session_factory() as session:
@@ -121,17 +154,19 @@ class TenantMiddleware(BaseHTTPMiddleware):
                             logger.warning(f"TenantMiddleware: SQLAlchemy lookup failed but Raw SQL found membership for {user_id}. Self-healing active.")
                             request.state.role = raw_membership.role
                         else:
-                            return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
+                            await send_response(JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403))
+                            return
                     except Exception as raw_e:
                         logger.error(f"TenantMiddleware: Raw SQL fallback failed: {raw_e}")
-                        return JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403)
+                        await send_response(JSONResponse(content={"detail": f"Forbidden: User {user_id} is not a member of Company {company_id}"}, status_code=403))
+                        return
         except Exception as e:
             import traceback
             logger.error(f"TenantMiddleware Error: {str(e)}\n{traceback.format_exc()}")
-            return JSONResponse(
+            await send_response(JSONResponse(
                 content={"detail": f"Internal Server Error in Tenant Verification: {str(e)}"}, 
                 status_code=500
-            )
+            ))
+            return
             
-        response = await call_next(request)
-        return response
+        await self.app(scope, receive, send)

@@ -126,24 +126,20 @@ jobs:
               # netloc is user:pass@host:port
               # We want to keep user:pass@ and remove host:port
               # modifying to add 'localhost' to ensure sqlalchemy parses it correctly
-              if '@' in url.netloc:
-                  user_pass = url.netloc.rsplit('@', 1)[0]
-                  new_netloc = user_pass + '@localhost'
-              else:
-                  new_netloc = 'localhost' # Fallback content
-              
-              # Query params for Unix socket
-              # host query param tells asyncpg to use the unix socket
-              new_query = f'host=/cloudsql/{instance_connection_name}'
-              
               # Reconstruct URL
               # Scheme: postgresql+asyncpg (asyncpg requires this scheme in SQLAlchemy)
-              # Netloc: user:pass@ (empty host)
+              # Netloc: user:pass (no host, no @)
               # Path: /dbname
               # Query: host=/cloudsql/...
+              
+              if '@' in url.netloc:
+                  user_pass = url.netloc.rsplit('@', 1)[0]
+              else:
+                  user_pass = url.netloc
+
               unix_socket_url = urlunparse((
                   'postgresql+asyncpg',
-                  new_netloc,
+                  user_pass + '@', # trailing @ is needed if user:pass is present, but no host
                   url.path,
                   '',
                   new_query,

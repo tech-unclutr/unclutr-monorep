@@ -37,12 +37,7 @@ if "postgresql+asyncpg" in DATABASE_URL:
         query_params["ssl"] = ["disable"]
     
     if is_unix_socket:
-        # Check if we are using Unix sockets (Cloud SQL on Cloud Run)
-        # We need to disable SSL for Unix sockets as it's not supported/needed and causes connection refused
-        if "ssl" not in query_params:
-            query_params["ssl"] = ["disable"]
-            
-        logger.info(f"Detected Unix socket connection. SSL disabled for: {parsed_url.path.lstrip('/')}")
+         logger.info(f"Detected Unix socket connection.")
 
     # Reconstruct URL without problematic arguments
     new_query = urlencode(query_params, doseq=True)
@@ -69,11 +64,24 @@ if DATABASE_URL.startswith("postgresql"):
 
     # Explicitly enforce Unix socket usage if detected in URL
     # This fixes issues where generic host (like localhost) causes asyncpg to attempt TCP
-    if "/cloudsql/" in DATABASE_URL:
+    # Explicitly enforce Unix socket usage if detected in URL
+    # This fixes issues where generic host (like localhost) causes asyncpg to attempt TCP
+    if "/cloudsql/" in DATABASE_URL or "%2Fcloudsql%2F" in DATABASE_URL:
+        # Check for host in query params (decoded)
         parsed_current = urlparse(DATABASE_URL)
         qs_current = parse_qs(parsed_current.query)
+        
         if "host" in qs_current:
              engine_kwargs["connect_args"]["host"] = qs_current["host"][0]
+             # Also disable SSL for Unix sockets to prevent timeouts
+             engine_kwargs["connect_args"]["ssl"] = False
+             logger.info(f"Using Unix socket from query param. SSL disabled.")
+
+        # Check for host in netloc (encoded)
+        elif "%2Fcloudsql%2F" in DATABASE_URL and not parsed_current.netloc.endswith("localhost"):
+             # If host is in netloc, SQLAlchemy handles parsing, but we must forcibly disable SSL
+             engine_kwargs["connect_args"]["ssl"] = False
+             logger.info(f"Using Unix socket from netloc. SSL disabled.")
 
     logger.info("Using PostgreSQL with connection pooling")
 else:

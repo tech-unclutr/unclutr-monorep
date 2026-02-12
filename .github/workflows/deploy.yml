@@ -144,3 +144,14 @@ jobs:
         run: |
           firebase experiments:enable webframeworks
           firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --force --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Ensure Frontend Public Access (Staging)
+        if: steps.env_setup.outputs.ENV_NAME == 'staging'
+        run: |
+          # The Firebase-managed Cloud Run service for staging is seemingly named 'ssrsquareupstaging'
+          # We need to explicitly allow unauthenticated invocations as it defaults to private.
+          echo "Run: Granting public access to ssrsquareupstaging..."
+          gcloud run services add-iam-policy-binding ssrsquareupstaging \
+            --region asia-south1 \
+            --member=allUsers \
+            --role=roles/run.invoker

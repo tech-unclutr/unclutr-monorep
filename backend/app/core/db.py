@@ -66,6 +66,15 @@ if DATABASE_URL.startswith("postgresql"):
             "prepared_statement_cache_size": 0
         }, # Required for Supabase Transaction Pooler
     })
+
+    # Explicitly enforce Unix socket usage if detected in URL
+    # This fixes issues where generic host (like localhost) causes asyncpg to attempt TCP
+    if "/cloudsql/" in DATABASE_URL:
+        parsed_current = urlparse(DATABASE_URL)
+        qs_current = parse_qs(parsed_current.query)
+        if "host" in qs_current:
+             engine_kwargs["connect_args"]["host"] = qs_current["host"][0]
+
     logger.info("Using PostgreSQL with connection pooling")
 else:
     logger.warning("Using SQLite - NOT recommended for production!")

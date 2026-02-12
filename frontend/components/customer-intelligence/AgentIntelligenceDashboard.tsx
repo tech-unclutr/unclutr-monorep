@@ -710,27 +710,51 @@ export default function AgentIntelligenceDashboard({
                                         </div>
                                     </div>
                                 </div>
-                            ) : (isCompleted || isExhausted) ? (
-                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
-                                    <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                                        <CheckCircle2 className="w-5 h-5 text-zinc-400" />
+                            ) : (isTargetAchieved) ? (
+                                <div className="h-full rounded-[32px] border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 flex flex-col items-center justify-center p-8 text-center bg-indigo-50/20 dark:bg-indigo-950/10">
+                                    <div className="relative mb-6">
+                                        <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                                        <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center relative z-10 shadow-2xl">
+                                            <Trophy className="w-10 h-10 text-white drop-shadow-lg" />
+                                        </div>
                                     </div>
-                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                                        {hasFailures ? "Campaign Suspended" : "Campaign Ended"}
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 max-w-[200px] mt-1 mb-6">
-                                        {hasFailures
-                                            ? `${failedLeads.length} leads failed to connect.`
-                                            : "No valid leads remaining in queue."}
+                                    <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Target Achieved!</h3>
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-[280px] mt-2 mb-8 font-medium">
+                                        Mission accomplished. All cohort targets have been met successfully.
                                     </p>
                                     <Button
                                         onClick={() => setShowResetConfirm(true)}
                                         disabled={isResetting}
-                                        variant="outline"
-                                        className="h-9 px-6 rounded-full border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400 font-bold text-[10px] uppercase tracking-widest gap-2"
+                                        className="h-12 px-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 gap-2"
                                     >
-                                        {isResetting ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                                        {isResetting ? "Resetting..." : "Reset Metrics"}
+                                        {isResetting ? <RotateCcw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                                        Run it Again
+                                    </Button>
+                                </div>
+                            ) : (isExhausted || isCompleted) ? (
+                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
+                                    <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-6">
+                                        {hasFailures ? <AlertCircle className="w-8 h-8 text-amber-500" /> : <CheckCircle2 className="w-8 h-8 text-emerald-500" />}
+                                    </div>
+                                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                                        {hasFailures ? "Lead Capacity Exhausted" : "Queue Complete"}
+                                    </h3>
+                                    <p className="text-sm text-zinc-500 max-w-[260px] mt-2 mb-8 font-medium">
+                                        {hasFailures
+                                            ? `${failedLeads.length} leads were unreachable or failed to connect. Reset metrics to try again.`
+                                            : "All leads have been processed. Systems standing by."}
+                                    </p>
+                                    <Button
+                                        onClick={() => setShowResetConfirm(true)}
+                                        disabled={isResetting}
+                                        variant={hasFailures ? "default" : "outline"}
+                                        className={cn(
+                                            "h-12 px-8 rounded-full font-bold transition-all gap-2",
+                                            hasFailures ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20" : "border-zinc-200 dark:border-zinc-800"
+                                        )}
+                                    >
+                                        {isResetting ? <RotateCcw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                                        {hasFailures ? `Retry ${failedLeads.length} Failed Leads` : "Reset Campaign Metrics"}
                                     </Button>
                                 </div>
                             ) : (
@@ -742,16 +766,6 @@ export default function AgentIntelligenceDashboard({
                                     <p className="text-xs text-zinc-500 max-w-[200px] mt-1">
                                         Establishing secure uplinks with active AI agents...
                                     </p>
-                                    {isExhausted && hasFailures && (
-                                        <Button
-                                            onClick={() => setShowResetConfirm(true)}
-                                            disabled={isResetting}
-                                            className="h-12 px-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 gap-2"
-                                        >
-                                            {isResetting ? <RotateCcw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                                            {isResetting ? "Resetting..." : `Retry ${failedLeads.length} Failed Leads`}
-                                        </Button>
-                                    )}
                                 </div>
                             )}
                         </div>

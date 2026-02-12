@@ -70,3 +70,4 @@ frontend/*.log
 backend/venv_lite/
 backend/venv_repair/
 backend.log
+backend/env.json

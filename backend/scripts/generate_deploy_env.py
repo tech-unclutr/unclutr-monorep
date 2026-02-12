@@ -62,7 +62,9 @@ def main():
         'SHOPIFY_API_KEY': os.environ.get('SHOPIFY_API_KEY_SECRET'),
         'SHOPIFY_API_SECRET': os.environ.get('SHOPIFY_API_SECRET_SECRET'),
         'GEMINI_API_KEY': os.environ.get('GEMINI_API_KEY_SECRET'),
-        'FIREBASE_CREDENTIALS_JSON': os.environ.get('FIREBASE_CREDENTIALS_JSON_SECRET')
+        'FIREBASE_CREDENTIALS_JSON': os.environ.get('FIREBASE_CREDENTIALS_JSON_SECRET'),
+        'BOLNA_API_KEY': os.environ.get('BOLNA_API_KEY_SECRET'),
+        'BOLNA_AGENT_ID': os.environ.get('BOLNA_AGENT_ID_SECRET')
     }
 
     # Remove any None values

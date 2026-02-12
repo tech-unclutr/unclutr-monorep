@@ -2,7 +2,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 
 from app.core.config import settings
 
@@ -28,6 +28,10 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info("Startup: Database initialized successfully.")
+        
+        # [DEBUG] Log all registered routes to verify WebSocket mount
+        routes = [route.path for route in app.routes]
+        logger.info(f"Startup: Registered Routes: {routes}")
     except Exception as e:
         logger.error(f"Startup: Database initialization failed! App continuing in degraded mode. Error: {e}")
     
@@ -400,6 +404,11 @@ app.mount(f"{settings.API_V1_STR}/integrations/shopify", shopify_app)
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "SquareUp Backend", "version": APP_VERSION}
+
+# [FIX] Manually register WebSocket route to ensure it exists
+# 'include_router' with prefix sometimes fails to register WS routes correctly in this setup
+from app.api.v1.endpoints.execution import campaign_websocket
+app.add_api_websocket_route(f"{settings.API_V1_STR}/execution/campaign/{{campaign_id}}/ws", campaign_websocket)
 
 
 

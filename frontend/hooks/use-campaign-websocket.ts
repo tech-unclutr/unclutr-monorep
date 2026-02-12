@@ -117,7 +117,15 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
 
                 // Strip protocol
                 const urlWithoutProtocol = baseUrl.replace(/^https?:\/\//, '');
-                wsUrl = `${wsProtocol}//${urlWithoutProtocol}/execution/campaign/${campaignId}/ws`;
+
+                // [FIX] Firebase Hosting (almost.joinsquareup.com) strips 'Upgrade' headers, breaking WebSockets.
+                // We must use the Direct Cloud Run URL for WebSocket connections in this environment.
+                if (baseUrl.includes('almost.joinsquareup.com')) {
+                    console.log('[WebSocket] Detected Staging Environment (Firebase Hosting). Switching to Direct Cloud Run URL.');
+                    wsUrl = `wss://squareup-backend-staging-527397315020.asia-south1.run.app/api/v1/execution/campaign/${campaignId}/ws`;
+                } else {
+                    wsUrl = `${wsProtocol}//${urlWithoutProtocol}/execution/campaign/${campaignId}/ws`;
+                }
             } else {
                 // Fallback for local development or if env var is missing
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

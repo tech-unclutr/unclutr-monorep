@@ -55,7 +55,7 @@ jobs:
           chmod +x cloud-sql-proxy
           
           # Start proxy in background
-          ./cloud-sql-proxy --port 5432 unclutr-monorep:us-central1:squareup-db-staging &
+          ./cloud-sql-proxy --port 5432 unclutr-monorep:asia-south1:unclutr-db-india &
           
           # Wait for proxy to be ready
           for i in $(seq 1 30); do
@@ -120,7 +120,7 @@ jobs:
               url = urlparse(db_secret)
               
               # Cloud SQL Instance Connection Name
-              instance_connection_name = 'unclutr-monorep:us-central1:squareup-db-staging'
+              instance_connection_name = 'unclutr-monorep:asia-south1:unclutr-db-india'
               
               # Safely extract user:pass@ from netloc to preserve encoding
               # netloc is user:pass@host:port
@@ -196,7 +196,7 @@ jobs:
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \
-            --add-cloudsql-instances unclutr-monorep:us-central1:squareup-db-staging \
+            --add-cloudsql-instances unclutr-monorep:asia-south1:unclutr-db-india \
             --env-vars-file env.json
 
       - name: Deploy Frontend to Firebase

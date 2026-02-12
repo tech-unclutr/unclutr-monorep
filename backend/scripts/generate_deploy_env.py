@@ -15,31 +15,38 @@ def main():
     
     print(f"DEBUG: Processing DB Secret (Length: {len(db_secret)})")
     
-    # Robust Regex Parsing to isolate user/pass
-    # Extract user:pass (everything between // and @)
-    user_pass_match = re.search(r'://([^@]+)@', db_secret)
-    if user_pass_match:
-        user_pass = user_pass_match.group(1)
-    else:
-        print("WARNING: Could not extract user:pass from DB_SECRET, attempting fallback split")
-        try:
-            # Fallback: simple split if regex fails
-            user_pass = db_secret.split('://')[1].split('@')[0]
-        except:
-            user_pass = ""
-            print("ERROR: Failed to extract user:pass entirely.")
-
-    # Force proper asyncpg format with Unix socket
-    # Format: postgresql+asyncpg://USER:PASS@/postgres?host=/cloudsql/INSTANCE
-    unix_socket_url = f"postgresql+asyncpg://{user_pass}@/postgres?host=/cloudsql/{instance_connection_name}"
-    
-    # Mask password for logging
-    masked_url = unix_socket_url
-    if user_pass and ":" in user_pass:
-            p = user_pass.split(':')[1]
-            masked_url = masked_url.replace(p, '***')
-    
-    print(f"Constructed URL: {masked_url}")
+    # Parse DB Secret safely
+    try:
+        from urllib.parse import urlparse
+        
+        url = urlparse(db_secret)
+        
+        # Extract components
+        user = url.username
+        password = url.password
+        dbname = url.path.lstrip('/') if url.path else 'postgres'
+        
+        # Construct credentials string
+        if password:
+            creds = f"{user}:{password}"
+        else:
+            creds = user
+            
+        print(f"DEBUG: Parsed DB Name: {dbname}")
+        
+        # Construct Unix Socket URL for Cloud Run
+        # Format: postgresql+asyncpg://USER:PASS@/DBNAME?host=/cloudsql/INSTANCE
+        unix_socket_url = f"postgresql+asyncpg://{creds}@/{dbname}?host=/cloudsql/{instance_connection_name}"
+        
+        # Mask password for logging
+        masked_url = unix_socket_url.replace(password, '***') if password else unix_socket_url
+        print(f"Constructed URL: {masked_url}")
+        
+    except Exception as e:
+        print(f"ERROR: Failed to parse DATABASE_URL_SECRET: {e}")
+        # Fallback to original buggy behavior if parsing fails entirely, or exit? 
+        # Better to exit as this is critical
+        sys.exit(1)
 
     # Construct environment variables dictionary
     env_vars = {

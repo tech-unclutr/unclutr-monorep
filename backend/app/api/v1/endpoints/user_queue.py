@@ -268,7 +268,7 @@ async def get_lead_context(
             "created_at": log.created_at,
             "duration": log.duration,
             "recording_url": log.recording_url,
-            "full_transcript": log.full_transcript  # Full transcript from CallLog
+            "full_transcript": log.full_transcript or getattr(log, "transcript", None)  # Fallback to transcript
         })
         
     for log in user_logs:

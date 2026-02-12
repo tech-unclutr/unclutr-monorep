@@ -73,7 +73,16 @@ async def bolna_webhook(
     execution_map.currency = payload.get("currency", "USD")
     
     # Transcript & Extraction
-    execution_map.transcript = str(payload.get("transcript")) if payload.get("transcript") else None
+    import json
+    transcript_raw = payload.get("transcript")
+    if transcript_raw:
+        if isinstance(transcript_raw, (list, dict)):
+            execution_map.transcript = json.dumps(transcript_raw)
+        else:
+            execution_map.transcript = str(transcript_raw)
+    else:
+        execution_map.transcript = None
+        
     execution_map.full_transcript = execution_map.transcript 
     
     # [NEW] Persist Events to CampaignEvent table

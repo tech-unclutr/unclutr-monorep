@@ -175,15 +175,28 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName, on
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-zinc-500">AI Attempts</span>
-                                                <span className="text-xs font-black text-zinc-900 dark:text-white">{context?.ai_call_history?.length || 0}</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">
+                                                    {timeline.filter(e => e.type === 'AI_CALL').length}
+                                                </span>
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-zinc-500">User Attempts</span>
-                                                <span className="text-xs font-black text-zinc-900 dark:text-white">{context?.user_call_logs?.length || 0}</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">
+                                                    {timeline.filter(e => e.type === 'USER_CALL').length}
+                                                </span>
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs font-bold text-zinc-500">Total Duration</span>
-                                                <span className="text-xs font-black text-zinc-900 dark:text-white">~12 mins</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">
+                                                    {(() => {
+                                                        const totalSeconds = timeline.reduce((acc, curr) => acc + (curr.duration || 0), 0);
+                                                        if (totalSeconds === 0) return "0s";
+                                                        const minutes = Math.floor(totalSeconds / 60);
+                                                        const seconds = totalSeconds % 60;
+                                                        if (minutes === 0) return `${seconds}s`;
+                                                        return `~${minutes}m ${seconds}s`;
+                                                    })()}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -320,13 +333,6 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName, on
                     </p>
                     <div className="flex gap-3">
                         <Button variant="ghost" className="rounded-2xl font-bold h-12 px-6" onClick={onClose}>Close</Button>
-                        <Button
-                            onClick={() => onResumeCall?.(itemId)}
-                            className="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black h-12 px-8 shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            <PhoneCall className="w-4 h-4 mr-2" />
-                            RESUME CALL FLOW
-                        </Button>
                     </div>
                 </div>
             </DialogContent>

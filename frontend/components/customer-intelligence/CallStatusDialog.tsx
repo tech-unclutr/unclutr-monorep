@@ -217,9 +217,17 @@ export const CallStatusDialog = ({ isOpen, onClose, lead, onSuccess }: CallStatu
                                                 if (Array.isArray(latestAI.full_transcript)) {
                                                     transcriptLines = latestAI.full_transcript;
                                                 } else if (typeof latestAI.full_transcript === 'string') {
+                                                    const cleaned = latestAI.full_transcript.trim();
                                                     // Try parsing if it looks like JSON
-                                                    if (latestAI.full_transcript.trim().startsWith('[')) {
-                                                        transcriptLines = JSON.parse(latestAI.full_transcript);
+                                                    if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
+                                                        // Replace single quotes with double quotes if it looks like Python str(list)
+                                                        const jsonCompatible = cleaned.replace(/'/g, '"');
+                                                        try {
+                                                            transcriptLines = JSON.parse(jsonCompatible);
+                                                        } catch (jsonErr) {
+                                                            // Fallback to original parse if replacement fails
+                                                            transcriptLines = JSON.parse(cleaned);
+                                                        }
                                                     } else {
                                                         // Simple split if just text
                                                         return (
@@ -230,6 +238,7 @@ export const CallStatusDialog = ({ isOpen, onClose, lead, onSuccess }: CallStatu
                                                     }
                                                 }
                                             } catch (e) {
+                                                console.error("Transcript parse error", e);
                                                 return <div className="text-sm text-red-500">Error parsing transcript</div>
                                             }
 
@@ -257,22 +266,30 @@ export const CallStatusDialog = ({ isOpen, onClose, lead, onSuccess }: CallStatu
                                 </div>
 
                                 {/* Extracted Details */}
-                                {aiContext?.extracted_data && (
-                                    <div>
-                                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-4 mt-8 flex items-center gap-2">
-                                            <Target className="w-4 h-4 text-emerald-500" />
-                                            Extracted Data
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {Object.entries(aiContext.extracted_data).map(([k, v]) => (
-                                                <div key={k} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
-                                                    <div className="text-[10px] font-bold uppercase text-zinc-400 mb-1">{k.replace(/_/g, ' ')}</div>
-                                                    <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate" title={String(v)}>{String(v)}</div>
-                                                </div>
-                                            ))}
+                                {(() => {
+                                    // Try to find extracted data from latest AI history first, then fallback to aiContext
+                                    const latestAI = history.find(h => h.type === 'AI');
+                                    const extractedData = latestAI?.extracted_data || aiContext?.extracted_data;
+
+                                    if (!extractedData || Object.keys(extractedData).length === 0) return null;
+
+                                    return (
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-4 mt-8 flex items-center gap-2">
+                                                <Target className="w-4 h-4 text-emerald-500" />
+                                                Extracted Data
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {Object.entries(extractedData).map(([k, v]) => (
+                                                    <div key={k} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                                                        <div className="text-[10px] font-bold uppercase text-zinc-400 mb-1">{k.replace(/_/g, ' ')}</div>
+                                                        <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate" title={String(v)}>{String(v)}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                             </div>
                         ) : (

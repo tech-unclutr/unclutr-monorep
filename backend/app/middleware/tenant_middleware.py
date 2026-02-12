@@ -57,10 +57,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/webhook/bolna"
         ]
         
-        # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR is a websocket
-        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path or is_websocket
+        # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR is a websocket OR ends with /ws
+        # [FIX] Cloud Run/GFE often strips Upgrade headers (especially in H2), so is_websocket check is unreliable.
+        # We rely on path-based bypass for WebSockets, as they handle their own Auth via Query Params.
+        is_public = path == "/" or any(p in path for p in public_paths) or "/webhooks/" in path or is_websocket or path.endswith("/ws")
         
-        logger.debug(f"TenantMiddleware: path={path}, user_id={user_id}, is_public={is_public}")
+        # logger.debug(f"TenantMiddleware: path={path}, user_id={user_id}, is_public={is_public}")
         
         if is_public:
             return await call_next(request)

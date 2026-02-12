@@ -246,6 +246,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
     const [userQueueRefreshTrigger, setUserQueueRefreshTrigger] = useState<number>(0);
     const [contextLead, setContextLead] = useState<{ id: string, item_id: string, name: string } | null>(null);
     const [isContextModalOpen, setIsContextModalOpen] = useState(false);
+    const [activeTriggerContactId, setActiveTriggerContactId] = useState<string | null>(null);
     const [hasStartedSession, setHasStartedSession] = useState(false); // New: Track if user clicked Play in this session
 
     // Track the time of the last manual action (Start/Pause/Resume)
@@ -1145,6 +1146,7 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                     historyItems={historyItems}
                                     maxConcurrency={maxConcurrency}
                                     onStart={handleResumeSession}
+                                    triggerContactId={activeTriggerContactId}
                                     onCallClick={(item) => {
                                         setSelectedUserQueueItem(item);
                                         setIsStatusDialogOpen(true);
@@ -1636,6 +1638,10 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                     leadId={contextLead.id}
                     itemId={contextLead.item_id}
                     leadName={contextLead.name}
+                    onResumeCall={(itemId) => {
+                        setActiveTriggerContactId(itemId);
+                        setIsContextModalOpen(false);
+                    }}
                 />
             )}
         </>

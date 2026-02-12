@@ -76,6 +76,7 @@ interface UserActionPanelProps {
     refreshTrigger?: number;
     historyItems?: any[]; // Using any[] for flexibility matching ExecutionPanel, strictly should be HistoryItem[]
     maxConcurrency?: number;
+    triggerContactId?: string | null;
 }
 
 // --- Sub-components ---
@@ -255,11 +256,16 @@ const NextLeadCard = ({
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-100/50 dark:border-emerald-500/10">
-                                <p className="text-[10px] font-black text-emerald-600/70 dark:text-emerald-400 uppercase tracking-wider mb-1">AI Summary</p>
-                                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 line-clamp-3">
-                                    {item.ai_summary || "Highly interested customer."}
-                                </p>
+                            <div className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-100/50 dark:border-emerald-500/10 flex flex-col group/summary">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-black text-emerald-600/70 dark:text-emerald-400 uppercase tracking-widest">AI Summary</p>
+                                    <Sparkles className="w-3 h-3 text-emerald-400 opacity-0 group-hover/summary:opacity-100 transition-opacity" />
+                                </div>
+                                <div className="max-h-[120px] overflow-y-auto scrollbar-subtle pr-2">
+                                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                                        {item.ai_summary || "Highly interested customer."}
+                                    </p>
+                                </div>
                             </div>
                             <div className="bg-zinc-50/50 dark:bg-zinc-900/30 rounded-2xl p-4 border border-zinc-100 dark:border-zinc-800">
                                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wider mb-1">Attempts</p>
@@ -270,19 +276,21 @@ const NextLeadCard = ({
                 ) : (
                     /* PREVIEW MODE UI */
                     <>
-                        <div className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-3xl p-5 border border-emerald-100/50 dark:border-emerald-500/10 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-3 opacity-10">
-                                <Bot className="w-12 h-12" />
+                        <div className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-3xl p-6 border border-emerald-100/50 dark:border-emerald-500/10 relative overflow-hidden group/summary">
+                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover/summary:opacity-10 transition-opacity">
+                                <Bot className="w-16 h-16" />
                             </div>
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 rounded-full bg-white dark:bg-emerald-900/50 flex items-center justify-center shadow-sm">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-6 h-6 rounded-full bg-white dark:bg-emerald-900/50 flex items-center justify-center shadow-sm border border-emerald-100/50">
                                     <Sparkles className="w-3 h-3 text-emerald-500" />
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600/70 dark:text-emerald-400">AI Call Summary</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600/70 dark:text-emerald-400">AI Context Analysis</span>
                             </div>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-300 font-semibold leading-relaxed line-clamp-3">
-                                {item.ai_summary || "Highly interested customer. Expecting a follow-up call."}
-                            </p>
+                            <div className="max-h-[140px] overflow-y-auto scrollbar-subtle pr-2">
+                                <p className="text-sm text-zinc-600 dark:text-zinc-300 font-semibold leading-relaxed">
+                                    {item.ai_summary || "Highly interested customer. Expecting a follow-up call."}
+                                </p>
+                            </div>
                         </div>
                         {/* Stats Row */}
                         <div className="grid grid-cols-2 gap-4">
@@ -389,7 +397,7 @@ const QueueLeadCard = ({ item, index, onClick, onSwap }: { item: UserQueueItem, 
             </div>
 
             <div className="bg-zinc-50/50 dark:bg-black/20 rounded-2xl p-3 border border-zinc-100/50 dark:border-zinc-800/30">
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold line-clamp-2 leading-snug italic">
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold leading-snug italic">
                     &quot;{item.ai_summary || "Ready for follow-up"}&quot;
                 </p>
             </div>
@@ -437,11 +445,12 @@ const QueueLeadCard = ({ item, index, onClick, onSwap }: { item: UserQueueItem, 
 // --- Main Panel ---
 
 
-export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStarted = false, onCallClick, onContextClick, onStart, refreshTrigger, historyItems = [], maxConcurrency = 2 }: UserActionPanelProps) => {
+export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStarted = false, onCallClick, onContextClick, onStart, refreshTrigger, historyItems = [], maxConcurrency = 2, triggerContactId }: UserActionPanelProps) => {
     const [queue, setQueue] = useState<UserQueueItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [contactModeId, setContactModeId] = useState<string | null>(null);
+    const [lastTriggeredId, setLastTriggeredId] = useState<string | null>(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -482,6 +491,16 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (triggerContactId && triggerContactId !== lastTriggeredId) {
+            const item = queue.find(q => q.id === triggerContactId);
+            if (item) {
+                handleContactStart(item);
+                setLastTriggeredId(triggerContactId);
+            }
+        }
+    }, [triggerContactId, queue, lastTriggeredId]);
 
     useEffect(() => {
         fetchQueue(refreshTrigger ? true : false); // Force refresh if trigger changes (and is not undefined/initial)

@@ -40,6 +40,7 @@ interface CallContextModalProps {
     leadId: string;
     itemId: string;
     leadName: string;
+    onResumeCall?: (itemId: string) => void;
 }
 
 interface TimelineEvent {
@@ -53,7 +54,7 @@ interface TimelineEvent {
     transcript?: string;
 }
 
-export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: CallContextModalProps) => {
+export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName, onResumeCall }: CallContextModalProps) => {
     const [isLoading, setIsLoading] = useState(true);
     const [context, setContext] = useState<any>(null);
     const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
@@ -128,14 +129,17 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-3xl rounded-[3rem] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-0 overflow-hidden h-[85vh] flex flex-col">
+            <DialogContent className="max-w-4xl rounded-[3rem] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-0 overflow-hidden h-[85vh] flex flex-col shadow-2xl">
                 <DialogTitle className="sr-only">Call Context for {leadName}</DialogTitle>
                 <DialogDescription className="sr-only">
                     View execution history and details for this lead.
                 </DialogDescription>
                 {/* Header Section */}
-                <div className="bg-gradient-to-br from-orange-600 to-orange-800 p-8 text-white">
-                    <div className="flex items-center gap-6">
+                <div className="bg-gradient-to-br from-orange-600 to-orange-800 p-8 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <History className="w-32 h-32" />
+                    </div>
+                    <div className="flex items-center gap-6 relative z-10">
                         <Avatar className="w-20 h-20 border-4 border-white/20 shadow-2xl">
                             <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${leadId}`} />
                             <AvatarFallback>{leadName.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -163,49 +167,51 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                         </div>
                     ) : (
                         <div className="flex-1 flex flex-col md:flex-row divide-x divide-zinc-100 dark:divide-zinc-800">
-                            {/* Left: Metadata & Preferences */}
-                            <div className="w-full md:w-64 p-6 space-y-8 bg-zinc-50/50 dark:bg-zinc-900/10">
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Engagement Stats</h4>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-zinc-500">AI Attempts</span>
-                                            <span className="text-xs font-black text-zinc-900 dark:text-white">{context?.ai_call_history?.length || 0}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-zinc-500">User Attempts</span>
-                                            <span className="text-xs font-black text-zinc-900 dark:text-white">{context?.user_call_logs?.length || 0}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-zinc-500">Total Duration</span>
-                                            <span className="text-xs font-black text-zinc-900 dark:text-white">~12 mins</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Confirmed Time</h4>
-                                    {context?.user_queue_item?.confirmation_slot ? (
-                                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3">
-                                            <Calendar className="w-5 h-5 text-emerald-600" />
-                                            <div className="leading-tight">
-                                                <p className="text-xs font-black text-emerald-700">{format(new Date(context.user_queue_item.confirmation_slot), "MMM do")}</p>
-                                                <p className="text-[10px] font-bold text-emerald-600">{format(new Date(context.user_queue_item.confirmation_slot), "h:mm a")}</p>
+                            {/* Left: Metadata & Preferences (Scrollable) */}
+                            <ScrollArea className="w-full md:w-80 h-full bg-zinc-50/50 dark:bg-zinc-900/10">
+                                <div className="p-6 space-y-8">
+                                    <div>
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Engagement Stats</h4>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-zinc-500">AI Attempts</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">{context?.ai_call_history?.length || 0}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-zinc-500">User Attempts</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">{context?.user_call_logs?.length || 0}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-zinc-500">Total Duration</span>
+                                                <span className="text-xs font-black text-zinc-900 dark:text-white">~12 mins</span>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <p className="text-xs text-zinc-400 font-medium italic">No preferred slot detected.</p>
-                                    )}
-                                </div>
+                                    </div>
 
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Extracted Context</h4>
-                                    <StructuredLeadContext
-                                        structuredContext={context?.user_queue_item?.structured_context}
-                                        aiSummary={context?.user_queue_item?.ai_summary}
-                                    />
+                                    <div>
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Confirmed Time</h4>
+                                        {context?.user_queue_item?.confirmation_slot ? (
+                                            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3">
+                                                <Calendar className="w-5 h-5 text-emerald-600" />
+                                                <div className="leading-tight">
+                                                    <p className="text-xs font-black text-emerald-700">{format(new Date(context.user_queue_item.confirmation_slot), "MMM do")}</p>
+                                                    <p className="text-[10px] font-bold text-emerald-600">{format(new Date(context.user_queue_item.confirmation_slot), "h:mm a")}</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-zinc-400 font-medium italic">No preferred slot detected.</p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-4">Extracted Context</h4>
+                                        <StructuredLeadContext
+                                            structuredContext={context?.user_queue_item?.structured_context}
+                                            aiSummary={context?.user_queue_item?.ai_summary}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                            </ScrollArea>
 
                             {/* Right: Timeline */}
                             <div className="flex-1 p-6 overflow-hidden flex flex-col">
@@ -314,7 +320,10 @@ export const CallContextModal = ({ isOpen, onClose, leadId, itemId, leadName }: 
                     </p>
                     <div className="flex gap-3">
                         <Button variant="ghost" className="rounded-2xl font-bold h-12 px-6" onClick={onClose}>Close</Button>
-                        <Button className="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black h-12 px-8 shadow-xl shadow-orange-500/20">
+                        <Button
+                            onClick={() => onResumeCall?.(itemId)}
+                            className="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black h-12 px-8 shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        >
                             <PhoneCall className="w-4 h-4 mr-2" />
                             RESUME CALL FLOW
                         </Button>

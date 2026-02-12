@@ -122,7 +122,7 @@ export default function CustomerIntelligencePage() {
 
     const CAMPAIGNS_PER_PAGE = 3;
 
-    const fetchCampaigns = async (offset = 0, append = false, limit = CAMPAIGNS_PER_PAGE) => {
+    const fetchCampaigns = async (offset = 0, append = false, limit = CAMPAIGNS_PER_PAGE, skipContactSync = false) => {
         // Guard: Wait for auth to be ready and companyId to be present
         if (isAuthLoading || !companyId) return;
 
@@ -149,16 +149,18 @@ export default function CustomerIntelligencePage() {
                 };
 
                 // Override with latest user profile state
-                setContactDetails({
-                    name: baseline.name,
-                    phone: baseline.phone,
-                    role: baseline.role,
-                    department: baseline.department,
-                    linkedin: baseline.linkedin
-                });
+                if (!skipContactSync) {
+                    setContactDetails({
+                        name: baseline.name,
+                        phone: baseline.phone,
+                        role: baseline.role,
+                        department: baseline.department,
+                        linkedin: baseline.linkedin
+                    });
 
-                if (baseline.name && baseline.phone && baseline.role && baseline.department && baseline.linkedin) {
-                    setIsContactSaved(true);
+                    if (baseline.name && baseline.phone && baseline.role && baseline.department && baseline.linkedin) {
+                        setIsContactSaved(true);
+                    }
                 }
             }
 
@@ -201,7 +203,7 @@ export default function CustomerIntelligencePage() {
                     // Fetch all currently visible campaigns to maintain "Load More" state
                     const currentCount = latestCampaigns.length;
                     const limit = currentCount > 0 ? currentCount : CAMPAIGNS_PER_PAGE;
-                    fetchCampaigns(0, false, limit);
+                    fetchCampaigns(0, false, limit, true);
                 }
             }, 15000); // 15 seconds
 

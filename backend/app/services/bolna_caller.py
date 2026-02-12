@@ -230,23 +230,27 @@ class BolnaCaller:
         results = []
         sent_numbers = set() # Safety check for intra-batch duplicates
         
-        # [FIX] Auto-detect Ngrok URL for Webhook
-        # This ensures real-time updates work in dev environment without manual config
-        webhook_url = None
+        # [FIX] Robust Webhook URL construction for Dev & Staging
+        # Path must match api.py (no /integrations/ prefix)
+        webhook_api_path = f"{settings.API_V1_STR}/webhook/bolna"
+        webhook_url = f"{settings.BACKEND_URL}{webhook_api_path}"
+        
         try:
-            async with httpx.AsyncClient() as client:
-                # Try fetching from local Ngrok API
-                ngrok_res = await client.get("http://localhost:4040/api/tunnels", timeout=0.5)
-                if ngrok_res.status_code == 200:
-                    tunnels = ngrok_res.json().get("tunnels", [])
-                    # Find https tunnel
-                    public_url = next((t["public_url"] for t in tunnels if t["proto"] == "https"), None)
-                    if public_url:
-                        webhook_url = f"{public_url}/api/v1/integrations/webhook/bolna"
-                        logger.info(f"[BolnaCaller] Auto-detected Ngrok Webhook URL: {webhook_url}")
+            # Development: Auto-detect Ngrok if available
+            if not settings.is_production:
+                async with httpx.AsyncClient() as client:
+                    ngrok_res = await client.get("http://localhost:4040/api/tunnels", timeout=0.5)
+                    if ngrok_res.status_code == 200:
+                        tunnels = ngrok_res.json().get("tunnels", [])
+                        public_url = next((t["public_url"] for t in tunnels if t["proto"] == "https"), None)
+                        if public_url:
+                            webhook_url = f"{public_url}{webhook_api_path}"
+                            logger.info(f"[BolnaCaller] Auto-detected Ngrok Webhook URL: {webhook_url}")
         except Exception:
-            # Silently fail if ngrok API is not accessible (e.g. prod)
             pass
+            
+        if webhook_url:
+             logger.info(f"[BolnaCaller] Using Webhook URL: {webhook_url}")
 
         # Define internal helper for single concurrent call
         async def params_trigger_single_call(client, task, original_index, url, headers):

@@ -300,12 +300,12 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     # We want valid call logs for this campaign, latest first
     
     # A. AI Call Logs
+    # [FIX] More inclusive history query
+    # We want ALL call logs, even if they never reached the Human Queue (UserQueueItem)
     history_stmt = (
         select(CallLog, CampaignLead)
         .join(CampaignLead, CallLog.lead_id == CampaignLead.id)
-        .join(UserQueueItem, CampaignLead.id == UserQueueItem.lead_id)
         .where(CallLog.campaign_id == campaign_id)
-        .where(UserQueueItem.status == "CLOSED")
         .order_by(CallLog.created_at.desc())
         .limit(100)
     )
@@ -317,9 +317,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
     user_history_stmt = (
         select(UserCallLog, CampaignLead)
         .join(CampaignLead, UserCallLog.lead_id == CampaignLead.id)
-        .join(UserQueueItem, CampaignLead.id == UserQueueItem.lead_id)
         .where(UserCallLog.campaign_id == campaign_id)
-        .where(UserQueueItem.status == "CLOSED")
         .order_by(UserCallLog.created_at.desc())
         .limit(100)
     )

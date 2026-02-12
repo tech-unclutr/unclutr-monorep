@@ -115,9 +115,12 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
                 // If API_URL is https://almost.joinsquareup.com/api/v1
                 // We want wss://almost.joinsquareup.com/api/v1/execution/campaign/...
 
-                // Strip protocol
-                const urlWithoutProtocol = baseUrl.replace(/^https?:\/\//, '');
-
+                wsUrl = `${wsProtocol}//${urlWithoutProtocol}/execution/campaign/${campaignId}/ws`;
+            } else {
+                // Fallback for local development or if env var is missing
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const host = window.location.host === 'localhost:3000' ? 'localhost:8000' : window.location.host;
+                wsUrl = `${protocol}//${host}/api/v1/execution/campaign/${campaignId}/ws`;
             }
 
             // [FIX] Firebase Hosting (almost.joinsquareup.com) strips 'Upgrade' headers, breaking WebSockets.

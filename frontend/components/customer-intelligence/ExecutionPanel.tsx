@@ -1109,31 +1109,6 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                         {/* Pipeline View: 2 Queues */}
                         <div className="flex flex-col gap-6 mb-6">
 
-                            {/* 0. USER ACTION PIPELINE (Replaces HumanQueue) */}
-                            <div className="mb-6">
-                                <UserActionPanel
-                                    campaignId={campaignId}
-                                    campaignStatus={state === 'ACTIVE_READY' || state === 'WARMUP' || state === 'IN_CALL' ? 'ACTIVE' : 'PAUSED'}
-                                    isStarted={state !== 'PAUSED'}
-                                    refreshTrigger={userQueueRefreshTrigger}
-                                    historyItems={historyItems}
-                                    maxConcurrency={maxConcurrency}
-                                    onStart={handleResumeSession}
-                                    onCallClick={(item) => {
-                                        setSelectedUserQueueItem(item);
-                                        setIsStatusDialogOpen(true);
-                                    }}
-                                    onContextClick={(item) => {
-                                        setContextLead({
-                                            id: item.lead_id,
-                                            item_id: item.id,
-                                            name: item.lead_name
-                                        });
-                                        setIsContextModalOpen(true);
-                                    }}
-                                />
-                            </div>
-
                             {/* 1. INTELLIGENCE DASHBOARD (Added Section) */}
                             <div className="mb-8">
                                 <AgentIntelligenceDashboard
@@ -1157,6 +1132,31 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
                                     feedViewMode={viewMode}
                                     onFeedViewModeChange={setViewMode}
                                     className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 min-h-[500px]"
+                                />
+                            </div>
+
+                            {/* 0. USER ACTION PIPELINE (Replaces HumanQueue) */}
+                            <div className="mb-6">
+                                <UserActionPanel
+                                    campaignId={campaignId}
+                                    campaignStatus={state === 'ACTIVE_READY' || state === 'WARMUP' || state === 'IN_CALL' ? 'ACTIVE' : 'PAUSED'}
+                                    isStarted={state !== 'PAUSED'}
+                                    refreshTrigger={userQueueRefreshTrigger}
+                                    historyItems={historyItems}
+                                    maxConcurrency={maxConcurrency}
+                                    onStart={handleResumeSession}
+                                    onCallClick={(item) => {
+                                        setSelectedUserQueueItem(item);
+                                        setIsStatusDialogOpen(true);
+                                    }}
+                                    onContextClick={(item) => {
+                                        setContextLead({
+                                            id: item.lead_id,
+                                            item_id: item.id,
+                                            name: item.lead_name
+                                        });
+                                        setIsContextModalOpen(true);
+                                    }}
                                 />
                             </div>
 

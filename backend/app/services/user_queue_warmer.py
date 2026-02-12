@@ -80,10 +80,71 @@ class UserQueueWarmer:
             
             if existing_uqi:
                 logger.info(f"UserQueueItem already exists for lead {queue_item.lead_id} (ID: {existing_uqi.id})")
-                # Mark as promoted to stop retrying
+                
+                # [FIX] Update history even if already in queue
+                # This ensures the dashboard doesn't show stale "AI CALL X hours ago" value
+                # when a fresh AI attempt has happened.
+                
+                # Get the latest BolnaExecutionMap to update the context
+                bolna_result = await session.execute(
+                    select(BolnaExecutionMap).where(
+                        BolnaExecutionMap.queue_item_id == queue_item_id
+                    ).order_by(desc(BolnaExecutionMap.created_at)).limit(1)
+                )
+                bolna_map = bolna_result.scalar_one_or_none()
+                
+                if bolna_map:
+                    new_history_entry = {
+                        "bolna_call_id": bolna_map.bolna_call_id,
+                        "call_duration": bolna_map.call_duration,
+                        "call_status": bolna_map.call_status,
+                        "extracted_data": bolna_map.extracted_data or {},
+                        "transcript_summary": bolna_map.transcript_summary,
+                        "created_at": bolna_map.created_at.isoformat() if bolna_map.created_at else None
+                    }
+                    
+                    # Update call_history (handle list vs dict migration)
+                    current_history = existing_uqi.call_history
+                    if isinstance(current_history, list):
+                        existing_uqi.call_history = current_history + [new_history_entry]
+                    elif isinstance(current_history, dict) and current_history:
+                        existing_uqi.call_history = [current_history, new_history_entry]
+                    else:
+                        existing_uqi.call_history = [new_history_entry]
+                    
+                    # Also update summary and intent if we have better info
+                    # We re-run the summary/context extraction to be safe
+                    found_transcript = bolna_map.transcript or bolna_map.full_transcript
+                    if found_transcript:
+                         try:
+                             # Generate structured context and concise summary
+                             existing_uqi.ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                             existing_uqi.structured_context = await llm_service.generate_structured_lead_context(
+                                 transcript=str(found_transcript),
+                                 extracted_data=bolna_map.extracted_data or {}
+                             )
+                         except:
+                             pass
+                    
+                    # Update priority indicators
+                    extracted = bolna_map.extracted_data or {}
+                    if extracted.get("interested"):
+                        existing_uqi.intent_strength = max(existing_uqi.intent_strength, 0.9)
+                    
+                    callback_time = extracted.get("callback_time")
+                    if callback_time:
+                        try:
+                            existing_uqi.confirmation_slot = datetime.fromisoformat(callback_time.replace('Z', '+00:00'))
+                        except:
+                            pass
+
+                # Mark ORIGINAL queue item as promoted to stop redundant promotes
                 queue_item.promoted_to_user_queue = True
                 queue_item.promoted_at = datetime.utcnow()
                 session.add(queue_item)
+                
+                existing_uqi.updated_at = datetime.utcnow()
+                session.add(existing_uqi)
                 await session.commit()
                 return existing_uqi
             

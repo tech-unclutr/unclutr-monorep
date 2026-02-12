@@ -64,7 +64,7 @@ const LAB_USE_CASES = [
         title: "Zero-Party Lab",
         tag: "Data Enrichment",
         result: "Enriched 1.2k profiles with direct intent via our voice AI agents.",
-        avatars: ["/images/avatars/avatar_50.png", "/images/avatars/avatar_51.png", "/images/avatars/avatar_52.png"]
+        avatars: ["/images/avatars/avatar_43.png", "/images/avatars/avatar_44.png", "/images/avatars/avatar_45.png"]
     },
     {
         id: "sentiment",
@@ -72,7 +72,7 @@ const LAB_USE_CASES = [
         title: "Sentiment Lab",
         tag: "Customer Experience",
         result: "Mapped 92% positive sentiment shift after v2 support rollout.",
-        avatars: ["/images/avatars/avatar_60.png", "/images/avatars/avatar_61.png", "/images/avatars/avatar_62.png"]
+        avatars: ["/images/avatars/avatar_46.png", "/images/avatars/avatar_47.png", "/images/avatars/avatar_48.png"]
     },
     {
         id: "win-back",
@@ -80,7 +80,7 @@ const LAB_USE_CASES = [
         title: "Win-back Lab",
         tag: "Re-activation",
         result: "$9.2k revenue generated from previously 'dormant' segments.",
-        avatars: ["/images/avatars/avatar_70.png", "/images/avatars/avatar_71.png", "/images/avatars/avatar_72.png"]
+        avatars: ["/images/avatars/avatar_4.png", "/images/avatars/avatar_5.png", "/images/avatars/avatar_6.png"]
     }
 ];
 

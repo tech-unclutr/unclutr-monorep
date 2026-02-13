@@ -686,52 +686,100 @@ export default function AgentIntelligenceDashboard({
                                     </div>
                                 </div>
                             ) : (isTargetAchieved) ? (
-                                <div className="h-full rounded-[32px] border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 flex flex-col items-center justify-center p-8 text-center bg-indigo-50/20 dark:bg-indigo-950/10">
-                                    <div className="relative mb-6">
-                                        <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                                        <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center relative z-10 shadow-2xl">
-                                            <Trophy className="w-10 h-10 text-white drop-shadow-lg" />
-                                        </div>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="h-full rounded-[40px] border border-indigo-500/30 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-indigo-500/10 via-transparent to-amber-500/5 dark:from-indigo-500/20 dark:via-zinc-950 dark:to-amber-500/10 shadow-[0_0_50px_-12px_rgba(99,102,241,0.2)] backdrop-blur-sm relative overflow-hidden"
+                                >
+                                    {/* Animated Aura */}
+                                    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                                        <div className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)] animate-[pulse_8s_ease-in-out_infinite]" />
                                     </div>
-                                    <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">Target Achieved!</h3>
-                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-[280px] mt-2 mb-8 font-medium">
-                                        Mission accomplished. All cohort targets have been met successfully.
+
+                                    <div className="relative z-10 mb-8">
+                                        <motion.div
+                                            animate={{
+                                                scale: [1, 1.1, 1],
+                                                rotate: [0, 5, -5, 0]
+                                            }}
+                                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                            className="w-24 h-24 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-indigo-600 flex items-center justify-center shadow-[0_20px_50px_-12px_rgba(245,158,11,0.4)]"
+                                        >
+                                            <Trophy className="w-12 h-12 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+                                        </motion.div>
+                                        <motion.div
+                                            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 0.5] }}
+                                            transition={{ duration: 2, repeat: Infinity }}
+                                            className="absolute -top-2 -right-2 text-amber-400"
+                                        >
+                                            <Sparkles className="w-6 h-6" />
+                                        </motion.div>
+                                    </div>
+                                    <h3 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight relative z-10">Target Achieved!</h3>
+                                    <p className="text-base text-zinc-500 dark:text-zinc-400 max-w-[320px] mt-3 mb-10 font-medium leading-relaxed relative z-10">
+                                        Mission accomplished. All cohort targets have been met with exceptional precision.
                                     </p>
                                     <Button
                                         onClick={() => setShowResetConfirm(true)}
                                         disabled={isResetting}
-                                        className="h-12 px-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 gap-2"
+                                        className="h-14 px-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-[0_20px_40px_-10px_rgba(79,70,229,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(79,70,229,0.5)] active:scale-95 gap-3 relative z-10 border-t border-white/20"
                                     >
-                                        {isResetting ? <RotateCcw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                                        Run it Again
+                                        {isResetting ? <RotateCcw className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5 shadow-sm" />}
+                                        <span className="tracking-wide">RE-INITIATE SEQUENCE</span>
                                     </Button>
-                                </div>
+                                </motion.div>
                             ) : (isExhausted || isCompleted) ? (
-                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
-                                    <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-6">
-                                        {hasFailures ? <AlertCircle className="w-8 h-8 text-amber-500" /> : <CheckCircle2 className="w-8 h-8 text-emerald-500" />}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="h-full rounded-[40px] border border-zinc-200 dark:border-zinc-800/50 flex flex-col items-center justify-center p-10 text-center bg-white/40 dark:bg-zinc-900/20 shadow-xl backdrop-blur-sm group overflow-hidden"
+                                >
+                                    <div className="relative mb-8">
+                                        <motion.div
+                                            animate={{ scale: [1, 1.05, 1] }}
+                                            transition={{ duration: 4, repeat: Infinity }}
+                                            className={cn(
+                                                "w-20 h-20 rounded-3xl flex items-center justify-center shadow-inner mt-2 rotate-[10deg] group-hover:rotate-0 transition-transform duration-700",
+                                                hasFailures ? "bg-amber-500/10" : "bg-emerald-500/10"
+                                            )}
+                                        >
+                                            {hasFailures ? (
+                                                <AlertCircle className="w-10 h-10 text-amber-500 drop-shadow-sm" />
+                                            ) : (
+                                                <CheckCircle2 className="w-10 h-10 text-emerald-500 drop-shadow-sm" />
+                                            )}
+                                        </motion.div>
+                                        <div className="absolute -inset-4 bg-zinc-500/5 blur-3xl -z-10 rounded-full animate-pulse" />
                                     </div>
-                                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                                        {hasFailures ? "Lead Capacity Exhausted" : "Queue Complete"}
+                                    <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                                        {hasFailures ? "Capacity Exhausted" : "Operational Standby"}
                                     </h3>
-                                    <p className="text-sm text-zinc-500 max-w-[260px] mt-2 mb-8 font-medium">
+                                    <p className="text-[15px] text-zinc-500 dark:text-zinc-400 max-w-[300px] mt-3 mb-10 font-medium leading-relaxed">
                                         {hasFailures
-                                            ? `${failedLeads.length} leads were unreachable or failed to connect. Reset metrics to try again.`
-                                            : "All leads have been processed. Systems standing by."}
+                                            ? `Precisely ${failedLeads.length} leads were unreachable at this time. Recommendation: Re-attempt sequence after thermal cooldown.`
+                                            : "The queue is clear. All leads processed successfully. Systems currently in low-power operational standby."}
                                     </p>
                                     <Button
                                         onClick={() => setShowResetConfirm(true)}
                                         disabled={isResetting}
                                         variant={hasFailures ? "default" : "outline"}
                                         className={cn(
-                                            "h-12 px-8 rounded-full font-bold transition-all gap-2",
-                                            hasFailures ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20" : "border-zinc-200 dark:border-zinc-800"
+                                            "h-14 px-10 rounded-full font-black transition-all gap-3 tracking-widest uppercase text-xs",
+                                            hasFailures
+                                                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-500/20 border-t border-white/20"
+                                                : "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 bg-white/50 dark:bg-transparent backdrop-blur-sm shadow-sm"
                                         )}
                                     >
-                                        {isResetting ? <RotateCcw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                                        {hasFailures ? `Retry ${failedLeads.length} Failed Leads` : "Reset Campaign Metrics"}
+                                        {isResetting ? <RotateCcw className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5 opacity-70" />}
+                                        {hasFailures ? `Cycle ${failedLeads.length} Remaining Contacts` : "Reset Matrix State"}
                                     </Button>
-                                </div>
+
+                                    {/* Subtle status label */}
+                                    <div className="absolute bottom-6 flex items-center gap-2 opacity-30 group-hover:opacity-100 transition-opacity duration-1000">
+                                        <div className="w-1 h-1 rounded-full bg-zinc-400 animate-pulse" />
+                                        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-400 dark:text-zinc-500">Neural Buffer Clear</span>
+                                    </div>
+                                </motion.div>
                             ) : (activeAgents && activeAgents.length > 0) ? (
                                 <div className="h-full overflow-y-auto pr-2 scrollbar-hide">
                                     <div className="flex flex-col h-full">

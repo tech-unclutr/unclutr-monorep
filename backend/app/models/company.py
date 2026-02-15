@@ -11,7 +11,7 @@ from app.models.base_mixins import UserTrackedModel
 class CompanyBase(SQLModel):
     brand_name: str = Field(index=True)
     
-    # Brand Identity
+    # Brand Context
     legal_name: Optional[str] = Field(default=None)
     founded_year: Optional[str] = Field(default=None)
     tagline: Optional[str] = Field(default=None)

@@ -485,9 +485,9 @@ const CampaignCardBase = ({
                                 {/* A. Context Matrix */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     {[
-                                        { title: "Brand Identity", icon: Briefcase, text: brand_context, color: "text-indigo-600", bg: "bg-indigo-50/50", border: "border-indigo-100/50", darkBg: "dark:bg-indigo-500/10", darkBorder: "dark:border-indigo-500/20" },
-                                        { title: "Target Audience", icon: User, text: customer_context, color: "text-orange-600", bg: "bg-orange-50/50", border: "border-orange-100/50", darkBg: "dark:bg-orange-500/10", darkBorder: "dark:border-orange-500/20" },
-                                        { title: "Agent Persona", icon: BrainCircuit, text: team_member_context, color: "text-emerald-600", bg: "bg-emerald-50/50", border: "border-emerald-100/50", darkBg: "dark:bg-emerald-500/10", darkBorder: "dark:border-emerald-500/20" }
+                                        { title: "Brand Context", icon: Briefcase, text: brand_context, color: "text-indigo-600", bg: "bg-indigo-50/50", border: "border-indigo-100/50", darkBg: "dark:bg-indigo-500/10", darkBorder: "dark:border-indigo-500/20" },
+                                        { title: "Campaign Purpose", icon: User, text: customer_context, color: "text-orange-600", bg: "bg-orange-50/50", border: "border-orange-100/50", darkBg: "dark:bg-orange-500/10", darkBorder: "dark:border-orange-500/20" },
+                                        { title: "Team Context", icon: BrainCircuit, text: team_member_context, color: "text-emerald-600", bg: "bg-emerald-50/50", border: "border-emerald-100/50", darkBg: "dark:bg-emerald-500/10", darkBorder: "dark:border-emerald-500/20" }
                                     ].map((ctx, i) => (
                                         <motion.div
                                             key={i}

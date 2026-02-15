@@ -121,7 +121,8 @@ export function useCampaignWebSocket(campaignId: string | null): UseCampaignWebS
             } else {
                 // Fallback for local development or if env var is missing
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const host = window.location.host === 'localhost:3000' ? 'localhost:8000' : window.location.host;
+                // Use current host instead of assuming localhost:8000
+                const host = window.location.host;
                 wsUrl = `${protocol}//${host}/api/v1/execution/campaign/${campaignId}/ws`;
             }
 

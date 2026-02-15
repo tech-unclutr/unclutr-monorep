@@ -9,7 +9,7 @@ import { useAuth } from "@/context/auth-context";
 // Simple in-memory cache to avoid refetching on every mount if not needed, 
 // or we could use SWR/React Query. For now, standard fetch.
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export function useCompany() {
     const [company, setCompany] = useState<Company | null>(null);

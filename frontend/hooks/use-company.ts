@@ -79,19 +79,18 @@ export function useCompany() {
         } finally {
             setLoading(false);
         }
-    }, []); // Removed toast dependency
+    }, [onboardingCompleted]); // Added onboardingCompleted dependency
 
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                fetchCompany();
-            } else {
-                setLoading(false);
-            }
-        });
-        return () => unsubscribe();
-    }, [fetchCompany]);
+        if (onboardingCompleted === true) {
+            fetchCompany();
+        } else if (onboardingCompleted === false) {
+            // If onboarding is explicitly false, we won't find a company
+            setLoading(false);
+        }
+        // If onboardingCompleted is null, we stay in loading state as Auth is still initting/syncing
+    }, [fetchCompany, onboardingCompleted]);
 
     const updateCompany = async (updates: CompanyUpdate) => {
         // Optimistic update

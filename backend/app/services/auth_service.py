@@ -117,6 +117,9 @@ async def _sync_user_attempt(session: AsyncSession, user_in: UserCreate) -> User
     if not membership and memberships:
         membership = memberships[0]
         user.current_company_id = membership.company_id
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
     
     if membership:
         user.role = membership.role

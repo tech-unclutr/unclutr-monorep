@@ -27,8 +27,12 @@ async def read_company_me(
     if not current_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not current_user.current_company_id:
-        # Fallback: Check for any membership
+    company = None
+    if current_user.current_company_id:
+        company = await session.get(Company, current_user.current_company_id)
+    
+    if not company:
+        # Fallback/Self-heal: Check for any membership
         from sqlmodel import select
 
         from app.models.iam import CompanyMembership
@@ -39,15 +43,17 @@ async def read_company_me(
         if not membership:
             raise HTTPException(status_code=404, detail="User does not belong to any company")
             
-        # Self-heal: Update user's current company
+        # Update user's current company
         current_user.current_company_id = membership.company_id
         session.add(current_user)
         await session.commit()
         await session.refresh(current_user)
-    
-    company = await session.get(Company, current_user.current_company_id)
+
+        # Try getting the company again
+        company = await session.get(Company, current_user.current_company_id)
+        
     if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise HTTPException(status_code=404, detail="Company not found after self-healing")
         
     return company
 

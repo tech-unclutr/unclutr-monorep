@@ -101,13 +101,18 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
             {/* Header */}
             <div className={cn("flex px-6 items-center", isCollapsed ? "justify-center pt-8 pb-4" : "justify-between pt-6 pb-2")}>
                 <div className={cn("flex items-center gap-2", isCollapsed ? "mb-4" : "mb-6")}>
-                    <div className="w-8 h-8 md:w-9 md:h-9 bg-[#FF8A4C] rounded-lg flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/20">
-                        <Leaf className="w-5 h-5 fill-white" />
-                    </div>
-                    <div className={cn("flex flex-col transition-opacity duration-200", isCollapsed ? "hidden opacity-0 w-0" : "flex opacity-100")}>
-                        <span className="font-bold text-gray-900 dark:text-[#E4E4E7] text-base leading-tight whitespace-nowrap font-display">SquareUp</span>
-                        <span className="text-gray-400 dark:text-[#71717A] text-[10px] whitespace-nowrap">Your Brand OS</span>
-                    </div>
+                    {isCollapsed ? (
+                        <div className="w-8 h-8 md:w-9 md:h-9 relative flex items-center justify-center shrink-0">
+                            <img src="/brand/icon.svg" alt="Logo" className="w-full h-full object-contain" />
+                        </div>
+                    ) : (
+                        <div className="mt-2 w-full">
+                            {/* Light Mode Wordmark (Dark Text) */}
+                            <img src="/brand/wordmark-dark.svg" alt="SquareUp" className="w-40 h-auto object-contain dark:hidden" />
+                            {/* Dark Mode Wordmark (Light Text) */}
+                            <img src="/brand/wordmark-light.svg" alt="SquareUp" className="w-40 h-auto object-contain hidden dark:block" />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -279,10 +284,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                             <button className={cn(
                                 "flex items-center hover:bg-gray-50 dark:hover:bg-[#27272A] transition-colors outline-none group",
                                 isCollapsed
-                                    ? "justify-center rounded-full w-8 h-8 p-0"
+                                    ? "justify-center rounded-full w-10 h-10 p-0 mx-auto"
                                     : "gap-2 px-2 py-1.5 w-full text-left rounded-lg"
                             )}>
-                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
+                                <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">
                                     <img
                                         src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(companyName)}`}
                                         alt="Avatar"
@@ -333,7 +338,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                     <button className={cn(
                         "flex items-center hover:bg-gray-50 dark:hover:bg-[#27272A] transition-colors outline-none group",
                         isCollapsed
-                            ? "justify-center rounded-full w-10 h-10 p-0"
+                            ? "justify-center rounded-full w-10 h-10 p-0 mx-auto"
                             : "gap-3 px-2 py-2 w-full text-left rounded-lg"
                     )}>
                         <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-700">

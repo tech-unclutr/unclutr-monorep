@@ -2,7 +2,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, WebSocket
+from fastapi import FastAPI, Request
 
 from app.core.config import settings
 

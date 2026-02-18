@@ -59,8 +59,12 @@ export function EmptyDashboardState({
                                 />
                             </motion.div>
                         ) : (
-                            <div className="w-20 h-20 rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center">
-                                <div className="w-10 h-10 bg-[#FF8A4C]/20 rounded-full animate-pulse" />
+                            <div className="w-32 h-16 flex items-center justify-center">
+                                <img
+                                    src={resolvedTheme === 'dark' ? "/brand/wordmark-light.svg" : "/brand/wordmark-dark.svg"}
+                                    alt="Logo"
+                                    className="w-full h-auto object-contain opacity-50 hover:opacity-100 transition-all duration-500"
+                                />
                             </div>
                         )}
                     </AnimatePresence>

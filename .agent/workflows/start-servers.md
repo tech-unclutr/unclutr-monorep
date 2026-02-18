@@ -7,13 +7,14 @@ This workflow performs a clean restart of the development stack. It forcefully t
 // turbo
 ```bash
 cd backend
-/tmp/venv_unclutr/bin/python scripts/stop_servers.py
+venv/bin/python scripts/stop_servers.py
 ```
 
 2. Start the Backend Server.
 ```bash
 # In a new terminal tab/window
 cd backend
+export DATABASE_URL="postgresql+asyncpg://param@localhost:5432/unclutr"
 ./scripts/start_backend.sh
 ```
 
@@ -35,5 +36,5 @@ ngrok http 8000 --domain=unwastable-godsent-see.ngrok-free.dev
 // turbo
 ```bash
 cd backend
-/tmp/venv_unclutr/bin/python scripts/verify_system.py
+venv/bin/python scripts/verify_system.py
 ```

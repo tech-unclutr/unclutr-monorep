@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { MagicLoader } from "@/components/ui/magic-loader";
 
@@ -86,13 +85,13 @@ const LAB_USE_CASES = [
 
 const HEADER_OPTIONS = [
     "that Squares Up.",
-    "that Outperforms.",
-    "that Scales Fast.",
-    "that Wins Markets.",
-    "that Drives Growth.",
-    "that Sees Everything.",
-    "that Just Works.",
-    "that Squares Up Data."
+    "at Scale.",
+    "that Converts.",
+    "that Retains.",
+    "before they churn.",
+    "before they bounce.",
+    "that drives revenue.",
+    "that wins loyalty."
 ];
 
 export default function LoginPage() {
@@ -102,12 +101,6 @@ export default function LoginPage() {
     const [message, setMessage] = useState("");
     const router = useRouter();
     const { isAuthenticated, loading: authLoading } = useAuth();
-    const { setTheme } = useTheme();
-
-    // Reset theme to light on login page
-    useEffect(() => {
-        setTheme("light");
-    }, [setTheme]);
 
     const [activeIndices, setActiveIndices] = useState([0, 1, 2]);
     const [rotationStep, setRotationStep] = useState(0);
@@ -217,7 +210,7 @@ export default function LoginPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: "linear" }}
-            className="min-h-screen flex flex-col lg:flex-row bg-background"
+            className="fixed inset-0 flex flex-col lg:flex-row bg-background overflow-hidden"
         >
             {/* Left Side: The Intelligence Canvas (World Class 15/10) */}
             <div className="hidden lg:flex lg:w-[45%] bg-[#030303] px-12 py-10 flex-col relative overflow-hidden border-r border-white-[0.03]">
@@ -269,28 +262,23 @@ export default function LoginPage() {
                             delay: 0.2
                         }}
                         className="relative group cursor-pointer"
-                        onClick={() => router.push("/")}
+                        onClick={() => router.push("/dashboard")}
                     >
-                        <div className="h-12 w-12 rounded-[18px] bg-white flex items-center justify-center text-black font-black text-2xl mb-6 shadow-[0_0_30px_rgba(255,255,255,0.15)] relative z-10 overflow-hidden">
-                            S
-                            <motion.div
-                                className="absolute inset-0 bg-gradient-to-tr from-transparent via-black/10 to-transparent"
-                                animate={{ x: ['-200%', '200%'] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                            />
+                        <div className="h-16 flex items-center justify-start mb-6 relative z-10">
+                            <img src="/brand/wordmark-light.svg" alt="SquareUp" className="h-12 w-auto object-contain relative z-20" />
                         </div>
                         {/* Hub Aura */}
                         <div className="absolute inset-0 h-12 w-12 rounded-[18px] bg-white/10 blur-xl -z-10 animate-pulse" />
                     </motion.div>
 
-                    <h1 className="text-4xl lg:text-5xl font-black text-white tracking-[-0.03em] leading-[0.9] max-w-lg font-display perspective-1000">
+                    <h1 className="text-3xl lg:text-[2.6rem] font-black text-white tracking-[-0.03em] leading-[1.0] max-w-lg font-display perspective-1000">
                         <motion.span
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                             className="block text-white/90"
                         >
-                            Intelligence
+                            Customer Understanding
                         </motion.span>
                         <div className="block mt-1 relative min-h-[1.5em]">
                             <AnimatePresence mode="wait">
@@ -490,12 +478,12 @@ export default function LoginPage() {
             </div>
 
             {/* Right Side: The Entry (Auth) */}
-            <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 lg:px-24 lg:py-16 bg-white dark:bg-zinc-950" >
+            <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 lg:px-24 bg-white dark:bg-zinc-950">
                 <div className="w-full max-w-[360px] space-y-8">
                     {/* Mobile Header */}
                     <div className="lg:hidden flex flex-col items-center space-y-4 text-center mb-8">
-                        <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl">
-                            S
+                        <div className="h-12 flex items-center justify-center mb-2">
+                            <img src="/brand/wordmark-dark.svg" alt="SquareUp" className="h-10 w-auto object-contain" />
                         </div>
                         <h1 className="text-2xl font-semibold tracking-tight">
                             SquareUp your intelligence

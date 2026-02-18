@@ -7,10 +7,10 @@ import {
     Receipt,
     Truck,
     CheckCircle2,
-    Loader2,
     ChevronDown,
     ChevronUp
 } from 'lucide-react';
+import { Loader } from '@/components/ui/loader';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -56,7 +56,7 @@ export const SyncSummary: React.FC<SyncSummaryProps> = ({ status, syncStats = {}
                 <div className="flex items-center gap-3">
                     <div className={cn("p-1.5 rounded-full flex items-center justify-center", isSyncing ? "bg-white dark:bg-zinc-800 shadow-sm" : "bg-gray-100 dark:bg-zinc-800")}>
                         {isSyncing ? (
-                            <Loader2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500 animate-spin" />
+                            <Loader size={14} className="text-emerald-600 dark:text-emerald-500" />
                         ) : (
                             <CheckCircle2 className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
                         )}

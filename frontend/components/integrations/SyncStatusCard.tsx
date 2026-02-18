@@ -7,9 +7,9 @@ import {
     Receipt,
     Truck,
     CheckCircle2,
-    Loader2,
     RefreshCw
 } from 'lucide-react';
+import { Loader } from '@/components/ui/loader';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -102,7 +102,7 @@ export const SyncStatusCard: React.FC<SyncStatusCardProps> = ({ status, lastSync
                             {/* Single Sequential Task View */}
                             <div className="flex items-center gap-4 bg-gray-50/50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5 transition-all">
                                 <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 border border-blue-500/20 text-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.1)]">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <Loader size={16} />
                                 </div>
                                 <div className="flex flex-col min-w-0">
                                     <span className="text-xs font-bold text-gray-900 dark:text-gray-100">

@@ -15,9 +15,9 @@ import {
     DownloadIcon,
     SparklesIcon,
     InfoIcon,
-    Loader2,
     X
 } from 'lucide-react';
+import { Loader } from "@/components/ui/loader";
 import { useDebounce } from "@/lib/hooks";
 import { useCampaignWebSocket } from "@/hooks/use-campaign-websocket";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1413,7 +1413,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full animate-pulse" />
                                     <div className="relative p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500">
-                                        <Loader2 className="w-8 h-8 animate-spin" />
+                                        <Loader size={32} />
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-center">
@@ -2189,7 +2189,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                             }}
                                                             disabled={isSyncingCalendar}
                                                         >
-                                                            {isSyncingCalendar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SparklesIcon className="w-3.5 h-3.5" />}
+                                                            {isSyncingCalendar ? <Loader size="sm" className="mr-2" /> : <SparklesIcon className="w-3.5 h-3.5" />}
                                                             Block on Google
                                                         </Button>
                                                     )}
@@ -2239,7 +2239,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                     exit={{ opacity: 0 }}
                                     className="flex items-center gap-2 text-[10px] text-indigo-500 font-bold uppercase tracking-widest"
                                 >
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader size="sm" className="mr-2" />
                                     <span>Syncing Draft</span>
                                 </motion.div>
                             )}

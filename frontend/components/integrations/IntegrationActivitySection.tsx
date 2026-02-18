@@ -2,7 +2,8 @@ import React from 'react';
 import { ActivityFeed } from '@/components/integrations/ActivityFeed';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Activity, CheckCircle2, Info, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Activity, CheckCircle2, Info, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Loader } from '@/components/ui/loader';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Integration } from '@/lib/api/integrations';
@@ -73,7 +74,7 @@ export const IntegrationActivitySection: React.FC<IntegrationActivitySectionProp
                         {isProcessingOrCoolingDown ? (
                             <>
                                 {isReconciling ? (
-                                    <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                                    <Loader size={12} className="shrink-0" />
                                 ) : isErrorState ? (
                                     <Info className="w-3 h-3 shrink-0 text-red-500" />
                                 ) : (

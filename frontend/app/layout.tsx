@@ -11,6 +11,9 @@ const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 export const metadata: Metadata = {
   title: "SquareUp.ai",
   description: "The Decision & Control Layer for D2C Brands",
+  icons: {
+    icon: "/brand/favicon.ico",
+  },
 };
 
 import { Toaster } from "@/components/ui/sonner";

@@ -37,7 +37,7 @@ if "postgresql+asyncpg" in DATABASE_URL:
         query_params["ssl"] = ["disable"]
     
     if is_unix_socket:
-         logger.info(f"Detected Unix socket connection.")
+         logger.info("Detected Unix socket connection.")
 
     # Reconstruct URL without problematic arguments
     new_query = urlencode(query_params, doseq=True)
@@ -75,13 +75,13 @@ if DATABASE_URL.startswith("postgresql"):
              engine_kwargs["connect_args"]["host"] = qs_current["host"][0]
              # Also disable SSL for Unix sockets to prevent timeouts
              engine_kwargs["connect_args"]["ssl"] = False
-             logger.info(f"Using Unix socket from query param. SSL disabled.")
+             logger.info("Using Unix socket from query param. SSL disabled.")
 
         # Check for host in netloc (encoded)
         elif "%2Fcloudsql%2F" in DATABASE_URL and not parsed_current.netloc.endswith("localhost"):
              # If host is in netloc, SQLAlchemy handles parsing, but we must forcibly disable SSL
              engine_kwargs["connect_args"]["ssl"] = False
-             logger.info(f"Using Unix socket from netloc. SSL disabled.")
+             logger.info("Using Unix socket from netloc. SSL disabled.")
 
     logger.info("Using PostgreSQL with connection pooling")
 else:

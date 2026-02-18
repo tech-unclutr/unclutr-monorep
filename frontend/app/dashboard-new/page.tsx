@@ -43,8 +43,6 @@ export default function CashCompassPage() {
                         <EmptyDashboardState
                             title="Connect Your Financials"
                             description="Visualize your revenue, burn, and runway by connecting your bank accounts and accounting software."
-                            image="/images/cash-compass-empty.png"
-                            lightImage="/images/cash-compass-empty-light.png"
                         />
                     </div>
                     {/* )} */}

@@ -371,8 +371,12 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
         
             if company:
                 logger.info(f"Updating existing company {company.id} for user {user_id}")
+                # Only update if new values are provided (prevent overwriting with None/Empty)
+                new_brand_name = basics.get("brandName")
+                if new_brand_name:
+                    company.brand_name = new_brand_name
+                    
                 company.legal_name = basics.get("companyName", company.legal_name)
-                company.brand_name = basics.get("brandName", company.brand_name)
                 company.currency = region.get("currency", company.currency)
                 company.timezone = region.get("timezone", company.timezone)
                 company.industry = basics.get("category", company.industry)
@@ -386,7 +390,8 @@ async def complete_onboarding(session: AsyncSession, user_id: str, user_data: Op
                 result = await session.exec(stmt)
                 brand = result.first()
                 if brand:
-                    brand.name = basics.get("brandName", brand.name)
+                    if new_brand_name:
+                        brand.name = new_brand_name
                     session.add(brand)
                 
                 # Update Workspace (assume primary)

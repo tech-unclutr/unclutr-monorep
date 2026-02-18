@@ -40,13 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isSyncing, setIsSyncing] = useState(false);
     const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
     const router = useRouter();
-    const initialized = useRef(false);
     const syncInProgress = useRef<string | null>(null);
 
     useEffect(() => {
-        if (initialized.current) return;
-        initialized.current = true;
-
         let isMounted = true;
 
         const init = async () => {
@@ -54,9 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const startTime = performance.now();
 
             // 1. Force persistence immediately (Non-blocking as much as possible)
-            setPersistence(auth, browserLocalPersistence).catch(e => {
-                console.error("DEBUG: AuthProvider [Init] Persistence error:", e);
-            });
+            // REMOVED: Redundant setPersistence. It is already called in lib/firebase.ts and can cause race conditions if called twice.
+            if (!auth) {
+                console.error("DEBUG: AuthProvider [Init] Auth instance is missing or failed to initialize.");
+                return;
+            }
 
             // 2. Attach onAuthStateChanged observer IMMEDIATELY.
             // This is the primary source of truth for the session.
@@ -69,11 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(firebaseUser);
 
                 if (firebaseUser) {
-                    // Prevent concurrent syncs for the same user
-                    if (syncInProgress.current === firebaseUser.uid) {
-                        console.log("DEBUG: AuthProvider [Sync] Sync already in progress, skipping.");
-                        return;
-                    }
                     syncInProgress.current = firebaseUser.uid;
 
                     // Debounce Sync: Check if we just synced this user (prevents HMR spam)

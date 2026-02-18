@@ -1,9 +1,7 @@
 
-from unittest.mock import MagicMock, AsyncMock
 import pytest
 from fastapi import Request, FastAPI
 from fastapi.responses import JSONResponse
-from starlette.websockets import WebSocket
 
 from app.middleware.tenant_middleware import TenantMiddleware
 

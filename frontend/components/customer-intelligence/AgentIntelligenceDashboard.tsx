@@ -1069,8 +1069,8 @@ export default function AgentIntelligenceDashboard({
                     </div>
                 </div>
 
-                {/* FOLD 3: MISSION CONTROL FEED (Renamed to Processing Last Calls) */}
-                <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800/50 pt-6 pb-4">
+                {/* FOLD 3: MISSION CONTROL FEED (Renamed to Processing Last Calls) - HIDDEN */}
+                {/* <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800/50 pt-6 pb-4">
                     <ExecutionFeed
                         campaignId={campaignId || ""}
                         isActive={!isPaused && !isCompleted}
@@ -1079,7 +1079,7 @@ export default function AgentIntelligenceDashboard({
                         viewMode={feedViewMode}
                         onViewModeChange={onFeedViewModeChange}
                     />
-                </div>
+                </div> */}
             </div>
 
             {/* Footer Status Bar */}

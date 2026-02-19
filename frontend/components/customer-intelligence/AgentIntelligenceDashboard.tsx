@@ -629,63 +629,7 @@ export default function AgentIntelligenceDashboard({
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-2 relative">
-                            {isPaused ? (
-                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
-                                    <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center mb-4">
-                                        <Coffee className="w-5 h-5 text-amber-500" />
-                                    </div>
-                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Agents Waiting</h3>
-                                    <p className="text-xs text-zinc-500 max-w-[200px] mt-1">
-                                        Campaign is currently paused. Resuming will re-activate neural mesh uplinks.
-                                    </p>
-                                </div>
-                            ) : (activeAgents && activeAgents.filter(Boolean).length > 0) ? (
-                                <div className="h-full overflow-y-auto pr-2 scrollbar-hide">
-                                    <div className="flex flex-col h-full">
-                                        <div className={cn(
-                                            "grid gap-6 mb-6",
-                                            "grid-cols-1 lg:grid-cols-2"
-                                        )}>
-                                            {Array.from({ length: maxConcurrency }).map((_, idx) => {
-                                                const agent = activeAgents[idx];
-                                                if (agent) {
-                                                    const allLeads = Object.values(allLeadsByCohort).flat();
-                                                    const leadData = allLeads.find(l => l.lead_id === agent.lead_id);
-                                                    const agentWithCohort = {
-                                                        ...agent,
-                                                        cohort: leadData?.cohort || agent.cohort
-                                                    };
-                                                    return (
-                                                        <div
-                                                            key={agent.agent_id || `active-${idx}`}
-                                                            className="min-h-[400px] h-full transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
-                                                        >
-                                                            <AgentLiveStream
-                                                                agent={agentWithCohort}
-                                                                events={allEvents.filter(e => e.agent_id ? e.agent_id === agent.agent_id : e.agent_name === agent.agent_name)}
-                                                                index={idx}
-                                                            />
-                                                        </div>
-                                                    );
-                                                }
-                                                const persona = AGENT_PERSONAS[idx % AGENT_PERSONAS.length];
-                                                return (
-                                                    <div
-                                                        key={`placeholder-${idx}`}
-                                                        className="min-h-[400px] h-full rounded-[32px] border border-dashed border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/10 flex flex-col items-center justify-center p-8 text-center"
-                                                    >
-                                                        <Avatar className="w-20 h-20 mb-6 border-2 border-white dark:border-zinc-800 shadow-xl">
-                                                            <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${persona.seed}&backgroundColor=e0e7ff`} />
-                                                        </Avatar>
-                                                        <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100">Agent {persona.name}</h3>
-                                                        <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Standing By</p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (isTargetAchieved) ? (
+                            {isTargetAchieved ? (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.98 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -728,6 +672,16 @@ export default function AgentIntelligenceDashboard({
                                         <span className="tracking-wide">RE-INITIATE SEQUENCE</span>
                                     </Button>
                                 </motion.div>
+                            ) : isPaused ? (
+                                <div className="h-full rounded-[32px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center p-8 text-center bg-zinc-50/30">
+                                    <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center mb-4">
+                                        <Coffee className="w-5 h-5 text-amber-500" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Agents Waiting</h3>
+                                    <p className="text-xs text-zinc-500 max-w-[200px] mt-1">
+                                        Campaign is currently paused. Resuming will re-activate neural mesh uplinks.
+                                    </p>
+                                </div>
                             ) : (isExhausted || isCompleted) ? (
                                 <motion.div
                                     initial={{ opacity: 0 }}

@@ -772,13 +772,20 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         for cohort_name, target in target_map.items():
             total_targets += target
             
-            # Count successful calls for this cohort
+            # Count successful calls for this cohort:
+            # A lead counts as "complete" if it reached INTENT_YES status (AI call agreed)
+            # OR if it was promoted to the user queue (human conducted the interview successfully).
             success_stmt = (
                 select(QueueItem)
                 .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
                 .where(QueueItem.campaign_id == campaign_id)
                 .where(CampaignLead.cohort == cohort_name)
-                .where(QueueItem.status.in_(SUCCESS_STATUSES))
+                .where(
+                    or_(
+                        QueueItem.status.in_(SUCCESS_STATUSES),
+                        QueueItem.promoted_to_user_queue == True
+                    )
+                )
             )
             success_result = await session.execute(success_stmt)
             completed_count = len(success_result.scalars().all())
@@ -815,11 +822,16 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         total_leads_stmt = select(func.count(CampaignLead.id)).where(CampaignLead.campaign_id == campaign_id)
         total_leads = (await session.execute(total_leads_stmt)).scalar() or 0
         
-        # Count all unique successful queue items
+        # Count all unique successful queue items (INTENT_YES or promoted to user queue)
         total_success_stmt = (
             select(func.count(QueueItem.id))
             .where(QueueItem.campaign_id == campaign_id)
-            .where(QueueItem.status.in_(SUCCESS_STATUSES))
+            .where(
+                or_(
+                    QueueItem.status.in_(SUCCESS_STATUSES),
+                    QueueItem.promoted_to_user_queue == True
+                )
+            )
         )
         total_success = (await session.execute(total_success_stmt)).scalar() or 0
         

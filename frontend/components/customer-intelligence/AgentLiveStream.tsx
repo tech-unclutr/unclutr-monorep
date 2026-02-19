@@ -224,12 +224,31 @@ export function AgentLiveStream({ agent, events, index }: AgentLiveStreamProps) 
                         )}
                     </div>
 
-                    {/* LAST LOG LINE */}
+                    {/* STATUS / LAST LOG LINE */}
                     <div className="flex-1 min-w-0">
-                        {events.length > 0 ? (
+                        {(['initiated', 'queued'].includes(status)) ? (
+                            <div className="text-[11px] text-blue-500 dark:text-blue-400 font-semibold truncate">
+                                Dialing {agent.lead_name || 'lead'}...
+                            </div>
+                        ) : status === 'ringing' ? (
+                            <div className="text-[11px] text-amber-500 dark:text-amber-400 font-semibold truncate">
+                                Ringing...
+                            </div>
+                        ) : status === 'connected' && events.length === 0 ? (
+                            <div className="text-[11px] text-emerald-500 dark:text-emerald-400 font-semibold truncate">
+                                Connected — starting conversation...
+                            </div>
+                        ) : events.length > 0 && ['speaking', 'listening', 'processing', 'connected', 'in-progress'].includes(status) ? (
                             <div className="text-[11px] text-zinc-600 dark:text-zinc-300 truncate font-medium">
                                 <span className={cn("mr-2 font-bold", events[events.length - 1].type === 'agent_action' ? "text-orange-500" : "text-emerald-500")}>
-                                    {events[events.length - 1].type === 'agent_action' ? "AI:" : "User:"}
+                                    {events[events.length - 1].type === 'agent_action' ? "AI:" : "Lead:"}
+                                </span>
+                                {events[events.length - 1].message?.replace(/^.*: "/, '').replace(/"$/, '')}
+                            </div>
+                        ) : events.length > 0 ? (
+                            <div className="text-[11px] text-zinc-600 dark:text-zinc-300 truncate font-medium">
+                                <span className={cn("mr-2 font-bold", events[events.length - 1].type === 'agent_action' ? "text-orange-500" : "text-emerald-500")}>
+                                    {events[events.length - 1].type === 'agent_action' ? "AI:" : "Lead:"}
                                 </span>
                                 {events[events.length - 1].message?.replace(/^.*: "/, '').replace(/"$/, '')}
                             </div>

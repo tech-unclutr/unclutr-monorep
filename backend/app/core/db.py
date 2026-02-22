@@ -56,10 +56,6 @@ if DATABASE_URL.startswith("postgresql"):
         "max_overflow": 20,  # Max connections beyond pool_size
         "pool_pre_ping": True,  # Verify connections before using
         "pool_recycle": 3600,  # Recycle connections after 1 hour
-        "connect_args": {
-            "statement_cache_size": 0,
-            "prepared_statement_cache_size": 0
-        }, # Required for Supabase Transaction Pooler
     })
 
     # Explicitly enforce Unix socket usage if detected in URL
@@ -72,6 +68,8 @@ if DATABASE_URL.startswith("postgresql"):
         qs_current = parse_qs(parsed_current.query)
         
         if "host" in qs_current:
+             if "connect_args" not in engine_kwargs:
+                 engine_kwargs["connect_args"] = {}
              engine_kwargs["connect_args"]["host"] = qs_current["host"][0]
              # Also disable SSL for Unix sockets to prevent timeouts
              engine_kwargs["connect_args"]["ssl"] = False

@@ -55,31 +55,55 @@ class BolnaCaller:
             try:
                 # Find the window where 'now' falls between start and end
                 for w in campaign.execution_windows:
-                    day = w.get('day', '')
-                    st = w.get('start', '')
-                    et = w.get('end', '')
-                    if day and st and et:
-                        start_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{st}:00"))
-                        end_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{et}:00"))
-                        
-                        if start_dt <= now_utc <= end_dt:
-                            active_window = w
-                            break
-                
+                    day_str = w.get('day', '')  # Could be "YYYY-MM-DD" or "Monday"
+                    st = w.get('start', '')     # e.g. "09:00"
+                    et = w.get('end', '')       # e.g. "18:00"
+                    
+                    if day_str and st and et:
+                        # If day_str is an exact date ("YYYY-MM-DD")
+                        try:
+                            # Parse exact date string
+                            base_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+                            start_dt = tz_ist.localize(datetime.combine(base_date, datetime.strptime(st, "%H:%M").time()))
+                            end_dt = tz_ist.localize(datetime.combine(base_date, datetime.strptime(et, "%H:%M").time()))
+                            
+                            if start_dt <= now_utc <= end_dt:
+                                active_window = w
+                                break
+                        except ValueError:
+                            # Fallback if it's a day of week like "Monday" (legacy parsing)
+                            try:
+                                start_dt = tz_ist.localize(datetime.fromisoformat(f"{day_str}T{st}:00"))
+                                end_dt = tz_ist.localize(datetime.fromisoformat(f"{day_str}T{et}:00"))
+                                if start_dt <= now_utc <= end_dt:
+                                    active_window = w
+                                    break
+                            except ValueError:
+                                pass # Skip bad format
+                                
                 if active_window:
-                    day = active_window.get('day', '')
+                    day_str = active_window.get('day', '')
                     st = active_window.get('start', '')
                     et = active_window.get('end', '')
                     
-                    # Exact format requested: YYYY-MM-DD HH:MM to YYYY-MM-DD HH:MM IST
-                    window_str = f"{day} {st} to {day} {et} IST"
+                    # Window string for agent prompt Context
+                    window_str = f"{day_str} {st} to {day_str} {et} IST"
                     
-                    # BOLNA FIX: Exact naive ISO format requested: YYYY-MM-DDTHH:MM:SS
-                    start_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{st}:00"))
-                    end_dt = tz_ist.localize(datetime.fromisoformat(f"{day}T{et}:00"))
-                    
-                    start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
-                    end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                    # Ensure Bolna receives full ISO timestamps by combining the parsed components
+                    try:
+                        base_date = datetime.strptime(day_str, "%Y-%m-%d").date()
+                        start_dt = tz_ist.localize(datetime.combine(base_date, datetime.strptime(st, "%H:%M").time()))
+                        end_dt = tz_ist.localize(datetime.combine(base_date, datetime.strptime(et, "%H:%M").time()))
+                        # BOLNA FIX: Exact naive ISO format requested: YYYY-MM-DDTHH:MM:SS
+                        start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                        end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                    except ValueError:
+                         # Fallback legacy 
+                         start_dt = tz_ist.localize(datetime.fromisoformat(f"{day_str}T{st}:00"))
+                         end_dt = tz_ist.localize(datetime.fromisoformat(f"{day_str}T{et}:00"))
+                         start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                         end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                         
                 else:
                     # No active window found - Prevent call
                     logger.error(f"[BolnaCaller] ERROR: No active execution window for campaign {campaign.id}. 'Now' is {now_utc.astimezone(tz_ist)}")

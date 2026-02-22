@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 const TooltipContext = React.createContext<{
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
-    triggerRef: React.RefObject<HTMLElement | null>;
+    triggerRef: React.RefObject<any>;
 } | null>(null);
 
 export const TooltipProvider = ({
@@ -23,7 +23,7 @@ export const TooltipProvider = ({
 
 export const Tooltip = ({ children }: { children: React.ReactNode }) => {
     const [isOpen, setIsOpen] = React.useState(false);
-    const triggerRef = React.useRef<HTMLElement>(null);
+    const triggerRef = React.useRef<any>(null);
 
     return (
         <TooltipContext.Provider value={{ isOpen, setIsOpen, triggerRef }}>

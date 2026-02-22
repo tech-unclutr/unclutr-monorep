@@ -13,7 +13,7 @@ async def debug_queue_status(session: AsyncSession = Depends(get_session)):
         stmt = (
             select(QueueItem, CampaignLead)
             .join(CampaignLead, QueueItem.lead_id == CampaignLead.id)
-            .where(QueueItem.status == 'DIALING_INTENT')
+            .where(QueueItem.status.in_(['DIALING_INTENT', 'READY']))
             .order_by(QueueItem.created_at.desc())
             .limit(10)
         )

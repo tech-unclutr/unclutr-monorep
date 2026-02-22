@@ -335,7 +335,11 @@ class BolnaCaller:
                 
                 if current_number in sent_numbers:
                     logger.warning(f"[BolnaCaller] Safety: Skipping duplicate number {current_number} in batch.")
-                    results.append({"status": "error", "error": "Duplicate phone number in batch"})
+                    results.append({
+                        "status": "error", 
+                        "error": "Duplicate phone number in batch",
+                        "queue_item_id": str(queue_item_ids[i])
+                    })
                     continue
                 
                 sent_numbers.add(current_number)
@@ -357,17 +361,22 @@ class BolnaCaller:
             concurrent_results = await asyncio.gather(*coros, return_exceptions=True)
             
             # Process results sequentially to update DB (Session is not thread-safe)
-            for res in concurrent_results:
+            for j, res in enumerate(concurrent_results):
                 if isinstance(res, Exception):
                     # Should be covered by internal try/except but just in case
                     logger.error(f"[BolnaCaller] Unexpected concurrent error: {res}")
+                    # Try to map back if possible, fallback to string error
                     results.append({"status": "error", "error": str(res)})
                     continue
                     
-                i = res["original_index"]
+                i = res.get("original_index")
                 
                 if res["status"] == "error":
-                    results.append({"status": "error", "error": res["error"]})
+                    results.append({
+                        "status": "error", 
+                        "error": res["error"],
+                        "queue_item_id": str(queue_item_ids[i]) if i is not None else None
+                    })
                     continue
                 
                 # Success path
@@ -402,7 +411,7 @@ class BolnaCaller:
                     currency="USD"
                 )
                 session.add(call_log)
-                results.append({"status": "success", "call_id": call_id})
+                results.append({"status": "success", "call_id": call_id, "queue_item_id": str(queue_item_ids[i])})
 
         await session.flush() # Replaced commit with flush
         return {"results": results, "count": len(results)}

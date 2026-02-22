@@ -367,11 +367,17 @@ class QueueWarmer:
                 return
 
             if call_results and "results" in call_results:
-                for i, res in enumerate(call_results["results"]):
-                    if i < len(items_to_promote) and res.get("status") == "error":
-                        items_to_promote[i].status = "FAILED"
-                        items_to_promote[i].outcome = res.get("error") or "Unknown Error"
-                        session.add(items_to_promote[i])
+                for res in call_results["results"]:
+                    if res.get("status") == "error":
+                        q_id = res.get("queue_item_id")
+                        if q_id:
+                            for item in items_to_promote:
+                                if str(item.id) == str(q_id):
+                                    item.status = "FAILED"
+                                    item.outcome = f"API Error: {res.get('error')}"
+                                    session.add(item)
+                                    break
+                await session.flush()
             
                 # Broadcast the new state to the UI via WebSocket
                 try:

@@ -18,6 +18,17 @@ async def debug_queue_status(session: AsyncSession = Depends(get_session)):
             .limit(10)
         )
         result = await session.execute(stmt)
+        items = []
+        for q, l in result.all():
+            items.append({
+                "lead_name": f"{l.first_name} {l.last_name}",
+                "queue_item_id": str(q.id),
+                "status": q.status,
+                "execution_count": q.execution_count,
+                "outcome": q.outcome,
+                "updated_at": str(q.updated_at)
+            })
+        
         # Get summary of all statuses
         from sqlalchemy import func
         count_stmt = select(QueueItem.status, func.count(QueueItem.id)).group_by(QueueItem.status)

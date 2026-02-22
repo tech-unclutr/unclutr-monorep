@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import uuid
+import asyncio
 from typing import Any, Dict
 import logging
 
@@ -38,10 +39,17 @@ async def bolna_webhook(
     if not bolna_call_id:
         return {"status": "ignored", "reason": "no_call_id"}
         
-    # 2. Find Mapping
-    statement = select(BolnaExecutionMap).where(BolnaExecutionMap.bolna_call_id == bolna_call_id)
-    result = await session.execute(statement)
-    execution_map = result.scalars().first()
+    # 2. Find Mapping (with Retry)
+    execution_map = None
+    for attempt in range(3):
+        statement = select(BolnaExecutionMap).where(BolnaExecutionMap.bolna_call_id == bolna_call_id)
+        result = await session.execute(statement)
+        execution_map = result.scalars().first()
+        if execution_map:
+            break
+        if attempt < 2:
+            logger.info(f"[BolnaWebhook] Mapping not found for {bolna_call_id}, retrying in 1s... (Attempt {attempt + 1}/3)")
+            await asyncio.sleep(1)
     
     if not execution_map:
         logger.warning(f"[BolnaWebhook] No execution map found for {bolna_call_id}")

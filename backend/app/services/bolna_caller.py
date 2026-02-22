@@ -413,7 +413,7 @@ class BolnaCaller:
                 session.add(call_log)
                 results.append({"status": "success", "call_id": call_id, "queue_item_id": str(queue_item_ids[i])})
 
-        await session.flush() # Replaced commit with flush
+        await session.commit()
         return {"results": results, "count": len(results)}
 
     @staticmethod

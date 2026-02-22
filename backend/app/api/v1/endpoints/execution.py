@@ -1059,8 +1059,9 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         # Import moved to top-level or ensure it's available
         from app.services.websocket_manager import manager
         await manager.broadcast_status_update(str(campaign_id), response_data)
+        logger.info(f"[WebSocket] Broadcasted status update for campaign {campaign_id} (Active: {len(agents)})")
     except Exception as e:
-        logger.error(f"[WebSocket] Broadcast error: {e}")
+        logger.error(f"[WebSocket] Broadcast error for campaign {campaign_id}: {e}")
     
     return response_data
 
@@ -1303,10 +1304,11 @@ async def start_session(
     logger.info("[Execution] Triggering QueueWarmer...")
 
     try:
-        # [NEW] Clear old buffer if resuming to ensure we pick fresh top leads
-        # Logic: If we are just starting, we probably want the BEST leads now, not what was left over from last time.
-        await QueueWarmer.clear_ready_buffer(session, campaign_id)
-        
+        # [FIX] Do NOT clear the ready buffer here. If the user did a Reset before pressing Play,
+        # the reset endpoint already set items back to READY with execution_count=0.
+        # Clearing the buffer would destroy those items, forcing the warmer to re-create them
+        # from scratch and opening a race window where a fast Bolna failure triggers "Capacity Exhausted".
+        # The warmer's replenishment logic handles stale/excess buffer items on its own.
         await QueueWarmer.check_and_replenish(campaign_id, session)
     except Exception as e:
         logger.error(f"[Execution] CRITICAL: QueueWarmer failed after start: {e}")

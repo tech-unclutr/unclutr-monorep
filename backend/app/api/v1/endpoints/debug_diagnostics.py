@@ -7,7 +7,7 @@ from app.models.campaign_lead import CampaignLead
 
 router = APIRouter()
 
-@router.get("/debug/queue-status")
+@router.get("/queue-status")
 async def debug_queue_status(session: AsyncSession = Depends(get_session)):
     try:
         stmt = (

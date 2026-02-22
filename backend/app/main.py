@@ -41,18 +41,28 @@ async def lifespan(app: FastAPI):
             session = await session_gen.__anext__()
             
             # Print Queue State
-            stmt = select(QueueItem, CampaignLead).join(CampaignLead, QueueItem.lead_id == CampaignLead.id).where(QueueItem.status == 'DIALING_INTENT').order_by(QueueItem.created_at.desc()).limit(10)
+            stmt = select(QueueItem, CampaignLead).join(CampaignLead, QueueItem.lead_id == CampaignLead.id).where(CampaignLead.customer_name.ilike('%kunj%')).order_by(QueueItem.created_at.desc()).limit(10)
             result = await session.execute(stmt)
-            logger.error("=== KUNJ DEBUG QUEUE DATA ===")
+            logger.error("=== KUNJ DEBUG QUEUE DATA (ANY STATUS) ===")
+            found_items = False
             for item, lead in result.all():
-                logger.error(f"Lead: {lead.first_name} {lead.last_name} | ItemID: {item.id} | Status: {item.status} | Executions: {item.execution_count} | Outcome: {item.outcome}")
+                found_items = True
+                logger.error(f"Lead: {lead.first_name} {lead.last_name} | ItemID: {item.id} | Status: {item.status} | Outcome: {item.outcome}")
+            
+            if not found_items:
+                logger.error("No QueueItem found for Kunj")
             
             # Print Execution Map State
             stmt_maps = select(BolnaExecutionMap, CampaignLead).join(QueueItem, BolnaExecutionMap.queue_item_id == QueueItem.id).join(CampaignLead, QueueItem.lead_id == CampaignLead.id).where(CampaignLead.customer_name.ilike('%kunj%')).limit(10)
             result_maps = await session.execute(stmt_maps)
             logger.error("=== KUNJ DEBUG EXECUTION MAPS ===")
+            found_maps = False
             for cmap, clead in result_maps.all():
+                found_maps = True
                 logger.error(f"Lead: {clead.first_name} {clead.last_name} | Bolna Call ID: {cmap.bolna_call_id} | Map ID: {cmap.id} | Status: {cmap.call_status}")
+            
+            if not found_maps:
+                logger.error("No Execution Maps found for Kunj")
             
             logger.error("===============================")
             await session.close()

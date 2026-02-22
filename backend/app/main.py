@@ -32,6 +32,23 @@ async def lifespan(app: FastAPI):
         # [DEBUG] Log all registered routes to verify WebSocket mount
         routes = [route.path for route in app.routes]
         logger.info(f"Startup: Registered Routes: {routes}")
+        
+        # [DEBUG] Print Kunj's Queue Status immediately on boot
+        try:
+            from app.models.queue_item import QueueItem
+            from app.models.campaign_lead import CampaignLead
+            session_gen = get_session()
+            session = await session_gen.__anext__()
+            stmt = select(QueueItem, CampaignLead).join(CampaignLead, QueueItem.lead_id == CampaignLead.id).where(QueueItem.status == 'DIALING_INTENT').order_by(QueueItem.created_at.desc()).limit(10)
+            result = await session.execute(stmt)
+            logger.error("=== KUNJ DEBUG QUEUE DATA ===")
+            for item, lead in result.all():
+                logger.error(f"Lead: {lead.first_name} {lead.last_name} | ItemID: {item.id} | Status: {item.status} | Executions: {item.execution_count} | Outcome: {item.outcome}")
+            logger.error("===============================")
+            await session.close()
+        except Exception as qe:
+            logger.error(f"Startup Queue Debug Failed: {qe}")
+            
     except Exception as e:
         logger.error(f"Startup: Database initialization failed! App continuing in degraded mode. Error: {e}")
     

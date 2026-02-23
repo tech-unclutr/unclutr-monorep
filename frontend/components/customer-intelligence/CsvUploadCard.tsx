@@ -12,7 +12,8 @@ import {
     ArrowRight,
     Loader2,
     RefreshCcw,
-    AlertTriangle
+    AlertTriangle,
+    Zap
 } from 'lucide-react';
 import { cn, formatToIST, formatRelativeTime, formatPhoneNumber } from "@/lib/utils";
 import Papa from 'papaparse';
@@ -517,48 +518,6 @@ export function CsvUploadCard({ onSuccess,
     };
 
 
-    if (stage === 'ORCHESTRATION') {
-        return (
-            <CampaignComposer
-                campaignId={campaignId}
-                initialLeads={mappedLeads} // Pass leads for Draft Mode
-                initialName={campaignName}
-                onBack={() => setPersistedState(prev => ({ ...prev, stage: 'MAPPING' }))}
-                onCampaignIdGenerated={(id) => setPersistedState(prev => ({ ...prev, campaignId: id }))}
-                onComplete={(createdId) => {
-                    if (mode === 'create' && onSuccess) {
-                        // Critical: Reset state first to return to "Upload" screen behind the popup
-                        reset();
-                        // Use the ID returned from composer (newly created) or the one in state
-                        onSuccess(createdId || campaignId || '');
-                    } else {
-                        // Edit mode: Show internal success state
-                        setPersistedState(prev => ({ ...prev, stage: 'DONE' }));
-                        if (onSuccess && campaignId) onSuccess(campaignId);
-                    }
-                }}
-                onError={(error) => {
-                    console.error("Composer Error:", error);
-                    if (error?.status === 404) {
-                        toast.error("Session expired: Campaign not found. Starting fresh.");
-                        removePersistedState();
-                        setFile(null);
-                        if (onCancel) onCancel();
-                    } else {
-                        // Handle generic errors by showing the error state
-                        setErrorResult({
-                            title: "Campaign Finalization Failed",
-                            message: error?.message || "Failed to save campaign details. Please try again.",
-                            canRetry: true
-                        });
-                        setPersistedState(prev => ({ ...prev, stage: 'ERROR' }));
-                    }
-                }}
-                className={className}
-                isMagicUI={isMagicUI}
-            />
-        );
-    }
 
 
     return (
@@ -894,6 +853,7 @@ export function CsvUploadCard({ onSuccess,
                             </Button>
 
                             <Button
+                                type="button"
                                 onClick={() => handleCreateCampaign(false)}
                                 disabled={isProcessing}
                                 className={cn(
@@ -924,6 +884,45 @@ export function CsvUploadCard({ onSuccess,
                 {stage === 'UPLOADING' && (
                     <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in duration-500 w-full">
                         <ProcessingLog data={csvData} mapping={mapping} />
+                    </div>
+                )}
+
+                {stage === 'ORCHESTRATION' && (
+                    <div className="flex-1 -m-6 md:-m-8"> {/* Negative margin to negate CardContent padding */}
+                        <CampaignComposer
+                            campaignId={campaignId || undefined}
+                            initialLeads={mappedLeads}
+                            initialName={campaignName}
+                            onBack={() => setPersistedState(prev => ({ ...prev, stage: 'MAPPING' }))}
+                            onCampaignIdGenerated={(id) => setPersistedState(prev => ({ ...prev, campaignId: id }))}
+                            onComplete={(createdId) => {
+                                if (mode === 'create' && onSuccess) {
+                                    reset();
+                                    onSuccess(createdId || campaignId || '');
+                                } else {
+                                    setPersistedState(prev => ({ ...prev, stage: 'DONE' }));
+                                    if (onSuccess && (campaignId || createdId)) onSuccess(createdId || campaignId || '');
+                                }
+                            }}
+                            onError={(error) => {
+                                console.error("Composer Error:", error);
+                                if (error?.status === 404) {
+                                    toast.error("Session expired. Starting fresh.");
+                                    removePersistedState();
+                                    setFile(null);
+                                    if (onCancel) onCancel();
+                                } else {
+                                    setErrorResult({
+                                        title: "Campaign Finalization Failed",
+                                        message: error?.message || "Something went wrong. Please try again.",
+                                        canRetry: true
+                                    });
+                                    setPersistedState(prev => ({ ...prev, stage: 'ERROR' }));
+                                }
+                            }}
+                            className="h-full border-none shadow-none rounded-none"
+                            isMagicUI={isMagicUI}
+                        />
                     </div>
                 )}
 
@@ -990,10 +989,11 @@ export function CsvUploadCard({ onSuccess,
                         </div>
                         <div className="flex gap-4">
                             {mode === 'edit' ? (
-                                <Button onClick={() => {
-                                    if (onLeadsUpdated) onLeadsUpdated();
-                                    else window.location.reload();
-                                }} className="rounded-2xl h-12 px-8 bg-zinc-900 hover:bg-zinc-800 text-white shadow-xl shadow-indigo-500/10">
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        if (onLeadsUpdated) onLeadsUpdated();
+                                    }} className="rounded-2xl h-12 px-8 bg-zinc-900 hover:bg-zinc-800 text-white shadow-xl shadow-indigo-500/10">
                                     Return to Campaign
                                 </Button>
                             ) : (

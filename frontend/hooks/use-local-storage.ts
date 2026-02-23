@@ -19,6 +19,20 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         }
     });
 
+    // Handle key changes
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        try {
+            const item = window.localStorage.getItem(key);
+            const value = item ? JSON.parse(item) : initialValue;
+            setStoredValue(value);
+        } catch (error) {
+            console.error("Error reading from localStorage on key change:", error);
+            setStoredValue(initialValue);
+        }
+    }, [key]);
+
     // Return a wrapped version of useState's setter function that ...
     // ... persists the new value to localStorage.
     const setValue = (value: T | ((val: T) => T)) => {

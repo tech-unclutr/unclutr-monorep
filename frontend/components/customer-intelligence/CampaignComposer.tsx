@@ -322,7 +322,8 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                             ...prev,
                             cohorts: cohortsList,
                             cohortCounts: counts,
-                            selectedCohorts: prev.selectedCohorts.length > 0 ? prev.selectedCohorts : []
+                            selectedCohorts: prev.selectedCohorts.length > 0 ? prev.selectedCohorts : [],
+                            draftCreatedAt: Date.now() // [FIX] Renew draft timestamp on fresh lead transition
                         };
                     });
                     console.log("CampaignComposer: Draft initialization complete (derived from leads)");

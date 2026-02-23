@@ -62,6 +62,11 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
     const { companyId: authCompanyId, user } = useAuth();
 
     // Dynamic storage key to avoid collisions between creating and edit flows
+    // [STABILITY] We log if the company ID is missing to track potential state resets
+    if (!authCompanyId && mode === 'create') {
+        console.warn("CsvUpload: authCompanyId is missing, using 'default' storage key. This may cause state resets if auth syncs late.");
+    }
+
     const storageKey = mode === 'edit' && propCampaignId
         ? `csv_upload_edit_${propCampaignId}`
         : `csv_upload_state_${authCompanyId || 'default'}`;
@@ -262,6 +267,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
      */
     const validateAuth = async (): Promise<boolean> => {
         try {
+            console.log("CsvUpload: Validating auth...", { user: !!user, authCompanyId });
             // 1. Check if user is logged in
             if (!user) {
                 toast.error("Authentication check failed. Please refresh page.");
@@ -273,6 +279,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
             if (!authCompanyId) {
                 // Just a fallback check on localStorage directly as a hail mary
                 const storedCompanyId = localStorage.getItem('unclutr_company_id');
+                console.log("CsvUpload: authCompanyId missing in context, checking localStorage:", !!storedCompanyId);
                 if (!storedCompanyId) {
                     toast.error("Organization context missing. Please refresh page.");
                     return false;
@@ -282,6 +289,7 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
 
             return true;
         } catch (err) {
+            console.error("CsvUpload: Auth validation error:", err);
             return false;
         }
     };
@@ -303,7 +311,12 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
         }
 
         try {
-            setPersistedState(prev => ({ ...prev, stage: 'UPLOADING' }));
+            console.log("CsvUpload: Starting campaign processing...", { mode, forceCreate, targetCampaignId: propCampaignId || persistedState.campaignId });
+
+            // For Edit mode, we show the loading/processing log because we are actually calling the API to update leads
+            if (mode === 'edit' || (propCampaignId || persistedState.campaignId)) {
+                setPersistedState(prev => ({ ...prev, stage: 'UPLOADING' }));
+            }
 
             const leads = csvData.map(row => {
                 const lead: any = {
@@ -341,25 +354,11 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 // We do NOT call the API here anymore. We just transition to ORCHESTRATION state.
                 // The CampaignComposer will handle the creation on "Finish".
 
-                if (forceCreate) {
-                    // If force create was requested (after duplicate check), we just proceed.
-                    // The composer check will happen on final submit (create-full), which also duplicates check?
-                    // Actually, create-full has duplicate check.
-                    // IMPORTANT: If user explicitly said "Create Duplicate", we need to pass that intent to Composer?
-                    // Currently CampaignComposer finalize doesn't support "force_create" flag prop.
-                    // But strictly speaking, the user *just* uploaded a file. 
-                    // If they clicked "Create Duplicate", we proceed.
-                    // The backend create-full check will likely flag it again unless we pass force_create.
-                    // Adding forceCreate intent to state?
-                    // For now, let's just let them proceed. If they hit duplicate error at end, they will see it then?
-                    // Or we rely on the check we just "skipped" effectively?
-                    // Wait, we *didn't* check for duplicates yet because we didn't call the API.
-                    // In the OLD flow, API called check.
-                    // NEW FLOW: We don't call API. So we don't know if it's duplicate until the END.
-                    // This changes UX: Duplicate warning happens at END now, instead of middle.
-                    // Is this acceptable? "Prevent data from being saved... until ... logic".
-                    // Yes, acceptable.
-                }
+                // IMPORTANT: If user explicitly said "Create Duplicate", we need to pass that intent to Composer
+                // Currently CampaignComposer finalize doesn't support "force_create" flag prop directly as a prop,
+                // but we can pass it through a state or just let the user handle it in the next step.
+
+                console.log("CsvUpload: Transitioning to ORCHESTRATION in Draft Mode");
 
                 setPersistedState(prev => ({
                     ...prev,

@@ -131,7 +131,9 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
     // For Draft Mode, we use a generic key. If multiple drafts needed, we'd need a draft ID.
     // User flow implies one active creation flow.
     const initialStorageKey = React.useMemo(() => {
-        return campaignId ? `campaign_composer_${campaignId}` : `campaign_composer_draft`;
+        const key = campaignId ? `campaign_composer_${campaignId}` : `campaign_composer_draft`;
+        console.log("CampaignComposer: Initializing with storage key:", key);
+        return key;
         // We use useMemo to keep this key STABLE during the lifecycle of this component instance, 
         // even if campaignId prop updates from null to a real ID.
     }, []); // Empty deps = stable for life of mount
@@ -291,6 +293,12 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
     useEffect(() => {
         // Fetch initial suggestions, cohorts, and complete campaign data
         const initData = async () => {
+            console.log("CampaignComposer: Starting initData...", {
+                campaignId,
+                hasLeads: !!initialLeads,
+                leadsCount: initialLeads?.length,
+                hasInitialized: hasInitializedRef.current
+            });
             if (hasInitializedRef.current) return;
 
             // DRAFT MODE INITIALIZATION
@@ -317,7 +325,10 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                             selectedCohorts: prev.selectedCohorts.length > 0 ? prev.selectedCohorts : []
                         };
                     });
+                    console.log("CampaignComposer: Draft initialization complete (derived from leads)");
                     hasInitializedRef.current = true;
+                } else {
+                    console.warn("CampaignComposer: Draft mode but no initialLeads provided yet.");
                 }
                 return;
             }
@@ -447,6 +458,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
 
                     return newState;
                 });
+                console.log("CampaignComposer: Edit mode initialization complete");
                 hasInitializedRef.current = true;
                 setIsNotFound(false);
             } catch (error: any) {
@@ -465,6 +477,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                 setIsLoading(false);
                 // Allow debouncer to settle before enabling auto-save (Safety Buffer)
                 setTimeout(() => {
+                    console.log("CampaignComposer: Enabling auto-save (settled)");
                     isReadyToSave.current = true;
                 }, 1000);
             }

@@ -508,6 +508,9 @@ export default function CustomerIntelligencePage() {
                         setStatus('COMPLETED');
                         setActiveCampaign(campaign);
                         toast.success("Interview completed & Campaign generated!");
+
+                        // Redirect to the newly generated campaign
+                        router.push(`/dashboard/customer-intelligence/campaign/${campaign_id}`);
                     } else if (campaign.status === 'FAILED') {
                         if (pollInterval) clearInterval(pollInterval);
                         if (timeoutId) clearTimeout(timeoutId);
@@ -712,8 +715,12 @@ export default function CustomerIntelligencePage() {
                                 <div className="lg:col-span-3">
                                     <CsvUploadCard
                                         className="h-full min-h-[400px] shadow-sm border-gray-200/80 dark:border-white/[0.08]"
-                                        onSuccess={() => {
-                                            fetchCampaigns(0, false, latestCampaigns.length + 1);
+                                        onSuccess={(newId) => {
+                                            if (newId) {
+                                                router.push(`/dashboard/customer-intelligence/campaign/${newId}`);
+                                            } else {
+                                                fetchCampaigns(0, false, latestCampaigns.length + 1);
+                                            }
                                         }}
                                         isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                                     />

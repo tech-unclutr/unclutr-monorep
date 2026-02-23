@@ -151,6 +151,10 @@ export function CsvUploadCard({ onSuccess,
         }
     }, [mode]);
 
+    useEffect(() => {
+        console.log("CsvUpload: Mounted/Updated", { mode, stage: persistedState.stage, storageKey });
+    }, [mode, persistedState.stage, storageKey]);
+
 
     // Cleanup on unmount removed to prevents accidental state loss during re-renders.
     // We will rely on explicit Cancel/Success actions to clean up.
@@ -184,48 +188,63 @@ export function CsvUploadCard({ onSuccess,
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleExcelParse = useCallback((file: File) => {
+        console.log("CsvUpload: Starting Excel parse", { fileName: file.name, fileSize: file.size });
         const reader = new FileReader();
         reader.onload = (e) => {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-            if (jsonData && jsonData.length > 0) {
-                const detectedHeaders = Object.keys(jsonData[0] as object);
+                console.log("CsvUpload: Excel parse complete", { rowCount: jsonData?.length });
 
-                // Auto-mapping logic
-                const newMapping = { ...persistedState.mapping };
-                detectedHeaders.forEach(h => {
-                    const low = h.toLowerCase();
-                    if (low.includes('name')) newMapping.customer_name = h;
-                    if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
-                    if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
-                });
+                if (jsonData && jsonData.length > 0) {
+                    const detectedHeaders = Object.keys(jsonData[0] as object);
 
-                setCsvData(jsonData);
-                setPersistedState(prev => ({
-                    ...prev,
-                    headers: detectedHeaders,
-                    mapping: newMapping,
-                    stage: 'MAPPING'
-                }));
-            } else {
-                toast.error("The Excel file appears to be empty");
+                    // Auto-mapping logic
+                    const newMapping = { ...persistedState.mapping };
+                    detectedHeaders.forEach(h => {
+                        const low = h.toLowerCase();
+                        if (low.includes('name')) newMapping.customer_name = h;
+                        if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
+                        if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
+                    });
+
+                    setCsvData(jsonData);
+                    setPersistedState(prev => ({
+                        ...prev,
+                        headers: detectedHeaders,
+                        mapping: newMapping,
+                        stage: 'MAPPING'
+                    }));
+                } else {
+                    toast.error("The Excel file appears to be empty");
+                }
+            } catch (err) {
+                console.error("CsvUpload: Excel parse error", err);
+                toast.error("Failed to parse Excel file");
             }
         };
         reader.readAsArrayBuffer(file);
     }, [persistedState.mapping, setPersistedState]);
 
     const handleFileSelect = useCallback((file: File) => {
+        console.log("CsvUpload: File selected", { name: file.name, size: file.size, type: file.type });
         setFile(file);
 
         if (file.name.endsWith('.csv')) {
+            console.log("CsvUpload: Starting CSV parse");
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
+                    console.log("CsvUpload: CSV parse complete", {
+                        rowCount: results.data?.length,
+                        errors: results.errors?.length,
+                        meta: results.meta
+                    });
                     if (results.data && results.data.length > 0) {
                         const detectedHeaders = Object.keys(results.data[0] as object);
 
@@ -369,10 +388,10 @@ export function CsvUploadCard({ onSuccess,
                 // but we can pass it through a state or just let the user handle it in the next step.
 
                 if (mode === 'create' && !propCampaignId && !persistedState.campaignId) {
-                    console.log("CsvUpload: Transitioning to ORCHESTRATION in Draft Mode");
+                    console.log("CsvUpload: Draft Mode detected, checking current stage before orchestration:", stage);
 
                     if (onOrchestrate) {
-                        console.log("CsvUpload: External orchestration triggered");
+                        console.log("CsvUpload: Triggering onOrchestrate with leads", { count: leads.length });
                         onOrchestrate(leads, campaignName);
                         // Reset local state so card returns to fresh upload state
                         reset();

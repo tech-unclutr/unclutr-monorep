@@ -64,6 +64,8 @@ export default function CustomerIntelligencePage() {
     const [isLoadingUser, setIsLoadingUser] = useState(true); // [NEW]
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+    const [draftLeads, setDraftLeads] = useState<any[] | null>(null);
+    const [draftName, setDraftName] = useState<string>("");
     const [composerView, setComposerView] = useState<'composer' | 'leads'>('composer');
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null); // [NEW] Track expanded card
     const [showGlance, setShowGlance] = useState(true); // [NEW] Start true to prevent flash
@@ -758,6 +760,14 @@ export default function CustomerIntelligencePage() {
                                         onSuccess={() => {
                                             fetchCampaigns(0, false, latestCampaigns.length + 1);
                                         }}
+                                        onOrchestrate={(leads, name) => {
+                                            console.log("Dashboard: Orchestration triggered for draft", { leadsCount: leads.length, name });
+                                            setDraftLeads(leads);
+                                            setDraftName(name);
+                                            setEditingCampaignId(null);
+                                            setComposerView('composer');
+                                            setIsComposerOpen(true);
+                                        }}
                                         isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                                     />
 
@@ -1052,16 +1062,22 @@ export default function CustomerIntelligencePage() {
                                     />
                                 ) : (
                                     <CampaignComposer
-                                        key={`composer-${editingCampaignId}-${composerView}`}
-                                        campaignId={editingCampaignId!}
+                                        key={`composer-${editingCampaignId || 'draft'}-${composerView}`}
+                                        campaignId={editingCampaignId}
+                                        initialLeads={draftLeads || undefined}
+                                        initialName={draftName || undefined}
                                         isMagicUI={FEATURE_FLAGS.IS_MAGIC_AI_ENABLED}
                                         onComplete={() => {
                                             fetchCampaigns(0, false, latestCampaigns.length + 1);
                                             setIsComposerOpen(false);
+                                            setDraftLeads(null);
+                                            setDraftName("");
                                         }}
                                         onBack={() => {
                                             fetchCampaigns(0, false, Math.max(latestCampaigns.length, CAMPAIGNS_PER_PAGE));
                                             setIsComposerOpen(false);
+                                            setDraftLeads(null);
+                                            setDraftName("");
                                         }}
                                         onEditLeads={() => setComposerView('leads')}
                                         className="h-full shadow-2xl"

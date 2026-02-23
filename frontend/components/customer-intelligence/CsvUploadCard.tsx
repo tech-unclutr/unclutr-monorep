@@ -45,6 +45,7 @@ interface CsvUploadCardProps {
     mode?: 'create' | 'edit';
     campaignId?: string;
     onLeadsUpdated?: () => void;
+    onOrchestrate?: (leads: any[], name: string) => void;
     onDirtyChange?: (isDirty: boolean) => void;
     isMagicUI?: boolean;
 }
@@ -58,7 +59,16 @@ import { ConfirmExitDialog } from './ConfirmExitDialog';
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useAuth } from "@/context/auth-context";
 
-export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create', campaignId: propCampaignId, onLeadsUpdated, onDirtyChange, isMagicUI }: CsvUploadCardProps) {
+export function CsvUploadCard({ onSuccess,
+    onCancel,
+    className,
+    mode = 'create',
+    campaignId: propCampaignId,
+    onLeadsUpdated,
+    onOrchestrate,
+    onDirtyChange,
+    isMagicUI = true
+}: CsvUploadCardProps) {
     const { companyId: authCompanyId, user } = useAuth();
 
     // Dynamic storage key to avoid collisions between creating and edit flows
@@ -357,6 +367,18 @@ export function CsvUploadCard({ onSuccess, onCancel, className, mode = 'create',
                 // IMPORTANT: If user explicitly said "Create Duplicate", we need to pass that intent to Composer
                 // Currently CampaignComposer finalize doesn't support "force_create" flag prop directly as a prop,
                 // but we can pass it through a state or just let the user handle it in the next step.
+
+                if (mode === 'create' && !propCampaignId && !persistedState.campaignId) {
+                    console.log("CsvUpload: Transitioning to ORCHESTRATION in Draft Mode");
+
+                    if (onOrchestrate) {
+                        console.log("CsvUpload: External orchestration triggered");
+                        onOrchestrate(leads, campaignName);
+                        // Reset local state so card returns to fresh upload state
+                        reset();
+                        return;
+                    }
+                }
 
                 console.log("CsvUpload: Transitioning to ORCHESTRATION in Draft Mode");
 

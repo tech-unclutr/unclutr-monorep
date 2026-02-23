@@ -402,10 +402,10 @@ async def google_calendar_callback(
     try:
         await google_calendar_service.handle_callback(code, state, session)
         # Redirect back to frontend customer intelligence tab
-        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard-new/customer-intelligence?calendar_connected=true")
+        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/customer-intelligence?calendar_connected=true")
     except Exception as e:
         logger.error(f"Google OAuth callback failed: {e}")
-        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard-new/customer-intelligence?error=calendar_auth_failed")
+        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/customer-intelligence?error=calendar_auth_failed")
 
 @router.get("/calendar/status")
 async def get_calendar_status(

@@ -1,6 +1,6 @@
 "use client";
 
-import { Sidebar } from "@/components/dashboard-new/sidebar";
+import { Sidebar } from "@/components/dashboard/sidebar";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ProtectedRoute } from "@/components/auth/protected-route";

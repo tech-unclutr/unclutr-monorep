@@ -92,7 +92,7 @@ function ShopifySetupContent() {
         setIsValidating(true);
         try {
             await shopifyApi.triggerSync(integrationId, companyId, selectedRange);
-            router.push(`/dashboard-new/integrations?success=true&shop=${shopDomain}&syncing=${integrationId}`);
+            router.push(`/dashboard/integrations?success=true&shop=${shopDomain}&syncing=${integrationId}`);
             toast.success("Import Started", { description: "Streaming your Shopify data now." });
         } catch (err: any) {
             toast.error("Sync Failed", { description: "Wait a moment and try again." });

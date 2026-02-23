@@ -150,10 +150,10 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                     )}
                     <div className="space-y-1">
                         {/*                         <Link
-                            href="/dashboard-new/birds-eye"
+                            href="/dashboard/birds-eye"
                             className={cn(
                                 "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
-                                isActive("/dashboard-new/birds-eye")
+                                isActive("/dashboard/birds-eye")
                                     ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
                                     : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
                                 isCollapsed ? "justify-center" : ""

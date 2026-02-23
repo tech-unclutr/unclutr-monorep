@@ -865,7 +865,7 @@ export default function CustomerIntelligencePage() {
                                                             }}
                                                             onClick={() => !isExpanded && setExpandedCampaignId(campaign.id)}
                                                             onStartCampaign={() => {
-                                                                window.location.href = `/dashboard-new/customer-intelligence/campaign/${campaign.id}`;
+                                                                window.location.href = `/dashboard/customer-intelligence/campaign/${campaign.id}`;
                                                             }}
                                                         />
                                                     </motion.div>

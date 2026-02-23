@@ -142,7 +142,7 @@ async def shopify_callback(
         logger.warning(msg)
         with open("oauth_trace.log", "a") as f:
             f.write(f"[{datetime.now().isoformat()}] {msg} - check SHOPIFY_API_SECRET in .env\n")
-        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard-new/integrations?error=hmac_invalid")
+        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/integrations?error=hmac_invalid")
 
     try:
         # 2. Extract Company Context from State
@@ -152,7 +152,7 @@ async def shopify_callback(
              logger.error(msg)
              with open("oauth_trace.log", "a") as f:
                  f.write(f"[{datetime.now().isoformat()}] {msg}\n")
-             return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard-new/integrations?error=state_invalid")
+             return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/integrations?error=state_invalid")
 
         company_id = UUID(company_id_str)
 
@@ -296,11 +296,11 @@ async def shopify_callback(
         with open("oauth_debug.log", "w") as f:
             f.write(error_msg)
         # Redirect to frontend error page with generic but logged failure
-        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard-new/integrations?error=handshake_failed")
+        return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/integrations?error=handshake_failed")
 
     # Success - Redirect to frontend dashboard (Platform Integration Flow)
     # The embedded app at admin.shopify.com is separate and accessed directly via backend root
-    return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard-new/integrations?success=true&shop={shop}")
+    return RedirectResponse(f"{settings.FRONTEND_URL}/dashboard/integrations?success=true&shop={shop}")
 
 @router.post("/sync/{integration_id}")
 async def trigger_historical_sync(

@@ -20,7 +20,7 @@ import { Plus, Shield, ShieldCheck, Lock, Eye, RefreshCw, AlertCircle, Sparkles,
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { EmptyDashboardState } from '@/components/dashboard-new/empty-dashboard-state';
+import { EmptyDashboardState } from '@/components/dashboard/empty-dashboard-state';
 import { useRouter } from "next/navigation";
 import { syncOnboardingState } from "@/lib/api/settings";
 import { useAuth } from '@/hooks/use-auth';

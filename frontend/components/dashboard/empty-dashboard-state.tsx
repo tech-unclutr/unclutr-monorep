@@ -20,7 +20,7 @@ export function EmptyDashboardState({
     title,
     description,
     actionLabel = "Connect Integrations",
-    actionHref = "/dashboard-new/integrations",
+    actionHref = "/dashboard/integrations",
     image,
     lightImage
 }: EmptyDashboardStateProps) {

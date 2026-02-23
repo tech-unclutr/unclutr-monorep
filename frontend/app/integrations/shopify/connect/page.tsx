@@ -42,7 +42,7 @@ export default function ShopifyConnectPage() {
     };
 
     const handleSkip = () => {
-        router.push("/dashboard-new/integrations");
+        router.push("/dashboard/integrations");
     };
 
     return (

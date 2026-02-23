@@ -110,7 +110,7 @@ export default function BasicsPage() {
             await refreshAuth();
             localStorage.removeItem('unclutr_onboarding_draft');
             toast.success("Welcome aboard!", { description: "Unleashing your dashboard pulse now..." });
-            setTimeout(() => { router.push('/dashboard-new'); }, 1000);
+            setTimeout(() => { router.push('/dashboard'); }, 1000);
         } catch (error) {
             console.error("Failed to complete onboarding:", error);
             toast.error("Finish Failed", { description: "We couldn't finalize your setup. Try again?" });

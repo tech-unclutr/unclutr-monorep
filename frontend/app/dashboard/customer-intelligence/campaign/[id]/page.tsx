@@ -119,7 +119,7 @@ export default function CampaignPage() {
             console.error("Failed to fetch campaign:", error);
             if (error.status === 404) {
                 toast.error("Campaign not found");
-                router.push('/dashboard-new/customer-intelligence');
+                router.push('/dashboard/customer-intelligence');
             } else {
                 // Don't spam toasts on poll errors
                 if (!campaign) {
@@ -195,7 +195,7 @@ export default function CampaignPage() {
             setIsPauseConfirmOpen(true);
             return;
         }
-        router.push('/dashboard-new/customer-intelligence');
+        router.push('/dashboard/customer-intelligence');
     };
 
     const handlePauseAndExit = async () => {
@@ -209,7 +209,7 @@ export default function CampaignPage() {
 
             // Small delay for toast
             setTimeout(() => {
-                router.push('/dashboard-new/customer-intelligence');
+                router.push('/dashboard/customer-intelligence');
             }, 500);
         } catch (error: any) {
             console.error("Failed to pause campaign:", error);
@@ -242,7 +242,7 @@ export default function CampaignPage() {
             setIsDeleteConfirmOpen(false);
             // Small delay to allow toast to show before navigation
             setTimeout(() => {
-                router.push('/dashboard-new/customer-intelligence');
+                router.push('/dashboard/customer-intelligence');
             }, 500);
         } catch (error: any) {
             console.error("Failed to delete campaign:", error);
@@ -834,7 +834,7 @@ export default function CampaignPage() {
                         </AlertDialogCancel>
                         <Button
                             variant="ghost"
-                            onClick={() => router.push('/dashboard-new/customer-intelligence')}
+                            onClick={() => router.push('/dashboard/customer-intelligence')}
                             className="rounded-2xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 font-semibold h-12 px-6"
                         >
                             Exit Without Pausing

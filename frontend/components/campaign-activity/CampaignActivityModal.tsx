@@ -173,14 +173,31 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                         // Collect full transcript across the interaction if available
                         let fullTranscript: Array<{ role: string, content: string }> = [];
                         contextData.history.forEach((item: any) => {
-                            if (item.full_transcript && Array.isArray(item.full_transcript)) {
-                                // Sometimes transcripts from Bolna are just appended, so we'll just take the last valid one 
-                                // Alternatively, if they are separate segments, we merge them.
-                                // Assuming item.full_transcript is an array of objects like { role: 'agent'|'user', content: '...' }
-                                fullTranscript = item.full_transcript;
+                            if (item.full_transcript) {
+                                if (Array.isArray(item.full_transcript)) {
+                                    // Assuming item.full_transcript is an array of objects like { role: 'agent'|'user', content: '...' }
+                                    fullTranscript = item.full_transcript;
+                                } else if (typeof item.full_transcript === 'string') {
+                                    // Split Bolna transcript string format: "Agent: Hello\nUser: Hi" 
+                                    const lines = item.full_transcript.split('\n');
+                                    const parsedTranscript = lines.map((line: string) => {
+                                        const lowerLine = line.toLowerCase();
+                                        if (lowerLine.startsWith('agent:') || lowerLine.startsWith('api:')) {
+                                            return { role: 'agent', content: line.substring(line.indexOf(':') + 1).trim() };
+                                        } else if (lowerLine.startsWith('user:')) {
+                                            return { role: 'user', content: line.substring(line.indexOf(':') + 1).trim() };
+                                        } else {
+                                            // Fallback if no prefix
+                                            return { role: 'agent', content: line.trim() };
+                                        }
+                                    }).filter((t: { role: string, content: string }) => t.content); // Remove empty lines
+
+                                    if (parsedTranscript.length > 0) {
+                                        fullTranscript = parsedTranscript;
+                                    }
+                                }
                             }
                         });
-
 
                         setEvents(transformedEvents);
                         setCompleteHistory(contextData.history);

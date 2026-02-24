@@ -451,6 +451,17 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
     const scrollRef = useRef<HTMLDivElement>(null);
     const [contactModeId, setContactModeId] = useState<string | null>(null);
     const [lastTriggeredId, setLastTriggeredId] = useState<string | null>(null);
+
+    const userHistoryItems = React.useMemo(() => {
+        const userCalls = historyItems.filter(item => item.is_user_call === true);
+        const uniqueLeads = new Map();
+        userCalls.forEach(call => {
+            if (!uniqueLeads.has(call.lead_id)) {
+                uniqueLeads.set(call.lead_id, call);
+            }
+        });
+        return Array.from(uniqueLeads.values());
+    }, [historyItems]);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -935,7 +946,7 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
                 </div>
 
                 {/* History Section Persistence */}
-                {!isLoading && historyItems.length > 0 && (
+                {!isLoading && userHistoryItems.length > 0 && (
                     <div className="w-full max-w-4xl mx-auto mt-12 bg-white/50 dark:bg-zinc-950/50 rounded-[3rem] border border-zinc-200/50 dark:border-zinc-800/50 p-8 shadow-sm backdrop-blur-sm z-10">
                         <div className="flex items-center gap-3 mb-6 px-2">
                             <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-500">
@@ -948,7 +959,7 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
                         </div>
 
                         <div className="space-y-3">
-                            {historyItems.slice(0, 5).map((item, i) => (
+                            {userHistoryItems.slice(0, 5).map((item, i) => (
                                 <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50">
                                     <div className="flex items-center gap-4">
                                         <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800">
@@ -1201,7 +1212,7 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
             )}
 
             {/* History Section */}
-            {historyItems.length > 0 && (
+            {userHistoryItems.length > 0 && (
                 <div className="w-full bg-white dark:bg-zinc-950 rounded-[3rem] border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
                     <div className="flex items-center gap-3 mb-6 px-2">
                         <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-500">
@@ -1214,8 +1225,7 @@ export const UserActionPanel = ({ campaignId, campaignStatus = 'ACTIVE', isStart
                     </div>
 
                     <div className="space-y-3">
-                        {historyItems
-                            .filter(item => item.is_user_call === true)
+                        {userHistoryItems
                             .slice(0, 5)
                             .map((item, i) => (
                                 <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50">

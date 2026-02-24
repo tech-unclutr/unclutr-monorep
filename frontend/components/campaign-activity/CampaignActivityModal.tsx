@@ -104,8 +104,9 @@ const statusConfig: Record<string, { color: string, Icon: any }> = {
 };
 
 const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const validSeconds = isNaN(seconds) ? 0 : Math.max(0, seconds);
+    const mins = Math.floor(validSeconds / 60);
+    const secs = Math.floor(validSeconds % 60);
     if (mins === 0) return `${secs}s`;
     return `${mins}m ${secs.toString().padStart(2, '0')}s`;
 };
@@ -448,7 +449,7 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                                             <Headphones className="w-4 h-4" />
                                         </div>
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                            Acoustics Archive
+                                            Call Recording
                                         </h3>
                                     </div>
                                     {call.recording_url && (
@@ -498,6 +499,46 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                                     </div>
                                 )}
                             </Card>
+
+                            {/* Section 2: Transcript */}
+                            {call.transcript && call.transcript.length > 0 && (
+                                <Card className="rounded-[32px] bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+                                    <button
+                                        onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
+                                        className="w-full flex items-center justify-between p-8 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+                                                <Mic className="w-4 h-4" />
+                                            </div>
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                                Full Transcript
+                                            </h3>
+                                        </div>
+                                        {isTranscriptOpen ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
+                                    </button>
+
+                                    {isTranscriptOpen && (
+                                        <div className="px-8 pb-8 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            {call.transcript.map((turn, i) => (
+                                                <div key={i} className={cn(
+                                                    "flex flex-col",
+                                                    turn.role === 'agent' || turn.role === 'assistant' ? 'items-start' : 'items-end'
+                                                )}>
+                                                    <div className={cn(
+                                                        "max-w-[85%] px-5 py-3 rounded-3xl text-[13px] font-medium leading-relaxed shadow-sm",
+                                                        turn.role === 'agent' || turn.role === 'assistant'
+                                                            ? "bg-indigo-600 text-white rounded-tl-sm"
+                                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tr-sm border border-zinc-200/50 dark:border-zinc-700/50"
+                                                    )}>
+                                                        {turn.content}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </Card>
+                            )}
 
                             {/* Section: Mission Control Feed (Priya Reporting Vibe) */}
                             <div className="space-y-4">
@@ -605,46 +646,6 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Section 2: Transcript */}
-                            {call.transcript && call.transcript.length > 0 && (
-                                <Card className="rounded-[32px] bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
-                                    <button
-                                        onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
-                                        className="w-full flex items-center justify-between p-8 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
-                                                <Mic className="w-4 h-4" />
-                                            </div>
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                                Neuro-Conversation Archive
-                                            </h3>
-                                        </div>
-                                        {isTranscriptOpen ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
-                                    </button>
-
-                                    {isTranscriptOpen && (
-                                        <div className="px-8 pb-8 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            {call.transcript.map((turn, i) => (
-                                                <div key={i} className={cn(
-                                                    "flex flex-col",
-                                                    turn.role === 'agent' || turn.role === 'assistant' ? 'items-start' : 'items-end'
-                                                )}>
-                                                    <div className={cn(
-                                                        "max-w-[85%] px-5 py-3 rounded-3xl text-[13px] font-medium leading-relaxed shadow-sm",
-                                                        turn.role === 'agent' || turn.role === 'assistant'
-                                                            ? "bg-indigo-600 text-white rounded-tl-sm"
-                                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tr-sm border border-zinc-200/50 dark:border-zinc-700/50"
-                                                    )}>
-                                                        {turn.content}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </Card>
-                            )}
 
                             {/* Section 4: Close Button */}
                             <div className="pt-4">

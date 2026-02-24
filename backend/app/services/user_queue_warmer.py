@@ -118,7 +118,10 @@ class UserQueueWarmer:
                     if found_transcript:
                          try:
                              # Generate structured context and concise summary
-                             existing_uqi.ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                             try:
+                                 existing_uqi.ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                             except Exception:
+                                 pass
                              existing_uqi.structured_context = await llm_service.generate_structured_lead_context(
                                  transcript=str(found_transcript),
                                  extracted_data=bolna_map.extracted_data or {}
@@ -220,7 +223,14 @@ class UserQueueWarmer:
                          structured_context = None
                      
                      # Use LLM for concise summary (backwards compatibility)
-                     ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                     try:
+                         ai_summary = await llm_service.generate_concise_summary(str(found_transcript))
+                     except Exception as e:
+                         logger.warning(f"Failed to generate concise summary: {e}")
+                         if bolna_map.transcript_summary:
+                             ai_summary = bolna_map.transcript_summary[:200]
+                         else:
+                             ai_summary = "Interaction recorded."
                      
                      # [IMPROVED] Fallback to Bolna's native summary if Gemini returns generic text
                      if (not ai_summary or "found by AI" in ai_summary.lower()) and bolna_map.transcript_summary:

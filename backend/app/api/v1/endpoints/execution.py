@@ -306,6 +306,7 @@ async def get_campaign_realtime_status_internal(campaign_id: UUID, session: Asyn
         select(CallLog, CampaignLead)
         .join(CampaignLead, CallLog.lead_id == CampaignLead.id)
         .where(CallLog.campaign_id == campaign_id)
+        .where(CallLog.status.not_in(["initiated", "ringing", "connected", "speaking", "listening", "processing", "in-progress"]))
         .order_by(CallLog.created_at.desc())
         .limit(100)
     )
@@ -2440,10 +2441,11 @@ async def get_campaign_history(
         select(CallLog, CampaignLead, UserQueueItem)
         .join(CampaignLead, CallLog.lead_id == CampaignLead.id)
         .outerjoin(UserQueueItem, and_(
-            UserQueueItem.campaign_id == campaign_id,
-            UserQueueItem.lead_id == CampaignLead.id
+            CallLog.campaign_id == UserQueueItem.campaign_id,
+            CallLog.lead_id == UserQueueItem.lead_id
         ))
         .where(CallLog.campaign_id == campaign_id)
+        .where(CallLog.status.not_in(["initiated", "ringing", "connected", "speaking", "listening", "processing", "in-progress"]))
         .order_by(CallLog.created_at.desc())
     )
     

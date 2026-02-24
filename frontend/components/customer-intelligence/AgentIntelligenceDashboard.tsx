@@ -742,6 +742,18 @@ export default function AgentIntelligenceDashboard({
                                             "grid-cols-1 lg:grid-cols-2"
                                         )}>
                                             {Array.from({ length: maxConcurrency }).map((_, idx) => {
+                                                const activeAgent = activeAgents[idx];
+                                                if (activeAgent) {
+                                                    return (
+                                                        <AgentLiveStream
+                                                            key={`live-agent-${activeAgent.lead_id || idx}`}
+                                                            agent={activeAgent}
+                                                            events={allEvents.filter(e => e.lead_id === activeAgent.lead_id)}
+                                                            index={idx}
+                                                        />
+                                                    );
+                                                }
+
                                                 const persona = AGENT_PERSONAS[idx % AGENT_PERSONAS.length];
                                                 return (
                                                     <div

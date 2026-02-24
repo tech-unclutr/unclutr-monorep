@@ -125,6 +125,9 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
     const [completeHistory, setCompleteHistory] = useState<any[]>([]);
     const [hasCompleteContext, setHasCompleteContext] = useState(false);
 
+    // [NEW] Local state for transcript
+    const [localTranscript, setLocalTranscript] = useState<Array<{ role: string, content: string }> | undefined>(call?.transcript);
+
     // Reset state when call changes or modal opens/closes
     React.useEffect(() => {
         setIsPlaying(false);
@@ -133,6 +136,7 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
         setIsTranscriptOpen(false);
         setCompleteHistory([]);
         setHasCompleteContext(false);
+        setLocalTranscript(call?.transcript);
 
         if (isOpen && call) {
             fetchEvents();
@@ -166,9 +170,27 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                             }
                         }));
 
+                        // Collect full transcript across the interaction if available
+                        let fullTranscript: Array<{ role: string, content: string }> = [];
+                        contextData.history.forEach((item: any) => {
+                            if (item.full_transcript && Array.isArray(item.full_transcript)) {
+                                // Sometimes transcripts from Bolna are just appended, so we'll just take the last valid one 
+                                // Alternatively, if they are separate segments, we merge them.
+                                // Assuming item.full_transcript is an array of objects like { role: 'agent'|'user', content: '...' }
+                                fullTranscript = item.full_transcript;
+                            }
+                        });
+
+
                         setEvents(transformedEvents);
                         setCompleteHistory(contextData.history);
                         setHasCompleteContext(true);
+
+                        // Fix 1: Ensure transcript is populated if not originally in call log but available in context
+                        if ((!call.transcript || call.transcript.length === 0) && fullTranscript.length > 0) {
+                            setLocalTranscript(fullTranscript);
+                        }
+
                         setIsLoadingEvents(false);
                         return; // Successfully fetched complete context
                     }
@@ -501,7 +523,7 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                             </Card>
 
                             {/* Section 2: Transcript */}
-                            {call.transcript && call.transcript.length > 0 && (
+                            {localTranscript && localTranscript.length > 0 && (
                                 <Card className="rounded-[32px] bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
                                     <button
                                         onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
@@ -519,8 +541,8 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                                     </button>
 
                                     {isTranscriptOpen && (
-                                        <div className="px-8 pb-8 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            {call.transcript.map((turn, i) => (
+                                        <div className="px-8 pb-8 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 max-h-[400px] overflow-y-auto custom-scrollbar">
+                                            {localTranscript.map((turn, i) => (
                                                 <div key={i} className={cn(
                                                     "flex flex-col",
                                                     turn.role === 'agent' || turn.role === 'assistant' ? 'items-start' : 'items-end'

@@ -241,6 +241,58 @@ export const CampaignActivityModal: React.FC<CampaignActivityModalProps> = ({ ca
                 }
                 const data = await api.get(url);
                 setEvents(data);
+
+                // Try to extract transcript from these events if it exists (usually inside metadata)
+                let fullTranscript: Array<{ role: string, content: string }> = [];
+                data.forEach((item: any) => {
+                    if (item.metadata?.full_transcript) {
+                        if (Array.isArray(item.metadata.full_transcript)) {
+                            fullTranscript = item.metadata.full_transcript;
+                        } else if (typeof item.metadata.full_transcript === 'string') {
+                            const lines = item.metadata.full_transcript.split('\n');
+                            const parsedTranscript = lines.map((line: string) => {
+                                const lowerLine = line.toLowerCase();
+                                if (lowerLine.startsWith('agent:') || lowerLine.startsWith('api:')) {
+                                    return { role: 'agent', content: line.substring(line.indexOf(':') + 1).trim() };
+                                } else if (lowerLine.startsWith('user:')) {
+                                    return { role: 'user', content: line.substring(line.indexOf(':') + 1).trim() };
+                                } else {
+                                    return { role: 'agent', content: line.trim() };
+                                }
+                            }).filter((t: { role: string, content: string }) => t.content);
+
+                            if (parsedTranscript.length > 0) fullTranscript = parsedTranscript;
+                        }
+                    }
+                });
+
+                // Final Fallback: Construct transcript from event sequence if fullTranscript is still empty
+                if (fullTranscript.length === 0 && Array.isArray(data)) {
+                    const constructedTranscript: Array<{ role: string, content: string }> = [];
+                    data.forEach((event: any) => {
+                        if (event.type === 'user_reply') {
+                            let content = event.message || '';
+                            if (content.startsWith('Lead replied: "') && content.endsWith('"')) {
+                                content = content.substring(15, content.length - 1);
+                            }
+                            if (content) constructedTranscript.push({ role: 'user', content });
+                        } else if (event.type === 'agent_action') {
+                            const msg = event.message || '';
+                            if (msg.includes(' is saying: "')) {
+                                const match = msg.match(/ is saying: "(.*?)"$/);
+                                if (match) constructedTranscript.push({ role: 'agent', content: match[1] });
+                            } else if (msg.includes(' is greeting the lead.')) {
+                                constructedTranscript.push({ role: 'agent', content: 'Hello!' }); // Generic fallback for greeting if transcript misses it
+                            }
+                        }
+                    });
+
+                    if (constructedTranscript.length > 0) fullTranscript = constructedTranscript;
+                }
+
+                if ((!call.transcript || call.transcript.length === 0) && fullTranscript.length > 0) {
+                    setLocalTranscript(fullTranscript);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch lead events:", error);

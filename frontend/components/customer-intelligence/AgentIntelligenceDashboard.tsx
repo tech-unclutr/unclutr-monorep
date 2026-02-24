@@ -607,9 +607,9 @@ export default function AgentIntelligenceDashboard({
                                             </div>
 
                                             <div className="space-y-1">
-                                                <h3 className="text-xs font-black tracking-[0.2em] text-zinc-900 dark:text-zinc-100 uppercase">Queue Clear</h3>
+                                                <h3 className="text-xs font-black tracking-[0.2em] text-zinc-900 dark:text-zinc-100 uppercase">Queue Empty</h3>
                                                 <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-[200px]">
-                                                    All leads processed. System standing by for new entries.
+                                                    No more leads to call right now.
                                                 </p>
                                             </div>
                                         </motion.div>
@@ -661,7 +661,7 @@ export default function AgentIntelligenceDashboard({
                                     </div>
                                     <h3 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight relative z-10">Target Achieved!</h3>
                                     <p className="text-base text-zinc-500 dark:text-zinc-400 max-w-[320px] mt-3 mb-10 font-medium leading-relaxed relative z-10">
-                                        Mission accomplished. All cohort targets have been met with exceptional precision.
+                                        Great work! You've successfully hit your targets for all cohorts.
                                     </p>
                                     <Button
                                         onClick={() => setShowResetConfirm(true)}
@@ -669,7 +669,7 @@ export default function AgentIntelligenceDashboard({
                                         className="h-14 px-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-[0_20px_40px_-10px_rgba(79,70,229,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(79,70,229,0.5)] active:scale-95 gap-3 relative z-10 border-t border-white/20"
                                     >
                                         {isResetting ? <RotateCcw className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5 shadow-sm" />}
-                                        <span className="tracking-wide">RE-INITIATE SEQUENCE</span>
+                                        <span className="tracking-wide">RESTART CAMPAIGN</span>
                                     </Button>
                                 </motion.div>
                             ) : isPaused ? (
@@ -679,7 +679,7 @@ export default function AgentIntelligenceDashboard({
                                     </div>
                                     <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Agents Waiting</h3>
                                     <p className="text-xs text-zinc-500 max-w-[200px] mt-1">
-                                        Campaign is currently paused. Resuming will re-activate neural mesh uplinks.
+                                        Campaign is paused. Resume to start calling leads again.
                                     </p>
                                 </div>
                             ) : (isExhausted || isCompleted) ? (
@@ -706,12 +706,12 @@ export default function AgentIntelligenceDashboard({
                                         <div className="absolute -inset-4 bg-zinc-500/5 blur-3xl -z-10 rounded-full animate-pulse" />
                                     </div>
                                     <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                                        {hasFailures ? "Capacity Exhausted" : "Operational Standby"}
+                                        {hasFailures ? "Action Required" : "All Caught Up"}
                                     </h3>
                                     <p className="text-[15px] text-zinc-500 dark:text-zinc-400 max-w-[300px] mt-3 mb-10 font-medium leading-relaxed">
                                         {hasFailures
-                                            ? `Precisely ${failedLeads.length} leads were unreachable at this time. Recommendation: Re-attempt sequence after thermal cooldown.`
-                                            : "The queue is clear. All leads processed successfully. Systems currently in low-power operational standby."}
+                                            ? `We couldn't reach ${failedLeads.length} people this round. Let's give them a break, then try cycling through again later.`
+                                            : "Your queue is completely clear. Every lead has been processed and there are no more calls to make."}
                                     </p>
                                     <Button
                                         onClick={() => setShowResetConfirm(true)}
@@ -725,13 +725,13 @@ export default function AgentIntelligenceDashboard({
                                         )}
                                     >
                                         {isResetting ? <RotateCcw className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5 opacity-70" />}
-                                        {hasFailures ? `Cycle ${failedLeads.length} Remaining Contacts` : "Reset Matrix State"}
+                                        {hasFailures ? `Retry ${failedLeads.length} Failed Call${failedLeads.length === 1 ? '' : 's'}` : "Reset Campaign"}
                                     </Button>
 
                                     {/* Subtle status label */}
                                     <div className="absolute bottom-6 flex items-center gap-2 opacity-30 group-hover:opacity-100 transition-opacity duration-1000">
                                         <div className="w-1 h-1 rounded-full bg-zinc-400 animate-pulse" />
-                                        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-400 dark:text-zinc-500">Neural Buffer Clear</span>
+                                        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-400 dark:text-zinc-500">System Idle</span>
                                     </div>
                                 </motion.div>
                             ) : (activeAgents && activeAgents.length > 0) ? (
@@ -777,12 +777,12 @@ export default function AgentIntelligenceDashboard({
                                                         </div>
 
                                                         <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium max-w-[180px] mt-4 leading-relaxed">
-                                                            System online and awaiting next lead sequence...
+                                                            Online and waiting for the next lead...
                                                         </p>
 
                                                         <div className="mt-8 px-4 py-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 flex items-center gap-2">
                                                             <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                                                            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Autonomous Standby</span>
+                                                            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Standing By</span>
                                                         </div>
                                                     </div>
                                                 );
@@ -795,9 +795,9 @@ export default function AgentIntelligenceDashboard({
                                     <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
                                         <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
                                     </div>
-                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Initializing Neural Mesh</h3>
+                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Warming Up Agents</h3>
                                     <p className="text-xs text-zinc-500 max-w-[200px] mt-1">
-                                        Establishing secure uplinks with active AI agents...
+                                        Connecting to AI agents and preparing the queue...
                                     </p>
                                 </div>
                             )}

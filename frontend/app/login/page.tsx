@@ -504,7 +504,7 @@ export default function LoginPage() {
                             type="button"
                             onClick={handleGoogleSignIn}
                             disabled={isAnyLoading || isGlobalLoading}
-                            className="w-full h-12 text-[15px] font-normal border-neutral-200 hover:bg-neutral-50 transition-all active:scale-[0.98] dark:border-neutral-800 dark:hover:bg-neutral-900"
+                            className="w-full h-12 text-[15px] font-normal border-neutral-200 hover:bg-neutral-50 transition-all active:scale-[0.98] dark:border-neutral-800 dark:hover:bg-neutral-900 dark:text-neutral-100"
                             variant="outline"
                         >
                             {isGlobalLoading ? (
@@ -568,7 +568,7 @@ export default function LoginPage() {
                                     onChange={(e: { target: { value: SetStateAction<string>; }; }) => setEmail(e.target.value)}
                                     required
                                     disabled={isAnyLoading}
-                                    className="h-12 border-neutral-200 focus-visible:ring-1 focus-visible:ring-black transition-all bg-neutral-50/30 dark:border-neutral-800 dark:bg-neutral-900/30 dark:focus-visible:ring-white"
+                                    className="h-12 border-neutral-200 focus-visible:ring-1 focus-visible:ring-black transition-all bg-neutral-50/30 dark:border-neutral-800 dark:bg-neutral-900/30 dark:focus-visible:ring-white dark:text-neutral-100 dark:placeholder:text-neutral-500"
                                 />
                             </div>
                             <Button type="submit" className="w-full h-12 text-[15px] bg-black text-white hover:bg-zinc-800 transition-all font-medium dark:bg-white dark:text-black dark:hover:bg-neutral-200" disabled={isAnyLoading || isGlobalLoading}>

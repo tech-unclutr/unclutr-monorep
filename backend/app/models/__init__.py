@@ -12,6 +12,7 @@ from .campaign_goal_detail import CampaignGoalDetail as CampaignGoalDetail
 from .campaign_lead import CampaignLead as CampaignLead
 from .cohort import Cohort as Cohort
 from .company import Brand as Brand, Company as Company, Workspace as Workspace
+from .contact import Contact as Contact
 from .datasource import DataSource as DataSource, DataSourceCategory as DataSourceCategory
 from .datasource_request import RequestStatus as RequestStatus, RequestType as RequestType, UserRequest as UserRequest
 from .iam import CompanyMembership as CompanyMembership, SystemRole as SystemRole, WorkspaceMembership as WorkspaceMembership

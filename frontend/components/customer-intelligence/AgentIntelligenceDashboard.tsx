@@ -145,7 +145,8 @@ export default function AgentIntelligenceDashboard({
     const isTargetAchieved = completionData ? (completionData.total_targets > 0 && completionData.total_completed >= completionData.total_targets) : false;
     // Check for actual progress to prevent premature "Mission Accomplished" on empty campaigns
     const hasProgress = completionData ? ((completionData.total_completed || 0) > 0 || (completionData.total_calls || 0) > 0) : false;
-    const showCompletionUI = isTargetAchieved || ((isCompleted || isExhausted) && hasProgress);
+    const effectivelyTargetAchieved = isTargetAchieved && (isPaused || isCompleted || isQueueEmpty);
+    const showCompletionUI = effectivelyTargetAchieved || ((isCompleted || isExhausted) && hasProgress);
 
     // Extract Campaign ID from URL (since it's not passed as prop currently)
     // URL pattern: .../campaign/[id]
@@ -629,7 +630,7 @@ export default function AgentIntelligenceDashboard({
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-2 relative">
-                            {isTargetAchieved ? (
+                            {effectivelyTargetAchieved ? (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.98 }}
                                     animate={{ opacity: 1, scale: 1 }}

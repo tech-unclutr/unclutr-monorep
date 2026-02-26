@@ -20,6 +20,9 @@ class CampaignLead(SQLModel, table=True):
     
     meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     
+    # Link to structured Contact profile (optional for backward compat)
+    contact_id: Optional[UUID] = Field(default=None, foreign_key="contacts.id", index=True)
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     __table_args__ = (

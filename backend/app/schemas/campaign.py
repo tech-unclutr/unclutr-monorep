@@ -40,6 +40,7 @@ class CampaignLeadBase(BaseModel):
     contact_number: str
     cohort: Optional[str] = None
     meta_data: Optional[Dict[str, Any]] = {}
+    contact_profile: Optional[Dict[str, Any]] = None  # Structured profile from column mapper
 
 class CreateFromCsvRequest(BaseModel):
     campaign_name: Optional[str] = None

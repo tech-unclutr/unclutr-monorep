@@ -35,7 +35,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { TimeWindowSelector } from "./TimeWindowSelector";
 import { AvailabilityMagicPopup } from "./AvailabilityMagicPopup";
 import { getUniqueCohortAvatars } from "@/lib/avatar-utils";
-import { formatToIST, formatRelativeTime } from "@/lib/utils";
+import { formatToIST, formatRelativeTime, capitalizeCohortName } from "@/lib/utils";
 import { addMinutes, format, parseISO, setMinutes, startOfHour, formatDistanceToNow } from 'date-fns';
 import { ConfirmExitDialog } from './ConfirmExitDialog';
 import {
@@ -1086,7 +1086,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                     <Avatar className="w-12 h-12 border-2 border-white/20">
                                                         <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=cohort-${avatarIdx}&backgroundColor=e0e7ff`} />
                                                     </Avatar>
-                                                    <span className="text-[10px] font-black uppercase tracking-tight truncate max-w-[80px]">{c}</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-tight truncate max-w-[80px]">{capitalizeCohortName(c)}</span>
                                                 </button>
                                             );
                                         })}
@@ -1096,7 +1096,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                     {selectedCohorts.length > 0 ? (
                                         <div className="flex-1 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 p-8 flex flex-col gap-6 overflow-y-auto scrollbar-hide">
                                             <div className="flex items-center justify-between">
-                                                <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Strategy for {currentCohort}</h3>
+                                                <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Strategy for {capitalizeCohortName(currentCohort)}</h3>
                                                 <div className="flex items-center gap-2 bg-indigo-500/10 px-4 py-2 rounded-full border border-indigo-500/20">
                                                     <UsersIcon className="w-4 h-4 text-indigo-500" />
                                                     <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">{cohortCounts[currentCohort]} Leads Available</span>
@@ -1659,7 +1659,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                                 "text-sm font-bold truncate w-full transition-colors duration-300",
                                                                 isActive ? "text-zinc-900 dark:text-white" : "text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white"
                                                             )}>
-                                                                {cohort === 'Default' ? 'General Audience' : cohort}
+                                                                {cohort === 'Default' ? 'General Audience' : capitalizeCohortName(cohort)}
                                                             </span>
                                                             <div className={cn(
                                                                 "flex items-center gap-1.5 text-[10px] font-bold transition-colors duration-300",
@@ -1735,7 +1735,7 @@ export function CampaignComposer({ campaignId, initialLeads, initialName, onComp
                                                                     </div>
                                                                     <div className="flex-1 text-center sm:text-left space-y-4">
                                                                         <h3 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter">
-                                                                            {currentCohort === 'Default' ? 'General Audience' : currentCohort}
+                                                                            {currentCohort === 'Default' ? 'General Audience' : capitalizeCohortName(currentCohort)}
                                                                         </h3>
 
                                                                         <div className="space-y-3">

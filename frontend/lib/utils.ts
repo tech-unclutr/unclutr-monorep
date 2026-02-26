@@ -115,3 +115,11 @@ export function formatPhoneNumber(phone: string | number | null | undefined): st
 
     return cleaned;
 }
+
+/**
+ * Title-case cohort names: "high value" → "High Value"
+ */
+export function capitalizeCohortName(name: string): string {
+    if (!name) return name;
+    return name.replace(/\b\w/g, (c) => c.toUpperCase());
+}

@@ -689,17 +689,20 @@ class CampaignService:
 
         from app.models.campaign_lead import CampaignLead
         
-        # Get counts per cohort
+        # Get counts per cohort (including leads with null/empty cohort)
         stmt = select(CampaignLead.cohort, func.count(CampaignLead.id)).where(
             CampaignLead.campaign_id == campaign_id,
-            CampaignLead.cohort != None
         ).group_by(CampaignLead.cohort)
         
         result = await session.execute(stmt)
         rows = result.all()
         
-        cohorts = [r[0] for r in rows if r[0]]
-        counts = {r[0]: r[1] for r in rows if r[0]}
+        cohorts = []
+        counts = {}
+        for r in rows:
+            name = r[0] if r[0] else "Uncategorized"
+            cohorts.append(name)
+            counts[name] = r[1]
 
         # Fetch campaign to get selected cohorts
         campaign = await session.get(Campaign, campaign_id)

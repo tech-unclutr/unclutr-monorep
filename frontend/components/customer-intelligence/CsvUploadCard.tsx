@@ -13,7 +13,11 @@ import {
     Loader2,
     RefreshCcw,
     AlertTriangle,
-    Zap
+    Zap,
+    ChevronDown,
+    User as UserIcon,
+    Building2,
+    MapPin
 } from 'lucide-react';
 import { cn, formatToIST, formatRelativeTime, formatPhoneNumber } from "@/lib/utils";
 import Papa from 'papaparse';
@@ -91,11 +95,15 @@ export function CsvUploadCard({ onSuccess,
         mapping: {
             customer_name: '',
             contact_number: '',
-            cohort: ''
+            cohort: '',
+            profile_fields: {} as Record<string, string>,  // { csvColumn: contactField }
         },
         campaignName: '',
         campaignId: null as string | null
     });
+
+    // Profile Fields expansion state
+    const [isProfileExpanded, setIsProfileExpanded] = useState(false);
 
     // Notify parent about dirty state changes
     useEffect(() => {
@@ -146,7 +154,7 @@ export function CsvUploadCard({ onSuccess,
                 ...prev,
                 stage: 'UPLOAD',
                 headers: [],
-                mapping: { customer_name: '', contact_number: '', cohort: '' }
+                mapping: { customer_name: '', contact_number: '', cohort: '', profile_fields: {} }
             }));
             setCsvData([]);
         }
@@ -173,6 +181,18 @@ export function CsvUploadCard({ onSuccess,
             };
             if (mapping.cohort && row[mapping.cohort]) {
                 lead.cohort = row[mapping.cohort];
+            }
+            // Build contact_profile from mapped profile fields
+            if (mapping.profile_fields && Object.keys(mapping.profile_fields).length > 0) {
+                const profile: Record<string, any> = {};
+                for (const [csvCol, targetField] of Object.entries(mapping.profile_fields)) {
+                    if (row[csvCol] != null && row[csvCol] !== '') {
+                        profile[targetField] = row[csvCol];
+                    }
+                }
+                if (Object.keys(profile).length > 0) {
+                    lead.contact_profile = profile;
+                }
             }
             return lead;
         });
@@ -205,13 +225,27 @@ export function CsvUploadCard({ onSuccess,
                     const detectedHeaders = Object.keys(jsonData[0] as object);
 
                     // Auto-mapping logic
-                    const newMapping = { ...persistedState.mapping };
+                    const newMapping = { ...persistedState.mapping, profile_fields: {} as Record<string, string> };
+                    const profileFields: Record<string, string> = {};
                     detectedHeaders.forEach(h => {
                         const low = h.toLowerCase();
-                        if (low.includes('name')) newMapping.customer_name = h;
+                        if (low.includes('name') && !low.includes('company')) newMapping.customer_name = h;
                         if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
                         if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
+                        // Auto-detect profile fields
+                        if (low === 'first name' || low === 'first_name' || low === 'firstname') profileFields[h] = 'first_name';
+                        if (low === 'last name' || low === 'last_name' || low === 'lastname') profileFields[h] = 'last_name';
+                        if (low === 'title' || low === 'designation' || low === 'job title' || low === 'job_title') profileFields[h] = 'title';
+                        if (low === 'email' || low === 'e-mail' || low === 'email address') profileFields[h] = 'email';
+                        if (low.includes('linkedin')) profileFields[h] = 'linkedin_url';
+                        if (low === 'company' || low === 'company name' || low === 'company_name' || low === 'organization') profileFields[h] = 'company_name';
+                        if (low === 'industry' || low === 'sector') profileFields[h] = 'industry';
+                        if (low.includes('employee') || low.includes('# employee') || low.includes('company size') || low.includes('team size')) profileFields[h] = 'employee_count';
+                        if (low === 'city' || low === 'location') profileFields[h] = 'city';
+                        if (low === 'country' || low === 'region') profileFields[h] = 'country';
+                        if ((low === 'mobile 2' || low === 'mobile2' || low === 'alt phone' || low === 'alternate phone') && h !== newMapping.contact_number) profileFields[h] = 'alt_phone';
                     });
+                    newMapping.profile_fields = profileFields;
 
                     setCsvData(jsonData);
                     setPersistedState(prev => ({
@@ -250,13 +284,27 @@ export function CsvUploadCard({ onSuccess,
                         const detectedHeaders = Object.keys(results.data[0] as object);
 
                         // Auto-mapping logic
-                        const newMapping = { ...persistedState.mapping };
+                        const newMapping = { ...persistedState.mapping, profile_fields: {} as Record<string, string> };
+                        const profileFields: Record<string, string> = {};
                         detectedHeaders.forEach(h => {
                             const low = h.toLowerCase();
-                            if (low.includes('name')) newMapping.customer_name = h;
+                            if (low.includes('name') && !low.includes('company')) newMapping.customer_name = h;
                             if (low.includes('phone') || low.includes('number') || low.includes('contact')) newMapping.contact_number = h;
                             if (low.includes('cohort') || low.includes('segment') || low.includes('group')) newMapping.cohort = h;
+                            // Auto-detect profile fields
+                            if (low === 'first name' || low === 'first_name' || low === 'firstname') profileFields[h] = 'first_name';
+                            if (low === 'last name' || low === 'last_name' || low === 'lastname') profileFields[h] = 'last_name';
+                            if (low === 'title' || low === 'designation' || low === 'job title' || low === 'job_title') profileFields[h] = 'title';
+                            if (low === 'email' || low === 'e-mail' || low === 'email address') profileFields[h] = 'email';
+                            if (low.includes('linkedin')) profileFields[h] = 'linkedin_url';
+                            if (low === 'company' || low === 'company name' || low === 'company_name' || low === 'organization') profileFields[h] = 'company_name';
+                            if (low === 'industry' || low === 'sector') profileFields[h] = 'industry';
+                            if (low.includes('employee') || low.includes('# employee') || low.includes('company size') || low.includes('team size')) profileFields[h] = 'employee_count';
+                            if (low === 'city' || low === 'location') profileFields[h] = 'city';
+                            if (low === 'country' || low === 'region') profileFields[h] = 'country';
+                            if ((low === 'mobile 2' || low === 'mobile2' || low === 'alt phone' || low === 'alternate phone') && h !== newMapping.contact_number) profileFields[h] = 'alt_phone';
                         });
+                        newMapping.profile_fields = profileFields;
 
                         setCsvData(results.data);
                         setPersistedState(prev => ({
@@ -356,6 +404,18 @@ export function CsvUploadCard({ onSuccess,
                 };
                 if (mapping.cohort && row[mapping.cohort]) {
                     lead.cohort = row[mapping.cohort];
+                }
+                // Build contact_profile from mapped profile fields
+                if (mapping.profile_fields && Object.keys(mapping.profile_fields).length > 0) {
+                    const profile: Record<string, any> = {};
+                    for (const [csvCol, targetField] of Object.entries(mapping.profile_fields)) {
+                        if (row[csvCol] != null && row[csvCol] !== '') {
+                            profile[targetField] = row[csvCol];
+                        }
+                    }
+                    if (Object.keys(profile).length > 0) {
+                        lead.contact_profile = profile;
+                    }
                 }
                 return lead;
             });
@@ -757,6 +817,174 @@ export function CsvUploadCard({ onSuccess,
                                             </Select>
                                         </div>
                                     </div>
+
+                                    {/* Profile Fields - Collapsible */}
+                                    {(() => {
+                                        // Calculate extra columns (exclude already-mapped ones)
+                                        const usedCols = new Set([mapping.customer_name, mapping.contact_number, mapping.cohort].filter(Boolean));
+                                        const extraCols = headers.filter(h => !usedCols.has(h));
+                                        const linkedCount = Object.keys(mapping.profile_fields || {}).length;
+
+                                        if (extraCols.length === 0) return null;
+
+                                        const PROFILE_TARGETS = [
+                                            { value: 'first_name', label: 'First Name', icon: 'person' },
+                                            { value: 'last_name', label: 'Last Name', icon: 'person' },
+                                            { value: 'title', label: 'Title', icon: 'person' },
+                                            { value: 'email', label: 'Email', icon: 'person' },
+                                            { value: 'linkedin_url', label: 'LinkedIn URL', icon: 'person' },
+                                            { value: 'company_name', label: 'Company Name', icon: 'company' },
+                                            { value: 'industry', label: 'Industry', icon: 'company' },
+                                            { value: 'employee_count', label: 'Employee Count', icon: 'company' },
+                                            { value: 'alt_phone', label: 'Alt Phone', icon: 'person' },
+                                            { value: 'city', label: 'City', icon: 'location' },
+                                            { value: 'country', label: 'Country', icon: 'location' },
+                                        ];
+
+                                        // Find already-used target fields so we can indicate them
+                                        const usedTargets = new Set(Object.values(mapping.profile_fields || {}));
+
+                                        return (
+                                            <div className="mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsProfileExpanded(!isProfileExpanded)}
+                                                    className="w-full flex items-center justify-between p-3 rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/[0.01] hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="flex items-center gap-1 text-gray-400">
+                                                            <UserIcon className="w-3.5 h-3.5" />
+                                                            <Building2 className="w-3.5 h-3.5" />
+                                                            <MapPin className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Profile Fields</span>
+                                                        {linkedCount > 0 && (
+                                                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-500/20">
+                                                                {linkedCount} linked
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] text-gray-400 font-medium">
+                                                            {extraCols.length} extra {extraCols.length === 1 ? 'column' : 'columns'}
+                                                        </span>
+                                                        <ChevronDown className={cn(
+                                                            "w-3.5 h-3.5 text-gray-400 transition-transform duration-200",
+                                                            isProfileExpanded && "rotate-180"
+                                                        )} />
+                                                    </div>
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {isProfileExpanded && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="mt-2 p-3 rounded-xl border border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] shadow-sm space-y-1.5">
+                                                                {/* Header */}
+                                                                <div className="flex items-center justify-between px-1 pb-2 border-b border-gray-50 dark:border-white/[0.03]">
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Your Column</span>
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Save As</span>
+                                                                </div>
+
+                                                                {extraCols.map(col => {
+                                                                    const currentTarget = (mapping.profile_fields || {})[col];
+                                                                    const isLinked = !!currentTarget;
+
+                                                                    return (
+                                                                        <div key={col} className={cn(
+                                                                            "flex items-center justify-between py-1.5 px-1 rounded-lg transition-colors",
+                                                                            isLinked ? "bg-indigo-50/30 dark:bg-indigo-500/5" : "hover:bg-gray-50/50 dark:hover:bg-white/[0.02]"
+                                                                        )}>
+                                                                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setPersistedState(prev => {
+                                                                                            const pf = { ...prev.mapping.profile_fields };
+                                                                                            if (pf[col]) {
+                                                                                                delete pf[col];
+                                                                                            } else {
+                                                                                                // Auto-assign first available target
+                                                                                                const used = new Set(Object.values(pf));
+                                                                                                const available = PROFILE_TARGETS.find(t => !used.has(t.value));
+                                                                                                if (available) pf[col] = available.value;
+                                                                                            }
+                                                                                            return { ...prev, mapping: { ...prev.mapping, profile_fields: pf } };
+                                                                                        });
+                                                                                    }}
+                                                                                    className={cn(
+                                                                                        "w-4 h-4 rounded border-2 flex items-center justify-center transition-all flex-shrink-0",
+                                                                                        isLinked
+                                                                                            ? "bg-indigo-500 border-indigo-500 text-white"
+                                                                                            : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
+                                                                                    )}
+                                                                                >
+                                                                                    {isLinked && <CheckCircle2 className="w-3 h-3" />}
+                                                                                </button>
+                                                                                <span className={cn(
+                                                                                    "text-[11px] font-medium truncate",
+                                                                                    isLinked ? "text-gray-700 dark:text-gray-200" : "text-gray-400 dark:text-gray-500"
+                                                                                )}>
+                                                                                    {col}
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <div className="flex-shrink-0 ml-2">
+                                                                                {isLinked ? (
+                                                                                    <Select
+                                                                                        value={currentTarget}
+                                                                                        onValueChange={(val) => {
+                                                                                            setPersistedState(prev => ({
+                                                                                                ...prev,
+                                                                                                mapping: {
+                                                                                                    ...prev.mapping,
+                                                                                                    profile_fields: { ...prev.mapping.profile_fields, [col]: val }
+                                                                                                }
+                                                                                            }));
+                                                                                        }}
+                                                                                    >
+                                                                                        <SelectTrigger className="w-[140px] h-7 border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] rounded-md text-[10px] font-medium">
+                                                                                            <SelectValue />
+                                                                                        </SelectTrigger>
+                                                                                        <SelectContent>
+                                                                                            {PROFILE_TARGETS.map(t => (
+                                                                                                <SelectItem
+                                                                                                    key={t.value}
+                                                                                                    value={t.value}
+                                                                                                    className="text-[10px]"
+                                                                                                    disabled={usedTargets.has(t.value) && t.value !== currentTarget}
+                                                                                                >
+                                                                                                    <span className="flex items-center gap-1.5">
+                                                                                                        {t.icon === 'person' && <UserIcon className="w-3 h-3 text-blue-400" />}
+                                                                                                        {t.icon === 'company' && <Building2 className="w-3 h-3 text-amber-400" />}
+                                                                                                        {t.icon === 'location' && <MapPin className="w-3 h-3 text-emerald-400" />}
+                                                                                                        {t.label}
+                                                                                                    </span>
+                                                                                                </SelectItem>
+                                                                                            ))}
+                                                                                        </SelectContent>
+                                                                                    </Select>
+                                                                                ) : (
+                                                                                    <span className="text-[10px] text-gray-300 dark:text-gray-600 font-medium italic px-2">
+                                                                                        Skip
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 

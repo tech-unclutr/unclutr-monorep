@@ -34,6 +34,7 @@ from app.schemas.campaign import (
     CreateFullCampaignRequest,
     ReplaceLeadsRequest,
 )
+from app.services.contact_service import bulk_upsert_contacts
 from app.services.intelligence.campaign_service import campaign_service
 from app.services.intelligence.google_calendar_service import google_calendar_service
 from app.services.intelligence.insight_engine import insight_engine
@@ -1394,6 +1395,7 @@ async def create_campaign_from_csv(
             c_name = lead.get("customer_name", "Unknown")
             c_cohort = lead.get("cohort") or "Default"
             c_meta = lead.get("meta_data") or {}
+            c_profile = lead.get("contact_profile")
 
             if key in unique_leads:
                 # Duplicate found - Logic: Update to latest, log old cohort if different
@@ -1405,6 +1407,9 @@ async def create_campaign_from_csv(
                 existing["cohort"] = c_cohort
                 # Update metadata
                 existing["meta_data"] = c_meta
+                # Update contact_profile (last win)
+                if c_profile:
+                    existing["contact_profile"] = c_profile
                 
                 # Log change if cohort differs
                 if old_cohort != c_cohort:
@@ -1427,6 +1432,7 @@ async def create_campaign_from_csv(
                     "contact_number": key,
                     "cohort": c_cohort,
                     "meta_data": c_meta,
+                    "contact_profile": c_profile,
                     "status": "PENDING",
                     "created_at": datetime.utcnow()
                 }
@@ -1458,6 +1464,30 @@ async def create_campaign_from_csv(
             l["campaign_id"] = campaign.id
         
         leads_data = final_leads_list
+
+        # 5b. Upsert Contacts (if any leads have contact_profile data)
+        has_profiles = any(ld.get("contact_profile") for ld in leads_data)
+        if has_profiles:
+            try:
+                phone_to_contact = await bulk_upsert_contacts(
+                    session, company_id, leads_data, source="csv_upload"
+                )
+                await session.flush()  # Ensure contact IDs are available
+                for ld in leads_data:
+                    phone = str(ld.get("contact_number", "")).strip()
+                    if phone in phone_to_contact:
+                        ld["contact_id"] = phone_to_contact[phone]
+                    # Remove contact_profile from lead dict (not a DB column)
+                    ld.pop("contact_profile", None)
+            except Exception as contact_err:
+                logger.warning(f"Contact upsert failed (non-blocking): {contact_err}")
+                # Strip contact_profile so it doesn't cause insert errors
+                for ld in leads_data:
+                    ld.pop("contact_profile", None)
+        else:
+            # Strip contact_profile key if present but empty
+            for ld in leads_data:
+                ld.pop("contact_profile", None)
 
         t_db_start = time.time()
         if leads_data:
@@ -1586,11 +1616,34 @@ async def create_full_campaign(
                 "contact_number": key,
                 "cohort": lead.cohort or "Default",
                 "meta_data": lead.meta_data or {},
+                "contact_profile": lead.contact_profile,
                 "status": "PENDING",
                 "created_at": datetime.utcnow()
             }
         
         leads_data = list(unique_leads.values())
+
+        # 3b. Upsert Contacts (if any leads have contact_profile data)
+        has_profiles = any(ld.get("contact_profile") for ld in leads_data)
+        if has_profiles:
+            try:
+                phone_to_contact = await bulk_upsert_contacts(
+                    session, company_id, leads_data, source="csv_upload"
+                )
+                await session.flush()
+                for ld in leads_data:
+                    phone = str(ld.get("contact_number", "")).strip()
+                    if phone in phone_to_contact:
+                        ld["contact_id"] = phone_to_contact[phone]
+                    ld.pop("contact_profile", None)
+            except Exception as contact_err:
+                logger.warning(f"Contact upsert failed (non-blocking): {contact_err}")
+                for ld in leads_data:
+                    ld.pop("contact_profile", None)
+        else:
+            for ld in leads_data:
+                ld.pop("contact_profile", None)
+
         if leads_data:
             from sqlalchemy import insert
             stmt = insert(CampaignLead).values(leads_data)

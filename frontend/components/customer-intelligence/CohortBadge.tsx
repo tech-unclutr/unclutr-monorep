@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Users } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn, capitalizeCohortName } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 interface CohortBadgeProps {
@@ -34,7 +34,7 @@ export function CohortBadge({
                 variant === 'mini' ? "w-2.5 h-2.5" : "w-3 h-3",
                 "opacity-70 group-hover:opacity-100 transition-opacity"
             )} />
-            <span className="truncate max-w-[120px]">{cohort}</span>
+            <span className="truncate max-w-[120px]">{capitalizeCohortName(cohort)}</span>
         </>
     );
 

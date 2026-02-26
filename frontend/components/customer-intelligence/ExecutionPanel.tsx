@@ -492,9 +492,13 @@ export function ExecutionPanel({ campaignId, campaignStatus, hasStrategy = true,
     // Auto-Pause Logic: Automatically pause campaign when completed or targets achieved to preserve credits
     useEffect(() => {
         const autoPauseOnCompletion = async () => {
-            const isTargetAchieved = completionData ? completionData.total_completed >= completionData.total_targets : false;
+            const isTargetAchieved = completionData ? (completionData.total_targets > 0 && completionData.total_completed >= completionData.total_targets) : false;
 
-            if ((isCompleted || isTargetAchieved) && (state === 'ACTIVE_READY' || state === 'IN_CALL' || state === 'WARMUP')) {
+            // Only auto-pause if we legitimately hit completion/target from a running state
+            // AND we haven't recently manually started it (gives the user the power to override)
+            const isRecentManualAction = Date.now() - lastManualActionTime.current < 10000;
+
+            if (!isRecentManualAction && (isCompleted || isTargetAchieved) && (state === 'ACTIVE_READY' || state === 'IN_CALL' || state === 'WARMUP')) {
                 try {
                     await handlePauseSession();
                 } catch (e) {

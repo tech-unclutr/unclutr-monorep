@@ -1560,14 +1560,20 @@ async def reset_campaign(
 
     # 2.5 Clear Call Logs (History) to ensure UI looks "fresh"
     # This prevents the "Roster" (AgentQueue) from showing old failures in the history column
-    log_stmt = select(CallLog).where(CallLog.campaign_id == campaign_id)
-    logs_result = await session.execute(log_stmt)
-    logs_to_delete = logs_result.scalars().all()
-    
-    for log in logs_to_delete:
-        await session.delete(log)
+    if item_ids:
+        lead_ids_to_reset = [item.lead_id for item in items_to_reset]
+        log_stmt = (
+            select(CallLog)
+            .where(CallLog.campaign_id == campaign_id)
+            .where(CallLog.lead_id.in_(lead_ids_to_reset))
+        )
+        logs_result = await session.execute(log_stmt)
+        logs_to_delete = logs_result.scalars().all()
+        
+        for log in logs_to_delete:
+            await session.delete(log)
 
-    logger.info(f"[Execution] Deleted {len(logs_to_delete)} call logs for campaign reset.")
+        logger.info(f"[Execution] Deleted {len(logs_to_delete)} call logs for campaign reset.")
         
     # 3. Reset Status to READY
     now = datetime.utcnow()

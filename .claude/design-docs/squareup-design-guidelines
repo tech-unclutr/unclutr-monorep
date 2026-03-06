@@ -1,0 +1,171 @@
+# SquareUp — Official Design Guidelines
+
+> **For the Team.** These are the definitive design standards for SquareUp.ai. They reflect the "15/10" aesthetic philosophy: high signal, zero noise, and uncompromising premium quality. Every pixel placed must adhere to these foundations. 
+
+---
+
+## 🧠 Core Design Philosophy
+
+SquareUp is the **Decision & Control Layer for D2C Brands**. We are not building another generic B2B SaaS dashboard. We are building a high-fidelity control center that must immediately convey *trust, determinism, and advanced intelligence*. 
+
+### 1. Truth-First (The Data Mandate)
+Before aesthetics, there is accuracy. If the UI looks beautiful but the data is approximated, the design has failed. Our interface must reflect "Penny-Perfect" reality. This means:
+- We don't hide complex data; we make it legible. 
+- We design robust tables and dense data grids because our users (Founders/Operators) demand rigorous detail. 
+- Statuses must be deterministic (e.g., "Connected", "Pending Sync", "Failed") — never "Unknown."
+
+### 2. AI-Native, Not AI-Bolted
+AI is woven into our architecture, not just added as an afterthought. Our UI must accommodate the scale and speed of AI:
+- We design for states where thousands of actions happen simultaneously (e.g., the *Agent Intelligence Dashboard*).
+- System-driven actions must be clearly distinct from human actions visually.
+- The interface must surface *insights*, not just raw events. 
+
+### 3. The "15/10" Aesthetic Rule
+Good is not good enough. We do not ship 7/10 screens. 
+- **Premium Minimalism:** We do not decorate for the sake of decoration. (Inspired by Notion, Tally.so, and Linear).
+- **High Signal, Zero Noise:** Every border, shadow, and color shift must serve a purpose—usually to guide the eye to the most valuable information.
+- **Micro-Delight:** The UI must feel alive. Every interactive element must provide immediate, high-quality micro-feedback (spring animations, subtle color shifts) to make the user feel in control.
+
+### 4. Time-to-Value Obsession
+The user must experience an "Aha!" moment within **10 seconds** of landing on a screen. 
+- Onboarding shouldn't feel like a chore; it should feel like plugging a powerful engine into their business.
+- Empty states are unacceptable. An empty state must always guide the user to the next logical action with a compelling Call-to-Action.
+
+---
+
+## 💎 Brand Identity & Assets
+
+### 1. Logo & Brand Assets
+The primary brand asset folder is located in `/public/brand/` and `/public/logos/`.
+
+- **Favicon & Icon:** `icon.svg` (The geometric SquareUp emblem). Used for avatars, loaders, and collapsed sidebars.
+- **Wordmark (Light Theme):** `wordmark-dark.svg` (Dark text for light backgrounds).
+- **Wordmark (Dark Theme):** `wordmark-light.svg` (Light text for dark backgrounds).
+- **Animation Assets:** `loader_icon.svg`, `su_logo_transparent.gif`.
+
+**Usage Rules:**
+- Do not alter the proportions of the wordmark or the icon.
+- In the sidebar header, the wordmark must instantly swap based on the active theme. 
+- The icon should be used for the collapsed `w-[80px]` sidebar state.
+
+---
+
+## 🖋️ Typography Architecture
+
+We use a dual-font system loaded via Google Fonts. Typography is the foundation of our "clean" aesthetic.
+
+### 1. Primary Font: Inter (`font-sans`)
+`var(--font-inter)`
+- **Role:** The workhorse. Used for all body text, dashboard data, tables, labels, and standard buttons.
+- **Why:** Highly legible at small sizes, neutral, and data-dense. 
+
+### 2. Display Font: Outfit (`font-display`)
+`var(--font-outfit)`
+- **Role:** The accent. Used for Company Names, high-level structural headers, and marketing-driven typography where we need a touch of "tech/brand" personality.
+- **Why:** Geometric, modern, and adds a premium custom feel without overwhelming the data.
+
+**Typography Rules:**
+- **Tracking (Letter-spacing):** Tighten tracking slightly on large headings (`tracking-tight`).
+- **Data UI:** Use `text-xs` to `text-[13.5px]` extensively to maximize information density.
+- **Hierarchy:** Never use just font size for hierarchy. Combine size, weight (`font-medium` vs `font-bold`), and color (`text-foreground` vs `text-muted-foreground`) to guide the eye.
+
+---
+
+## 🎨 Color System & Dark Mode
+
+We use a semantic CSS variable system mapping to HSL values (`hsl(var(--color))`). Our system natively supports instantaneous Dark/Light mode switching via the `.dark` class.
+
+### The Palette (Tailwind Mapping)
+
+1. **Background & Surface:**
+   - `bg-background`: The canvas. Pure white (`0 0% 100%`) or deep near-black (`222.2 84% 4.9%`). We do *not* use generic grays.
+   - `bg-card` / `bg-popover`: Surface layers for structural cards and dropdowns.
+   
+2. **Foreground (Text):**
+   - `text-foreground`: Primary heading/vital text. (Near black/Near white).
+   - `text-muted-foreground`: Secondary text, timestamps, helper text. (Mid-gray `#A1A1AA` / `#71717A`). *Crucial for reducing cognitive load.*
+
+3. **Primary Action:**
+   - `bg-primary` / `text-primary-foreground`: Black buttons on Light mode, White buttons on Dark mode. Monochromatic contrast.
+   - **Accent Spotlight:** We specifically use vivid **Orange (`#FF8A4C`)** for high-priority "Active" states (e.g., the active Sidebar navigation item) with a distinct colored shadow (`shadow-[0_0_15px_rgba(255,138,76,0.25)]`).
+
+4. **Feedback Colors:**
+   - **Destructive:** Vivid Red (`0 84% 60%`) tailored for high-contrast warnings and deletion actions.
+   - **Warning/Status:** Amber/Yellow (`bg-amber-400`) specifically for pending/partial states, often accompanied by a pulse animation.
+
+**The "No Generic Colors" Rule:**
+Never use strict `red-500` or `blue-500`. All utility classes must map through our semantic `--var` system or be highly curated hex codes (e.g., `#FF8A4C`, `#18181B`).
+
+---
+
+## 📐 Component Primitives (ShadcnUI Core)
+
+We utilize highly customized ShadcnUI components. They are headless but strictly styled to our brand.
+
+### 1. Cards (`/components/ui/card.tsx`)
+- **Corners:** Always `rounded-xl` for main container cards.
+- **Borders:** Thin, subtle borders (`border-gray-100` dark: `border-[#27272A]`).
+- **Inner Padding:** Standardized to `p-6` for CardHeader and CardContent.
+
+### 2. Buttons (`/components/ui/button.tsx`)
+- **Radii:** `rounded-md` across all variants.
+- **Default Variant:** High contrast `bg-primary` (solid black/white) with a subtle `shadow-sm`.
+- **Outline Variant:** Must feature a scale-down interaction effect (`active:scale-[0.98]`).
+- **Ghost Variant:** Used for secondary actions (e.g., table row actions), relying on `hover:bg-accent`.
+
+### 3. Badges (`/components/ui/badge.tsx`)
+- **Radii:** Pill-shaped `rounded-full`.
+- **Typography:** `text-xs font-semibold`.
+
+### 4. Custom Scrollbars
+Never use default browser scrollbars. Apply our global utility:
+- `.scrollbar-subtle`: Thin, transparent track, with a 4px semi-transparent thumb (`rgba(161, 161, 170, 0.3)`).
+
+---
+
+## ✨ Animation, Motion & "The Dynamic Feel"
+
+We do not do static UI. Motion implies quality.
+
+### 1. Easing Curves
+We use a custom spring curve for bouncy, natural interactions:
+- `transitionTimingFunction: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'`
+
+### 2. Standard CSS Animations (`globals.css`)
+- **Slide & Fade:** Dialogs, dropdowns, and drawers must use `--animate-in`, `fade-in`, and `slide-in-from-bottom` to feel like they are floating into view, not just "appearing".
+- **Zoom:** Modals should scale up slightly from `0.95` (`zoom-in`).
+- **Shimmer:** Used extensively in loading states (skeletons) moving at `-200%` to `200%`.
+
+### 3. High-Fidelity Loaders (`/components/ui/loader.tsx`)
+- **Standard Loader:** A dual-pulsing SVG animation of the SquareUp icon (scales from `1` to `1.15` while opacity breathes).
+- **Magic Loader:** "Discovering your business truth" — Features the icon breathing above a sweeping neon-orange scanning line (`shadow-[0_0_15px_rgba(99,102,241,0.5)]`).
+
+---
+
+## 🗺️ Layout & Navigation (The Dashboard Pattern)
+
+### 1. The Sidebar (`sidebar.tsx`)
+- **Architecture:** Fixed left sidebar, transitioning between `w-[240px]` (Expanded) and `w-[80px]` (Collapsed).
+- **Aesthetic:** `bg-white/80` (Dark: `#18181B`/80) with `backdrop-blur-xl`. It needs to feel like frosted glass over the canvas.
+- **Active State:** Active items receive the brand Orange background with a vivid colored glow.
+- **Collapse Action:** Must be smooth (`duration-500 cubic-bezier(0.4, 0, 0.2, 1)`).
+
+### 2. Main Content Area
+- **Density:** High. The target audience (D2C Founders) wants data. Use grid layouts (`grid-cols-3` or `grid-cols-4`) for top-level metric cards.
+- **Integrations Listing:** (The `/public/logos/` directory holds 147 brand logos). Integration cards must have hover-reveal descriptions, vivid colored shadows on hover, and smooth linear slide-in animations.
+
+---
+
+## 🛑 Do's and Don'ts
+
+### DO
+- **DO use `text-muted-foreground` heavily.** If everything is high contrast, nothing is.
+- **DO implement empty states for everything.** An empty table is a failure; an empty state with a call-to-action is a feature.
+- **DO use subtle colored shadows.** Instead of standard drop-shadows, use shadows tinted to the color of the element (e.g., a green success button gets a pale green shadow).
+- **DO transition everything.** Simple color changes on hover must have `transition-colors duration-200`.
+
+### DON'T
+- **DON'T use standard spinners.** Always use the SquareUp `Loader` or `MagicLoader` component.
+- **DON'T ignore Dark Mode.** Every single component MUST be tested in both modes. If you hardcode a hex color like `bg-[#F3F4F6]`, you break Dark Mode. Use `bg-muted` instead.
+- **DON'T cramp the whitespace.** Give `p-6` padding to main container edges to let the data breathe. 
+- **DON'T use default browser select/inputs.** All forms must use the Shadcn primitives (`searchable-select.tsx`, `phone-input.tsx`).

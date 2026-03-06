@@ -6,6 +6,7 @@ pydantic-settings>=2.1.0
 sqlalchemy>=2.0.25
 sqlmodel>=0.0.14
 asyncpg>=0.29.0
+greenlet>=3.0.0
 
 python-multipart>=0.0.6
 httpx>=0.26.0

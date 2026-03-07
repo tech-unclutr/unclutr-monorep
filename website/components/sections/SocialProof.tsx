@@ -41,7 +41,7 @@ export default function SocialProof() {
     <section
       ref={containerRef}
       data-section-name="social-proof"
-      className="relative z-10 py-24 lg:py-36 overflow-hidden"
+      className="relative z-10 w-full py-24 lg:py-36 overflow-hidden"
       style={{
         background: "#FBF4EC"
       }}
@@ -65,18 +65,19 @@ export default function SocialProof() {
         className="relative z-10 max-w-[1200px] mx-auto px-6"
       >
         {/* Badge */}
-        <motion.div variants={itemVariants} className="text-center mb-8">
-          <span className="inline-block py-1.5 px-4 rounded-full text-xs font-bold tracking-[0.15em] uppercase text-orange-600 bg-orange-50/80 border border-orange-200/50 backdrop-blur-sm shadow-sm ring-1 ring-black/5">
+        <motion.div variants={itemVariants} className="text-center mb-8 flex justify-center w-full">
+          <span className="inline-block py-2 px-5 rounded-full text-[10px] sm:text-xs font-bold tracking-[0.1em] sm:tracking-[0.15em] uppercase text-orange-600 bg-orange-50/80 border border-orange-200/50 backdrop-blur-sm shadow-sm ring-1 ring-black/5 max-w-full truncate whitespace-normal">
             Validated by leaders from 50+ customer-centric teams
           </span>
         </motion.div>
 
         {/* Headline */}
-        <motion.div variants={itemVariants} className="max-w-[1000px] mx-auto mb-12 lg:mb-16">
-          <h2 className="font-display text-[clamp(28px,4vw,48px)] tracking-[-0.03em] text-[#0b132b] leading-[1.1] text-center">
-            <span className="whitespace-nowrap">The world's sharpest consumer teams don't guess.</span>
-            <br />
-            <span>They build on <span className="text-[#FF5A36]">Square Up</span>.</span>
+        <motion.div variants={itemVariants} className="w-full mx-auto mb-12 lg:mb-16">
+          <h2 className="font-display text-[clamp(22px,4vw,48px)] tracking-[-0.03em] text-[#0b132b] leading-[1.1] text-center">
+            <span className="md:whitespace-nowrap">The world's sharpest consumer teams don't guess.</span>
+            <br className="hidden md:block" />
+            {" "}
+            <span className="md:whitespace-nowrap">They build on <span className="text-[#FF5A36]">Square Up</span>.</span>
           </h2>
         </motion.div>
 

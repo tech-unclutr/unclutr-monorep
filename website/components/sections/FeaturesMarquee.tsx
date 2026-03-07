@@ -180,7 +180,7 @@ export default function FeaturesMarquee() {
       <div className="relative z-10 max-w-[1100px] mx-auto px-6 lg:px-10 text-center flex flex-col items-center">
         <motion.h2
           style={{ y: headlineSpringY, opacity: headlineOpacity }}
-          className="font-display text-[clamp(28px,6vw,76px)] leading-[1.05] tracking-[-0.04em] text-[#0b132b] max-w-4xl mx-auto"
+          className="font-display text-[clamp(24px,6vw,76px)] leading-[1.05] tracking-[-0.04em] text-[#0b132b] max-w-4xl mx-auto"
         >
           SquareUp makes customer
           <br className="hidden sm:block" />

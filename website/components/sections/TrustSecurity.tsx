@@ -94,7 +94,7 @@ function SecurityCard({ card, index }: { card: typeof securityCards[0]; index: n
         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
         className="relative h-full transition-transform duration-200 ease-out"
       >
-        <div className="absolute inset-0 rounded-2xl bg-white/5 backdrop-blur-3xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:bg-black/20 dark:border-white/10 z-0" />
+        <div className="absolute inset-0 rounded-2xl bg-white shadow-lg border border-black/5 dark:bg-neutral-800 dark:border-white/10 z-0" />
 
         {/* Dynamic Glare */}
         <motion.div
@@ -111,7 +111,7 @@ function SecurityCard({ card, index }: { card: typeof securityCards[0]; index: n
               {card.label}
             </span>
           </div>
-          <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium">
             {card.body}
           </p>
         </div>

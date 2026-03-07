@@ -80,6 +80,7 @@ function StudioCard({
     onHover,
     onLeave,
     onClick,
+    onSwipe,
 }: {
     agent: typeof STUDIO_TEAM[0];
     index: number;
@@ -90,6 +91,7 @@ function StudioCard({
     onHover: () => void;
     onLeave: () => void;
     onClick: () => void;
+    onSwipe: (direction: "left" | "right") => void;
 }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const isActive = index === activeIndex;
@@ -124,9 +126,20 @@ function StudioCard({
         }
     }, [isActive, isRevealed]);
 
+    const handlePanEnd = (e: any, info: any) => {
+        if (!isActive) return;
+
+        const swipeThreshold = 50;
+        if (info.offset.x < -swipeThreshold) {
+            onSwipe("left"); // Swiped left -> Next card
+        } else if (info.offset.x > swipeThreshold) {
+            onSwipe("right"); // Swiped right -> Previous card
+        }
+    };
+
     return (
         <motion.div
-            className="absolute cursor-pointer"
+            className="absolute cursor-pointer touch-none"
             style={{
                 zIndex,
                 transformOrigin: "center center",
@@ -156,9 +169,10 @@ function StudioCard({
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
             onClick={onClick}
+            onPanEnd={handlePanEnd}
         >
             <motion.div
-                className="relative w-[calc(100vw-48px)] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
+                className="relative w-[calc(100vw-32px)] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
                 style={{
                     background: isActive
                         ? "linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.95) 100%)"
@@ -524,7 +538,7 @@ export default function InterviewStudio() {
                     </motion.div>
 
                     <motion.h2
-                        className="font-display text-[clamp(44px,8vw,80px)] tracking-[-0.04em] text-[#1d1d1f] leading-[0.95] font-bold"
+                        className="font-display text-[clamp(28px,8vw,80px)] tracking-[-0.04em] text-[#1d1d1f] leading-[0.95] font-bold"
                         initial={{ opacity: 0, y: 50 }}
                         animate={isInView ? { opacity: 1, y: 0 } : {}}
                         transition={{ duration: 0.9, ease: EASE_OUT_EXPO }}
@@ -552,7 +566,7 @@ export default function InterviewStudio() {
                         className="absolute left-0 sm:-left-4 lg:-left-8 z-20 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-black/[0.06] shadow-sm hidden sm:flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:shadow-md hover:bg-white transition-all duration-300 cursor-pointer"
                         aria-label="Previous agent"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                     </button>
 
                     <div className="relative w-full h-[400px] xs:h-[440px] sm:h-[520px] lg:h-[540px] flex items-center justify-center">
@@ -568,6 +582,13 @@ export default function InterviewStudio() {
                                 onHover={handleHover}
                                 onLeave={handleLeave}
                                 onClick={() => handleSelect(idx)}
+                                onSwipe={(dir) => {
+                                    if (dir === "left") {
+                                        handleSelect((activeIndex + 1) % STUDIO_TEAM.length)
+                                    } else {
+                                        handleSelect(activeIndex === 0 ? STUDIO_TEAM.length - 1 : activeIndex - 1)
+                                    }
+                                }}
                             />
                         ))}
                     </div>
@@ -578,7 +599,7 @@ export default function InterviewStudio() {
                         className="absolute right-0 sm:-right-4 lg:-right-8 z-20 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-black/[0.06] shadow-sm hidden sm:flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:shadow-md hover:bg-white transition-all duration-300 cursor-pointer"
                         aria-label="Next agent"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                     </button>
                 </div>
 

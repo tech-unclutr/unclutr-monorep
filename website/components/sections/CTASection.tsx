@@ -50,7 +50,7 @@ export default function CTASection() {
     const colors = ["#ffffff", "#cccccc", "#ff6b00", "#ff9f43"];
 
     let count = 0;
-    const targetCount = width < 768 ? 18000 : PARTICLE_COUNT;
+    const targetCount = width < 768 ? 6000 : PARTICLE_COUNT;
 
     while (count < targetCount) {
       // Sample random point in a unit cube
@@ -214,11 +214,24 @@ export default function CTASection() {
 
   // Mouse parallax
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mousePosPixel, setMousePosPixel] = useState({ x: 0, y: 0 });
+  const [isHoveringHeart, setIsHoveringHeart] = useState(false);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     setMousePos({
       x: (e.clientX / window.innerWidth) * 2 - 1,
       y: (e.clientY / window.innerHeight) * 2 - 1,
     });
+    setMousePosPixel({ x: e.clientX, y: e.clientY });
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2);
+
+    // Show tooltip when mostly assembled and hovering near center
+    const currentProgress = assembleProgress.get();
+    setIsHoveringHeart(dist <= 350 && currentProgress > 0.6);
   };
 
   const springCfg = { damping: 28, stiffness: 100, mass: 1 };
@@ -293,6 +306,30 @@ export default function CTASection() {
             </motion.h1>
           </motion.div>
         )}
+
+        {/* Footnote Option 2 */}
+        <div className="absolute bottom-12 left-0 w-full flex justify-center z-40 pointer-events-none text-center px-4">
+          <span className="text-[10px] sm:text-[11px] font-sans text-white/30 tracking-widest uppercase md:max-w-max max-w-sm">
+            * Each particle represents a direct data point from your actual customers, which forms your customer intelligence.
+          </span>
+        </div>
+
+        {/* Option 4: Hover Tooltip */}
+        <motion.div
+          animate={{
+            opacity: isHoveringHeart ? 1 : 0,
+            scale: isHoveringHeart ? 1 : 0.95,
+            x: mousePosPixel.x + 20,
+            y: mousePosPixel.y + 20,
+          }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed top-0 left-0 z-50 pointer-events-none flex flex-col gap-2 px-4 py-3 bg-black/60 border border-white/10 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] w-max"
+        >
+          <span className="text-sm text-white font-medium max-w-[280px] leading-relaxed">
+            Each particle represents a direct data point from your actual customers, which forms your customer intelligence.
+          </span>
+        </motion.div>
+
       </div>
     </section>
   );

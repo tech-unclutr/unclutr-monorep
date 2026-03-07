@@ -735,13 +735,13 @@ export default function StudiesSection() {
         </div>
 
         {/* ── Role Filter Tabs ─────────────────────── */}
-        <div className="mb-10 -mx-6 px-6 overflow-x-auto scrollbar-hide">
-          <div className="flex gap-2 pb-4 snap-x snap-mandatory min-w-min">
+        <div className="mb-10 w-full overflow-hidden">
+          <div className="flex gap-2 pb-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-2">
             {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => handleCategoryChange(cat.id)}
-                className={`shrink-0 snap-start px-5 py-2.5 rounded-full text-[14px] font-semibold transition-all duration-300 whitespace-nowrap ${activeCategory === cat.id
+                className={`flex-shrink-0 snap-start px-5 py-2.5 rounded-full text-[14px] font-semibold transition-all duration-300 whitespace-nowrap ${activeCategory === cat.id
                   ? "bg-maze-black text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
                   : "bg-white/60 text-neutral-500 hover:bg-white hover:text-maze-black shadow-sm"
                   }`}
@@ -768,7 +768,7 @@ export default function StudiesSection() {
               </h3>
               <p className="text-white/50 text-base lg:text-lg leading-relaxed">
                 You give the brief. Our AI agents do the rest. They recruit, interview, and catch every insight a human would miss. Analyst-grade depth, at{" "}
-<span className="text-[#FF5A36] font-semibold">lightning speed.</span>
+                <span className="text-[#FF5A36] font-semibold">lightning speed.</span>
               </p>
             </div>
 
@@ -783,63 +783,63 @@ export default function StudiesSection() {
 
         {/* ── Study Grid ───────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-min">
-            {visibleStudies.map((study, idx) => (
-              <div
-                key={study.id}
-                onClick={() => setSelectedStudy(study)}
-                className="study-card bg-white rounded-[28px] p-7 border border-neutral-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer group hover:-translate-y-1 flex flex-col relative overflow-hidden"
-              >
-                {/* Color accent bar */}
-                <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: study.color }} />
+          {visibleStudies.map((study, idx) => (
+            <div
+              key={study.id}
+              onClick={() => setSelectedStudy(study)}
+              className="study-card bg-white rounded-[28px] p-7 border border-neutral-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer group hover:-translate-y-1 flex flex-col relative overflow-hidden"
+            >
+              {/* Color accent bar */}
+              <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: study.color }} />
 
-                <div className="relative z-10 flex flex-col flex-1">
-                  {/* Icon */}
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full mb-4" style={{ backgroundColor: study.color + '12', color: study.color }}>
-                    <TrendingUp className="w-4 h-4" />
+              <div className="relative z-10 flex flex-col flex-1">
+                {/* Icon */}
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full mb-4" style={{ backgroundColor: study.color + '12', color: study.color }}>
+                  <TrendingUp className="w-4 h-4" />
+                </span>
+
+                {/* Name */}
+                <h4 className="text-lg font-semibold text-maze-black leading-snug mb-1.5 font-display tracking-tight">
+                  {study.name}
+                </h4>
+
+                {/* ROI Title */}
+                <p className="text-[13px] font-semibold uppercase tracking-wide mb-4" style={{ color: study.color }}>
+                  {study.outcome}
+                </p>
+
+                {/* Primary metric */}
+                <p className="text-xl font-display text-maze-black tracking-tight border-l-2 pl-3 mb-5 mt-auto" style={{ borderColor: study.color }}>
+                  {study.roiMetric}
+                </p>
+
+                {/* Speed contrast */}
+                <div className="flex items-center justify-between border-t border-neutral-100 pt-3.5 text-[12px] font-medium">
+                  <span className="flex items-center gap-1.5 text-maze-black">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" /> {study.timeToInsight}
                   </span>
-
-                  {/* Name */}
-                  <h4 className="text-lg font-semibold text-maze-black leading-snug mb-1.5 font-display tracking-tight">
-                    {study.name}
-                  </h4>
-
-                  {/* ROI Title */}
-                  <p className="text-[13px] font-semibold uppercase tracking-wide mb-4" style={{ color: study.color }}>
-                    {study.outcome}
-                  </p>
-
-                  {/* Primary metric */}
-                  <p className="text-xl font-display text-maze-black tracking-tight border-l-2 pl-3 mb-5 mt-auto" style={{ borderColor: study.color }}>
-                    {study.roiMetric}
-                  </p>
-
-                  {/* Speed contrast */}
-                  <div className="flex items-center justify-between border-t border-neutral-100 pt-3.5 text-[12px] font-medium">
-                    <span className="flex items-center gap-1.5 text-maze-black">
-                      <Zap className="w-3.5 h-3.5 text-amber-500" /> {study.timeToInsight}
-                    </span>
-                    <span className="text-neutral-300 text-[11px]">
-                      vs {study.agencyTimeline} traditional
-                    </span>
-                  </div>
+                  <span className="text-neutral-300 text-[11px]">
+                    vs {study.agencyTimeline} traditional
+                  </span>
                 </div>
               </div>
-            ))}
-
-            {/* +XX More Studies Tile */}
-            <div
-              className="bg-neutral-100/80 rounded-[28px] p-7 border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-white hover:border-neutral-300 hover:shadow-lg"
-            >
-              <div className="w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center mb-5 text-neutral-400 group-hover:text-maze-black group-hover:scale-110 transition-all duration-300 border border-neutral-100">
-                <RefreshCcw className="w-5 h-5" />
-              </div>
-              <h4 className="text-2xl font-display font-semibold text-maze-black mb-1.5">
-                +{totalStudyCount} more
-              </h4>
-              <p className="text-neutral-500 text-sm font-medium max-w-[200px]">
-                Full library of proven research frameworks, ready to launch.
-              </p>
             </div>
+          ))}
+
+          {/* +XX More Studies Tile */}
+          <div
+            className="bg-neutral-100/80 rounded-[28px] p-7 border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-white hover:border-neutral-300 hover:shadow-lg"
+          >
+            <div className="w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center mb-5 text-neutral-400 group-hover:text-maze-black group-hover:scale-110 transition-all duration-300 border border-neutral-100">
+              <RefreshCcw className="w-5 h-5" />
+            </div>
+            <h4 className="text-2xl font-display font-semibold text-maze-black mb-1.5">
+              +{totalStudyCount} more
+            </h4>
+            <p className="text-neutral-500 text-sm font-medium max-w-[200px]">
+              Full library of proven research frameworks, ready to launch.
+            </p>
+          </div>
         </div>
 
         {/* Load More / Show Less Buttons */}

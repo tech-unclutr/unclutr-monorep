@@ -25,17 +25,11 @@ export default function Footer() {
   return (
     <footer
       ref={containerRef}
-      className="relative overflow-hidden"
-      style={{
-        height: "30vh",
-        maxHeight: "360px",
-        minHeight: "240px",
-        background: "black",
-      }}
+      className="relative overflow-hidden w-full h-[140px] sm:h-[30vh] sm:min-h-[240px] sm:max-h-[360px] bg-black"
       data-section-name="footer"
     >
       {/* Ghost wordmark — blends into background */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pointer-events-none overflow-hidden pb-4 md:pb-8 px-8 md:px-20">
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pointer-events-none overflow-hidden pb-0 md:pb-4 px-4 md:px-20 h-full">
         <motion.div
           style={{ y, opacity }}
           className="w-full flex justify-center items-end"

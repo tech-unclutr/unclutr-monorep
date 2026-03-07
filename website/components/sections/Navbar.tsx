@@ -17,7 +17,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-neutral-200 bg-white shadow-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-neutral-200 bg-white/95 backdrop-blur-md shadow-md lg:shadow-sm">
       <div className="mx-auto flex h-16 sm:h-20 max-w-[1400px] items-center justify-between px-6 lg:px-10">
         {}
         <a href="/" aria-label="Square Up" className="shrink-0">

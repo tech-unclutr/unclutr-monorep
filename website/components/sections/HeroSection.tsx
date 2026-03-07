@@ -36,6 +36,7 @@ export default function HeroSection() {
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
   const [particles, setParticles] = useState<Particle[]>([]);
   const [isHoveringGlobe, setIsHoveringGlobe] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeTextIndex, setActiveTextIndex] = useState(0);
   const particlesRef = useRef<Particle[]>([]);
 
@@ -113,9 +114,9 @@ export default function HeroSection() {
     const newParticles: Particle[] = [];
     const colors = ["#ffffff", "#cccccc", "#ff6b00", "#ff9f43"];
 
-    // Scan pixels - reduce density on mobile for performance
-    const effectiveDensity = isMobileSize ? PARTICLE_DENSITY * 1.2 : PARTICLE_DENSITY;
-    const step = Math.floor(1 / effectiveDensity);
+    // Scan pixels - use higher density for smaller text but less jitter
+    const effectiveDensity = isMobileSize ? PARTICLE_DENSITY * 1.5 : PARTICLE_DENSITY;
+    const step = Math.max(1, Math.floor(1 / effectiveDensity));
     for (let y = 0; y < height; y += step) {
       for (let x = 0; x < width; x += step) {
         const index = (y * width + x) * 4;
@@ -135,9 +136,9 @@ export default function HeroSection() {
 
           newParticles.push({
             textPos: {
-              x: x - width / 2 + (Math.random() - 0.5) * 4,
-              y: y - height / 2 + (Math.random() - 0.5) * 4,
-              z: (Math.random() - 0.5) * 20
+              x: x - width / 2 + (Math.random() - 0.5) * (isMobileSize ? 1.5 : 4),
+              y: y - height / 2 + (Math.random() - 0.5) * (isMobileSize ? 1.5 : 4),
+              z: (Math.random() - 0.5) * (isMobileSize ? 8 : 20)
             },
             globePos: { x: 0, y: 0, z: 0 },
             currentPos: { x: 0, y: 0, z: 0 },
@@ -148,7 +149,7 @@ export default function HeroSection() {
             },
             color: rColor,
             size: isMobileSize
-              ? (isHighlight ? Math.random() * 1.0 + 0.6 : Math.random() * 0.6 + 0.3)
+              ? (isHighlight ? Math.random() * 1.2 + 0.8 : Math.random() * 0.8 + 0.4)
               : (isHighlight ? Math.random() * 2 + 1.5 : Math.random() * 1.5 + 0.5),
           });
         }
@@ -303,15 +304,19 @@ export default function HeroSection() {
 
         const isMobileRender = width < 768;
         const rawSize = (p.size + 0.5) * scale * (rawProgress > 0.8 ? 1.5 : 1.0);
-        const finalSize = isMobileRender ? Math.min(rawSize, 1.5) : rawSize;
+        // Make mobile particles tightly grouped but very bright
+        const finalSize = isMobileRender ? Math.min(rawSize, 1.8) : rawSize;
 
         ctx.beginPath();
         // Give the brightest particles a white core
         const isBright = p.color === "#ffffff" || p.color === "#ff9f43";
         ctx.fillStyle = isBright ? '#ffffff' : p.color;
 
+        // Boost alpha significantly on mobile so the tight points glow
+        const baseAlpha = isMobileRender ? Math.min(1, alpha * 2.5) : alpha;
+
         // Use a single, clean alpha value without double-multiplying
-        ctx.globalAlpha = isBright ? alpha * opacityMultiplier : alpha * 0.6 * opacityMultiplier;
+        ctx.globalAlpha = isBright ? baseAlpha * opacityMultiplier : baseAlpha * (isMobileRender ? 0.9 : 0.6) * opacityMultiplier;
 
         if (finalSize < 1.5) {
           ctx.fillRect(projX * dpr, projY * dpr, finalSize * dpr, finalSize * dpr);
@@ -395,8 +400,11 @@ export default function HeroSection() {
               const cy = rect.top + rect.height / 2;
               const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2);
               setIsHoveringGlobe(dist <= GLOBE_RADIUS);
+              setMousePos({ x: e.clientX, y: e.clientY });
             }}
-            onMouseLeave={() => setIsHoveringGlobe(false)}
+            onMouseLeave={() => {
+              setIsHoveringGlobe(false);
+            }}
           >
             <div className="relative w-full max-w-5xl px-6 flex flex-col items-center text-center group">
               {/* Mission Content */}
@@ -415,7 +423,7 @@ export default function HeroSection() {
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute inset-0 flex flex-col items-center justify-center"
                 >
-                  <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-semibold tracking-tight text-white mb-4">
+                  <h1 className="text-[clamp(36px,10vw,64px)] md:text-7xl lg:text-8xl font-display font-semibold tracking-tight text-white mb-4">
                     Designed for<br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-br from-brand-orange via-white to-white/80">
                       Consumer Companies
@@ -458,6 +466,22 @@ export default function HeroSection() {
 
         {/* Bottom edge fade */}
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black to-transparent pointer-events-none z-[5]" />
+
+        {/* Option 4: Hover Tooltip */}
+        <motion.div
+          animate={{
+            opacity: isHoveringGlobe ? 1 : 0,
+            scale: isHoveringGlobe ? 1 : 0.95,
+            x: mousePos.x + 20,
+            y: mousePos.y + 20,
+          }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed top-0 left-0 z-50 pointer-events-none flex flex-col gap-2 px-4 py-3 bg-black/60 border border-white/10 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] w-max"
+        >
+          <span className="text-sm text-white font-medium max-w-[280px] leading-relaxed">
+            Each particle represents a direct data point from your actual customers, which forms your customer intelligence.
+          </span>
+        </motion.div>
       </div>
     </section>
   );

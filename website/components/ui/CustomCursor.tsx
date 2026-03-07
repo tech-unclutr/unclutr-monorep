@@ -42,8 +42,8 @@ export default function CustomCursor() {
     const cursor = cursorRef.current;
     if (!cursor) return;
 
-    positionRef.current.x += (targetRef.current.x - positionRef.current.x) * 0.15;
-    positionRef.current.y += (targetRef.current.y - positionRef.current.y) * 0.15;
+    positionRef.current.x = targetRef.current.x;
+    positionRef.current.y = targetRef.current.y;
 
     cursor.style.transform = `translate(${positionRef.current.x}px, ${positionRef.current.y}px)`;
 

@@ -34,8 +34,8 @@ export const PHYSICS = {
 
 // Particle settings
 export const PARTICLE_SETTINGS = {
-  maxParticles: 100,
-  initialCount: 50,
+  maxParticles: 50,
+  initialCount: 20,
   handoffSpawnRate: 0.15, // Probability of spawning from hero exit
   viewportBuffer: 100,
   edgeFade: 20,

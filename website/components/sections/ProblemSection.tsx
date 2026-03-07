@@ -534,7 +534,7 @@ function SpeechBubble({
 
     return (
         <motion.div
-            className="relative max-w-[520px] mx-auto"
+            className="relative w-full max-w-full sm:max-w-[520px] mx-auto px-4 sm:px-0"
             style={{ y: scrollYProgress ? smoothBubbleY : 0 }}
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -561,7 +561,7 @@ function SpeechBubble({
 
                 {/* Title */}
                 <motion.h3
-                    className="text-[20px] sm:text-[22px] lg:text-[24px] font-bold text-[#1d1d1f] tracking-tight mb-3 leading-tight pt-2"
+                    className="text-[18px] sm:text-[22px] lg:text-[24px] font-bold text-[#1d1d1f] tracking-tight mb-3 leading-tight pt-2"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.1 }}
@@ -883,7 +883,7 @@ export default function ProblemSection() {
                     animate={isInView ? { opacity: 1 } : {}}
                     transition={{ duration: 0.6, delay: 0.4 }}
                 >
-                    <div className="flex gap-4 overflow-x-auto overflow-y-visible hide-scrollbar justify-center py-4 -my-2">
+                    <div className="flex gap-4 overflow-x-auto overflow-y-visible hide-scrollbar justify-start md:justify-center px-6 md:px-0 py-4 -my-2">
                         {ARCS_DATA.map((arc, idx) => {
                             const isActive = activeArcIndex === idx;
                             return (

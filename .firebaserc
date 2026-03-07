@@ -13,6 +13,9 @@
         ],
         "development": [
           "unclutr-monorep"
+        ],
+        "website-production": [
+          "joinsquareup-website"
         ]
       }
     }

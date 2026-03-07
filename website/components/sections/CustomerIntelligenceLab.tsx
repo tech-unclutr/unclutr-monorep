@@ -75,6 +75,7 @@ function StackedCard({
     activeIndex,
     totalCards,
     isRevealed,
+    cardSpacing,
     onHover,
     onLeave,
 }: {

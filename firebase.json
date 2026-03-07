@@ -83,6 +83,18 @@
           "type": 301
         }
       ]
+    },
+    {
+      "target": "website-production",
+      "source": "website",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      }
     }
   ],
   "emulators": {

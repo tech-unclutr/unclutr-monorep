@@ -1,924 +1,464 @@
 "use client";
 
-import { useRef, useMemo, useState, useEffect } from "react";
-import {
-  motion,
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
+import { useScroll, motion, useTransform, useMotionValueEvent, useSpring } from "framer-motion";
+import { ChevronDown, Target, Users, Activity, Sparkles } from "lucide-react";
 import { useIsMobile } from "../ui/useIsMobile";
 
-const ACCENT = "#FF5A36";
+/* ─── Copy & Neural Network Data ─── */
+const SUBHEADLINE = "The Customer Understanding team you wish you had";
+const PARTICLE_DENSITY = 0.25;
+const GLOBE_RADIUS = 320;
+const TEXT_LINES = ["Stop Guessing", "Start Listening"];
 
+const MISSION_TEXT = "We go find what your customers are saying, make sense of it, and turn it into clear priorities for the relevant teams in your organization.";
 
-function seededRandom(seed: number) {
-  let s = (seed * 9301 + 49297) | 0;
-  s = ((s ^ (s << 13)) >>> 0);
-  s = ((s ^ (s >> 17)) >>> 0);
-  s = ((s ^ (s << 5)) >>> 0);
-  return (s >>> 0) / 4294967296;
+interface Particle {
+  textPos: { x: number; y: number; z: number };
+  globePos: { x: number; y: number; z: number };
+  currentPos: { x: number; y: number; z: number };
+  flyOutDir: { x: number; y: number; z: number };
+  color: string;
+  size: number;
+  hasExited?: boolean; // Track if particle has dispatched exit event
 }
 
 
-type HeroCard = { id: string; x: number; y: number; w: number };
-
-const HERO_CARDS: HeroCard[] = [
-  { id: "crowd", x: 56, y: 26, w: 16 },
-  { id: "report", x: 64, y: 10, w: 22 },
-  { id: "unmoderated", x: 56, y: 46, w: 20 },
-  { id: "moderated", x: 72, y: 32, w: 18 },
-];
-
-const HERO_CARDS_MOBILE: HeroCard[] = [
-  { id: "crowd", x: 2, y: 3, w: 18 },
-  { id: "report", x: 58, y: 1, w: 22 },
-  { id: "unmoderated", x: 2, y: 73, w: 20 },
-  { id: "moderated", x: 60, y: 71, w: 18 },
-];
-
-const HERO_TEXT_LINES = ["KNOW", "YOUR", "CUSTOMERS"] as const;
-
-
-function generateEdgePixels(count: number) {
-  const pixels: { x: number; y: number; w: number; h: number; opacity: number }[] = [];
-  for (let i = 0; i < count; i++) {
-    const angle =
-      (i / count) * Math.PI * 2 + (seededRandom(i) - 0.5) * 0.4;
-
-    const r = 42 + seededRandom(i + 500) * 18;
-    const sizeRand = seededRandom(i + 1000);
-    let w: number, h: number;
-    if (sizeRand < 0.4) {
-
-      w = 1.5 + seededRandom(i + 1100) * 2;
-      h = w;
-    } else if (sizeRand < 0.7) {
-
-      w = 3 + seededRandom(i + 1100) * 3;
-      h = w;
-    } else {
-
-      w = 1.5 + seededRandom(i + 1100) * 2.5;
-      h = 4 + seededRandom(i + 1200) * 8;
-    }
-
-    const opacity = r < 48 ? 0.8 : r < 52 ? 0.55 : r < 56 ? 0.3 : 0.15;
-    pixels.push({
-      x: 50 + r * Math.cos(angle),
-      y: 50 + r * Math.sin(angle),
-      w, h, opacity,
-    });
-  }
-  return pixels;
-}
-
-
-function pointInPolygon(px: number, py: number, poly: number[][]) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i][0], yi = poly[i][1];
-    const xj = poly[j][0], yj = poly[j][1];
-    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
-}
-
-
-function generateSurfaceCutouts(_count: number) {
-  const cutouts: { x: number; y: number; w: number; h: number; opacity: number }[] = [];
-
-
-  const polygons: number[][][] = [
-
-    [[5, 16], [8, 12], [12, 10], [16, 9], [20, 10], [24, 10], [27, 12], [30, 14],
-    [33, 17], [34, 20], [33, 23], [31, 25], [30, 28], [28, 31], [26, 33], [24, 35],
-    [22, 37], [20, 38], [18, 36], [16, 34], [14, 32], [13, 29], [12, 26], [10, 23],
-    [8, 20], [6, 18]],
-
-    [[20, 38], [22, 39], [23, 41], [22, 43], [20, 44], [19, 42], [19, 40]],
-
-    [[25, 45], [28, 44], [31, 44], [34, 46], [37, 49], [39, 52], [40, 56], [39, 60],
-    [38, 64], [36, 68], [34, 72], [32, 76], [30, 79], [29, 76], [28, 72], [27, 68],
-    [26, 63], [25, 58], [25, 53], [25, 49]],
-
-    [[48, 28], [49, 25], [50, 22], [50, 18], [51, 16], [53, 14], [55, 13], [57, 14],
-    [59, 15], [61, 17], [61, 20], [60, 23], [59, 25], [57, 27], [55, 28], [53, 28],
-    [51, 28]],
-
-    [[46, 17], [47, 15], [48, 16], [48, 19], [47, 20], [46, 19]],
-
-    [[53, 10], [55, 8], [57, 9], [58, 11], [57, 13], [55, 13], [54, 12]],
-
-    [[47, 34], [49, 31], [51, 30], [53, 29], [56, 30], [58, 31], [60, 34], [61, 38],
-    [61, 42], [61, 46], [60, 50], [59, 54], [58, 58], [57, 62], [55, 66], [53, 68],
-    [51, 67], [49, 64], [48, 60], [47, 55], [46, 50], [46, 45], [46, 40], [47, 37]],
-
-    [[62, 28], [64, 25], [66, 22], [68, 19], [70, 16], [73, 13], [76, 11], [79, 10],
-    [82, 11], [85, 12], [88, 14], [90, 16], [92, 18], [92, 22], [91, 26], [90, 30],
-    [88, 33], [86, 35], [84, 37], [82, 38], [80, 40], [78, 42], [76, 44], [74, 46],
-    [72, 44], [70, 40], [68, 36], [66, 32], [64, 30]],
-
-    [[72, 44], [74, 46], [76, 48], [77, 52], [76, 55], [74, 54], [72, 51], [71, 48]],
-
-    [[60, 28], [62, 26], [64, 28], [66, 32], [64, 34], [62, 34], [60, 32]],
-
-    [[82, 58], [85, 56], [88, 56], [91, 57], [93, 58], [94, 61], [94, 65],
-    [93, 68], [92, 71], [90, 73], [88, 74], [85, 73], [83, 71], [82, 68],
-    [81, 64], [81, 61]],
-
-    [[35, 18], [37, 15], [39, 12], [41, 8], [43, 5], [45, 4], [46, 6], [46, 10],
-    [45, 14], [43, 17], [41, 19], [39, 20], [37, 20]],
-
-    [[10, 91], [20, 89], [35, 88], [50, 87], [65, 88], [80, 89], [90, 91],
-    [85, 95], [70, 97], [50, 98], [30, 97], [15, 95]],
-
-    [[80, 46], [83, 45], [86, 44], [88, 46], [90, 48], [88, 50], [85, 51],
-    [82, 50], [80, 48]],
-
-    [[89, 22], [90, 20], [91, 22], [92, 26], [91, 30], [90, 31], [89, 28], [89, 25]],
-
-    [[86, 40], [87, 38], [88, 40], [88, 43], [87, 44], [86, 42]],
-
-    [[94, 64], [95, 62], [96, 65], [96, 69], [95, 72], [94, 70], [94, 67]],
-
-    [[62, 58], [63, 56], [64, 59], [64, 63], [63, 66], [62, 64], [62, 61]],
-
-    [[74, 48], [75, 47], [76, 49], [75, 51], [74, 50]],
-  ];
-
-
-  const step = 1.35;
-  let seed = 2000;
-
-  for (let row = 0; row * step < 100; row++) {
-    const gy = row * step;
-    const xOff = (row % 2) * (step * 0.5);
-    for (let gx = xOff; gx < 100; gx += step) {
-      const jx = gx + (seededRandom(seed) - 0.5) * 0.25;
-      const jy = gy + (seededRandom(seed + 1) - 0.5) * 0.25;
-      seed += 2;
-
-      let hit = false;
-      for (let p = 0; p < polygons.length; p++) {
-        if (pointInPolygon(jx, jy, polygons[p])) { hit = true; break; }
-      }
-      if (!hit) continue;
-
-
-      const sizeRand = seededRandom(seed);
-      let w: number, h: number;
-      if (sizeRand < 0.5) {
-
-        w = 0.6 + seededRandom(seed + 1) * 0.35;
-        h = w;
-      } else if (sizeRand < 0.8) {
-
-        w = 0.95 + seededRandom(seed + 1) * 0.45;
-        h = w;
-      } else {
-
-        w = 0.5 + seededRandom(seed + 1) * 0.4;
-        h = 1.6 + seededRandom(seed + 2) * 2.2;
-      }
-      seed += 3;
-
-      const opacity = 0.75 + seededRandom(seed) * 0.25;
-      seed++;
-      cutouts.push({ x: jx, y: jy, w, h, opacity });
-      cutouts.push({ x: jx + 100, y: jy, w, h, opacity });
-    }
-  }
-
-  return cutouts;
-}
-
-
-function generateWhitePixels(count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const angle =
-      (i / count) * Math.PI * 2 + (seededRandom(i + 7000) - 0.5) * 0.6;
-    const r = 36 + seededRandom(i + 7500) * 26;
-    const sizeRand = seededRandom(i + 8000);
-    let w: number, h: number;
-    if (sizeRand < 0.6) {
-      w = 2 + seededRandom(i + 8100) * 4;
-      h = w;
-    } else {
-      w = 1.5 + seededRandom(i + 8100) * 2;
-      h = 3 + seededRandom(i + 8200) * 6;
-    }
-    return {
-      x: 50 + r * Math.cos(angle),
-      y: 50 + r * Math.sin(angle),
-      w, h,
-      opacity: r < 44 ? 0.3 : r < 50 ? 0.55 : r < 54 ? 0.45 : 0.2,
-    };
-  });
-}
-
-
-function generateSpherePixels(count: number) {
-  return Array.from({ length: count }, (_, i) => {
-
-
-    const theta = Math.acos(2 * seededRandom(i + 4000) - 1);
-    const phi = seededRandom(i + 4100) * Math.PI * 2;
-
-
-    const expandedR = 60 + seededRandom(i + 4200) * 80;
-
-    const scatteredX = 50 + expandedR * Math.sin(theta) * Math.cos(phi);
-    const scatteredY = 50 + expandedR * Math.sin(theta) * Math.sin(phi);
-
-
-    const finalR = seededRandom(i + 4300) * 40;
-    const finalAngle = seededRandom(i + 4400) * Math.PI * 2;
-    const finalX = 50 + finalR * Math.cos(finalAngle);
-    const finalY = 50 + finalR * Math.sin(finalAngle);
-
-
-    const startSize = 30 + seededRandom(i + 4500) * 70;
-    const endSize = 2 + seededRandom(i + 4600) * 6;
-
-
-    const blurDelay = seededRandom(i + 4700) * 0.4;
-
-    return {
-      scatteredX,
-      scatteredY,
-      finalX,
-      finalY,
-      startSize,
-      endSize,
-      blurDelay,
-    };
-  });
-}
-
-
-function AnimatedCard({
-  card,
-  converge,
-  cardScale,
-  overlayOpacity,
-  cardOpacity,
-  floatClass,
-  children,
-}: {
-  card: HeroCard;
-  converge: MotionValue<number>;
-  cardScale: MotionValue<number>;
-  overlayOpacity: MotionValue<number>;
-  cardOpacity: MotionValue<number>;
-  floatClass: string;
-  children: React.ReactNode;
-}) {
-  const left = useTransform(
-    converge,
-    (v: number) => `${card.x + (50 - card.x) * v}%`
-  );
-  const top = useTransform(
-    converge,
-    (v: number) => `${card.y + (50 - card.y) * v}%`
-  );
-
-  return (
-    <motion.div
-      style={{
-        left,
-        top,
-        scale: cardScale,
-        opacity: cardOpacity,
-      }}
-      className="absolute z-[5] origin-center will-change-transform"
-      suppressHydrationWarning
-    >
-      <div className={floatClass}>
-        <div className="relative" style={{ width: `${card.w}vw` }}>
-          {children}
-          <motion.div
-            style={{ opacity: overlayOpacity }}
-            className="absolute inset-0 rounded-lg"
-            aria-hidden
-          >
-            <div
-              className="w-full h-full rounded-lg"
-              style={{ background: ACCENT }}
-            />
-          </motion.div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-
-function SpherePixel({
-  pixel,
-  progress,
-  isMobile,
-}: {
-  pixel: ReturnType<typeof generateSpherePixels>[number];
-  progress: MotionValue<number>;
-  isMobile: boolean;
-}) {
-
-  const left = useTransform(
-    progress,
-    (v: number) => `${pixel.scatteredX + (pixel.finalX - pixel.scatteredX) * v}%`
-  );
-  const top = useTransform(
-    progress,
-    (v: number) => `${pixel.scatteredY + (pixel.finalY - pixel.scatteredY) * v}%`
-  );
-
-
-  const size = useTransform(
-    progress,
-    (v: number) => pixel.startSize + (pixel.endSize - pixel.startSize) * v
-  );
-
-
-  const opacity = useTransform(
-    progress,
-    [0, 0.05, 0.15, 0.85, 1],
-    [0, 0.7, 1, 1, 0]
-  );
-
-
-  const blur = useTransform(progress, (v: number) => {
-    const sharpStart = 0.3 + pixel.blurDelay;
-    if (isMobile) {
-      if (v < sharpStart) return 4;
-      if (v < sharpStart + 0.15) return 2;
-      return 0;
-    }
-    const sharpEnd = Math.min(sharpStart + 0.3, 1.0);
-    if (v < sharpStart) return 6;
-    if (v > sharpEnd) return 0;
-    return 6 * (1 - (v - sharpStart) / (sharpEnd - sharpStart));
-  });
-
-  const filterStyle = useTransform(blur, (b: number) =>
-    b > 0.1 ? `blur(${b}px)` : "none"
-  );
-
-  return (
-    <motion.div
-      style={{
-        left,
-        top,
-        width: size,
-        height: size,
-        opacity,
-        filter: filterStyle,
-      }}
-      className="absolute z-[4] will-change-transform"
-      aria-hidden
-      suppressHydrationWarning
-    >
-      <div className="w-full h-full" style={{ background: ACCENT }} />
-    </motion.div>
-  );
-}
-
-
-function AnimatedLetter({
-  char,
-  index,
-  total,
-  scrollYProgress,
-  isMobile,
-}: {
-  char: string;
-  index: number;
-  total: number;
-  scrollYProgress: MotionValue<number>;
-  isMobile: boolean;
-}) {
-
-  const stagger = (index / total) * 0.06;
-  const convergeStart = 0.08 + stagger;
-  const convergeEnd = convergeStart + 0.16;
-
-
-  const morphStart = convergeStart + 0.06;
-  const morphEnd = morphStart + 0.05;
-
-
-  const bgColor = useTransform(
-    scrollYProgress,
-    [morphStart, morphEnd],
-    ["rgba(255,90,54,0)", "rgba(255,90,54,1)"]
-  );
-
-  const textColor = useTransform(
-    scrollYProgress,
-    [morphStart, morphEnd],
-    [ACCENT, "rgba(255,90,54,0)"]
-  );
-
-
-  const shadow = useTransform(
-    scrollYProgress,
-    [morphStart, morphEnd],
-    isMobile
-      ? [
-        "1px 2px 4px rgba(180,50,20,0.2)",
-        "0px 0px 0px rgba(0,0,0,0)",
-      ]
-      : [
-        "1px 2px 0px rgba(180,50,20,0.15), 3px 5px 0px rgba(180,50,20,0.08), 6px 10px 20px rgba(0,0,0,0.06)",
-        "0px 0px 0px rgba(0,0,0,0), 0px 0px 0px rgba(0,0,0,0), 0px 0px 0px rgba(0,0,0,0)",
-      ]
-  );
-
-
-  const tx = isMobile
-    ? 6 + seededRandom(index * 7 + 50) * 4
-    : 12 + seededRandom(index * 7 + 50) * 10;
-  const ty = -5 + seededRandom(index * 7 + 150) * 10;
-
-
-  const scale = useTransform(scrollYProgress, [convergeStart, convergeEnd], [1, isMobile ? 0.06 : 0.02]);
-  const x = useTransform(scrollYProgress, [convergeStart, convergeEnd], ["0vw", `${tx}vw`]);
-  const y = useTransform(scrollYProgress, [convergeStart, convergeEnd], ["0vh", `${ty}vh`]);
-  const opacity = useTransform(
-    scrollYProgress,
-    [convergeEnd - 0.02, convergeEnd + 0.04],
-    [1, 0]
-  );
-
-  return (
-    <motion.span
-      style={{
-        scale,
-        x,
-        y,
-        opacity,
-        display: "inline-block",
-        backgroundColor: bgColor,
-        color: textColor,
-        textShadow: shadow,
-      }}
-      className="origin-center will-change-transform"
-    >
-      {char}
-    </motion.span>
-  );
-}
-
-
-function CrowdCard() {
-  return (
-    <div className="rounded-lg overflow-hidden bg-blue-100 aspect-square shadow-lg">
-      <div className="w-full h-full bg-gradient-to-br from-blue-200 to-blue-300 flex items-center justify-center p-4">
-        <svg viewBox="0 0 100 100" className="w-full h-full opacity-40">
-          {Array.from({ length: 40 }).map((_, i) => (
-            <circle
-              key={i}
-              cx={15 + (i % 8) * 10}
-              cy={20 + Math.floor(i / 8) * 15}
-              r={2 + seededRandom(i + 100) * 2}
-              fill="#4a6fa5"
-            />
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-function ReportCard() {
-  return (
-    <div className="rounded-lg bg-white shadow-xl p-4 border border-neutral-100">
-      <p className="text-[10px] text-neutral-400 mb-1">Report Preview</p>
-      <p className="text-[9px] text-neutral-400 font-medium tracking-wide uppercase mb-0.5">
-        Banking App Redesign
-      </p>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-semibold text-maze-black leading-tight">
-            Discovery
-          </p>
-          <p className="text-sm font-semibold text-maze-black leading-tight">
-            interviews
-          </p>
-        </div>
-        <div className="text-right text-[10px]">
-          <p className="text-neutral-400">Responses</p>
-          <p className="text-xl font-bold text-maze-black">25</p>
-          <p className="text-neutral-400 mt-1">No. of themes</p>
-          <p className="text-xl font-bold text-maze-black">8</p>
-        </div>
-      </div>
-      <div
-        className="mt-2 h-16 rounded flex items-center justify-center overflow-hidden"
-        style={{ background: `${ACCENT}60` }}
-      >
-        <svg viewBox="0 0 200 60" className="w-full opacity-30">
-          {Array.from({ length: 25 }).map((_, i) => (
-            <circle
-              key={i}
-              cx={10 + (i % 10) * 20}
-              cy={15 + Math.floor(i / 10) * 20}
-              r={3}
-              fill={ACCENT}
-            />
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-function UnmoderatedCard() {
-  return (
-    <div className="rounded-lg bg-white shadow-xl p-4 border border-neutral-100">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 rounded bg-orange-400 flex items-center justify-center">
-          <span className="text-white text-[8px] font-bold">U</span>
-        </div>
-        <span className="text-xs font-medium">Unmoderated study</span>
-      </div>
-      <div className="h-1 bg-neutral-200 rounded mb-1">
-        <div className="h-1 bg-maze-black rounded w-1/3" />
-      </div>
-      <div className="h-1 bg-neutral-100 rounded mb-4 w-2/3" />
-      <p className="text-[10px] text-neutral-400 uppercase tracking-wide mb-1">
-        Question
-      </p>
-      <p className="text-xs font-semibold mb-2">
-        How easy did you find the payments feature?
-      </p>
-      <div className="flex gap-0.5 mb-1">
-        {[1, 2, 3, 4, 5, 6, 7].map((star) => (
-          <svg
-            key={star}
-            className={`w-4 h-4 ${star <= 3 ? "text-lime" : "text-neutral-200"}`}
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-      <div className="flex justify-between text-[8px] text-neutral-400">
-        <span>Not at all satisfied</span>
-        <span>Extremely satisfied</span>
-      </div>
-    </div>
-  );
-}
-
-function PersonCard() {
-  return (
-    <div className="rounded-lg overflow-hidden aspect-[4/5] bg-gradient-to-br from-amber-100 to-amber-200 shadow-lg">
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-amber-300/50" />
-      </div>
-    </div>
-  );
-}
-
-function ModeratedCard() {
-  return (
-    <div className="rounded-lg bg-white shadow-xl overflow-hidden border border-neutral-100">
-      <div className="flex items-center gap-2 p-3 pb-0">
-        <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
-          <span className="text-white text-[8px] font-bold">M</span>
-        </div>
-        <span className="text-xs font-medium">Moderated interview</span>
-      </div>
-      <div className="p-3 pt-2">
-        <div className="rounded-lg overflow-hidden bg-teal-100 aspect-video flex items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-teal-200" />
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <p className="text-[10px] text-neutral-500">
-            Feedback on direct deposit feature
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const CARD_CONTENT: Record<string, React.FC> = {
-  crowd: CrowdCard,
-  report: ReportCard,
-  unmoderated: UnmoderatedCard,
-  person: PersonCard,
-  moderated: ModeratedCard,
-};
-
-const FLOAT_CLASSES = [
-  "animate-float-1",
-  "animate-float-2",
-  "animate-float-3",
-  "animate-float-1",
-  "animate-float-2",
-];
-
-
+/* ═══════════════════════════════════════════════════════════
+   HeroSection - Disintegrating Particle Globe + Intelligence Stream
+   ═══════════════════════════════════════════════════════════ */
 export default function HeroSection() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+
+  const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [isHoveringGlobe, setIsHoveringGlobe] = useState(false);
+  const [activeTextIndex, setActiveTextIndex] = useState(0);
+  const particlesRef = useRef<Particle[]>([]);
+
+  useEffect(() => {
+    if (isHoveringGlobe) return;
+
+    // Alternate between headline (0) and mission (1) every 4 seconds
+    const interval = setInterval(() => {
+      setActiveTextIndex((prev) => (prev === 0 ? 1 : 0));
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isHoveringGlobe]);
+
+  const showMission = activeTextIndex === 1;
+
+  // 1. Scroll tracking over a 250vh section for a punchy, cinematic experience
   const { scrollYProgress } = useScroll({
-    target: sectionRef,
+    target: containerRef,
     offset: ["start start", "end start"],
   });
 
-  const edgePixels = useMemo(() => generateEdgePixels(isMobile ? 80 : 200), [isMobile]);
-  const surfaceCutouts = useMemo(() => generateSurfaceCutouts(240), []);
-  const spherePixels = useMemo(() => generateSpherePixels(isMobile ? 120 : 300), [isMobile]);
-  const whitePixels = useMemo(() => generateWhitePixels(isMobile ? 40 : 105), [isMobile]);
-  const cards = isMobile ? HERO_CARDS_MOBILE : HERO_CARDS;
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 70,
+    damping: 20,
+    mass: 0.5,
+  });
 
+  const progressRef = useRef(0);
+  useMotionValueEvent(smoothProgress, "change", (latest) => {
+    progressRef.current = latest;
+  });
 
-  const heroTextOpacity = useTransform(
-    scrollYProgress,
-    [0, 0.08, 0.36, 0.42],
-    [1, 1, 1, 0]
-  );
+  const timeRef = useRef(0);
 
+  // 2. Initialize Particles
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    setMounted(true);
 
-  const letterData = useMemo(() => {
-    const total = HERO_TEXT_LINES.reduce((sum, l) => sum + l.length, 0);
-    let idx = 0;
-    return HERO_TEXT_LINES.map((line) => ({
-      line,
-      chars: line.split("").map((char) => ({
-        char,
-        index: idx++,
-        total,
-      })),
-    }));
+    const canvas = canvasRef.current;
+    const dpr = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    setDimensions({ width, height });
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Offscreen canvas to get text pixels
+    const offscreen = document.createElement("canvas");
+    offscreen.width = width;
+    offscreen.height = height;
+    const octx = offscreen.getContext("2d", { willReadFrequently: true });
+    if (!octx) return;
+
+    octx.fillStyle = "#ffffff";
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+
+    // Draw "STOP GUESSING" and "Start Listening"
+    const isMobileSize = width < 768;
+    const font1 = isMobileSize ? width * 0.1 : Math.min(width * 0.08, 120);
+    const font2 = isMobileSize ? width * 0.12 : Math.min(width * 0.1, 150);
+
+    octx.font = `600 ${font1}px 'Space Grotesk', sans-serif`;
+    octx.fillText(TEXT_LINES[0], width / 2, isMobileSize ? height * 0.42 : height * 0.4);
+
+    octx.font = `700 ${font2}px 'Space Grotesk', sans-serif`;
+    octx.fillText(TEXT_LINES[1], width / 2, isMobileSize ? height * 0.5 : height * 0.55);
+
+    const imgData = octx.getImageData(0, 0, width, height).data;
+    const newParticles: Particle[] = [];
+    const colors = ["#ffffff", "#cccccc", "#ff6b00", "#ff9f43"];
+
+    // Scan pixels - reduce density on mobile for performance
+    const effectiveDensity = isMobileSize ? PARTICLE_DENSITY * 1.2 : PARTICLE_DENSITY;
+    const step = Math.floor(1 / effectiveDensity);
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
+        const index = (y * width + x) * 4;
+        const alpha = imgData[index + 3];
+
+        if (alpha > 128) {
+          const isHighlight = Math.random() > 0.95;
+          const rColor = isHighlight ? colors[2] : (Math.random() > 0.5 ? colors[0] : colors[1]);
+
+          // Bias fly-out direction downward for transition continuity
+          const flyOutVector = {
+            x: (Math.random() - 0.5) * 0.6,
+            y: Math.random() * 0.8 + 0.2, // Strongly bias downward (positive Y = down)
+            z: (Math.random() - 0.5) * 0.4
+          };
+          const flyOutLen = Math.sqrt(flyOutVector.x ** 2 + flyOutVector.y ** 2 + flyOutVector.z ** 2) || 1;
+
+          newParticles.push({
+            textPos: {
+              x: x - width / 2 + (Math.random() - 0.5) * 4,
+              y: y - height / 2 + (Math.random() - 0.5) * 4,
+              z: (Math.random() - 0.5) * 20
+            },
+            globePos: { x: 0, y: 0, z: 0 },
+            currentPos: { x: 0, y: 0, z: 0 },
+            flyOutDir: {
+              x: (flyOutVector.x / flyOutLen) * (Math.random() * 2000 + 1000),
+              y: (flyOutVector.y / flyOutLen) * (Math.random() * 2000 + 1000),
+              z: (flyOutVector.z / flyOutLen) * (Math.random() * 2000 + 1000)
+            },
+            color: rColor,
+            size: isMobileSize
+              ? (isHighlight ? Math.random() * 1.0 + 0.6 : Math.random() * 0.6 + 0.3)
+              : (isHighlight ? Math.random() * 2 + 1.5 : Math.random() * 1.5 + 0.5),
+          });
+        }
+      }
+    }
+
+    // Generate Globe positions (Fibonacci sphere)
+    const numParticles = newParticles.length;
+    const phi = Math.PI * (3 - Math.sqrt(5));
+
+    for (let i = 0; i < numParticles; i++) {
+      const y = 1 - (i / (numParticles - 1)) * 2;
+      const radiusAtY = Math.sqrt(1 - y * y);
+      const theta = phi * i;
+
+      const x = Math.cos(theta) * radiusAtY;
+      const z = Math.sin(theta) * radiusAtY;
+
+      const noiseScale = 5;
+      const noiseX = (Math.random() - 0.5) * noiseScale;
+      const noiseY = (Math.random() - 0.5) * noiseScale;
+      const noiseZ = (Math.random() - 0.5) * noiseScale;
+
+      newParticles[i].globePos = {
+        x: x * GLOBE_RADIUS + noiseX,
+        y: y * GLOBE_RADIUS + noiseY,
+        z: z * GLOBE_RADIUS + noiseZ
+      };
+    }
+
+    // Shuffle globe targets to create continuous crossing paths during disintegration
+    for (let i = newParticles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = newParticles[i].globePos;
+      newParticles[i].globePos = newParticles[j].globePos;
+      newParticles[j].globePos = temp;
+    }
+
+    particlesRef.current = newParticles;
+    setParticles(newParticles);
+
   }, []);
 
+  // 3. Render Loop (Canvas Animation)
+  useEffect(() => {
+    if (!canvasRef.current || particlesRef.current.length === 0) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  const cardOverlay = useTransform(
-    scrollYProgress,
-    [0.08, 0.18],
-    [0, 1]
-  );
-  const cardScale = useTransform(
-    scrollYProgress,
-    [0.10, 0.32],
-    [1, 0.015]
-  );
-  const cardConverge = useTransform(
-    scrollYProgress,
-    [0.10, 0.32],
-    [0, 1]
-  );
-  const cardOpacity = useTransform(
-    scrollYProgress,
-    [0, 0.28, 0.38],
-    [1, 1, 0]
-  );
+    let animationFrameId: number;
+    const dpr = window.devicePixelRatio || 1;
 
+    const render = () => {
+      // Always reset base alpha before clearing the canvas to prevent smudging and trailing artifacts
+      ctx.globalAlpha = 1;
 
-  const sphereProgress = useTransform(
-    scrollYProgress,
-    [0.10, 0.42],
-    [0, 1]
-  );
+      // Full opaque clear to prevent background bleed-through
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      const width = dimensions.width;
+      const height = dimensions.height;
 
-  const globeOpacity = useTransform(
-    scrollYProgress,
-    [0.24, 0.36],
-    [0, 1]
-  );
+      // Map global scroll to particle progress. 
+      // 0 to 0.4 overall scroll = 0 to 1 text->globe transition
+      const rawProgress = Math.min(progressRef.current * 2.5, 1);
 
-  const globeScale = useTransform(
-    scrollYProgress,
-    [0.24, 0.35, 0.46],
-    [0.15, 0.55, 1.0]
-  );
+      timeRef.current += 0.003;
 
+      const rotY = timeRef.current;
+      const rotX = 0.2 + rawProgress * 0.3;
 
-  const globeTextOpacity = useTransform(
-    scrollYProgress,
-    [0.46, 0.56],
-    [0, 1]
-  );
-  const globeTextScale = useTransform(
-    scrollYProgress,
-    [0.46, 0.58],
-    [1.3, 1.0]
-  );
-  const globeTextY = useTransform(
-    scrollYProgress,
-    [0.46, 0.56],
-    ["20px", "0px"]
-  );
+      const cosY = Math.cos(rotY);
+      const sinY = Math.sin(rotY);
+      const cosX = Math.cos(rotX);
+      const sinX = Math.sin(rotX);
 
+      // Easing for the disintegration (Start slow, explode, settle)
+      const ease = rawProgress < 0.5 ? 4 * rawProgress * rawProgress * rawProgress : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
 
-  const fixedOpacity = useTransform(
-    scrollYProgress,
-    [0.82, 0.94],
-    [1, 0]
-  );
-  const fixedPointerEvents = useTransform(scrollYProgress, (v) =>
-    v >= 0.92 ? ("none" as const) : ("auto" as const)
-  );
+      for (let i = 0; i < particlesRef.current.length; i++) {
+        const p = particlesRef.current[i];
 
+        // Globe Target with Rotation
+        let gx = p.globePos.x * cosY - p.globePos.z * sinY;
+        let gz = p.globePos.x * sinY + p.globePos.z * cosY;
 
-  const indicatorOpacity = useTransform(
-    scrollYProgress,
-    [0, 0.05, 0.52, 0.58],
-    [1, 1, 1, 0]
-  );
+        let gy = p.globePos.y * cosX - gz * sinX;
+        gz = p.globePos.y * sinX + gz * cosX;
+
+        // Disintegration explosion force
+        const explosionForce = Math.sin(ease * Math.PI) * 200;
+        const noiseX = (Math.random() - 0.5) * explosionForce;
+        const noiseY = (Math.random() - 0.5) * explosionForce;
+        const noiseZ = (Math.random() - 0.5) * explosionForce;
+
+        // Globe Disintegration on scroll out
+        // progress > 0.6 means we are scrolling out.
+        const flyOutProgress = progressRef.current > 0.6 ? Math.min((progressRef.current - 0.6) / 0.4, 1) : 0;
+        const flyOutEase = flyOutProgress * flyOutProgress * flyOutProgress; // aggressive exponential curve for flying out
+
+        const currentX = p.textPos.x + (gx - p.textPos.x) * ease + noiseX + p.flyOutDir.x * flyOutEase;
+        const currentY = p.textPos.y + (gy - p.textPos.y) * ease + noiseY + p.flyOutDir.y * flyOutEase;
+        const currentZ = p.textPos.z + (gz - p.textPos.z) * ease + noiseZ + p.flyOutDir.z * flyOutEase;
+
+        p.currentPos = { x: currentX, y: currentY, z: currentZ };
+
+        // 3D Projection
+        const fov = 1200;
+        const viewZ = currentZ + fov;
+        if (viewZ <= 0) continue;
+
+        const scale = fov / viewZ;
+        const projX = currentX * scale + width / 2;
+
+        // Remove manual translation since the element physically scrolls up
+        const scrollOffset = 0;
+        const projY = currentY * scale + (height / 2) - scrollOffset;
+
+        // Dispatch exit event for particles exiting bottom during fly-out
+        if (flyOutProgress > 0.2 && projY > height * 0.9 && !p.hasExited) {
+          p.hasExited = true;
+          // Dispatch event for ParticleNarrativeController to spawn continuation particles
+          if (typeof window !== 'undefined' && Math.random() < 0.4) { // 40% of exiting particles spawn
+            window.dispatchEvent(new CustomEvent('hero-particle-exit', {
+              detail: {
+                x: projX,
+                y: height,
+                vx: (p.flyOutDir.x / 2000) * flyOutEase,
+                vy: Math.max(0.3, (p.flyOutDir.y / 2000) * flyOutEase * 0.5),
+                color: p.color
+              }
+            }));
+          }
+        }
+
+        // Illumination and Depth (Fade back of globe)
+        let alpha = 1;
+        if (rawProgress > 0.5) {
+          const minZ = -GLOBE_RADIUS;
+          const maxZ = GLOBE_RADIUS;
+          const normalizedZ = Math.max(0, Math.min(1, (currentZ - minZ) / (maxZ - minZ)));
+          alpha = 0.4 + normalizedZ * 0.6; // More solid 3D feel
+        }
+
+        // Global fade out as we transition to next section (0.7 - 1.0)
+        let opacityMultiplier = 1;
+        if (progressRef.current > 0.7) {
+          opacityMultiplier = Math.max(0, 1 - ((progressRef.current - 0.7) / 0.3));
+        }
+
+        const isMobileRender = width < 768;
+        const rawSize = (p.size + 0.5) * scale * (rawProgress > 0.8 ? 1.5 : 1.0);
+        const finalSize = isMobileRender ? Math.min(rawSize, 1.5) : rawSize;
+
+        ctx.beginPath();
+        // Give the brightest particles a white core
+        const isBright = p.color === "#ffffff" || p.color === "#ff9f43";
+        ctx.fillStyle = isBright ? '#ffffff' : p.color;
+
+        // Use a single, clean alpha value without double-multiplying
+        ctx.globalAlpha = isBright ? alpha * opacityMultiplier : alpha * 0.6 * opacityMultiplier;
+
+        if (finalSize < 1.5) {
+          ctx.fillRect(projX * dpr, projY * dpr, finalSize * dpr, finalSize * dpr);
+        } else {
+          ctx.arc(projX * dpr, projY * dpr, finalSize * dpr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Optional Glow on large particles
+        if (isBright && finalSize > 2) {
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = p.color;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [dimensions]);
+
+  /* ═══ Scroll Triggers for HTML Elements ═══ */
+  const textSubOpacity = useTransform(smoothProgress, [0, 0.1], [1, 0]);
+  const textSubY = useTransform(smoothProgress, [0, 0.1], [0, 20]);
+
+  // New hooks for Interactive Globe Overlay
+  // Sync appearance with globe formation completion (rawProgress ~1.0 at scroll 0.4)
+  const overlayOpacity = useTransform(smoothProgress, [0.4, 0.45, 0.6, 0.75], [0, 1, 1, 0]);
+  const overlayY = useTransform(smoothProgress, [0.4, 0.45], [40, 0]);
 
   return (
-    <section ref={sectionRef} className="relative z-0 h-[200vh] sm:h-[353vh]">
-      <motion.div
-        style={{ opacity: fixedOpacity, pointerEvents: fixedPointerEvents }}
-        className="fixed inset-0 z-[1] overflow-hidden"
-      >
-        {}
-        <motion.div
-          style={{ opacity: heroTextOpacity }}
-          className="absolute inset-0 flex items-center justify-center sm:justify-start z-10 pointer-events-none"
-        >
-          <div
-            className="px-4 text-center sm:text-left sm:pl-[5vw] sm:pr-0 w-full leading-[1.05] tracking-[-0.03em]"
+    <section id="hero" ref={containerRef} className="relative z-0 h-[250vh] bg-black text-white font-sans selection:bg-brand-orange/30">
+
+      {/* Sticky Container for the full Screen viewport */}
+      <div className="sticky top-0 w-full h-screen overflow-hidden left-0 flex items-center justify-center">
+
+        {/* Ambient Dark Canvas Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,107,0,0.12)_0%,transparent_60%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_10%,transparent_100%)]" />
+        </div>
+
+        {/* The Particle Canvas */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+          style={{ width: '100vw', height: '100vh' }}
+        />
+
+        {/* ═══ Phase 1: Static Hook Text (disappears immediately as scroll starts) ═══ */}
+        {mounted && (
+          <motion.div
+            style={{ opacity: textSubOpacity, y: textSubY }}
+            className="absolute z-20 top-[65%] w-full flex flex-col items-center justify-center px-4"
+          >
+            <h2 className="text-center font-display text-xl sm:text-2xl font-medium text-white max-w-2xl leading-tight text-balance tracking-wide">
+              {SUBHEADLINE}
+            </h2>
+
+            <div className="absolute top-[18vh] flex flex-col items-center gap-2 text-white/60 font-medium text-[10px] tracking-[0.2em] uppercase">
+              <span>Scroll to Ignite</span>
+              <ChevronDown className="w-3 h-3 animate-bounce" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══ Phase 2 & 3: Interactive Globe Overlay ═══ */}
+        {mounted && (
+          <motion.div
             style={{
-              fontFamily: "'Space Grotesk', system-ui, sans-serif",
-              fontSize: "clamp(44px, 12vw, 180px)",
-              fontWeight: 900,
+              opacity: overlayOpacity,
+              y: overlayY,
             }}
-            aria-label="KNOW YOUR CUSTOMERS"
+            className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-auto"
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2);
+              setIsHoveringGlobe(dist <= GLOBE_RADIUS);
+            }}
+            onMouseLeave={() => setIsHoveringGlobe(false)}
           >
-            {letterData.map((lineData, lineIdx) => (
-              <span key={lineIdx}>
-                {lineData.chars.map(({ char, index, total }) => (
-                  <AnimatedLetter
-                    key={index}
-                    char={char}
-                    index={index}
-                    total={total}
-                    scrollYProgress={scrollYProgress}
-                    isMobile={isMobile}
-                  />
-                ))}
-                {lineIdx < letterData.length - 1 && <br />}
-              </span>
-            ))}
-          </div>
-        </motion.div>
+            <div className="relative w-full max-w-5xl px-6 flex flex-col items-center text-center group">
+              {/* Mission Content */}
+              <div className="relative h-[400px] flex items-center justify-center w-full">
 
-        {}
-        {mounted && cards.map((card, idx) => {
-          const Content = CARD_CONTENT[card.id];
-          return (
-            <AnimatedCard
-              key={card.id}
-              card={card}
-              converge={cardConverge}
-              cardScale={cardScale}
-              overlayOpacity={cardOverlay}
-              cardOpacity={cardOpacity}
-              floatClass={FLOAT_CLASSES[idx]}
-            >
-              <Content />
-            </AnimatedCard>
-          );
-        })}
-
-        {}
-        {mounted && spherePixels.map((pixel, idx) => (
-          <SpherePixel
-            key={`sp-${idx}`}
-            pixel={pixel}
-            progress={sphereProgress}
-            isMobile={isMobile}
-          />
-        ))}
-
-        {}
-        {mounted && (
-          <motion.div
-            style={{ opacity: globeOpacity }}
-            className="absolute inset-0 flex items-center justify-center z-[3] pointer-events-none"
-          >
-            <motion.div
-              style={{ scale: globeScale }}
-              className="w-[min(85vw,76vh)] sm:w-[min(76vw,76vh)] aspect-square relative will-change-transform"
-            >
-              {}
-              <div
-                className="absolute inset-0 rounded-full overflow-hidden"
-                style={{ background: ACCENT }}
-              >
-                {}
-                {}
-                <div
-                  className="absolute inset-0 animate-globe-drift"
-                  style={{ width: "200%" }}
+                {/* Headline Mode */}
+                <motion.div
+                  initial={false}
+                  animate={{
+                    opacity: showMission ? 0 : 1,
+                    scale: showMission ? 0.98 : 1,
+                    y: showMission ? -10 : 0,
+                    filter: showMission ? "blur(20px)" : "blur(0px)",
+                    pointerEvents: showMission ? "none" : "auto"
+                  }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute inset-0 flex flex-col items-center justify-center"
                 >
-                  {surfaceCutouts.map((p, i) => (
-                    <div
-                      key={`sc-${i}`}
-                      className="absolute"
-                      style={{
-                        left: `${p.x}%`,
-                        top: `${p.y}%`,
-                        width: `${p.w}%`,
-                        height: `${p.h}%`,
-                        background: "#FFB89E",
-                        opacity: p.opacity,
-                      }}
-                    />
-                  ))}
-                </div>
+                  <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-semibold tracking-tight text-white mb-4">
+                    Designed for<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-br from-brand-orange via-white to-white/80">
+                      Consumer Companies
+                    </span>
+                  </h1>
+                </motion.div>
+
+                {/* Mission Mode (Glassmorphism) */}
+                <motion.div
+                  initial={false}
+                  animate={{
+                    opacity: showMission ? 1 : 0,
+                    scale: showMission ? 1 : 1.05,
+                    y: showMission ? 0 : 10,
+                    filter: showMission ? "blur(0px)" : "blur(20px)",
+                    pointerEvents: showMission ? "auto" : "none"
+                  }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <div className="relative p-10 md:p-16 rounded-[40px] overflow-hidden">
+                    {/* Glass Layer - Darkened and increased blur for maximum readability against particles */}
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[40px] border border-white/10 shadow-[0_12px_64px_0_rgba(0,0,0,0.8)]" />
+
+                    {/* Inner Content */}
+                    <p className="relative text-xl md:text-3xl font-display font-medium text-white leading-tight md:leading-snug max-w-2xl text-balance tracking-tight">
+                      {MISSION_TEXT}
+                    </p>
+
+                    {/* Subtle Internal Glow */}
+                    <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-brand-orange/10 blur-[100px] pointer-events-none" />
+                  </div>
+                </motion.div>
               </div>
-              {}
-              <div className="absolute inset-0 overflow-visible animate-globe-orbit">
-                {edgePixels.map((p, i) => (
-                  <div
-                    key={i}
-                    className="absolute"
-                    style={{
-                      left: `${p.x}%`,
-                      top: `${p.y}%`,
-                      width: `${p.w}px`,
-                      height: `${p.h}px`,
-                      background: ACCENT,
-                      opacity: p.opacity,
-                    }}
-                  />
-                ))}
-              </div>
-              {}
-              <div
-                className="absolute inset-0 overflow-visible animate-globe-orbit"
-                style={{ animationDirection: "reverse", animationDuration: "55s" }}
-              >
-                {whitePixels.map((p, i) => (
-                  <div
-                    key={`wp-${i}`}
-                    className="absolute"
-                    style={{
-                      left: `${p.x}%`,
-                      top: `${p.y}%`,
-                      width: `${p.w}px`,
-                      height: `${p.h}px`,
-                      background: "#FFC4AD",
-                      opacity: p.opacity,
-                    }}
-                  />
-                ))}
-              </div>
-            </motion.div>
+
+              {/* Polish note: Removed CTA and excessive hints for a cleaner "Apple" feel */}
+            </div>
           </motion.div>
         )}
 
-        {}
-        {mounted && (
-          <motion.div
-            style={{ opacity: globeTextOpacity }}
-            className="absolute inset-0 flex items-center justify-center z-[4] pointer-events-none"
-          >
-            <motion.h2
-              className="leading-[1.05] tracking-[-0.03em] text-center origin-center will-change-transform"
-              style={{
-                scale: globeTextScale,
-                y: globeTextY,
-                fontFamily: "'Space Grotesk', system-ui, sans-serif",
-                fontSize: "clamp(28px, 8vw, 140px)",
-                fontWeight: 900,
-                color: "#FFFFFF",
-                textShadow: isMobile
-                  ? "0 2px 8px rgba(0,0,0,0.3)"
-                  : "0 2px 0 rgba(180,40,10,0.5), 0 4px 8px rgba(120,20,0,0.35), 0 0 30px rgba(255,255,255,0.15), 0 0 60px rgba(255,90,54,0.4)",
-              }}
-            >
-              LIKE<br />NEVER<br />BEFORE
-            </motion.h2>
-          </motion.div>
-        )}
-
-        {}
-        <motion.div
-          style={{ opacity: indicatorOpacity, bottom: "calc(90px + env(safe-area-inset-bottom, 0px))" }}
-          className="absolute left-1/2 -translate-x-1/2 z-[6]"
-        >
-          <button className="scroll-indicator flex items-center gap-2 px-4 py-2 text-sm font-medium text-maze-black border border-neutral-300 rounded-full bg-white/70 backdrop-blur-sm">
-            Scroll to continue
-            <ChevronDown className="w-4 h-4" />
-          </button>
-        </motion.div>
-      </motion.div>
+        {/* Bottom edge fade */}
+        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black to-transparent pointer-events-none z-[5]" />
+      </div>
     </section>
   );
 }

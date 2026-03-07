@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, useInView, useScroll, useMotionValueEvent } from "framer-motion";
+import Image from "next/image";
 import AgentVideoCard from "../ui/AgentVideoCard";
 import { useIsMobile } from "../ui/useIsMobile";
+import { useRegisterParticleTargets } from "../ui/particles/useRegisterParticleTargets";
+import { RefObject } from "react";
 
 
 const agentsData = [
@@ -40,7 +43,7 @@ const agentsData = [
 ];
 
 const AUTO_ADVANCE_INTERVAL = 6000;
-const GAP = 16;
+const GAP = 56;
 
 
 export default function AgentsSection() {
@@ -49,6 +52,9 @@ export default function AgentsSection() {
     const isMobile = useIsMobile();
 
     const [activeAgentIndex, setActiveAgentIndex] = useState(0);
+
+    // Register particle targets
+    useRegisterParticleTargets("agents", sectionRef as unknown as RefObject<HTMLElement>, [".particle-target-agents"], inView);
 
 
     const carouselContainerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +66,7 @@ export default function AgentsSection() {
         if (!container) return;
         const cw = container.offsetWidth;
         setContainerWidth(cw);
-        const ratio = cw < 480 ? 0.92 : cw < 768 ? 0.88 : cw < 1024 ? 0.76 : 0.72;
+        const ratio = cw < 480 ? 0.88 : cw < 768 ? 0.82 : cw < 1024 ? 0.72 : 0.68;
         setCardWidth(Math.round(cw * ratio));
     }, []);
 
@@ -175,19 +181,14 @@ export default function AgentsSection() {
     }, [isAutoPlaying, startAutoAdvance]);
 
 
-    useEffect(() => {
-        if (!isUserScrolling.current) {
-            scrollToAgent(activeAgentIndex);
-        }
-    }, [activeAgentIndex, scrollToAgent]);
-
-
     const switchAgent = useCallback(
         (newIndex: number) => {
             if (newIndex === activeAgentIndex) return;
             isUserScrolling.current = false;
             setActiveAgentIndex(newIndex);
             scrollToAgent(newIndex);
+            // Focus section for keyboard nav
+            sectionRef.current?.focus();
             if (isAutoPlaying) {
                 startAutoAdvance();
             }
@@ -195,107 +196,166 @@ export default function AgentsSection() {
         [activeAgentIndex, isAutoPlaying, startAutoAdvance, scrollToAgent]
     );
 
+    useEffect(() => {
+        if (!isUserScrolling.current) {
+            scrollToAgent(activeAgentIndex);
+        }
+    }, [activeAgentIndex, scrollToAgent]);
+
+    // Keyboard navigation for left/right arrows
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const prevIndex = activeAgentIndex === 0 ? agentsData.length - 1 : activeAgentIndex - 1;
+            setActiveAgentIndex(prevIndex);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            const nextIndex = (activeAgentIndex + 1) % agentsData.length;
+            setActiveAgentIndex(nextIndex);
+        }
+    }, [activeAgentIndex]);
+
     const carouselSpring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
 
 
     const totalTrackWidth = agentsData.length * cardWidth + (agentsData.length - 1) * GAP;
     const peekWidth = Math.max((containerWidth - cardWidth) / 2 - GAP, 0);
-    const paddingForPeek = peekWidth + GAP;
+    const paddingForPeek = Math.max(peekWidth * 0.6, GAP);
 
     return (
         <div
             ref={sectionRef}
             id="agents"
-            className="relative flex flex-col items-center overflow-hidden"
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+            onClick={() => sectionRef.current?.focus()}
+            className="relative flex flex-col items-center overflow-hidden outline-none"
             style={{ paddingTop: "clamp(80px, 10vh, 120px)", paddingBottom: "40px" }}
         >
-            {}
+
+            {/* Header Text Stagger */}
             <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="text-center mb-4 px-4"
+                initial="hidden"
+                animate={inView ? "visible" : "hidden"}
+                variants={{
+                    hidden: {},
+                    visible: {
+                        transition: {
+                            staggerChildren: 0.15,
+                        }
+                    }
+                }}
+                className="text-center mb-8 px-4 relative z-10"
             >
-                <h2 className="font-display text-[clamp(32px,4vw,56px)] tracking-[-0.04em] text-[#0b132b] leading-[1.05]">
-                    Square Up doesn&apos;t assist your study.<br /><span className="text-[#FF5A36]">It runs it.</span>
-                </h2>
-                <p className="mt-3 text-base sm:text-lg text-[#757575] font-medium tracking-[-0.01em]">
-                    Five agents. One seamless workflow.
-                </p>
+                <motion.h2
+                    variants={{
+                        hidden: { opacity: 0, y: 40, filter: "blur(8px)", scale: 0.98 },
+                        visible: { opacity: 1, y: 0, filter: "blur(0px)", scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+                    }}
+                    className="font-display text-[clamp(44px,6vw,76px)] tracking-[-0.04em] text-[#0b132b] leading-[1.05] pointer-events-none max-w-4xl mx-auto"
+                >
+                    SquareUp makes customer
+                    <br className="hidden md:block" />
+                    understanding <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A36] to-[#FF8A66]">a system.</span>
+                </motion.h2>
+                <motion.p
+                    variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+                    }}
+                    className="mt-6 text-lg sm:text-xxl text-[#606060] font-medium tracking-[-0.01em] max-w-3xl mx-auto"
+                >
+                    Companies recruit the right participants effortlessly, conduct research autonomously, and deliver user insights that drive actual decisions at lightning speed.
+                </motion.p>
             </motion.div>
 
-            {}
+            {/* Pills Nav */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-                className="flex items-center justify-center mb-5 px-4"
+                initial={{ opacity: 0, y: 20, scale: 0.95, filter: "blur(4px)" }}
+                animate={inView ? { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" } : {}}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+                className="flex items-center justify-center mb-8 px-4 relative z-10"
             >
                 <div
                     ref={tabContainerRef}
                     className="relative inline-flex gap-0 p-[3px] rounded-full overflow-hidden"
                     style={{
-                        background: "linear-gradient(160deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.22) 40%, rgba(255,255,255,0.18) 60%, rgba(255,255,255,0.30) 100%)",
+                        background: "linear-gradient(160deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.18) 40%, rgba(255,255,255,0.14) 60%, rgba(255,255,255,0.25) 100%)",
                         backdropFilter: "blur(48px) saturate(2.0)",
                         WebkitBackdropFilter: "blur(48px) saturate(2.0)",
-                        border: "1px solid rgba(255,255,255,0.55)",
-                        boxShadow: "0 16px 56px -8px rgba(0,0,0,0.10), 0 6px 20px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,0.90), inset 0 -1px 1px rgba(0,0,0,0.04)",
+                        boxShadow: "0 16px 56px -8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.03), 0 0 0 1px rgba(255,255,255,0.25), inset 0 1px 2px rgba(255,255,255,0.60), inset 0 -1px 2px rgba(0,0,0,0.02)",
                     }}
                 >
                     <div
                         className="absolute inset-0 pointer-events-none rounded-full"
                         style={{
-                            background: "linear-gradient(180deg, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0.08) 50%, transparent 70%, rgba(255,255,255,0.10) 100%)",
+                            background: "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.05) 50%, transparent 70%, rgba(255,255,255,0.08) 100%)",
                         }}
                     />
-                    <div className="absolute top-0 left-0 right-0 h-px pointer-events-none rounded-full"
-                        style={{ background: "linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.80) 50%, transparent 95%)" }} />
-                    <div className="absolute bottom-0 left-0 right-0 h-px pointer-events-none rounded-full"
-                        style={{ background: "linear-gradient(90deg, transparent 10%, rgba(0,0,0,0.04) 50%, transparent 90%)" }} />
+                    <div className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none rounded-full"
+                        style={{ background: "linear-gradient(90deg, transparent 10%, rgba(255,255,255,0.45) 50%, transparent 90%)", filter: "blur(0.5px)" }} />
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] pointer-events-none rounded-full"
+                        style={{ background: "linear-gradient(90deg, transparent 15%, rgba(0,0,0,0.02) 50%, transparent 85%)", filter: "blur(0.5px)" }} />
 
                     <motion.div
                         className="absolute top-[3px] bottom-[3px] rounded-full z-0"
                         animate={{ left: pillStyle.left, width: pillStyle.width }}
                         transition={carouselSpring}
                         style={{
-                            background: "linear-gradient(135deg, rgba(255,90,54,0.13) 0%, rgba(255,120,80,0.07) 100%)",
-                            border: "1px solid rgba(255,90,54,0.16)",
-                            boxShadow: "0 0 12px rgba(255,90,54,0.08), inset 0 1px 0 rgba(255,255,255,0.3)",
+                            background: "linear-gradient(135deg, rgba(255,90,54,0.10) 0%, rgba(255,120,80,0.05) 100%)",
+                            boxShadow: "0 0 16px rgba(255,90,54,0.06), 0 0 0 1px rgba(255,90,54,0.10), inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -1px 1px rgba(255,90,54,0.04)",
                         }}
                     />
 
                     {agentsData.map((agent, i) => {
                         const isActive = activeAgentIndex === i;
                         return (
-                            <button
-                                ref={(el) => { tabButtonRefs.current[i] = el; }}
+                            <motion.button
+                                ref={(el: HTMLButtonElement | null) => { tabButtonRefs.current[i] = el; }}
                                 key={agent.name}
                                 onClick={() => switchAgent(i)}
-                                className="relative z-10 px-3 sm:px-5 md:px-7 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-colors duration-300 cursor-pointer border-none outline-none bg-transparent text-center whitespace-nowrap active:scale-[0.97]"
+                                whileHover={{ scale: isActive ? 1 : 1.05 }}
+                                whileTap={{ scale: 0.97 }}
+                                className="relative z-10 px-4 sm:px-6 md:px-8 py-2 rounded-full text-[12px] sm:text-[13px] font-semibold transition-colors duration-300 cursor-pointer border-none outline-none bg-transparent text-center whitespace-nowrap"
                                 style={{
-                                    color: isActive ? "#FF5A36" : "rgba(11,19,43,0.32)",
-                                    letterSpacing: "0.04em",
+                                    color: isActive ? "#FF5A36" : "rgba(11,19,43,0.45)",
+                                    letterSpacing: "0.02em",
                                     fontWeight: isActive ? 700 : 500,
                                 }}
                             >
                                 {agent.name}
-                            </button>
+                            </motion.button>
                         );
                     })}
                 </div>
             </motion.div>
 
-            {}
+            {/* Dynamic Background Halo Layer */}
             <motion.div
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={inView ? { opacity: 1, scale: 1 } : {}}
-                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-                className="w-full"
+                className="absolute top-[50%] left-1/2 w-[900px] h-[600px] rounded-full blur-[180px] pointer-events-none opacity-15"
+                animate={{
+                    background: `radial-gradient(ellipse 60% 50% at center, ${['#FF8A66', '#FFB199', '#FF5A36', '#FF8A66', '#FF5A36'][activeAgentIndex]} 0%, transparent 65%)`,
+                    x: "-50%",
+                    y: "-50%",
+                    scale: [1, 1.05, 1]
+                }}
+                transition={{
+                    background: { duration: 1.2 },
+                    scale: { duration: 4, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }
+                }}
+            />
+
+            {/* Carousel Container */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.98, y: 20 }}
+                animate={inView ? { opacity: 1, scale: 1, y: 0 } : {}}
+                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+                className="w-full relative z-10"
                 ref={carouselContainerRef}
             >
                 <div
                     ref={scrollContainerRef}
-                    className="w-full overflow-x-auto overflow-y-hidden scrollbar-hide"
+                    className="relative w-full overflow-x-auto overflow-y-hidden scrollbar-hide"
                     style={{
                         scrollSnapType: "x mandatory",
                         WebkitOverflowScrolling: "touch",
@@ -318,7 +378,7 @@ export default function AgentsSection() {
                             return (
                                 <div
                                     key={agent.name}
-                                    className="flex-shrink-0"
+                                    className="flex-shrink-0 particle-target-agents"
                                     style={{
                                         width: cardWidth,
                                         scrollSnapAlign: "center",
@@ -340,29 +400,31 @@ export default function AgentsSection() {
                 </div>
             </motion.div>
 
-            {}
+            { }
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={inView ? { opacity: 1 } : {}}
                 transition={{ duration: 0.5, delay: 0.5 }}
                 className="flex items-center justify-center gap-2 mt-5 flex-shrink-0"
             >
-                <div className="flex items-center gap-[6px]">
+                <div className="flex items-center gap-[8px]">
                     {agentsData.map((_, i) => {
                         const isActive = activeAgentIndex === i;
                         return (
                             <motion.button
                                 key={i}
                                 onClick={() => switchAgent(i)}
+                                whileHover={{ scale: 1.2 }}
+                                whileTap={{ scale: 0.9 }}
                                 className="rounded-full cursor-pointer border-none outline-none p-0"
                                 animate={{
-                                    width: isActive ? (isMobile ? 20 : 24) : (isMobile ? 5 : 6),
+                                    width: isActive ? (isMobile ? 24 : 32) : (isMobile ? 6 : 8),
                                     backgroundColor: isActive
                                         ? "#0b132b"
-                                        : "rgba(11,19,43,0.18)",
+                                        : "rgba(11,19,43,0.15)",
                                 }}
                                 transition={carouselSpring}
-                                style={{ height: isMobile ? 5 : 6 }}
+                                style={{ height: isMobile ? 6 : 8 }}
                             />
                         );
                     })}
@@ -371,7 +433,7 @@ export default function AgentsSection() {
                 <button
                     onClick={() => setIsAutoPlaying((prev) => !prev)}
                     className="ml-2 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer outline-none bg-transparent"
-                    style={{ border: "1.5px solid rgba(11,19,43,0.15)" }}
+                    style={{ boxShadow: "0 0 0 1.5px rgba(11,19,43,0.10), 0 2px 8px rgba(11,19,43,0.04)" }}
                 >
                     {isAutoPlaying ? (
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">

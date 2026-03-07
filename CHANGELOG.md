@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-website] - 2026-03-07
+### Website Premium UI/UX Overhaul
+
+#### Frontend & Design
+- **Architecture**: Complete redesign of the website implementing a premium, minimalist "15/10" aesthetic.
+- **Hero Section**: New immersive 3D globe visualization and refined typography.
+- **Navigation & Footer**: Implemented dynamic floating navigation that intuitively hides when the full-screen minimalist footer enters the viewport. Added a specialized full-width "SQUAREUP" typography footer.
+- **CTA Section**: Engineered a scroll-driven cinematic 3D heart particle assembly animation tied directly to user scroll progression.
+- **Animations & Effects**: Added dense, soothing particle effects with advanced spring physics for an elegant and dynamic user experience across multiple sections.
+- **Assets**: Added dedicated SVG and WebP static logos (`squareup_logos` folder).
+
 ## [1.1.4-stable] - 2026-02-10
 ### MVP v1 - High Intent Call Scheduler
 

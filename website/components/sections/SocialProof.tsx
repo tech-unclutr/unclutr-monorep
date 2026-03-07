@@ -1,63 +1,128 @@
 "use client";
 
+import { useRef } from "react";
+import { motion, useInView, Variants } from "framer-motion";
+
 const logos = [
-  { name: "Mesa School of Business", style: "font-bold text-xl tracking-wider" },
-  { name: "Zepto", style: "font-bold text-xl" },
-  { name: "WILDSTONE", style: "font-bold text-xl tracking-wider" },
-  { name: "Titan Skinn", style: "font-semibold text-lg tracking-[0.15em]" },
-  { name: "Fasttrack", style: "font-bold text-xl italic" },
-  { name: "Andamen", style: "font-semibold text-lg" },
-  { name: "V-BOG", style: "font-bold text-xl tracking-wider" },
-  { name: "14U Capital", style: "font-semibold text-lg tracking-[0.15em]" },
-  { name: "Mumbai Pav Company", style: "font-bold text-lg" },
-  { name: "Everaw", style: "font-bold text-xl italic" },
-  { name: "Cozy Bear", style: "font-semibold text-lg" },
+  "Zepto",
+  "Wild Stone",
+  "Fastrack",
+  "Skinn",
+  "14U Capital",
+  "Mumbai Pav Co.",
+  "Mesa School",
 ];
 
 export default function SocialProof() {
-  const doubled = [...logos, ...logos];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(containerRef, { once: true, amount: 0.3 });
+
+  const containerVariants: Variants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 15, filter: "blur(12px)" },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { duration: 1.4, ease: [0.16, 1, 0.3, 1] as const }
+    },
+  };
 
   return (
-    <section data-section-name="social-proof" className="relative z-10 py-12 sm:py-20 lg:py-28 overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 mb-12">
-        <h2 className="font-display text-[clamp(32px,4vw,56px)] tracking-[-0.04em] text-maze-black leading-[1.15] text-center max-w-[700px] mx-auto">
-          From startups to enterprises,<br /> all studies run on Square Up
-        </h2>
-        <p className="text-base sm:text-lg text-maze-black tracking-wide text-center mt-4">
-          Trusted by the leaders from world&apos;s most customer-obsessed teams
-        </p>
+    <section
+      ref={containerRef}
+      data-section-name="social-proof"
+      className="relative z-10 py-24 lg:py-36 overflow-hidden"
+      style={{
+        background: "#FBF4EC"
+      }}
+    >
+
+      {/* Subtle background glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none w-full h-full overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={inView ? { opacity: 0.25, scale: 1 } : { opacity: 0, scale: 0.8 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          className="w-[800px] h-[300px] bg-gradient-to-r from-orange-300 via-orange-100 to-transparent rounded-[100%] blur-[80px]"
+          style={{ transform: "translateY(-20%)" }}
+        />
       </div>
 
-      {}
-      <div className="relative">
-        <div className="flex overflow-hidden">
-          <div className="flex items-center gap-6 sm:gap-12 lg:gap-16 animate-scroll-left-slow shrink-0">
-            {doubled.map((logo, i) => (
-              <span
-                key={`${logo.name}-${i}`}
-                className="font-bold text-sm sm:text-base md:text-lg text-maze-black whitespace-nowrap select-none shrink-0"
-              >
-                {logo.name}
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-6 sm:gap-12 lg:gap-16 animate-scroll-left-slow shrink-0 ml-6 sm:ml-12 lg:ml-16">
-            {doubled.map((logo, i) => (
-              <span
-                key={`${logo.name}-dup-${i}`}
-                className="font-bold text-sm sm:text-base md:text-lg text-maze-black whitespace-nowrap select-none shrink-0"
-              >
-                {logo.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate={inView ? "visible" : "hidden"}
+        className="relative z-10 max-w-[1200px] mx-auto px-6"
+      >
+        {/* Badge */}
+        <motion.div variants={itemVariants} className="text-center mb-8">
+          <span className="inline-block py-1.5 px-4 rounded-full text-xs font-bold tracking-[0.15em] uppercase text-orange-600 bg-orange-50/80 border border-orange-200/50 backdrop-blur-sm shadow-sm ring-1 ring-black/5">
+            Validated by leaders from 50+ customer-centric teams
+          </span>
+        </motion.div>
 
-      {}
-      <div className="flex justify-center mt-12 sm:mt-16 lg:mt-[96px]">
-        <div className="h-px w-[33%] bg-neutral-300/30" />
-      </div>
+        {/* Headline */}
+        <motion.div variants={itemVariants} className="max-w-[900px] mx-auto mb-20 lg:mb-24">
+          <h2 className="font-display text-[clamp(28px,4vw,48px)] tracking-[-0.03em] text-[#0b132b] leading-[1.1] text-center">
+            <span className="whitespace-nowrap">The world's sharpest consumer teams</span>{" "}
+            <span className="whitespace-nowrap">don't guess.</span>
+            <br className="hidden sm:block" />
+            <span className="block mt-2 sm:inline sm:mt-0"> They build on <span className="text-[#FF5A36]">Square Up</span>.</span>
+          </h2>
+        </motion.div>
+
+        {/* Logo Grid */}
+        <motion.div variants={itemVariants} className="max-w-[1100px] mx-auto flex flex-col items-center gap-y-8 sm:gap-y-10">
+          {/* Top row */}
+          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-16 lg:gap-x-20 gap-y-8 sm:gap-y-10">
+            {logos.slice(0, 4).map((name, i) => (
+              <motion.span
+                key={name}
+                initial={{ opacity: 0, filter: "blur(4px)" }}
+                animate={inView ? { opacity: 1, filter: "blur(0px)" } : {}}
+                transition={{ duration: 0.8, delay: 0.4 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ scale: 1.08 }}
+                className="font-display text-xl sm:text-2xl font-medium tracking-tight
+                           text-[#8892B0] hover:text-[#FF5A36]
+                           transition-all duration-300 ease-out
+                           hover:drop-shadow-[0_4px_20px_rgba(255,90,54,0.3)]
+                           whitespace-nowrap select-none cursor-default"
+              >
+                {name}
+              </motion.span>
+            ))}
+          </div>
+          {/* Bottom row – centered */}
+          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-16 lg:gap-x-20 gap-y-8 sm:gap-y-10">
+            {logos.slice(4).map((name, i) => (
+              <motion.span
+                key={name}
+                initial={{ opacity: 0, filter: "blur(4px)" }}
+                animate={inView ? { opacity: 1, filter: "blur(0px)" } : {}}
+                transition={{ duration: 0.8, delay: 0.4 + (i + 4) * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ scale: 1.08 }}
+                className="font-display text-xl sm:text-2xl font-medium tracking-tight
+                           text-[#8892B0] hover:text-[#FF5A36]
+                           transition-all duration-300 ease-out
+                           hover:drop-shadow-[0_4px_20px_rgba(255,90,54,0.3)]
+                           whitespace-nowrap select-none cursor-default"
+              >
+                {name}
+              </motion.span>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 }

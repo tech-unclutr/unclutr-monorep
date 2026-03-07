@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef, RefObject } from "react";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { ArrowRight, ChevronDown, Globe, Briefcase, Heart, Users, BookOpen, Compass } from "lucide-react";
+import { useRegisterParticleTargets } from "@/components/ui/particles/useRegisterParticleTargets";
 
 const tabs = [
   {
@@ -132,6 +133,11 @@ const rotatingWords = ["Calls", "Reports", "Decisions"];
 export default function CoreFeatures() {
   const [activeTab, setActiveTab] = useState(0);
   const [wordIndex, setWordIndex] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const isInView = useInView(sectionRef, { amount: 0.3 });
+
+  // Register particle targets
+  useRegisterParticleTargets("coreFeatures", sectionRef as unknown as RefObject<HTMLElement>, [".particle-target-features"], isInView);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -141,9 +147,15 @@ export default function CoreFeatures() {
   }, []);
 
   return (
-    <section data-section-name="core-features" className="relative z-10 py-12 sm:py-20 lg:py-28">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-        {}
+    <section
+      ref={sectionRef}
+      id="features"
+      data-section-name="core-features"
+      className="relative z-10 py-12 sm:py-20 lg:py-28 overflow-hidden"
+    >
+
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-10">
+        { }
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="font-display text-[clamp(32px,4vw,56px)] tracking-[-0.03em] text-maze-black leading-[1.2]">
             Square Up helps you across
@@ -164,37 +176,35 @@ export default function CoreFeatures() {
           </div>
         </div>
 
-        {}
+        { }
         <div className="flex gap-0 mb-0">
           {tabs.map((tab, i) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(i)}
-              className={`group relative flex-1 flex items-center ${tab.align === "center" ? "justify-center" : "justify-start"} gap-2 cursor-pointer px-2 py-2.5 sm:px-4 sm:py-3 md:px-6 min-h-[44px] rounded-t-lg md:rounded-t-2xl transition-all duration-500 ease-in-out ${
-                activeTab === i
-                  ? ""
-                  : "hover:bg-white/10"
-              }`}
+              className={`group relative flex-1 flex items-center ${tab.align === "center" ? "justify-center" : "justify-start"} gap-2 cursor-pointer px-2 py-2.5 sm:px-4 sm:py-3 md:px-6 min-h-[44px] rounded-t-lg md:rounded-t-2xl transition-all duration-500 ease-in-out ${activeTab === i
+                ? ""
+                : "hover:bg-white/10"
+                }`}
               style={
                 activeTab === i
                   ? {
-                      background: "linear-gradient(160deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.20) 60%, rgba(255,255,255,0.35) 100%)",
-                      backdropFilter: "blur(48px) saturate(2.0)",
-                      WebkitBackdropFilter: "blur(48px) saturate(2.0)",
-                      borderTop: "1px solid rgba(255,255,255,0.55)",
-                      borderLeft: "1px solid rgba(255,255,255,0.55)",
-                      borderRight: "1px solid rgba(255,255,255,0.55)",
-                      boxShadow: "inset 0 1px 1px rgba(255,255,255,0.90), inset 0 -1px 1px rgba(0,0,0,0.02)",
-                    }
+                    background: "linear-gradient(160deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.20) 60%, rgba(255,255,255,0.35) 100%)",
+                    backdropFilter: "blur(48px) saturate(2.0)",
+                    WebkitBackdropFilter: "blur(48px) saturate(2.0)",
+                    borderTop: "1px solid rgba(255,255,255,0.55)",
+                    borderLeft: "1px solid rgba(255,255,255,0.55)",
+                    borderRight: "1px solid rgba(255,255,255,0.55)",
+                    boxShadow: "inset 0 1px 1px rgba(255,255,255,0.90), inset 0 -1px 1px rgba(0,0,0,0.02)",
+                  }
                   : {}
               }
             >
               <h2
-                className={`font-display text-[clamp(32px,4vw,56px)] tracking-[-0.04em] ${tab.align === "center" ? "text-center" : "text-left"} transition-all duration-300 ${
-                  activeTab === i
-                    ? "text-maze-black"
-                    : "text-neutral-400 group-hover:text-neutral-600"
-                }`}
+                className={`font-display text-[clamp(32px,4vw,56px)] tracking-[-0.04em] ${tab.align === "center" ? "text-center" : "text-left"} transition-all duration-300 ${activeTab === i
+                  ? "text-maze-black"
+                  : "text-neutral-400 group-hover:text-neutral-600"
+                  }`}
               >
                 {tab.label}
               </h2>
@@ -202,7 +212,7 @@ export default function CoreFeatures() {
           ))}
         </div>
 
-        {}
+        { }
         <div
           className="rounded-b-2xl rounded-tr-2xl lg:rounded-tr-none p-4 sm:p-6 lg:p-10 min-h-[400px] h-auto sm:h-[576px] lg:h-[504px]"
           style={{
@@ -222,7 +232,7 @@ export default function CoreFeatures() {
               transition={{ duration: 0.4 }}
               className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 items-start h-full"
             >
-              {}
+              { }
               <div>
                 <h3 className="font-display text-[clamp(24px,3vw,40px)] tracking-[-0.03em] text-maze-black leading-tight mb-4">
                   {tabs[activeTab].title}
@@ -238,9 +248,9 @@ export default function CoreFeatures() {
                 </a>
               </div>
 
-              {}
+              { }
               <div
-                className={`rounded-2xl p-6 lg:p-8 ${tabs[activeTab].cardBg} h-full flex items-center justify-center overflow-hidden`}
+                className={`rounded-2xl p-6 lg:p-8 ${tabs[activeTab].cardBg} h-full flex items-center justify-center overflow-hidden particle-target-features`}
               >
                 {tabs[activeTab].cardContent === "demographics" && <DemographicsCard />}
                 {tabs[activeTab].cardContent === "criteria" && <CriteriaCard />}

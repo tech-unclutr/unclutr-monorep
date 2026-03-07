@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Square Up | User Research and Testing Platform",
+  title: "SquareUp: Customer Understanding for Consumer Companies",
   description:
     "Square Up turns insights into clarity your team can act on. Research at the pace of change.",
 };
@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

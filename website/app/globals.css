@@ -7,8 +7,10 @@
 :root {
   --cream: #f5f2ed;
   --cream-dark: #eae5dd;
-  --lime: #FF5A36;
-  --lime-bright: #F73B20;
+  --peach: #FBF4EC;
+  --peach-light: #FCF6EF;
+  --lime: #FF8A4C;
+  --lime-bright: #FF7A5C;
   --maze-black: #212121;
   --maze-gray: #757575;
   --safe-area-top: env(safe-area-inset-top, 0px);
@@ -45,9 +47,11 @@ body {
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--cream);
 }
+
 ::-webkit-scrollbar-thumb {
   background: #c0b8ad;
   border-radius: 4px;
@@ -75,6 +79,7 @@ body {
 .tab-active {
   position: relative;
 }
+
 .tab-active::after {
   content: '';
   position: absolute;
@@ -101,6 +106,7 @@ img {
   transition: all 0.3s ease;
   background: white;
 }
+
 .feature-pill:hover {
   background: var(--maze-black);
   color: white;
@@ -114,59 +120,111 @@ img {
   padding: 24px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 .security-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
 }
+
 .security-card:active {
   transform: scale(0.98);
 }
 
 
 @keyframes scroll-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(6px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(6px);
+  }
 }
+
 .scroll-indicator {
   animation: scroll-bounce 2s ease-in-out infinite;
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
 
-html.lenis, html.lenis body {
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px #fbbf24);
+  }
+  50% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 8px #fbbf24) drop-shadow(0 0 16px #f59e0b);
+  }
+}
+
+html.lenis,
+html.lenis body {
   height: auto;
 }
+
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
 }
+
 .lenis.lenis-smooth [data-lenis-prevent] {
   overscroll-behavior: contain;
 }
+
 .lenis.lenis-stopped {
   overflow: hidden;
 }
 
 
 @keyframes scroll-left-css {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
+
 @keyframes scroll-right-css {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(-50%);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .animate-scroll-left {
   animation: scroll-left-css 60s linear infinite;
 }
+
 .animate-scroll-right {
   animation: scroll-right-css 60s linear infinite;
 }
 
 
 @keyframes globe-drift {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
+
 .animate-globe-drift {
   animation: globe-drift 18s linear infinite;
   will-change: transform;
@@ -175,43 +233,133 @@ html.lenis, html.lenis body {
 
 
 @keyframes globe-edge-orbit {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
+
 .animate-globe-orbit {
   animation: globe-edge-orbit 40s linear infinite;
 }
 
 
 @keyframes blob-drift-1 {
-  0%, 100% { transform: translate(0, 0); }
-  25%      { transform: translate(3vw, 2vh); }
-  50%      { transform: translate(-2vw, 4vh); }
-  75%      { transform: translate(1vw, -2vh); }
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(3vw, 2vh);
+  }
+
+  50% {
+    transform: translate(-2vw, 4vh);
+  }
+
+  75% {
+    transform: translate(1vw, -2vh);
+  }
 }
+
 @keyframes blob-drift-2 {
-  0%, 100% { transform: translate(0, 0); }
-  25%      { transform: translate(-2vw, -3vh); }
-  50%      { transform: translate(3vw, 1vh); }
-  75%      { transform: translate(-1vw, 3vh); }
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(-2vw, -3vh);
+  }
+
+  50% {
+    transform: translate(3vw, 1vh);
+  }
+
+  75% {
+    transform: translate(-1vw, 3vh);
+  }
 }
+
 @keyframes blob-drift-3 {
-  0%, 100% { transform: translate(0, 0); }
-  25%      { transform: translate(2vw, -2vh); }
-  50%      { transform: translate(-3vw, -1vh); }
-  75%      { transform: translate(1vw, 2vh); }
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(2vw, -2vh);
+  }
+
+  50% {
+    transform: translate(-3vw, -1vh);
+  }
+
+  75% {
+    transform: translate(1vw, 2vh);
+  }
 }
+
 @keyframes blob-drift-4 {
-  0%, 100% { transform: translate(0, 0); }
-  33%      { transform: translate(-2vw, 2vh); }
-  66%      { transform: translate(2vw, -1vh); }
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  33% {
+    transform: translate(-2vw, 2vh);
+  }
+
+  66% {
+    transform: translate(2vw, -1vh);
+  }
 }
 
-.blob-drift-1 { animation: blob-drift-1 20s ease-in-out infinite; }
-.blob-drift-2 { animation: blob-drift-2 25s ease-in-out infinite; }
-.blob-drift-3 { animation: blob-drift-3 22s ease-in-out infinite; }
-.blob-drift-4 { animation: blob-drift-4 18s ease-in-out infinite; }
+.blob-drift-1 {
+  animation: blob-drift-1 20s ease-in-out infinite;
+}
 
+.blob-drift-2 {
+  animation: blob-drift-2 25s ease-in-out infinite;
+}
+
+.blob-drift-3 {
+  animation: blob-drift-3 22s ease-in-out infinite;
+}
+
+.blob-drift-4 {
+  animation: blob-drift-4 18s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.study-card {
+  transition: transform 0.2s ease-out;
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
 
 .carousel-track {
   will-change: transform;
@@ -220,10 +368,13 @@ html.lenis, html.lenis body {
 }
 
 
-.scrollbar-hide::-webkit-scrollbar {
+.scrollbar-hide::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.scrollbar-hide {
+
+.scrollbar-hide,
+.hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -239,10 +390,12 @@ html.lenis, html.lenis body {
     font-size: 13px;
     padding: 6px 12px;
   }
+
   .security-card {
     padding: 18px;
     border-radius: 12px;
   }
+
   .touch-target {
     min-height: 44px;
     min-width: 44px;
@@ -251,14 +404,30 @@ html.lenis, html.lenis body {
 
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
   .animate-globe-drift,
   .animate-globe-orbit,
-  .blob-drift-1, .blob-drift-2, .blob-drift-3, .blob-drift-4 {
+  .blob-drift-1,
+  .blob-drift-2,
+  .blob-drift-3,
+  .blob-drift-4 {
     animation: none !important;
+  }
+}
+
+/* Custom cursor - hide default on desktop only */
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  *,
+  *::before,
+  *::after {
+    cursor: none !important;
   }
 }

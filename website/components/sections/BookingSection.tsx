@@ -16,6 +16,7 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import Reveal from "../ui/Reveal";
+import Image from "next/image";
 
 export default function BookingSection() {
   const [selectedDate, setSelectedDate] = useState<number | null>(18);
@@ -91,6 +92,7 @@ export default function BookingSection() {
     <motion.section
       id="book-call"
       className="py-12 sm:py-16 lg:py-24 relative overflow-hidden group"
+      style={{ background: "#FBF4EC" }}
       onMouseMove={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -99,6 +101,7 @@ export default function BookingSection() {
         e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
       }}
     >
+
       {}
       <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255,235,225,0.6) 0%, transparent 70%)" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[100px] bg-[#FF5A36]/5 z-0 pointer-events-none" />
@@ -117,24 +120,28 @@ export default function BookingSection() {
         }}
       />
 
-      <div className="max-w-[1000px] mx-auto px-6 relative z-10 flex flex-col items-center">
-        <Reveal width="100%">
-          <div className="text-center mb-8 sm:mb-12 lg:mb-16 w-full flex flex-col items-center">
-            <h2 className="font-display text-[clamp(32px,4vw,56px)] tracking-[-0.04em] text-[#0b132b] mb-4 text-center leading-[1.05]">
-              See it in{" "}
-              <span className="text-white">
-                action.
-              </span>
-            </h2>
-            <p className="text-base sm:text-lg text-[#475569] font-medium text-center max-w-2xl mx-auto">
-              Book a 30-minute tailored setup call to see how SquareUp can unify
-              your customer data.
-            </p>
-          </div>
-        </Reveal>
+      <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-stretch gap-8 lg:gap-12">
+        {/* Left column - Heading & Subheadline */}
+        <div className="w-full lg:w-1/3 flex flex-col justify-center">
+          <Reveal width="100%">
+            <div className="mb-8 lg:mb-0">
+              <h2 className="font-display text-[clamp(32px,4vw,56px)] tracking-[-0.04em] text-[#0b132b] mb-4 text-left leading-[1.05]">
+                Watch it{" "}
+                <span className="text-[#FF5A36]">
+                  work.
+                </span>
+              </h2>
+              <p className="text-base sm:text-lg text-[#475569] font-medium text-left max-w-lg">
+                Book a 30-minute tailored setup call to see how SquareUp can unify
+                your customer data.
+              </p>
+            </div>
+          </Reveal>
+        </div>
 
-        {}
-        <Reveal width="100%">
+        {/* Right column - Calendar */}
+        <div className="w-full lg:w-2/3">
+          <Reveal width="100%">
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -156,13 +163,14 @@ export default function BookingSection() {
 
             {}
             <div className="w-full md:w-[35%] py-8 px-6 sm:p-10 border-b md:border-b-0 md:border-r border-gray-200/50 relative z-10 flex flex-col bg-cream/40">
-              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-200 flex items-center justify-center mb-6 overflow-hidden">
-                {}
-                <div className="w-8 h-8 rounded bg-[#0b132b] relative">
-                  <div className="absolute inset-1 border border-white/50 rounded-sm overflow-hidden">
-                    <div className="w-full h-full bg-gradient-to-br from-[#FF5A36] to-transparent opacity-30"></div>
-                  </div>
-                </div>
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-200 flex items-center justify-center mb-6 overflow-hidden p-2">
+                <Image
+                  src="/su_logo_transparent.svg"
+                  alt="SquareUp"
+                  width={48}
+                  height={48}
+                  className="object-contain"
+                />
               </div>
 
               <h3 className="text-[14px] font-bold text-gray-400 mb-1 tracking-wider uppercase">
@@ -337,7 +345,8 @@ export default function BookingSection() {
               </div>
             </div>
           </motion.div>
-        </Reveal>
+          </Reveal>
+        </div>
       </div>
 
       <style jsx global>{`

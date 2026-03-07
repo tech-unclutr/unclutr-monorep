@@ -4,8 +4,14 @@ import { useEffect } from "react";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import FloatingNav from "@/components/sections/FloatingNav";
 import LogoNotch from "@/components/ui/LogoNotch";
+import ParticleNarrativeController from "@/components/ui/ParticleNarrativeController";
+
+import CustomCursor from "@/components/ui/CustomCursor";
+import CursorParticles from "@/components/ui/CursorParticles";
+import AmbientParticles from "@/components/ui/AmbientParticles";
 import HeroSection from "@/components/sections/HeroSection";
-import CoreFeatures from "@/components/sections/CoreFeatures";
+// import CoreFeatures from "@/components/sections/CoreFeatures";
+import InterviewStudio from "@/components/sections/InterviewStudio";
 import FeaturesMarquee from "@/components/sections/FeaturesMarquee";
 import AgentsSection from "@/components/sections/AgentsSection";
 import ResearchNeeds from "@/components/sections/ResearchNeeds";
@@ -45,24 +51,56 @@ export default function Home() {
     };
   }, []);
 
+  // Keyboard navigation: Up/Down arrow keys simulate scrolling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      e.preventDefault();
+      const distance = window.innerHeight * 0.3;
+      window.scrollBy({
+        top: e.key === "ArrowDown" ? distance : -distance,
+        behavior: "smooth",
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <main className="relative">
+    <main className="relative bg-[#FBF4EC]">
       <LoadingScreen />
       <LogoNotch />
       <FloatingNav />
       <HeroSection />
-      <div className="relative z-10 bg-cream">
-        <ProblemSection />
-        <CoreFeatures />
-        <FeaturesMarquee />
-        <AgentsSection />
-        <ResearchNeeds />
-        <SocialProof />
-        <TrustSecurity />
-        <BookingSection />
+      <div className="relative z-10">
+        {/* Light sections with ambient floating particles */}
+        <div className="relative">
+          <AmbientParticles fullHeight particleCount={50} opacity={0.3} direction="ambient" />
+          <ProblemSection />
+          <SocialProof />
+          <InterviewStudio />
+          <ResearchNeeds />
+          {/* <CoreFeatures /> */}
+          <FeaturesMarquee />
+          {/* <AgentsSection /> */}
+          <TrustSecurity />
+          <BookingSection />
+        </div>
+        {/* Dark sections */}
         <CTASection />
         <Footer />
       </div>
+      {/* Particle canvas */}
+      <ParticleNarrativeController />
+
+      {/* Cursor effects */}
+      <CursorParticles />
+      <CustomCursor />
     </main>
   );
 }

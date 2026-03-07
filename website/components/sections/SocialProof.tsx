@@ -72,19 +72,18 @@ export default function SocialProof() {
         </motion.div>
 
         {/* Headline */}
-        <motion.div variants={itemVariants} className="max-w-[900px] mx-auto mb-20 lg:mb-24">
+        <motion.div variants={itemVariants} className="max-w-[1000px] mx-auto mb-20 lg:mb-24">
           <h2 className="font-display text-[clamp(28px,4vw,48px)] tracking-[-0.03em] text-[#0b132b] leading-[1.1] text-center">
-            <span className="whitespace-nowrap">The world's sharpest consumer teams</span>{" "}
-            <span className="whitespace-nowrap">don't guess.</span>
-            <br className="hidden sm:block" />
-            <span className="block mt-2 sm:inline sm:mt-0"> They build on <span className="text-[#FF5A36]">Square Up</span>.</span>
+            <span className="whitespace-nowrap">The world's sharpest consumer teams don't guess.</span>
+            <br />
+            <span>They build on <span className="text-[#FF5A36]">Square Up</span>.</span>
           </h2>
         </motion.div>
 
         {/* Logo Grid */}
-        <motion.div variants={itemVariants} className="max-w-[1100px] mx-auto flex flex-col items-center gap-y-8 sm:gap-y-10">
+        <motion.div variants={itemVariants} className="max-w-[1100px] mx-auto flex flex-col items-center gap-y-3 sm:gap-y-4">
           {/* Top row */}
-          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-16 lg:gap-x-20 gap-y-8 sm:gap-y-10">
+          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-16 lg:gap-x-20 gap-y-3 sm:gap-y-4">
             {logos.slice(0, 4).map((name, i) => (
               <motion.span
                 key={name}
@@ -103,7 +102,7 @@ export default function SocialProof() {
             ))}
           </div>
           {/* Bottom row – centered */}
-          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-16 lg:gap-x-20 gap-y-8 sm:gap-y-10">
+          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-16 lg:gap-x-20 gap-y-3 sm:gap-y-4">
             {logos.slice(4).map((name, i) => (
               <motion.span
                 key={name}

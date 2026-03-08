@@ -17,13 +17,13 @@ export interface Study {
 // ── Constants ──────────────────────────────────
 
 export const INDUSTRIES = [
+    "Fintech",
     "D2C / Ecommerce",
     "FMCG",
     "Beauty",
     "Fashion",
     "Quick Commerce",
     "QSR",
-    "Fintech",
     "Healthtech",
     "Edtech",
     "Travel",

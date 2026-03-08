@@ -50,91 +50,105 @@ import {
 
 const industryMeta: Record<
     Industry,
-    { icon: React.ElementType; color: string; accent: string; heroGradient: string }
+    { icon: React.ElementType; color: string; accent: string; heroGradient: string; image?: string }
 > = {
+    Fintech: {
+        icon: Landmark,
+        color: "text-blue-400",
+        accent: "#3b82f6",
+        heroGradient: "from-blue-600/30 via-blue-900/20 to-transparent",
+        image: "fintech.png",
+    },
     "D2C / Ecommerce": {
         icon: ShoppingCart,
         color: "text-orange-400",
         accent: "#f97316",
         heroGradient: "from-orange-600/30 via-orange-900/20 to-transparent",
+        image: "d2c.png",
     },
     FMCG: {
         icon: Package,
         color: "text-emerald-400",
         accent: "#10b981",
         heroGradient: "from-emerald-600/30 via-emerald-900/20 to-transparent",
+        image: "fmcg.png",
     },
     Beauty: {
         icon: Sparkles,
         color: "text-pink-400",
         accent: "#ec4899",
         heroGradient: "from-pink-600/30 via-pink-900/20 to-transparent",
+        image: "beauty.png",
     },
     Fashion: {
         icon: Shirt,
         color: "text-violet-400",
         accent: "#8b5cf6",
         heroGradient: "from-violet-600/30 via-violet-900/20 to-transparent",
+        image: "fashion.png",
     },
     "Quick Commerce": {
         icon: Zap,
         color: "text-yellow-400",
         accent: "#eab308",
         heroGradient: "from-yellow-600/30 via-yellow-900/20 to-transparent",
+        image: "quick_commerce.png",
     },
     QSR: {
         icon: UtensilsCrossed,
         color: "text-red-400",
         accent: "#ef4444",
         heroGradient: "from-red-600/30 via-red-900/20 to-transparent",
-    },
-    Fintech: {
-        icon: Landmark,
-        color: "text-blue-400",
-        accent: "#3b82f6",
-        heroGradient: "from-blue-600/30 via-blue-900/20 to-transparent",
+        image: "qsr.png",
     },
     Healthtech: {
         icon: HeartPulse,
         color: "text-teal-400",
         accent: "#14b8a6",
         heroGradient: "from-teal-600/30 via-teal-900/20 to-transparent",
+        image: "healthtech.png",
     },
     Edtech: {
         icon: GraduationCap,
         color: "text-indigo-400",
         accent: "#6366f1",
         heroGradient: "from-indigo-600/30 via-indigo-900/20 to-transparent",
+        image: "edtech.png",
     },
     Travel: {
         icon: Plane,
         color: "text-sky-400",
         accent: "#0ea5e9",
         heroGradient: "from-sky-600/30 via-sky-900/20 to-transparent",
+        image: "travel.png",
     },
     "Media / OTT": {
         icon: Monitor,
         color: "text-purple-400",
         accent: "#a855f7",
         heroGradient: "from-purple-600/30 via-purple-900/20 to-transparent",
+        image: "media_ott.png",
     },
     "Omnichannel Retail": {
         icon: Store,
         color: "text-amber-400",
         accent: "#f59e0b",
         heroGradient: "from-amber-600/30 via-amber-900/20 to-transparent",
+        image: "omnichannel_retail.png",
     },
     Hyperlocal: {
         icon: MapPin,
         color: "text-lime-400",
         accent: "#84cc16",
         heroGradient: "from-lime-600/30 via-lime-900/20 to-transparent",
+        image: "hyperlocal.png",
     },
     Franchise: {
         icon: Building2,
         color: "text-stone-400",
         accent: "#78716c",
         heroGradient: "from-stone-600/30 via-stone-900/20 to-transparent",
+        image: "franchise.png",
     },
 };
 
@@ -381,7 +395,7 @@ function StudyRailCards({
                 <div
                     ref={scrollRef}
                     onScroll={updateArrows}
-                    className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 scroll-smooth"
+                    className="flex gap-4 overflow-x-auto scrollbar-show-on-hover pb-2 scroll-smooth"
                 >
                     {items.map((s) => (
                         <StudyCard
@@ -674,6 +688,148 @@ function IndustrySwitcher({
     );
 }
 
+// ── Industry Netflix-style Rail ────────────────
+function IndustryRail({
+    title,
+    items,
+    selectedIndustry,
+    onSelect,
+    industryCounts,
+}: {
+    title: string;
+    items: Industry[];
+    selectedIndustry: Industry | null;
+    onSelect: (industry: Industry) => void;
+    industryCounts: Record<string, number>;
+}) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
+
+    const updateArrows = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setCanScrollLeft(el.scrollLeft > 4);
+        setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    }, []);
+
+    const scroll = useCallback((dir: "left" | "right") => {
+        const el = scrollRef.current;
+        if (!el) return;
+        el.scrollBy({ left: dir === "left" ? -600 : 600, behavior: "smooth" });
+    }, []);
+
+    return (
+        <section className="min-w-0 px-8 overflow-hidden relative">
+            <h2 className="text-[15px] font-bold text-foreground tracking-tight mb-3 px-1">
+                {title}
+            </h2>
+
+            <div className="relative group/rail -mx-1">
+                {/* Left arrow */}
+                {canScrollLeft && (
+                    <button
+                        onClick={() => scroll("left")}
+                        className={cn(
+                            "absolute left-0 top-0 bottom-0 z-10 w-12",
+                            "bg-gradient-to-r from-[#F8FAFC] dark:from-[#0C0C0E] to-transparent",
+                            "flex items-center justify-start pl-1",
+                            "opacity-0 group-hover/rail:opacity-100 transition-opacity duration-200"
+                        )}
+                    >
+                        <div className="w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-800/90 shadow-lg flex items-center justify-center border border-gray-200 dark:border-[#3F3F46]">
+                            <ChevronLeft className="w-4 h-4 text-foreground" />
+                        </div>
+                    </button>
+                )}
+
+                {/* Scroll container */}
+                <div
+                    ref={scrollRef}
+                    onScroll={updateArrows}
+                    className="flex gap-3 overflow-x-auto scrollbar-show-on-hover pb-3 px-1 scroll-smooth"
+                >
+                    {items.map((industry) => {
+                        const m = industryMeta[industry];
+                        const I = m.icon;
+
+                        return (
+                            <button
+                                key={industry}
+                                onClick={() => onSelect(industry)}
+                                className={cn(
+                                    "flex-shrink-0 w-[180px] aspect-square rounded-xl overflow-visible",
+                                    "flex flex-col",
+                                    "hover:scale-[1.04] hover:z-10",
+                                    "transition-all duration-300 cursor-pointer group"
+                                )}
+                            >
+                                {/* Avatar / Icon area */}
+                                <div className="flex-1 flex items-center justify-center pt-4 pb-1">
+                                    {m.image ? (
+                                        <div className="relative w-48 h-48 group-hover:-translate-y-0.2 transition-all duration-500 rounded-2xl border-2 border-[#FF8A4C]/40 overflow-hidden">
+                                            <img
+                                                src={`/images/study-explorer/${m.image}`}
+                                                alt={industry}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className={cn(
+                                            "relative w-20 h-20 group-hover:-translate-y-1 transition-all duration-500"
+                                        )}>
+                                            {/* Outer frosted glass shell */}
+                                            <div className="absolute inset-0 rounded-2xl bg-white/10 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)]" />
+
+                                            {/* Inner gradient glow */}
+                                            <div className="absolute inset-[3px] rounded-xl bg-gradient-to-br from-blue-500/10 via-transparent to-blue-600/5 dark:from-blue-400/15 dark:to-blue-600/10" />
+
+                                            {/* Icon */}
+                                            <div className="absolute inset-0 flex items-center justify-center z-10">
+                                                <I className="w-8 h-8 text-blue-500 dark:text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                                            </div>
+
+                                            {/* Subtle reflection line */}
+                                            <div className="absolute top-2 left-3 right-3 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Bottom text area */}
+                                <div className="shrink-0 px-4 pb-4 pt-1">
+                                    <h3 className="text-[14px] font-semibold text-foreground leading-snug text-center">
+                                        {industry}
+                                    </h3>
+                                    <p className="text-[11px] text-muted-foreground mt-1 text-center">
+                                        {industryCounts[industry]} studies
+                                    </p>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Right arrow */}
+                {canScrollRight && (
+                    <button
+                        onClick={() => scroll("right")}
+                        className={cn(
+                            "absolute right-0 top-0 bottom-0 z-10 w-12",
+                            "bg-gradient-to-l from-[#F8FAFC] dark:from-[#0C0C0E] to-transparent",
+                            "flex items-center justify-end pr-1",
+                            "opacity-0 group-hover/rail:opacity-100 transition-opacity duration-200"
+                        )}
+                    >
+                        <div className="w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-800/90 shadow-lg flex items-center justify-center border border-gray-200 dark:border-[#3F3F46]">
+                            <ChevronRight className="w-4 h-4 text-foreground" />
+                        </div>
+                    </button>
+                )}
+            </div>
+        </section>
+    );
+}
+
 // ── Main component ─────────────────────────────
 
 export function StudyExplorer() {
@@ -796,54 +952,14 @@ export function StudyExplorer() {
                 {/* ──── Industry Rails ──── */}
                 <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-subtle pb-8 space-y-6">
                     {industryRows.map((row) => (
-                        <section key={row.title} className="min-w-0 px-8 overflow-hidden">
-                            <h2 className="text-[15px] font-bold text-foreground tracking-tight mb-3 px-1">
-                                {row.title}
-                            </h2>
-                            <div className="flex gap-3 overflow-x-auto scrollbar-subtle pb-3 px-1">
-                                {row.items.map((industry) => {
-                                    const m = industryMeta[industry];
-                                    const I = m.icon;
-
-                                    return (
-                                        <button
-                                            key={industry}
-                                            onClick={() => setSelectedIndustry(industry)}
-                                            className={cn(
-                                                "flex-shrink-0 w-[180px] aspect-[3/4] rounded-xl overflow-hidden relative",
-                                                "border border-gray-200 dark:border-[#27272A]",
-                                                "bg-white dark:bg-[#18181B]",
-                                                "hover:scale-[1.04] hover:z-10",
-                                                "hover:shadow-xl hover:shadow-gray-200/60 dark:hover:shadow-black/40",
-                                                "hover:border-gray-300 dark:hover:border-[#3F3F46]",
-                                                "transition-all duration-300 cursor-pointer group"
-                                            )}
-                                        >
-                                            {/* Avatar placeholder — replace with illustration/image later */}
-                                            <div className="flex-1 flex items-center justify-center pt-6">
-                                                <div className={cn(
-                                                    "w-16 h-16 rounded-2xl flex items-center justify-center",
-                                                    "bg-gray-50 dark:bg-[#27272A]",
-                                                    "group-hover:scale-110 transition-transform duration-300"
-                                                )}>
-                                                    <I className={cn("w-7 h-7", m.color)} />
-                                                </div>
-                                            </div>
-
-                                            {/* Bottom text area */}
-                                            <div className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-3">
-                                                <h3 className="text-[14px] font-semibold text-foreground leading-snug text-center">
-                                                    {industry}
-                                                </h3>
-                                                <p className="text-[11px] text-muted-foreground mt-1 text-center">
-                                                    {industryCounts[industry]} studies
-                                                </p>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </section>
+                        <IndustryRail
+                            key={row.title}
+                            title={row.title}
+                            items={row.items}
+                            selectedIndustry={selectedIndustry}
+                            onSelect={setSelectedIndustry}
+                            industryCounts={industryCounts}
+                        />
                     ))}
                 </div>
             </div>

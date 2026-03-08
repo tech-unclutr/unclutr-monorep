@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
     ArrowLeft,
     ChevronLeft,
@@ -27,8 +27,10 @@ import {
     FlaskConical,
     Clock,
     TrendingUp,
+    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,18 +40,27 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import {
-    studies,
-    INDUSTRIES,
-    DEPARTMENTS,
-    type Study,
-    type Industry,
-} from "@/data/studies";
+
+// ── Types ──────────────────────────────────────
+
+export interface Study {
+    id: string;
+    name: string;
+    family: string;
+    description: string;
+    departments: string[];
+    industries: string[];
+    urgency: "P0" | "P1" | "P2" | "P3";
+    method: string;
+    is_locked?: boolean;
+}
+
+export type Industry = string;
 
 // ── Industry icon + color mapping ──────────────
 
 const industryMeta: Record<
-    Industry,
+    string,
     { icon: React.ElementType; color: string; accent: string; heroGradient: string; image?: string }
 > = {
     Fintech: {
@@ -629,9 +640,11 @@ function StudyDetailDialog({
 function IndustrySwitcher({
     selected,
     onSelect,
+    industries,
 }: {
     selected: Industry;
     onSelect: (industry: Industry) => void;
+    industries: string[];
 }) {
     const [open, setOpen] = useState(false);
     const meta = industryMeta[selected];
@@ -661,7 +674,7 @@ function IndustrySwitcher({
                         "shadow-xl shadow-gray-200/50 dark:shadow-black/50",
                         "py-1.5 max-h-[320px] overflow-y-auto scrollbar-subtle"
                     )}>
-                        {INDUSTRIES.map((industry) => {
+                        {industries.map((industry) => {
                             const m = industryMeta[industry];
                             const I = m.icon;
                             return (
@@ -767,7 +780,7 @@ function IndustryRail({
                                 {/* Avatar / Icon area */}
                                 <div className="flex-1 flex items-center justify-center pt-4 pb-1">
                                     {m.image ? (
-                                        <div className="relative w-48 h-48 group-hover:-translate-y-0.2 transition-all duration-500 rounded-2xl border-2 border-[#FF8A4C]/40 overflow-hidden">
+                                        <div className="relative w-40 h-40 group-hover:-translate-y-0.2 transition-all duration-500 rounded-2xl border-2 border-[#FF8A4C]/40 overflow-hidden">
                                             <img
                                                 src={`/images/study-explorer/${m.image}`}
                                                 alt={industry}
@@ -837,6 +850,45 @@ export function StudyExplorer() {
     const [selectedStudy, setSelectedStudy] = useState<Study | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
 
+    // ── API Data State ──
+    const [studies, setStudies] = useState<Study[]>([]);
+    const [INDUSTRIES, setIndustries] = useState<string[]>([]);
+    const [DEPARTMENTS, setDepartments] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // ── Fetch data from API ──
+    useEffect(() => {
+        let cancelled = false;
+
+        async function fetchData() {
+            try {
+                setIsLoading(true);
+                const [metaData, studiesData] = await Promise.all([
+                    api.get("/studies/meta"),
+                    api.get("/studies"),
+                ]);
+
+                if (cancelled) return;
+
+                // Map meta data to the format the component expects
+                setIndustries(
+                    metaData.industries.map((i: any) => i.name)
+                );
+                setDepartments(
+                    metaData.departments.map((d: any) => d.name)
+                );
+                setStudies(studiesData);
+            } catch (err) {
+                console.error("Failed to load study data:", err);
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        }
+
+        fetchData();
+        return () => { cancelled = true; };
+    }, []);
+
     const openStudy = useCallback((study: Study) => {
         setSelectedStudy(study);
         setDialogOpen(true);
@@ -867,7 +919,7 @@ export function StudyExplorer() {
         }
 
         return grouped;
-    }, [selectedIndustry]);
+    }, [selectedIndustry, studies, DEPARTMENTS]);
 
     // Featured study: first P0 study
     const featuredStudy = useMemo(() => {
@@ -875,12 +927,12 @@ export function StudyExplorer() {
         return studies.find(
             (s) => s.industries.includes(selectedIndustry) && s.urgency === "P0"
         ) || null;
-    }, [selectedIndustry]);
+    }, [selectedIndustry, studies]);
 
     const totalStudies = useMemo(() => {
         if (!selectedIndustry) return 0;
         return studies.filter((s) => s.industries.includes(selectedIndustry)).length;
-    }, [selectedIndustry]);
+    }, [selectedIndustry, studies]);
 
     // Industry study counts (stable across renders)
     const industryCounts = useMemo(() => {
@@ -889,7 +941,7 @@ export function StudyExplorer() {
             counts[ind] = studies.filter((s) => s.industries.includes(ind)).length;
         }
         return counts;
-    }, []);
+    }, [INDUSTRIES, studies]);
 
     // Split industries into rows for the shelf layout
     const industryRows = useMemo(() => {
@@ -899,9 +951,21 @@ export function StudyExplorer() {
             { title: "Popular Industries", items: row1 },
             { title: "Explore More", items: row2 },
         ];
-    }, []);
+    }, [INDUSTRIES]);
 
     // ── Industry selection ──
+
+    // ── Loading state ──
+    if (isLoading) {
+        return (
+            <div className="h-screen flex items-center justify-center w-full">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#FF8A4C]" />
+                    <p className="text-muted-foreground text-sm">Loading studies…</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!selectedIndustry) {
         return (
@@ -996,6 +1060,7 @@ export function StudyExplorer() {
                     <IndustrySwitcher
                         selected={selectedIndustry}
                         onSelect={setSelectedIndustry}
+                        industries={INDUSTRIES}
                     />
                 </div>
             </div>

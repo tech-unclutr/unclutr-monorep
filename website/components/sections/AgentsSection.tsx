@@ -7,51 +7,56 @@ import AgentVideoCard from "../ui/AgentVideoCard";
 import { useIsMobile } from "../ui/useIsMobile";
 import { useRegisterParticleTargets } from "../ui/particles/useRegisterParticleTargets";
 import { RefObject } from "react";
+import { useSectionVisibility, useCarouselTracking } from "@/lib/analytics";
 
 
 const agentsData = [
     {
         name: "Pulse",
         video: "/agent-videos/pulse.mp4",
-        poster: "/pulse-frames/frame-117.webp",
+        poster: "/posters/pulse.webp",
         description: "Books meetings and qualifies leads at scale with voice AI.",
     },
     {
         name: "Yoda",
         video: "/agent-videos/yoda.mp4",
-        poster: "/yoda-frames/frame-106.webp",
+        poster: "/posters/yoda.webp",
         description: "Turns every conversation into a structured data set.",
     },
     {
         name: "Sage",
         video: "/agent-videos/sage.mp4",
-        poster: "/sage2-frames/frame-106.webp",
+        poster: "/posters/sage.webp",
         description: "Synthesizes millions of data points into clear Intelligence Briefs.",
     },
     {
         name: "Atlas",
         video: "/agent-videos/atlas.mp4",
-        poster: "/atlas-frames/frame-111.webp",
+        poster: "/posters/atlas.webp",
         description: "Turns scattered calls into an instant knowledge base.",
     },
     {
         name: "Kairo",
         video: "/agent-videos/kairo.mp4",
-        poster: "/kairo-frames/frame-124.webp",
+        poster: "/posters/kairo.webp",
         description: "Routes intelligence directly to the people who can fix it.",
     },
 ];
 
 const AUTO_ADVANCE_INTERVAL = 6000;
-const GAP = 56;
+const getGap = (width: number) => width < 640 ? 16 : width < 1024 ? 32 : 56;
 
 
 export default function AgentsSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const inView = useInView(sectionRef, { once: true, amount: 0.3 });
     const isMobile = useIsMobile();
+    useSectionVisibility("agents", sectionRef);
 
     const [activeAgentIndex, setActiveAgentIndex] = useState(0);
+    const { trackTransition: trackAgentCarousel, trackAutoplay: trackAgentAutoplay } = useCarouselTracking(
+        "agents", activeAgentIndex, agentsData.map(a => a.name)
+    );
 
     // Register particle targets
     useRegisterParticleTargets("agents", sectionRef as unknown as RefObject<HTMLElement>, [".particle-target-agents"], inView);
@@ -115,8 +120,9 @@ export default function AgentsSection() {
     const scrollToAgent = useCallback((index: number) => {
         const container = scrollContainerRef.current;
         if (!container || cardWidth === 0) return;
-        const peekWidth = Math.max((containerWidth - cardWidth) / 2 - GAP, 0);
-        const targetX = index * (cardWidth + GAP) - peekWidth;
+        const g = getGap(containerWidth);
+        const peekWidth = Math.max((containerWidth - cardWidth) / 2 - g, 0);
+        const targetX = index * (cardWidth + g) - peekWidth;
         container.scrollTo({ left: targetX, behavior: "smooth" });
     }, [cardWidth, containerWidth]);
 
@@ -158,11 +164,12 @@ export default function AgentsSection() {
         autoTimerRef.current = setInterval(() => {
             setActiveAgentIndex((prev) => {
                 const next = (prev + 1) % agentsData.length;
+                trackAgentCarousel(next, "autoplay");
                 return next;
             });
         }, AUTO_ADVANCE_INTERVAL);
 
-    }, []);
+    }, [trackAgentCarousel]);
 
     const stopAutoAdvance = () => {
         if (autoTimerRef.current) {
@@ -182,8 +189,9 @@ export default function AgentsSection() {
 
 
     const switchAgent = useCallback(
-        (newIndex: number) => {
+        (newIndex: number, method: "click" | "swipe" | "keyboard" | "dot" = "click") => {
             if (newIndex === activeAgentIndex) return;
+            trackAgentCarousel(newIndex, method);
             isUserScrolling.current = false;
             setActiveAgentIndex(newIndex);
             scrollToAgent(newIndex);
@@ -193,7 +201,7 @@ export default function AgentsSection() {
                 startAutoAdvance();
             }
         },
-        [activeAgentIndex, isAutoPlaying, startAutoAdvance, scrollToAgent]
+        [activeAgentIndex, isAutoPlaying, startAutoAdvance, scrollToAgent, trackAgentCarousel]
     );
 
     useEffect(() => {
@@ -207,29 +215,34 @@ export default function AgentsSection() {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
             const prevIndex = activeAgentIndex === 0 ? agentsData.length - 1 : activeAgentIndex - 1;
+            trackAgentCarousel(prevIndex, "keyboard");
             setActiveAgentIndex(prevIndex);
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
             const nextIndex = (activeAgentIndex + 1) % agentsData.length;
+            trackAgentCarousel(nextIndex, "keyboard");
             setActiveAgentIndex(nextIndex);
         }
-    }, [activeAgentIndex]);
+    }, [activeAgentIndex, trackAgentCarousel]);
 
     const carouselSpring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
 
 
-    const totalTrackWidth = agentsData.length * cardWidth + (agentsData.length - 1) * GAP;
-    const peekWidth = Math.max((containerWidth - cardWidth) / 2 - GAP, 0);
-    const paddingForPeek = Math.max(peekWidth * 0.6, GAP);
+    const gap = getGap(containerWidth);
+    const totalTrackWidth = agentsData.length * cardWidth + (agentsData.length - 1) * gap;
+    const peekWidth = Math.max((containerWidth - cardWidth) / 2 - gap, 0);
+    const paddingForPeek = Math.max(peekWidth * 0.6, gap);
 
     return (
         <div
             ref={sectionRef}
             id="agents"
             tabIndex={0}
+            role="region"
+            aria-label="AI Agents carousel"
             onKeyDown={handleKeyDown}
             onClick={() => sectionRef.current?.focus()}
-            className="relative flex flex-col items-center overflow-hidden outline-none"
+            className="relative flex flex-col items-center overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2"
             style={{ paddingTop: "clamp(80px, 10vh, 120px)", paddingBottom: "40px" }}
         >
 
@@ -316,7 +329,7 @@ export default function AgentsSection() {
                                 onClick={() => switchAgent(i)}
                                 whileHover={{ scale: isActive ? 1 : 1.05 }}
                                 whileTap={{ scale: 0.97 }}
-                                className="relative z-10 px-4 sm:px-6 md:px-8 py-2 rounded-full text-[12px] sm:text-[13px] font-semibold transition-colors duration-300 cursor-pointer border-none outline-none bg-transparent text-center whitespace-nowrap"
+                                className="relative z-10 px-4 sm:px-6 md:px-8 py-2 rounded-full text-[13px] sm:text-[14px] font-semibold transition-colors duration-300 cursor-pointer border-none outline-none bg-transparent text-center whitespace-nowrap"
                                 style={{
                                     color: isActive ? "#FF5A36" : "rgba(11,19,43,0.45)",
                                     letterSpacing: "0.02em",
@@ -366,7 +379,7 @@ export default function AgentsSection() {
                     <div
                         className="carousel-track flex items-center"
                         style={{
-                            gap: GAP,
+                            gap: gap,
                             paddingLeft: paddingForPeek,
                             paddingRight: paddingForPeek,
                             width: totalTrackWidth + paddingForPeek * 2,
@@ -413,9 +426,10 @@ export default function AgentsSection() {
                         return (
                             <motion.button
                                 key={i}
-                                onClick={() => switchAgent(i)}
+                                onClick={() => switchAgent(i, "dot")}
                                 whileHover={{ scale: 1.2 }}
                                 whileTap={{ scale: 0.9 }}
+                                aria-label={`Go to agent ${i + 1} of ${agentsData.length}`}
                                 className="rounded-full cursor-pointer border-none outline-none p-0"
                                 animate={{
                                     width: isActive ? (isMobile ? 24 : 32) : (isMobile ? 6 : 8),
@@ -431,7 +445,13 @@ export default function AgentsSection() {
                 </div>
 
                 <button
-                    onClick={() => setIsAutoPlaying((prev) => !prev)}
+                    onClick={() => {
+                        setIsAutoPlaying((prev) => {
+                            trackAgentAutoplay(prev ? "pause" : "start", prev ? "click" : undefined);
+                            return !prev;
+                        });
+                    }}
+                    aria-label={isAutoPlaying ? "Pause auto-advance" : "Start auto-advance"}
                     className="ml-2 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer outline-none bg-transparent"
                     style={{ boxShadow: "0 0 0 1.5px rgba(11,19,43,0.10), 0 2px 8px rgba(11,19,43,0.04)" }}
                 >

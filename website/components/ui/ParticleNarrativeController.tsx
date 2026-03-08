@@ -167,6 +167,7 @@ export default function ParticleNarrativeController() {
   // Step 2: Initialize and run particle system
   useEffect(() => {
     if (!mounted) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -364,7 +365,8 @@ export default function ParticleNarrativeController() {
           const orbitCenterDocY = scrollY + height / 2;
           if (!p.orbit) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = 100 + Math.random() * 200;
+            const viewScale = Math.min(width, height) / 1200;
+            const radius = (100 + Math.random() * 200) * viewScale;
             p.orbit = {
               radius,
               angle,
@@ -388,7 +390,7 @@ export default function ParticleNarrativeController() {
             // Assign a fixed parameter t along the heart curve for this particle
             p.heartTarget = {
               t: Math.random() * Math.PI * 2,
-              scale: 12 + Math.random() * 4 // slight thickness to the line
+              scale: (12 + Math.random() * 4) * (Math.min(width, height) / 1200) // scale to viewport
             };
           }
 
@@ -496,9 +498,14 @@ export default function ParticleNarrativeController() {
         ctx.fillStyle = currentColor;
         ctx.globalAlpha = finalAlpha;
 
-        const glowSize = LIGHT_OPACITY.glowBlur.min + (p.isSpecial ? (LIGHT_OPACITY.glowBlur.max - LIGHT_OPACITY.glowBlur.min) : 0);
-        ctx.shadowBlur = glowSize;
-        ctx.shadowColor = currentColor;
+        // Only apply shadowBlur to special particles (performance optimization)
+        if (p.isSpecial) {
+          const glowSize = LIGHT_OPACITY.glowBlur.min + (LIGHT_OPACITY.glowBlur.max - LIGHT_OPACITY.glowBlur.min);
+          ctx.shadowBlur = glowSize;
+          ctx.shadowColor = currentColor;
+        } else {
+          ctx.shadowBlur = 0;
+        }
 
         const drawSize = p.size * (p.isSpecial ? (1 + Math.sin(timeRef.current * 3 + p.sparklePhase) * 0.2) : 1);
 
@@ -556,6 +563,7 @@ export default function ParticleNarrativeController() {
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       className="fixed inset-0 pointer-events-none"
       style={{
         width: "100vw",

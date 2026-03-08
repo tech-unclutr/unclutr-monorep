@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useInView, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
 import { Lock, UserCog, Server, ShieldCheck, Fingerprint, FolderLock } from "lucide-react";
+import { useSectionVisibility } from "@/lib/analytics";
 const securityCards = [
   {
     icon: Lock,
@@ -123,6 +124,7 @@ function SecurityCard({ card, index }: { card: typeof securityCards[0]; index: n
 export default function TrustSecurity() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const inView = useInView(sectionRef, { once: true, amount: 0.2 });
+  useSectionVisibility("trust_security", sectionRef);
 
   return (
     <section

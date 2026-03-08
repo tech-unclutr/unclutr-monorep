@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 import { useRegisterParticleTargets } from "@/components/ui/particles/useRegisterParticleTargets";
+import { useSectionVisibility, useCarouselTracking } from "@/lib/analytics";
 
 // Typed easing curve for Framer Motion
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -30,21 +31,21 @@ const ARCS_DATA = [
                 shortLabel: "Delayed",
                 monologue:
                     'You keep saying you\'ll start user calls "after this launch." But the dust never settles. Every Monday, discovery gets quietly bumped again.',
-                avatar: "/avatars/avatar_booking_1.png",
+                avatar: "/avatars/avatar_booking_1.webp",
             },
             {
                 label: "90% No-Shows",
                 shortLabel: "Ghosted",
                 monologue:
                     'You emailed 50 humans. 10 booked. 2 showed up. Between time zones and "can we reschedule" emails, it\'s exhausting just to get on Zoom.',
-                avatar: "/avatars/avatar_booking_2.png",
+                avatar: "/avatars/avatar_booking_2.webp",
             },
             {
                 label: "Zero User Contact",
                 shortLabel: "Zero Calls",
                 monologue:
                     "You constantly talk about \"the customer\" in standup, but if you're being honest? You haven't actually spoken to a real user in 8 weeks.",
-                avatar: "/avatars/avatar_booking_3.png",
+                avatar: "/avatars/avatar_booking_3.webp",
             },
         ],
     },
@@ -58,21 +59,21 @@ const ARCS_DATA = [
                 shortLabel: "Pitching",
                 monologue:
                     "Instead of listening, you just pitched the roadmap for 20 minutes. They nodded politely, you felt validated, and then they completely ghosted.",
-                avatar: "/avatars/avatar_interview_1.png",
+                avatar: "/avatars/avatar_interview_1.webp",
             },
             {
                 label: "No Prep, No Insight",
                 shortLabel: "Unprepared",
                 monologue:
                     "You jumped on with zero prep, had a lovely chat about the weather, and realized after hanging up that you learned absolutely nothing useful.",
-                avatar: "/avatars/avatar_interview_2.png",
+                avatar: "/avatars/avatar_interview_2.webp",
             },
             {
                 label: "Ignoring Silent Churn",
                 shortLabel: "Blind Churn",
                 monologue:
                     "You celebrate a great NPS score, blissfully ignoring the 30% of your user base who quietly churned this morning without saying a single word.",
-                avatar: "/avatars/avatar_interview_3.png",
+                avatar: "/avatars/avatar_interview_3.webp",
             },
         ],
     },
@@ -86,21 +87,21 @@ const ARCS_DATA = [
                 shortLabel: "Unwatched",
                 monologue:
                     "It's a 45-minute mp4 in a Google Drive folder. You promised you'd write a summary later. You won't. Nobody is ever watching that.",
-                avatar: "/avatars/avatar_notion_1.png",
+                avatar: "/avatars/avatar_notion_1.webp",
             },
             {
                 label: "Unread Notes",
                 shortLabel: "Unread",
                 monologue:
                     "You dumped all your notes into a massive, perfectly organized Notion doc. Literally no one on the team has opened it since you hit save.",
-                avatar: "/avatars/avatar_notion_2.png",
+                avatar: "/avatars/avatar_notion_2.webp",
             },
             {
                 label: "Lost Insights",
                 shortLabel: "Lost",
                 monologue:
                     'The user dropped a massive truth bomb at minute 14. You didn\'t write it down. By Friday standup, it just morphed into "users want it faster".',
-                avatar: "/avatars/avatar_notion_3.png",
+                avatar: "/avatars/avatar_notion_3.webp",
             },
         ],
     },
@@ -114,21 +115,21 @@ const ARCS_DATA = [
                 shortLabel: "Wasted",
                 monologue:
                     "Engineering just spent a month grinding on a feature that Sales could have told you wouldn't close a single deal. But nobody asked them.",
-                avatar: "/avatars/avatar_silos_1.png",
+                avatar: "/avatars/avatar_silos_1.webp",
             },
             {
                 label: "Siloed Teams",
                 shortLabel: "Siloed",
                 monologue:
                     "Support knows exactly why users are confused. Product is busy building a new dashboard. You're two Slack channels apart, but building blind.",
-                avatar: "/avatars/avatar_silos_2.png",
+                avatar: "/avatars/avatar_silos_2.webp",
             },
             {
                 label: "Opinion Wars",
                 shortLabel: "Opinions",
                 monologue:
                     "Sales says users want X. Support says Y. The CEO says Z. Everyone just uses their own single conversation to force their pet feature.",
-                avatar: "/avatars/avatar_silos_3.png",
+                avatar: "/avatars/avatar_silos_3.webp",
             },
         ],
     },
@@ -142,21 +143,21 @@ const ARCS_DATA = [
                 shortLabel: "No Proof",
                 monologue:
                     'You claim to be "customer-obsessed." But ask the team to name the very last time a real user quote changed a roadmap decision? Crickets.',
-                avatar: "/avatars/avatar_rigor_1.png",
+                avatar: "/avatars/avatar_rigor_1.webp",
             },
             {
                 label: "Blind Building",
                 shortLabel: "Blind",
                 monologue:
                     "You've been building non-stop since your last round. If you're being completely honest, you still don't have a confident answer on why people actually buy.",
-                avatar: "/avatars/avatar_rigor_2.png",
+                avatar: "/avatars/avatar_rigor_2.webp",
             },
             {
                 label: "Data Without Why",
                 shortLabel: "No Why",
                 monologue:
                     "You have Mixpanel and a dozen dashboards. You know exactly what users are doing, but you have absolutely no idea *why* they're actually doing it.",
-                avatar: "/avatars/avatar_rigor_3.png",
+                avatar: "/avatars/avatar_rigor_3.webp",
             },
         ],
     },
@@ -170,21 +171,21 @@ const ARCS_DATA = [
                 shortLabel: "Loud Few",
                 monologue:
                     "Three power users complained loudly in Discord. You derailed the entire sprint to fix it. The 99% who silently pay you wanted something else entirely.",
-                avatar: "/avatars/avatar_roadmap_1.png",
+                avatar: "/avatars/avatar_roadmap_1.webp",
             },
             {
                 label: "Gut Over Data",
                 shortLabel: "Gut Feel",
                 monologue:
                     "In planning meetings, the founder's gut feeling is treated as undeniable fact. Nobody pushes back, because no one has the data to prove them wrong.",
-                avatar: "/avatars/avatar_roadmap_2.png",
+                avatar: "/avatars/avatar_roadmap_2.webp",
             },
             {
                 label: "Trend Chasing",
                 shortLabel: "FOMO",
                 monologue:
                     "A VC tweeted a hot take. Suddenly, your whole Q3 strategy shifted to chase an AI trend, abandoning the core problems your real users are begging for.",
-                avatar: "/avatars/avatar_roadmap_3.png",
+                avatar: "/avatars/avatar_roadmap_3.webp",
             },
         ],
     },
@@ -606,9 +607,13 @@ function SpeechBubble({
 export default function ProblemSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    useSectionVisibility("problem", sectionRef);
 
     const [activeArcIndex, setActiveArcIndex] = useState(0);
     const [spotlightIndex, setSpotlightIndex] = useState(1); // Center item by default
+    const { trackTransition: trackArcCarousel } = useCarouselTracking(
+        "problem_arc", activeArcIndex, ARCS_DATA.map(a => a.arcName)
+    );
     const [isHovered, setIsHovered] = useState(false);
     const [isCenterHovered, setIsCenterHovered] = useState(false);
     const [hoveredSide, setHoveredSide] = useState<"left" | "right" | null>(null);
@@ -650,9 +655,13 @@ export default function ProblemSection() {
 
     // Auto-cycle arcs (after cycling through all avatars)
     const advanceArc = useCallback(() => {
-        setActiveArcIndex((prev) => (prev + 1) % ARCS_DATA.length);
+        setActiveArcIndex((prev) => {
+            const next = (prev + 1) % ARCS_DATA.length;
+            trackArcCarousel(next, "autoplay");
+            return next;
+        });
         setSpotlightIndex(0); // Start from first avatar
-    }, []);
+    }, [trackArcCarousel]);
 
     // Avatar autoscroll effect
     useEffect(() => {
@@ -675,6 +684,7 @@ export default function ProblemSection() {
     }, [isHovered, isInView, advanceArc]);
 
     const handleArcClick = (idx: number) => {
+        trackArcCarousel(idx, "click");
         setActiveArcIndex(idx);
         setSpotlightIndex(1);
     };
@@ -704,7 +714,7 @@ export default function ProblemSection() {
 
             {/* Grain texture overlay */}
             <div
-                className="absolute inset-0 pointer-events-none z-50 opacity-[0.015]"
+                className="absolute inset-0 pointer-events-none z-[5] opacity-[0.015]"
                 style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
                 }}
@@ -883,7 +893,7 @@ export default function ProblemSection() {
                     animate={isInView ? { opacity: 1 } : {}}
                     transition={{ duration: 0.6, delay: 0.4 }}
                 >
-                    <div className="flex gap-4 overflow-x-auto overflow-y-visible hide-scrollbar justify-start md:justify-center px-6 md:px-0 py-4 -my-2">
+                    <div className="flex gap-4 overflow-x-auto overflow-y-visible hide-scrollbar justify-start md:justify-center px-6 md:px-0 py-4 -my-2 snap-x snap-mandatory">
                         {ARCS_DATA.map((arc, idx) => {
                             const isActive = activeArcIndex === idx;
                             return (
@@ -891,7 +901,7 @@ export default function ProblemSection() {
                                     key={idx}
                                     onClick={() => handleArcClick(idx)}
                                     className={`
-                                        relative flex-shrink-0 flex items-center gap-3 px-5 py-3.5 rounded-full
+                                        relative flex-shrink-0 flex items-center gap-3 px-5 py-3.5 rounded-full snap-center
                                         transition-all duration-500 cursor-pointer group
                                         ${isActive ? "" : "bg-black/[0.03] hover:bg-white/50"}
                                     `}

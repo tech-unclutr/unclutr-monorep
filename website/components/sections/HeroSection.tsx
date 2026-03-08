@@ -2,8 +2,9 @@
 
 import { useRef, useEffect, useState } from "react";
 import { useScroll, motion, useTransform, useMotionValueEvent, useSpring } from "framer-motion";
-import { ChevronDown, Target, Users, Activity, Sparkles } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useIsMobile } from "../ui/useIsMobile";
+import { useSectionVisibility } from "@/lib/analytics";
 
 /* ─── Copy & Neural Network Data ─── */
 const SUBHEADLINE = "The Customer Understanding team you wish you had";
@@ -31,10 +32,10 @@ export default function HeroSection() {
   const containerRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
+  useSectionVisibility("hero", containerRef);
   const [mounted, setMounted] = useState(false);
 
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
-  const [particles, setParticles] = useState<Particle[]>([]);
   const [isHoveringGlobe, setIsHoveringGlobe] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeTextIndex, setActiveTextIndex] = useState(0);
@@ -75,6 +76,10 @@ export default function HeroSection() {
   // 2. Initialize Particles
   useEffect(() => {
     if (!canvasRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setMounted(true);
+      return;
+    }
     setMounted(true);
 
     const canvas = canvasRef.current;
@@ -189,7 +194,6 @@ export default function HeroSection() {
     }
 
     particlesRef.current = newParticles;
-    setParticles(newParticles);
 
   }, []);
 
@@ -203,7 +207,18 @@ export default function HeroSection() {
     let animationFrameId: number;
     const dpr = window.devicePixelRatio || 1;
 
+    // Visibility gating — skip rendering when offscreen
+    const isVisibleRef = { current: true };
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisibleRef.current = entry.isIntersecting;
+    }, { threshold: 0 });
+    if (containerRef.current) observer.observe(containerRef.current);
+
     const render = () => {
+      if (!isVisibleRef.current) {
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
       // Always reset base alpha before clearing the canvas to prevent smudging and trailing artifacts
       ctx.globalAlpha = 1;
 
@@ -325,8 +340,8 @@ export default function HeroSection() {
           ctx.fill();
         }
 
-        // Optional Glow on large particles
-        if (isBright && finalSize > 2) {
+        // Optional Glow on large particles (limited to ~10% for performance)
+        if (isBright && finalSize > 2 && i % 10 === 0) {
           ctx.shadowBlur = 10;
           ctx.shadowColor = p.color;
         } else {
@@ -338,7 +353,10 @@ export default function HeroSection() {
     };
 
     render();
-    return () => cancelAnimationFrame(animationFrameId);
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      observer.disconnect();
+    };
   }, [dimensions]);
 
   /* ═══ Scroll Triggers for HTML Elements ═══ */
@@ -365,8 +383,9 @@ export default function HeroSection() {
         {/* The Particle Canvas */}
         <canvas
           ref={canvasRef}
+          aria-hidden="true"
           className="absolute inset-0 w-full h-full z-10 pointer-events-none"
-          style={{ width: '100vw', height: '100vh' }}
+          style={{ width: '100%', height: '100%' }}
         />
 
         {/* ═══ Phase 1: Static Hook Text (disappears immediately as scroll starts) ═══ */}
@@ -379,7 +398,7 @@ export default function HeroSection() {
               {SUBHEADLINE}
             </h2>
 
-            <div className="absolute top-[18vh] flex flex-col items-center gap-2 text-white/60 font-medium text-[10px] tracking-[0.2em] uppercase">
+            <div className="absolute top-[18vh] flex flex-col items-center gap-2 text-white/60 font-medium text-[11px] tracking-[0.2em] uppercase">
               <span>Scroll to Ignite</span>
               <ChevronDown className="w-3 h-3 animate-bounce" />
             </div>
@@ -444,7 +463,7 @@ export default function HeroSection() {
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute inset-0 flex items-center justify-center"
                 >
-                  <div className="relative p-10 md:p-16 rounded-[40px] overflow-hidden">
+                  <div className="relative p-6 xs:p-8 md:p-16 rounded-[40px] overflow-hidden">
                     {/* Glass Layer - Darkened and increased blur for maximum readability against particles */}
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-[40px] border border-white/10 shadow-[0_12px_64px_0_rgba(0,0,0,0.8)]" />
 
@@ -478,7 +497,7 @@ export default function HeroSection() {
           transition={{ duration: 0.15, ease: "easeOut" }}
           className="fixed top-0 left-0 z-50 pointer-events-none flex flex-col gap-2 px-4 py-3 bg-black/60 border border-white/10 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] w-max"
         >
-          <span className="text-sm text-white font-medium max-w-[280px] leading-relaxed">
+          <span className="text-sm text-white font-medium max-w-[260px] sm:max-w-[280px] leading-relaxed">
             Each particle represents a direct data point from your actual customers, which forms your customer intelligence.
           </span>
         </motion.div>

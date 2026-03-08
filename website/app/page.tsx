@@ -1,28 +1,39 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, Suspense } from "react";
+import dynamic from "next/dynamic";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import FloatingNav from "@/components/sections/FloatingNav";
 import LogoNotch from "@/components/ui/LogoNotch";
-import ParticleNarrativeController from "@/components/ui/ParticleNarrativeController";
-
-import CustomCursor from "@/components/ui/CustomCursor";
-import CursorParticles from "@/components/ui/CursorParticles";
-import AmbientParticles from "@/components/ui/AmbientParticles";
 import HeroSection from "@/components/sections/HeroSection";
-// import CoreFeatures from "@/components/sections/CoreFeatures";
-import InterviewStudio from "@/components/sections/InterviewStudio";
-import FeaturesMarquee from "@/components/sections/FeaturesMarquee";
-import AgentsSection from "@/components/sections/AgentsSection";
-import ResearchNeeds from "@/components/sections/ResearchNeeds";
-import SocialProof from "@/components/sections/SocialProof";
-import TrustSecurity from "@/components/sections/TrustSecurity";
-import BookingSection from "@/components/sections/BookingSection";
-import CTASection from "@/components/sections/CTASection";
-import Footer from "@/components/sections/Footer";
-import ProblemSection from "@/components/sections/ProblemSection";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { useScrollDepth, useExitIntent, useEngagementScore, useRageClick } from "@/lib/analytics";
+
+// Below-fold sections — lazy loaded
+const ProblemSection = dynamic(() => import("@/components/sections/ProblemSection"), { ssr: false });
+const SocialProof = dynamic(() => import("@/components/sections/SocialProof"), { ssr: false });
+const InterviewStudio = dynamic(() => import("@/components/sections/InterviewStudio"), { ssr: false });
+const ResearchNeeds = dynamic(() => import("@/components/sections/ResearchNeeds"), { ssr: false });
+const FeaturesMarquee = dynamic(() => import("@/components/sections/FeaturesMarquee"), { ssr: false });
+const TrustSecurity = dynamic(() => import("@/components/sections/TrustSecurity"), { ssr: false });
+const BookingSection = dynamic(() => import("@/components/sections/BookingSection"), { ssr: false });
+const CTASection = dynamic(() => import("@/components/sections/CTASection"), { ssr: false });
+const Footer = dynamic(() => import("@/components/sections/Footer"), { ssr: false });
+
+// Decorative / non-critical — lazy loaded
+const AmbientParticles = dynamic(() => import("@/components/ui/AmbientParticles"), { ssr: false });
+const ParticleNarrativeController = dynamic(() => import("@/components/ui/ParticleNarrativeController"), { ssr: false });
+const CursorParticles = dynamic(() => import("@/components/ui/CursorParticles"), { ssr: false });
+const CustomCursor = dynamic(() => import("@/components/ui/CustomCursor"), { ssr: false });
 
 export default function Home() {
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  // Analytics hooks
+  useScrollDepth();
+  useExitIntent();
+  useEngagementScore();
+  useRageClick(mainRef);
 
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
@@ -47,8 +58,28 @@ export default function Home() {
       requestAnimationFrame(raf);
     })();
 
+    // Premium anchor scroll — intercept all hash links and use Lenis
+    const handleAnchorClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href^='#']");
+      if (!anchor) return;
+      const target = document.querySelector(anchor.getAttribute("href")!);
+      if (!target) return;
+      e.preventDefault();
+      if (lenis) {
+        lenis.scrollTo(target as HTMLElement, {
+          offset: -40,
+          duration: 1.6,
+          easing: (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -12 * t)),
+        });
+      } else {
+        target.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+    document.addEventListener("click", handleAnchorClick);
+
     return () => {
       lenis?.destroy();
+      document.removeEventListener("click", handleAnchorClick);
     };
   }, []);
 
@@ -73,31 +104,29 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative bg-[#FBF4EC]">
+    <main ref={mainRef} className="relative bg-[#FBF4EC]">
       <LoadingScreen />
       <LogoNotch />
       <FloatingNav />
-      <HeroSection />
+      <ErrorBoundary><HeroSection /></ErrorBoundary>
       <div className="relative z-10">
         {/* Light sections with ambient floating particles */}
         <div className="relative">
           <AmbientParticles fullHeight particleCount={50} opacity={0.3} direction="ambient" />
-          <ProblemSection />
-          <SocialProof />
-          <InterviewStudio />
-          <ResearchNeeds />
-          {/* <CoreFeatures /> */}
-          <FeaturesMarquee />
-          {/* <AgentsSection /> */}
-          <TrustSecurity />
-          <BookingSection />
+          <Suspense fallback={<div className="min-h-[400px]" />}><ProblemSection /></Suspense>
+          <Suspense fallback={<div className="min-h-[200px]" />}><SocialProof /></Suspense>
+          <Suspense fallback={<div className="min-h-[400px]" />}><InterviewStudio /></Suspense>
+          <Suspense fallback={<div className="min-h-[400px]" />}><ResearchNeeds /></Suspense>
+          <Suspense fallback={<div className="min-h-[200px]" />}><FeaturesMarquee /></Suspense>
+          <Suspense fallback={<div className="min-h-[300px]" />}><TrustSecurity /></Suspense>
+          <Suspense fallback={<div className="min-h-[400px]" />}><BookingSection /></Suspense>
         </div>
         {/* Dark sections */}
-        <CTASection />
-        <Footer />
+        <ErrorBoundary><Suspense fallback={<div className="min-h-[400px] bg-black" />}><CTASection /></Suspense></ErrorBoundary>
+        <Suspense fallback={<div className="min-h-[200px] bg-black" />}><Footer /></Suspense>
       </div>
       {/* Particle canvas */}
-      <ParticleNarrativeController />
+      <ErrorBoundary><ParticleNarrativeController /></ErrorBoundary>
 
       {/* Cursor effects */}
       <CursorParticles />

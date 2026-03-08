@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Zap, ChevronUp, Sparkles } from "lucide-react";
+import { trackEvent, EventName } from "@/lib/analytics";
 
 const SOLUTIONS = [
     {
@@ -105,10 +106,13 @@ export default function FloatingNav() {
 
     const handleToggle = () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setActiveTab((prev) => (prev === "solutions" ? null : "solutions"));
+        const newState = activeTab === "solutions" ? null : "solutions";
+        trackEvent(EventName.NAV_DROPDOWN_TOGGLE, { state: newState ? "open" : "close", method: "click" });
+        setActiveTab(newState);
     };
 
     const scrollToTop = () => {
+        trackEvent(EventName.NAV_SCROLL_TO_TOP);
         window.scrollTo({ top: 0, behavior: "smooth" });
         setActiveTab(null);
     };
@@ -128,8 +132,9 @@ export default function FloatingNav() {
                     }}
                     onMouseLeave={handleMouseLeave}
                 >
-                    <div
-                        className="relative text-white border border-white/20 backdrop-blur-md flex flex-col items-center w-[calc(100vw-32px)] max-w-[400px]"
+                    <nav
+                        aria-label="Main navigation"
+                        className="relative text-white border border-white/20 backdrop-blur-md flex flex-col items-center w-[calc(100%-32px)] max-w-[400px]"
                         style={{
                             background: "linear-gradient(to right, #FF5A36, #FF914D)",
                             borderRadius: "24px",
@@ -144,7 +149,7 @@ export default function FloatingNav() {
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.15, ease: "linear" }}
-                                    className="w-full px-5 pt-6 pb-2"
+                                    className="w-full px-5 pt-6 pb-4"
                                     onMouseEnter={handleMouseEnter}
                                 >
                                     <div className="flex justify-between items-start gap-4">
@@ -153,6 +158,7 @@ export default function FloatingNav() {
                                                 <button
                                                     key={item.label}
                                                     onClick={() => {
+                                                        trackEvent(EventName.NAV_CLICK, { nav_item: item.label, nav_type: "solution", target_section: item.href });
                                                         const el = document.querySelector(item.href);
                                                         if (el) el.scrollIntoView({ behavior: "smooth" });
                                                         setActiveTab(null);
@@ -162,12 +168,12 @@ export default function FloatingNav() {
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[13px] font-bold tracking-tight text-white leading-none">{item.label}</span>
                                                         {item.badge && (
-                                                            <span className="text-[7px] bg-white/30 px-1.5 py-0.5 rounded-full uppercase font-black tracking-widest text-white">
+                                                            <span className="text-[9px] bg-white/30 px-1.5 py-0.5 rounded-full uppercase font-black tracking-widest text-white">
                                                                 {item.badge}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-[9px] text-white/50 leading-tight mt-1 group-hover:text-white/80 transition-colors uppercase tracking-tight">
+                                                    <p className="text-[11px] text-white/50 leading-tight mt-1 group-hover:text-white/80 transition-colors uppercase tracking-tight">
                                                         {item.description}
                                                     </p>
                                                 </button>
@@ -199,19 +205,21 @@ export default function FloatingNav() {
                             <div className="w-[1px] h-5 bg-white/20 shrink-0" />
 
                             <div className="flex-1 flex items-center h-full">
-                                <div
+                                <button
                                     onClick={handleToggle}
                                     onMouseEnter={handleMouseEnter}
-                                    className={`w-full h-full flex items-center justify-center gap-2 rounded-[18px] cursor-pointer transition-colors ${activeTab === "solutions" ? "bg-white/30" : "hover:bg-white/10"}`}
+                                    aria-expanded={activeTab === "solutions"}
+                                    aria-label="Our Solutions menu"
+                                    className={`w-full h-full flex items-center justify-center gap-2 rounded-[18px] cursor-pointer transition-colors border-none bg-transparent text-white ${activeTab === "solutions" ? "bg-white/30" : "hover:bg-white/10"}`}
                                 >
                                     <span className="font-bold text-[13px] tracking-tight whitespace-nowrap uppercase">Our Solutions</span>
                                     <ChevronUp size={14} className={`transition-transform duration-200 ${activeTab === "solutions" ? "rotate-180" : ""}`} />
-                                </div>
+                                </button>
                             </div>
 
                             <div className="w-[1px] h-5 bg-white/20 shrink-0" />
 
-                            <div className="flex-1 flex items-center h-[38px] relative group transition-all hover:scale-[1.02] active:scale-95">
+                            <div className="flex-1 flex items-center h-[44px] relative group transition-all hover:scale-[1.02] active:scale-95">
                                 <div className="absolute -inset-[2px] rounded-[20px] overflow-hidden pointer-events-none">
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <div
@@ -227,6 +235,7 @@ export default function FloatingNav() {
                                 </div>
                                 <a
                                     href="#book-call"
+                                    onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Book Pilot", cta_href: "#book-call", source_section: "floating_nav", cta_position: "nav_bar" })}
                                     className="relative bg-white w-full h-full rounded-[18px] font-bold text-[13px] flex items-center justify-center gap-2 z-10"
                                 >
                                     <Zap size={14} className="fill-current text-brand-orange" />
@@ -234,7 +243,7 @@ export default function FloatingNav() {
                                 </a>
                             </div>
                         </div>
-                    </div>
+                    </nav>
                 </motion.div>
             )}
         </AnimatePresence>

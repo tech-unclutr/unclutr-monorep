@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useInView, Variants } from "framer-motion";
+import { useSectionVisibility } from "@/lib/analytics";
 
 const logos = [
   "Zepto",
@@ -16,6 +17,7 @@ const logos = [
 export default function SocialProof() {
   const containerRef = useRef<HTMLDivElement>(null);
   const inView = useInView(containerRef, { once: true, amount: 0.3 });
+  useSectionVisibility("social_proof", containerRef);
 
   const containerVariants: Variants = {
     hidden: {},

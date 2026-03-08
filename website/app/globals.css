@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-
 :root {
   --cream: #f5f2ed;
   --cream-dark: #eae5dd;
@@ -24,14 +22,18 @@
 }
 
 html {
-  scroll-behavior: smooth;
   overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid #FF6B00;
+  outline-offset: 2px;
 }
 
 body {
   background: var(--cream);
   color: var(--maze-black);
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -62,7 +64,7 @@ body {
 
 
 .font-display {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
 }
 
@@ -432,10 +434,7 @@ html.lenis body {
 
 /* Custom cursor - hide default on desktop only */
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
-
-  *,
-  *::before,
-  *::after {
-    cursor: none !important;
+  body {
+    cursor: none;
   }
 }

@@ -38,9 +38,9 @@ const config: Config = {
         'premium': '0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 10px 20px -5px rgba(0, 0, 0, 0.04)',
       },
       fontFamily: {
-        display: ['"Space Grotesk"', "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
         sans: [
-          "Inter",
+          "var(--font-inter)",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",

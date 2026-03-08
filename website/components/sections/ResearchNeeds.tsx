@@ -3,6 +3,7 @@
 import { useState, useRef, RefObject, useEffect } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { useRegisterParticleTargets } from "@/components/ui/particles/useRegisterParticleTargets";
+import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
 import {
   ArrowRight,
   Sparkles,
@@ -677,6 +678,7 @@ export default function StudiesSection() {
 
   const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(sectionRef, { amount: 0.1 });
+  useSectionVisibility("studies", sectionRef);
 
   useRegisterParticleTargets("researchNeeds", sectionRef as unknown as RefObject<HTMLElement>, [".particle-target-research"], isInView);
 
@@ -707,6 +709,8 @@ export default function StudiesSection() {
   const handleCategoryChange = (id: RoleId) => {
     setActiveCategory(id);
     setVisibleCount(collapsedLimit);
+    const count = studiesList.filter(s => s.roles.includes(id)).length;
+    trackEvent(EventName.STUDY_FILTER, { filter_role: id, results_count: count });
   };
 
   return (
@@ -752,41 +756,17 @@ export default function StudiesSection() {
           </div>
         </div>
 
-        {/* ── Custom Study Hero Banner ──────────────── */}
-        <div className="mb-8 particle-target-research">
-          <div className="relative bg-[#0F0F0F] rounded-[32px] overflow-hidden group hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-500 p-8 lg:p-12 flex flex-col md:flex-row items-center justify-between gap-10">
-            {/* Glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#FF5A36]/15 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-[#FF5A36] blur-[150px] opacity-15 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
-
-            <div className="relative z-10 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 text-white text-[11px] font-bold uppercase tracking-[0.15em] mb-6 backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-[#FF5A36]" /> Custom Study
-              </div>
-              <h3 className="text-2xl lg:text-4xl font-display text-white mb-4 leading-tight">
-                Don't see what you need?
-              </h3>
-              <p className="text-white/50 text-base lg:text-lg leading-relaxed">
-                You give the brief. Our AI agents do the rest. They recruit, interview, and catch every insight a human would miss. Analyst-grade depth, at{" "}
-                <span className="text-[#FF5A36] font-semibold">lightning speed.</span>
-              </p>
-            </div>
-
-            <div className="relative z-10 shrink-0">
-              <button className="px-8 py-4 bg-white text-maze-black rounded-full font-semibold flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
-                Launch Custom Study
-                <span className="ml-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-orange-100 text-[#FF5A36] rounded-full">Coming Soon</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* ── Study Grid ───────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-min">
           {visibleStudies.map((study, idx) => (
             <div
               key={study.id}
-              onClick={() => setSelectedStudy(study)}
+              onClick={() => {
+                trackEvent(EventName.STUDY_CARD_CLICK, { study_name: study.name, study_category: study.id, card_index: idx, filter_active: activeCategory });
+                trackEvent(EventName.STUDY_MODAL_OPEN, { study_name: study.name, study_category: study.id });
+                window.dispatchEvent(new CustomEvent("sq:study_modal"));
+                setSelectedStudy(study);
+              }}
               className="study-card bg-white rounded-[28px] p-7 border border-neutral-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer group hover:-translate-y-1 flex flex-col relative overflow-hidden"
             >
               {/* Color accent bar */}
@@ -861,6 +841,35 @@ export default function StudiesSection() {
             </button>
           )}
         </div>
+
+        {/* ── Custom Study Hero Banner ──────────────── */}
+        <div className="mt-8 particle-target-research">
+          <div className="relative bg-[#0F0F0F] rounded-[32px] overflow-hidden group hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-500 p-8 lg:p-12 flex flex-col md:flex-row items-center justify-between gap-10">
+            {/* Glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FF5A36]/15 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-[#FF5A36] blur-[150px] opacity-15 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+
+            <div className="relative z-10 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 text-white text-[11px] font-bold uppercase tracking-[0.15em] mb-6 backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-[#FF5A36]" /> Custom Study
+              </div>
+              <h3 className="text-2xl lg:text-4xl font-display text-white mb-4 leading-tight">
+                Don't see what you need?
+              </h3>
+              <p className="text-white/50 text-base lg:text-lg leading-relaxed">
+                You give the brief. Our AI agents do the rest. They recruit, interview, and catch every insight a human would miss. Analyst-grade depth, at{" "}
+                <span className="text-[#FF5A36] font-semibold">lightning speed.</span>
+              </p>
+            </div>
+
+            <div className="relative z-10 shrink-0">
+              <button className="px-8 py-4 bg-white text-maze-black rounded-full font-semibold flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
+                Launch Custom Study
+                <span className="ml-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-orange-100 text-[#FF5A36] rounded-full">Coming Soon</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Expanded Modal - Single Fold Detail View ─── */}
@@ -872,7 +881,7 @@ export default function StudiesSection() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[99999] flex items-center justify-center"
-            onKeyDown={(e) => { if (e.key === 'Escape') setSelectedStudy(null); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { trackEvent(EventName.STUDY_MODAL_CLOSE, { study_name: selectedStudy.name, close_method: "escape" }); setSelectedStudy(null); } }}
             tabIndex={-1}
             ref={(el) => el?.focus()}
           >
@@ -883,7 +892,7 @@ export default function StudiesSection() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
               className="absolute inset-0 bg-black/50 backdrop-blur-xl cursor-pointer"
-              onClick={() => setSelectedStudy(null)}
+              onClick={() => { trackEvent(EventName.STUDY_MODAL_CLOSE, { study_name: selectedStudy!.name, close_method: "overlay" }); setSelectedStudy(null); }}
             />
 
             {/* Modal Panel - premium floating overlay */}
@@ -899,7 +908,7 @@ export default function StudiesSection() {
               {/* ── TOP BAR ── */}
               <div className="flex items-center justify-between px-6 lg:px-10 py-4 border-b border-neutral-100 shrink-0">
                 <motion.button
-                  onClick={() => setSelectedStudy(null)}
+                  onClick={() => { trackEvent(EventName.STUDY_MODAL_CLOSE, { study_name: selectedStudy!.name, close_method: "button" }); setSelectedStudy(null); }}
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.9 }}
                   className="w-10 h-10 bg-neutral-100 hover:bg-neutral-200 rounded-full flex items-center justify-center transition-colors text-neutral-600 hover:text-neutral-900"

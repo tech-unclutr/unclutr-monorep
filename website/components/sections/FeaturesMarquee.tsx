@@ -9,6 +9,7 @@ import {
 } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
 
 // SEO-optimized keywords across research, AI, and business categories
 const seoKeywords = {
@@ -98,6 +99,7 @@ function AmbientKeywordRow({
 
 export default function FeaturesMarquee() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  useSectionVisibility("cta_text", sectionRef);
 
   // Mouse tracking for magnetic glow
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
@@ -177,7 +179,7 @@ export default function FeaturesMarquee() {
 
 
       {/* Main content */}
-      <div className="relative z-10 max-w-[1100px] mx-auto px-6 lg:px-10 text-center flex flex-col items-center">
+      <div className="relative z-10 max-w-[1100px] mx-auto px-6 sm:px-8 lg:px-10 text-center flex flex-col items-center">
         <motion.h2
           style={{ y: headlineSpringY, opacity: headlineOpacity }}
           className="font-display text-[clamp(24px,6vw,76px)] leading-[1.05] tracking-[-0.04em] text-[#0b132b] max-w-4xl mx-auto"
@@ -213,8 +215,8 @@ export default function FeaturesMarquee() {
           <div className="absolute inset-[-4px] rounded-full bg-gradient-to-r from-[#FF5A36] via-[#FF8A66] to-[#FF5A36] opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-700 animate-pulse pointer-events-none" />
 
           <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
+            href="#book-call"
+            onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "See it in action", cta_href: "#book-call", source_section: "cta_text", cta_position: "main" })}
             className="group relative flex items-center gap-3 px-8 py-4 text-[16px] font-semibold rounded-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
             style={{
               background: "linear-gradient(180deg, #1a243a 0%, #0b132b 100%)",

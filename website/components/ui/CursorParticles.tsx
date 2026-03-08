@@ -38,8 +38,9 @@ export default function CursorParticles() {
   useEffect(() => {
     if (!mounted) return;
 
-    // Skip on mobile
+    // Skip on mobile or reduced motion
     if (window.innerWidth < 768) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -150,8 +151,12 @@ export default function CursorParticles() {
         ctx.beginPath();
         ctx.fillStyle = p.color;
         ctx.globalAlpha = finalAlpha;
-        ctx.shadowBlur = CURSOR_PARTICLE_CONFIG.glowBlur;
-        ctx.shadowColor = p.color;
+        if (i % 5 === 0) {
+          ctx.shadowBlur = CURSOR_PARTICLE_CONFIG.glowBlur;
+          ctx.shadowColor = p.color;
+        } else {
+          ctx.shadowBlur = 0;
+        }
 
         // Shrink as particle ages
         const sizeMod = 1 - lifeProgress * 0.5;
@@ -195,6 +200,7 @@ export default function CursorParticles() {
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       className="fixed inset-0 pointer-events-none"
       style={{
         width: "100vw",

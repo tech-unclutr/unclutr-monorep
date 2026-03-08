@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { motion, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
+import { useVideoTracking } from "@/lib/analytics";
 
 interface AgentVideoCardProps {
     name: string;
@@ -23,7 +24,7 @@ export default function AgentVideoCard({
     cardWidth,
 }: AgentVideoCardProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
-
+    useVideoTracking(videoRef, { name, sourceCarousel: "agents", cardIndex: 0 });
 
     useEffect(() => {
         const video = videoRef.current;
@@ -33,7 +34,11 @@ export default function AgentVideoCard({
             video.currentTime = 0;
             video.playbackRate = 1.3;
             const timer = setTimeout(() => {
-                video.play().catch(() => { });
+                video.play().catch((err) => {
+                    if (err.name !== "AbortError") {
+                        console.warn(`Video playback failed for ${name}:`, err.message);
+                    }
+                });
             }, 300);
             return () => clearTimeout(timer);
         } else {
@@ -86,6 +91,8 @@ export default function AgentVideoCard({
     return (
         <motion.div
             ref={cardRef}
+            role="group"
+            aria-label={`${name} agent: ${description}`}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             animate={{
@@ -154,6 +161,8 @@ export default function AgentVideoCard({
                     ref={videoRef}
                     src={(isActive || isAdjacent) ? videoSrc : undefined}
                     poster={posterSrc}
+                    width={cardWidth}
+                    height={Math.round(cardWidth * (9 / 16))}
                     muted
                     loop
                     playsInline

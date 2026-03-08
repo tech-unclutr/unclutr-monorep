@@ -1,6 +1,11 @@
+import bundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 const nextConfig = {
-  output: "export",
+  ...(process.env.NODE_ENV === 'production' ? { output: "export" } : {}),
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -25,4 +30,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

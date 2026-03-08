@@ -58,6 +58,7 @@ export default function AmbientParticles({
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || height < 10) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
         const dpr = window.devicePixelRatio || 1;
         const width = window.innerWidth;
@@ -69,7 +70,8 @@ export default function AmbientParticles({
         const highlightColors = ["#D4582A", "#E86830"];
         const particles: Particle[] = [];
 
-        for (let i = 0; i < particleCount; i++) {
+        const effectiveCount = width < 768 ? Math.min(particleCount, 30) : particleCount;
+        for (let i = 0; i < effectiveCount; i++) {
             const isHighlight = Math.random() > 0.85;
             const spreadX = Math.random() * width;
             const spreadY = Math.random() * height;
@@ -106,7 +108,18 @@ export default function AmbientParticles({
 
         let animationFrameId: number;
 
+        // Visibility gating — skip rendering when offscreen
+        const isVisibleRef = { current: true };
+        const observer = new IntersectionObserver(([entry]) => {
+            isVisibleRef.current = entry.isIntersecting;
+        }, { threshold: 0 });
+        observer.observe(canvas);
+
         const render = () => {
+            if (!isVisibleRef.current) {
+                animationFrameId = requestAnimationFrame(render);
+                return;
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             for (const p of particlesRef.current) {
@@ -167,6 +180,7 @@ export default function AmbientParticles({
 
         return () => {
             cancelAnimationFrame(animationFrameId);
+            observer.disconnect();
             window.removeEventListener("resize", handleResize);
         };
     }, [height, particleCount, direction]);
@@ -174,6 +188,7 @@ export default function AmbientParticles({
     return (
         <canvas
             ref={canvasRef}
+            aria-hidden="true"
             style={{
                 position: "absolute",
                 top: 0,

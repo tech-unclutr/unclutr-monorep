@@ -8,6 +8,7 @@ import {
     useSpring,
     useInView,
 } from "framer-motion";
+import { useSectionVisibility, useCarouselTracking, useVideoTracking } from "@/lib/analytics";
 
 /* ─────────────────────────────────────────────────────────────
    EASING & PHYSICS
@@ -26,7 +27,7 @@ const STUDIO_TEAM = [
         intro: "I book calls with your customers and connect you automatically. When you need more interviews, I run them myself using AI.",
         attributes: ["Books high-intent calls", "Connects you directly", "Runs AI interviews"],
         video: "/agent-videos/pulse.mp4",
-        poster: "/pulse-frames/frame-117.webp",
+        poster: "/posters/pulse.webp",
         color: "#FF6B00",
     },
     {
@@ -35,7 +36,7 @@ const STUDIO_TEAM = [
         intro: "I help you ask better questions during interviews. I suggest follow-ups and flag important moments so you never miss what matters.",
         attributes: ["Live question prompts", "Suggests follow-ups", "Flags key moments"],
         video: "/agent-videos/yoda.mp4",
-        poster: "/yoda-frames/frame-106.webp",
+        poster: "/posters/yoda.webp",
         color: "#6366F1",
     },
     {
@@ -44,7 +45,7 @@ const STUDIO_TEAM = [
         intro: "I store and transcribe every customer call in one place. Search anything a customer said and find it instantly.",
         attributes: ["Auto-transcribes calls", "One place for all calls", "Search any quote"],
         video: "/agent-videos/atlas.mp4",
-        poster: "/atlas-frames/frame-111.webp",
+        poster: "/posters/atlas.webp",
         color: "#10B981",
     },
     {
@@ -53,7 +54,7 @@ const STUDIO_TEAM = [
         intro: "I find what you'd miss. Hidden patterns, emerging themes, the thing 50 customers said differently but meant the same. I turn noise into clarity.",
         attributes: ["Spots hidden patterns", "Connects the dots", "Deep insight reports"],
         video: "/agent-videos/sage.mp4",
-        poster: "/sage2-frames/frame-106.webp",
+        poster: "/posters/sage.webp",
         color: "#FF5A36",
     },
     {
@@ -62,7 +63,7 @@ const STUDIO_TEAM = [
         intro: "I make sure every team knows what their customers are saying. Product gets product feedback. Sales gets buying signals. Everyone stays in the loop.",
         attributes: ["Routes insights by team", "Regular updates", "Keeps everyone aligned"],
         video: "/agent-videos/kairo.mp4",
-        poster: "/kairo-frames/frame-124.webp",
+        poster: "/posters/kairo.webp",
         color: "#F59E0B",
     },
 ];
@@ -94,6 +95,7 @@ function StudioCard({
     onSwipe: (direction: "left" | "right") => void;
 }) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    useVideoTracking(videoRef, { name: agent.name, sourceCarousel: "interview_studio", cardIndex: index });
     const isActive = index === activeIndex;
     const isFuture = index > activeIndex;
     const isAdjacent = Math.abs(index - activeIndex) === 1;
@@ -172,7 +174,7 @@ function StudioCard({
             onPanEnd={handlePanEnd}
         >
             <motion.div
-                className="relative w-[calc(100vw-32px)] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
+                className="relative w-[calc(100%-32px)] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
                 style={{
                     background: isActive
                         ? "linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.95) 100%)"
@@ -382,8 +384,12 @@ function ProgressDots({
 ───────────────────────────────────────────────────────────── */
 export default function InterviewStudio() {
     const sectionRef = useRef<HTMLDivElement>(null);
+    useSectionVisibility("interview_studio", sectionRef);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
+    const { trackTransition: trackCarousel, trackAutoplay: trackAutoplayState } = useCarouselTracking(
+        "interview_studio", activeIndex, STUDIO_TEAM.map(a => a.name)
+    );
     const [hasRevealed, setHasRevealed] = useState(false);
     const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
     const [cardSpacing, setCardSpacing] = useState(55);
@@ -419,7 +425,11 @@ export default function InterviewStudio() {
         }
 
         autoPlayRef.current = setInterval(() => {
-            setActiveIndex((prev) => (prev + 1) % STUDIO_TEAM.length);
+            setActiveIndex((prev) => {
+                const next = (prev + 1) % STUDIO_TEAM.length;
+                trackCarousel(next, "autoplay");
+                return next;
+            });
         }, AUTO_ADVANCE_INTERVAL);
 
         return () => {
@@ -427,11 +437,12 @@ export default function InterviewStudio() {
         };
     }, [isInView, hasRevealed, isPaused]);
 
-    const handleSelect = useCallback((idx: number) => {
+    const handleSelect = useCallback((idx: number, method: "click" | "swipe" | "keyboard" | "dot" = "click") => {
+        trackCarousel(idx, method);
         setActiveIndex(idx);
         setIsPaused(true);
         setTimeout(() => setIsPaused(false), 12000);
-    }, []);
+    }, [trackCarousel]);
 
     const handleHover = useCallback(() => {
         setIsPaused(true);
@@ -446,11 +457,11 @@ export default function InterviewStudio() {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
             const prevIndex = activeIndex === 0 ? STUDIO_TEAM.length - 1 : activeIndex - 1;
-            handleSelect(prevIndex);
+            handleSelect(prevIndex, "keyboard");
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
             const nextIndex = (activeIndex + 1) % STUDIO_TEAM.length;
-            handleSelect(nextIndex);
+            handleSelect(nextIndex, "keyboard");
         }
     }, [activeIndex, handleSelect]);
 
@@ -546,7 +557,7 @@ export default function InterviewStudio() {
                         Interview Studio
                     </motion.h2>
                     <motion.p
-                        className="mt-4 text-[17px] sm:text-[20px] text-[#6e6e73] font-medium max-w-[540px] leading-relaxed"
+                        className="mt-4 text-[17px] sm:text-[19px] md:text-[20px] text-[#6e6e73] font-medium max-w-[540px] leading-relaxed"
                         initial={{ opacity: 0, y: 25 }}
                         animate={isInView ? { opacity: 1, y: 0 } : {}}
                         transition={{ duration: 0.9, delay: 0.1, ease: EASE_OUT_EXPO }}
@@ -562,7 +573,7 @@ export default function InterviewStudio() {
                 >
                     {/* Left Arrow */}
                     <button
-                        onClick={() => handleSelect(activeIndex === 0 ? STUDIO_TEAM.length - 1 : activeIndex - 1)}
+                        onClick={() => handleSelect(activeIndex === 0 ? STUDIO_TEAM.length - 1 : activeIndex - 1, "click")}
                         className="absolute left-0 sm:-left-4 lg:-left-8 z-20 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-black/[0.06] shadow-sm hidden sm:flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:shadow-md hover:bg-white transition-all duration-300 cursor-pointer"
                         aria-label="Previous agent"
                     >
@@ -581,12 +592,12 @@ export default function InterviewStudio() {
                                 cardSpacing={cardSpacing}
                                 onHover={handleHover}
                                 onLeave={handleLeave}
-                                onClick={() => handleSelect(idx)}
+                                onClick={() => handleSelect(idx, "click")}
                                 onSwipe={(dir) => {
                                     if (dir === "left") {
-                                        handleSelect((activeIndex + 1) % STUDIO_TEAM.length)
+                                        handleSelect((activeIndex + 1) % STUDIO_TEAM.length, "swipe")
                                     } else {
-                                        handleSelect(activeIndex === 0 ? STUDIO_TEAM.length - 1 : activeIndex - 1)
+                                        handleSelect(activeIndex === 0 ? STUDIO_TEAM.length - 1 : activeIndex - 1, "swipe")
                                     }
                                 }}
                             />
@@ -595,7 +606,7 @@ export default function InterviewStudio() {
 
                     {/* Right Arrow */}
                     <button
-                        onClick={() => handleSelect((activeIndex + 1) % STUDIO_TEAM.length)}
+                        onClick={() => handleSelect((activeIndex + 1) % STUDIO_TEAM.length, "click")}
                         className="absolute right-0 sm:-right-4 lg:-right-8 z-20 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-black/[0.06] shadow-sm hidden sm:flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:shadow-md hover:bg-white transition-all duration-300 cursor-pointer"
                         aria-label="Next agent"
                     >
@@ -614,7 +625,7 @@ export default function InterviewStudio() {
                     <ProgressDots
                         total={STUDIO_TEAM.length}
                         active={activeIndex}
-                        onSelect={handleSelect}
+                        onSelect={(idx) => handleSelect(idx, "dot")}
                         isPaused={isPaused}
                     />
 
@@ -642,7 +653,17 @@ export default function InterviewStudio() {
                     </div>
                 </motion.div>
 
-                {/* Hint */}
+                {/* Mobile swipe hint */}
+                <motion.div
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 flex sm:hidden items-center gap-2 text-[11px] text-[#86868b]/60"
+                    initial={{ opacity: 0 }}
+                    animate={isInView && hasRevealed ? { opacity: [0, 1, 1, 0] } : {}}
+                    transition={{ delay: 1.8, duration: 3, times: [0, 0.1, 0.7, 1] }}
+                >
+                    <span>Swipe to explore</span>
+                </motion.div>
+
+                {/* Desktop hint */}
                 <motion.div
                     className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-2 text-[11px] text-[#86868b]/60"
                     initial={{ opacity: 0 }}

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { useScroll, motion, useSpring, useTransform } from "framer-motion";
+import { useSectionVisibility } from "@/lib/analytics";
 
 const PARTICLE_COUNT = 55000;
 const BASE_SCALE = 220; // Direct scale in pixels
@@ -17,6 +18,7 @@ export default function CTASection() {
   const containerRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mounted, setMounted] = useState(false);
+  useSectionVisibility("cta", containerRef);
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
   const particlesRef = useRef<Particle[]>([]);
 
@@ -36,6 +38,10 @@ export default function CTASection() {
   // Initialize particles
   useEffect(() => {
     if (!canvasRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setMounted(true);
+      return;
+    }
     setMounted(true);
 
     const canvas = canvasRef.current;
@@ -115,7 +121,18 @@ export default function CTASection() {
     let animId: number;
     const dpr = window.devicePixelRatio || 1;
 
+    // Visibility gating — skip rendering when offscreen
+    const isVisibleRef = { current: true };
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisibleRef.current = entry.isIntersecting;
+    }, { threshold: 0 });
+    if (containerRef.current) observer.observe(containerRef.current);
+
     const render = () => {
+      if (!isVisibleRef.current) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const { width, height } = dimensions;
@@ -182,8 +199,8 @@ export default function CTASection() {
 
         const dotSize = p.size * scale;
 
-        // Glow for front bright particles
-        if (isBright && dotSize > 1.2 && ease > 0.7 && normalizedZ > 0.7) {
+        // Glow for front bright particles (limited to ~10% for performance)
+        if (isBright && dotSize > 1.2 && ease > 0.7 && normalizedZ > 0.7 && i % 10 === 0) {
           ctx.shadowBlur = 6;
           ctx.shadowColor = p.color;
         } else {
@@ -191,7 +208,7 @@ export default function CTASection() {
         }
 
         ctx.beginPath();
-        if (dotSize < 0.8) {
+        if (dotSize < 1.5) {
           ctx.fillRect(
             projX * dpr - dotSize * dpr * 0.5,
             projY * dpr - dotSize * dpr * 0.5,
@@ -209,7 +226,10 @@ export default function CTASection() {
     };
 
     render();
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      cancelAnimationFrame(animId);
+      observer.disconnect();
+    };
   }, [dimensions, assembleProgress]);
 
   // Mouse parallax
@@ -261,7 +281,7 @@ export default function CTASection() {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       data-section-name="cta"
-      className="relative z-0 h-[140vh] md:h-[200vh] w-full bg-black"
+      className="relative z-0 h-[120vh] sm:h-[140vh] md:h-[200vh] w-full bg-black"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
 
@@ -272,6 +292,7 @@ export default function CTASection() {
 
         <canvas
           ref={canvasRef}
+          aria-hidden="true"
           className="absolute inset-0 w-full h-full z-10 pointer-events-none"
           style={{ width: "100vw", height: "100vh" }}
         />
@@ -307,9 +328,9 @@ export default function CTASection() {
           </motion.div>
         )}
 
-        {/* Footnote Option 2 */}
-        <div className="absolute bottom-12 left-0 w-full flex justify-center z-40 pointer-events-none text-center px-4">
-          <span className="text-[10px] sm:text-[11px] font-sans text-white/30 tracking-widest uppercase md:max-w-max max-w-sm">
+        {/* Particle footnote */}
+        <div className="absolute top-[80%] left-0 w-full flex justify-center z-40 pointer-events-none text-center px-4">
+          <span className="text-[11px] sm:text-[12px] font-sans text-white/30 tracking-widest uppercase md:max-w-max max-w-sm">
             * Each particle represents a direct data point from your actual customers, which forms your customer intelligence.
           </span>
         </div>
@@ -319,8 +340,8 @@ export default function CTASection() {
           animate={{
             opacity: isHoveringHeart ? 1 : 0,
             scale: isHoveringHeart ? 1 : 0.95,
-            x: mousePosPixel.x + 20,
-            y: mousePosPixel.y + 20,
+            x: Math.min(mousePosPixel.x + 20, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 320),
+            y: Math.min(mousePosPixel.y + 20, (typeof window !== 'undefined' ? window.innerHeight : 800) - 100),
           }}
           transition={{ duration: 0.15, ease: "easeOut" }}
           className="fixed top-0 left-0 z-50 pointer-events-none flex flex-col gap-2 px-4 py-3 bg-black/60 border border-white/10 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] w-max"

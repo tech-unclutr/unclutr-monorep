@@ -7,7 +7,9 @@
     "build:pitch-deck": "cd pitch-deck && npm run build",
     "build": "npm run build:pitch-deck && next build",
     "start": "next start -p 3005",
-    "lint": "next lint"
+    "lint": "next lint",
+    "optimize": "bash scripts/optimize-for-prod.sh",
+    "promote": "bash ../scripts/promote-to-live.sh"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",

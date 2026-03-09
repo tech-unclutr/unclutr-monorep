@@ -47,7 +47,7 @@ ok "Stripped $STRIPPED unguarded console statement(s)"
 # Also strip debugger statements
 DEBUGGER_COUNT=$(grep -r --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
   -l '^\s*debugger\s*;' "$WEBSITE_DIR" \
-  --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out --exclude-dir=pitch-deck 2>/dev/null | wc -l | tr -d ' ')
+  --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out --exclude-dir=pitch-deck 2>/dev/null | wc -l | tr -d ' ' || echo "0")
 
 if [ "$DEBUGGER_COUNT" -gt 0 ]; then
   find "$WEBSITE_DIR" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) \

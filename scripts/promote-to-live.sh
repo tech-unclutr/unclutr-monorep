@@ -158,11 +158,8 @@ find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} + 2>/dev/null || t
 
 # Checkout only the website-related paths from website-dev
 for p in "${WEBSITE_PATHS[@]}"; do
-  if git ls-tree -r "$SOURCE_BRANCH" --name-only | grep -q "^${p}" || \
-     git ls-tree "$SOURCE_BRANCH" --name-only | grep -q "^${p%/}$"; then
-    git checkout "$SOURCE_BRANCH" -- "$p" 2>/dev/null && \
-      ok "Copied: $p" || \
-      warn "Skipped (not in source): $p"
+  if git checkout "$SOURCE_BRANCH" -- "$p" 2>/dev/null; then
+    ok "Copied: $p"
   else
     warn "Not found in $SOURCE_BRANCH: $p"
   fi

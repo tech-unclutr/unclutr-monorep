@@ -47,7 +47,7 @@ ok "Stripped $STRIPPED unguarded console statement(s)"
 # Also strip debugger statements
 DEBUGGER_FILES=$(grep -rl '^\s*debugger\s*;' "$WEBSITE_DIR" \
   --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
-  --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out --exclude-dir=pitch-deck 2>/dev/null || true)
+  --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out 2>/dev/null || true)
 DEBUGGER_COUNT=0
 if [ -n "$DEBUGGER_FILES" ]; then
   DEBUGGER_COUNT=$(echo "$DEBUGGER_FILES" | wc -l | tr -d ' ')
@@ -55,7 +55,7 @@ fi
 
 if [ "$DEBUGGER_COUNT" -gt 0 ]; then
   find "$WEBSITE_DIR" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) \
-    ! -path "*/node_modules/*" ! -path "*/.next/*" ! -path "*/out/*" ! -path "*/pitch-deck/*" \
+    ! -path "*/node_modules/*" ! -path "*/.next/*" ! -path "*/out/*" \
     -exec sed -i '' '/^\s*debugger\s*;/d' {} +
   ok "Removed debugger statements from $DEBUGGER_COUNT file(s)"
 else

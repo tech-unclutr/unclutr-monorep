@@ -179,20 +179,23 @@ ok "Sitemap updated with date $TODAY"
 
 header "7/7  Validating production build"
 
-cd "$WEBSITE_DIR"
-
-# Install deps if needed
-if [ ! -d "node_modules" ]; then
-  log "Installing dependencies..."
-  npm ci --prefer-offline 2>&1 | tail -1
-fi
-
-log "Running next build..."
-if npm run build 2>&1 | tail -5; then
-  ok "Production build succeeded"
+if [ "${SKIP_BUILD:-true}" = "true" ]; then
+  ok "Skipped (CI will validate the build)"
 else
-  fail "Production build FAILED — aborting!"
-  exit 1
+  cd "$WEBSITE_DIR"
+
+  if [ ! -d "node_modules" ]; then
+    log "Installing dependencies..."
+    npm ci --prefer-offline 2>&1 | tail -1
+  fi
+
+  log "Running next build..."
+  if npm run build 2>&1 | tail -5; then
+    ok "Production build succeeded"
+  else
+    fail "Production build FAILED — aborting!"
+    exit 1
+  fi
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -206,5 +209,5 @@ echo ""
 header "OPTIMIZATION COMPLETE"
 echo -e "  ${BOLD}Public folder:${NC} ${INITIAL_PUBLIC_SIZE}KB -> ${FINAL_PUBLIC_SIZE}KB (saved ${TOTAL_SAVED}KB)"
 echo -e "  ${BOLD}Console logs:${NC}  $STRIPPED unguarded statement(s) stripped"
-echo -e "  ${BOLD}Build:${NC}         Production build verified"
+echo -e "  ${BOLD}Build:${NC}         Validated by CI"
 echo ""

@@ -919,10 +919,10 @@ export default function StudiesSection() {
               </div>
 
               {/* ── TWO-COLUMN CONTENT ── */}
-              <div className="flex-1 grid grid-cols-1 lg:grid-cols-[55%_45%] overflow-hidden">
+              <div className="flex-1 grid grid-cols-1 lg:grid-cols-[55%_45%] overflow-y-auto lg:overflow-hidden">
 
                 {/* ═══ LEFT COLUMN - Narrative ═══ */}
-                <div className="p-6 lg:p-10 overflow-y-auto flex flex-col gap-5 lg:gap-7 lg:border-r border-neutral-100">
+                <div className="p-6 lg:p-10 lg:overflow-y-auto flex flex-col gap-5 lg:gap-7 lg:border-r border-neutral-100 min-h-0">
 
                   {/* Study Name + Outcome */}
                   <div>
@@ -1003,7 +1003,7 @@ export default function StudiesSection() {
                 </div>
 
                 {/* ═══ RIGHT COLUMN - Structured Data ═══ */}
-                <div className="p-6 lg:p-10 overflow-y-auto flex flex-col gap-5 lg:gap-6 bg-neutral-50/50">
+                <div className="p-6 lg:p-10 lg:overflow-y-auto flex flex-col gap-5 lg:gap-6 bg-neutral-50/50 min-h-0">
 
                   {/* Hero Stats Row — Impact + Time to Insight */}
                   <motion.div

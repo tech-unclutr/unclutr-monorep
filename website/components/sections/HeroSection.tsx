@@ -1,13 +1,17 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useScroll, motion, useTransform, useMotionValueEvent, useSpring } from "framer-motion";
+import { useScroll, motion, useTransform, useMotionValueEvent, useSpring, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useIsMobile } from "../ui/useIsMobile";
 import { useSectionVisibility } from "@/lib/analytics";
 
 /* ─── Copy & Neural Network Data ─── */
-const SUBHEADLINE = "The Customer Understanding team you wish you had";
+const SUBHEADLINES = [
+  "The Customer Understanding team you wish you had",
+  "We give voice to the empty chair representing the customer in Amazon's board meetings",
+  "Replacing 'I think users want...' with 'Here is exactly what they need'"
+];
 const PARTICLE_DENSITY = 0.25;
 const GLOBE_RADIUS = 320;
 const TEXT_LINES = ["Stop Guessing", "Start Listening"];
@@ -34,6 +38,7 @@ export default function HeroSection() {
   const isMobile = useIsMobile();
   useSectionVisibility("hero", containerRef);
   const [mounted, setMounted] = useState(false);
+  const [subheadlineIndex, setSubheadlineIndex] = useState(0);
 
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
   const [isHoveringGlobe, setIsHoveringGlobe] = useState(false);
@@ -51,6 +56,13 @@ export default function HeroSection() {
 
     return () => clearInterval(interval);
   }, [isHoveringGlobe]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSubheadlineIndex((prev) => (prev + 1) % SUBHEADLINES.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
 
   const showMission = activeTextIndex === 1;
 
@@ -394,9 +406,20 @@ export default function HeroSection() {
             style={{ opacity: textSubOpacity, y: textSubY }}
             className="absolute z-20 top-[65%] w-full flex flex-col items-center justify-center px-4"
           >
-            <h2 className="text-center font-display text-xl sm:text-2xl font-medium text-white max-w-2xl leading-tight text-balance tracking-wide">
-              {SUBHEADLINE}
-            </h2>
+            <div className="relative h-20 sm:h-24 w-full max-w-2xl mx-auto flex items-center justify-center">
+              <AnimatePresence>
+                <motion.h2
+                  key={subheadlineIndex}
+                  initial={{ opacity: 0, filter: "blur(10px)", y: 10 }}
+                  animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+                  exit={{ opacity: 0, filter: "blur(10px)", y: -10 }}
+                  transition={{ duration: 0.8, ease: "easeInOut" }}
+                  className="absolute w-full text-center font-display text-xl sm:text-2xl font-medium text-white leading-tight text-balance tracking-wide"
+                >
+                  {SUBHEADLINES[subheadlineIndex]}
+                </motion.h2>
+              </AnimatePresence>
+            </div>
 
             <div className="absolute top-[18vh] flex flex-col items-center gap-2 text-white/60 font-medium text-[11px] tracking-[0.2em] uppercase">
               <span>Scroll to Ignite</span>

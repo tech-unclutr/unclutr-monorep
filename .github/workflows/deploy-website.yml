@@ -24,10 +24,6 @@ jobs:
         working-directory: ./website
         run: npm ci
 
-      - name: Build pitch deck
-        working-directory: ./website
-        run: npm run build:pitch-deck
-
       - name: Build website (static export)
         working-directory: ./website
         run: npx next build

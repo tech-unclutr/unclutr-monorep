@@ -220,6 +220,8 @@ export default function ParticleNarrativeController() {
 
     // Main render loop
     const render = () => {
+      if (document.hidden) return; // Pause when tab not visible
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       timeRef.current += 0.016;
 
@@ -539,6 +541,15 @@ export default function ParticleNarrativeController() {
 
     render();
 
+    // Resume RAF when tab becomes visible again
+    const onVisChange = () => {
+      if (!document.hidden) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(render);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisChange);
+
     const handleResize = () => {
       const newWidth = window.innerWidth;
       const newHeight = window.innerHeight;
@@ -553,6 +564,7 @@ export default function ParticleNarrativeController() {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      document.removeEventListener("visibilitychange", onVisChange);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("hero-particle-exit", handleHeroExit);

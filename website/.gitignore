@@ -4,6 +4,9 @@ node_modules/
 .npm-cache/
 tsconfig.tsbuildinfo
 
+# Pitch deck build output (built from pitch-deck/ source)
+public/investors/
+
 # OS
 .DS_Store
 

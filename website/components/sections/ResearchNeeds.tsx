@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, RefObject, useEffect } from "react";
+import { useState, useRef, useMemo, useCallback, RefObject, useEffect } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { useRegisterParticleTargets } from "@/components/ui/particles/useRegisterParticleTargets";
 import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
@@ -697,21 +697,21 @@ export default function StudiesSection() {
     };
   }, [selectedStudy]);
 
-  const filteredStudies = studiesList.filter(s => s.roles.includes(activeCategory));
+  const filteredStudies = useMemo(() => studiesList.filter(s => s.roles.includes(activeCategory)), [activeCategory]);
   const collapsedLimit = 5; // 5 cards + 1 "+XX" tile = 2 full rows on desktop
   const totalStudyCount = 60;
   const capped = Math.min(visibleCount, filteredStudies.length);
-  const visibleStudies = filteredStudies.slice(0, capped);
+  const visibleStudies = useMemo(() => filteredStudies.slice(0, capped), [filteredStudies, capped]);
   const hasMore = capped < filteredStudies.length;
   const isExpanded = capped > collapsedLimit;
 
   // Reset visible count when switching categories
-  const handleCategoryChange = (id: RoleId) => {
+  const handleCategoryChange = useCallback((id: RoleId) => {
     setActiveCategory(id);
     setVisibleCount(collapsedLimit);
     const count = studiesList.filter(s => s.roles.includes(id)).length;
     trackEvent(EventName.STUDY_FILTER, { filter_role: id, results_count: count });
-  };
+  }, []);
 
   return (
     <section

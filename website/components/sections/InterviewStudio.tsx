@@ -392,6 +392,7 @@ export default function InterviewStudio() {
     );
     const [hasRevealed, setHasRevealed] = useState(false);
     const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+    const activeIndexRef = useRef(0);
     const [cardSpacing, setCardSpacing] = useState(55);
 
     // Responsive card stack spacing
@@ -437,12 +438,16 @@ export default function InterviewStudio() {
         };
     }, [isInView, hasRevealed, isPaused]);
 
+    const trackCarouselRef = useRef(trackCarousel);
+    trackCarouselRef.current = trackCarousel;
+
     const handleSelect = useCallback((idx: number, method: "click" | "swipe" | "keyboard" | "dot" = "click") => {
-        trackCarousel(idx, method);
+        trackCarouselRef.current(idx, method);
+        activeIndexRef.current = idx;
         setActiveIndex(idx);
         setIsPaused(true);
         setTimeout(() => setIsPaused(false), 12000);
-    }, [trackCarousel]);
+    }, []);
 
     const handleHover = useCallback(() => {
         setIsPaused(true);
@@ -465,6 +470,39 @@ export default function InterviewStudio() {
         }
     }, [activeIndex, handleSelect]);
 
+    // Horizontal swipe/wheel → navigate cards (prevents browser back/forward)
+    useEffect(() => {
+        const el = sectionRef.current;
+        if (!el) return;
+
+        let lastWheelTime = 0;
+        const WHEEL_COOLDOWN = 500;
+
+        const handleWheel = (e: WheelEvent) => {
+            const absX = Math.abs(e.deltaX);
+            const absY = Math.abs(e.deltaY);
+            // Only intercept clearly horizontal swipes (dominant + above threshold)
+            if (absX > absY * 2 && absX > 15) {
+                e.preventDefault();
+
+                const now = Date.now();
+                if (now - lastWheelTime < WHEEL_COOLDOWN) return;
+                lastWheelTime = now;
+
+                const total = STUDIO_TEAM.length;
+                const curr = activeIndexRef.current;
+                if (e.deltaX > 0) {
+                    handleSelect((curr + 1) % total, "swipe");
+                } else {
+                    handleSelect(curr === 0 ? total - 1 : curr - 1, "swipe");
+                }
+            }
+        };
+
+        el.addEventListener("wheel", handleWheel, { passive: false });
+        return () => el.removeEventListener("wheel", handleWheel);
+    }, [handleSelect]);
+
     // Parallax transforms
     const { scrollYProgress } = useScroll({
         target: sectionRef,
@@ -483,6 +521,7 @@ export default function InterviewStudio() {
             onKeyDown={handleKeyDown}
             onClick={() => sectionRef.current?.focus()}
             className="relative overflow-hidden bg-transparent outline-none min-h-[600px] sm:min-h-[700px] lg:min-h-[800px] h-screen max-h-[1000px]"
+            style={{ overscrollBehaviorX: "none" }}
         >
             {/* Subtle grain texture */}
             <div
@@ -569,7 +608,7 @@ export default function InterviewStudio() {
                 {/* Horizontal Card Stack with Navigation Arrows */}
                 <div
                     className="relative flex items-center justify-center"
-                    style={{ perspective: "1800px" }}
+                    style={{ perspective: "1800px", touchAction: "pan-y", overscrollBehaviorX: "none" }}
                 >
                     {/* Left Arrow */}
                     <button

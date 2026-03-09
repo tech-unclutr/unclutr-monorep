@@ -108,16 +108,25 @@ export default function AmbientParticles({
 
         let animationFrameId: number;
 
-        // Visibility gating — skip rendering when offscreen
+        // Visibility gating — fully pause RAF when offscreen or tab hidden
         const isVisibleRef = { current: true };
+        const resumeRaf = () => {
+            if (isVisibleRef.current && !document.hidden) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = requestAnimationFrame(render);
+            }
+        };
         const observer = new IntersectionObserver(([entry]) => {
             isVisibleRef.current = entry.isIntersecting;
+            if (entry.isIntersecting) resumeRaf();
         }, { threshold: 0 });
         observer.observe(canvas);
+        const onVisChange = () => { if (!document.hidden) resumeRaf(); };
+        document.addEventListener("visibilitychange", onVisChange);
 
         const render = () => {
-            if (!isVisibleRef.current) {
-                animationFrameId = requestAnimationFrame(render);
+            if (!isVisibleRef.current || document.hidden) {
+                // Fully pause RAF when offscreen — resume via observer/visibilitychange
                 return;
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -181,6 +190,7 @@ export default function AmbientParticles({
         return () => {
             cancelAnimationFrame(animationFrameId);
             observer.disconnect();
+            document.removeEventListener("visibilitychange", onVisChange);
             window.removeEventListener("resize", handleResize);
         };
     }, [height, particleCount, direction]);

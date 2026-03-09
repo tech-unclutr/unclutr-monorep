@@ -130,10 +130,7 @@ export default function TrustSecurity() {
     <section
       ref={sectionRef}
       data-section-name="grid-card"
-      className="relative dark:bg-neutral-900 overflow-hidden"
-      style={{
-        background: "linear-gradient(180deg, #FBF4EC 0%, #F6F2ED 50%, #FBF4EC 100%)"
-      }}
+      className="relative overflow-hidden bg-gradient-to-b from-[#FBF4EC] via-[#F6F2ED] to-[#FBF4EC] dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-900"
     >
       {/* Magical glowing background */}
       <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden">

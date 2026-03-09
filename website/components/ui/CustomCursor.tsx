@@ -44,7 +44,7 @@ export default function CustomCursor() {
 
   const updateCursorPosition = useCallback(() => {
     const cursor = cursorRef.current;
-    if (!cursor) return;
+    if (!cursor || document.hidden) return; // Pause when tab not visible
 
     positionRef.current.x = targetRef.current.x;
     positionRef.current.y = targetRef.current.y;
@@ -107,6 +107,14 @@ export default function CustomCursor() {
 
     rafRef.current = requestAnimationFrame(updateCursorPosition);
 
+    // Resume RAF when tab becomes visible again
+    const onVisChange = () => {
+      if (!document.hidden && rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(updateCursorPosition);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisChange);
+
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("scroll", handleScroll, { passive: true });
     document.addEventListener("mouseover", handleMouseOver);
@@ -115,6 +123,7 @@ export default function CustomCursor() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      document.removeEventListener("visibilitychange", onVisChange);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("scroll", handleScroll);
       document.removeEventListener("mouseover", handleMouseOver);

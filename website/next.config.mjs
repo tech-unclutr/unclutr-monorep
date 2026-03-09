@@ -19,6 +19,20 @@ const nextConfig = {
       },
     ],
   },
+  // Serve pitch deck SPA from public/investors/ in dev mode
+  // (In production static export, Firebase handles this natively)
+  async rewrites() {
+    return [
+      {
+        source: '/investors',
+        destination: '/investors/index.html',
+      },
+      {
+        source: '/investors/',
+        destination: '/investors/index.html',
+      },
+    ];
+  },
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {

@@ -71,3 +71,28 @@ backend/venv_lite/
 backend/venv_repair/
 backend.log
 backend/env.json
+
+# Firebase build artifacts
+.firebase/
+
+# Debug & log files
+*.log
+debug_sync_error.log
+critical_error.log
+
+# One-off scripts and dev artifacts
+fix_order.py
+fix_parsing.py
+fix_props.py
+debug_deploy_logic.py
+debug_sqlalchemy.py
+debug_sqlalchemy_precedence.py
+test_oauth_config.py
+test_url_logic.py
+console_logs.txt
+backend_prints.txt
+execution_prints.txt
+frontend_logs.txt
+todos.txt
+task.md
+website/pitch-deck/node_modules

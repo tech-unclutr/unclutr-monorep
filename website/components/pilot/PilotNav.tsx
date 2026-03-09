@@ -54,11 +54,13 @@ export default function PilotNav() {
       </div>
 
       {/* Center logo */}
-      <img
-        src="/su_wordmark_transparent.svg"
-        alt="Square Up"
-        style={{ height: "clamp(38px, 10vw, 54px)", width: "auto", marginTop: "max(6px, env(safe-area-inset-top, 6px))" }}
-      />
+      <a href="/">
+        <img
+          src="/su_wordmark_transparent.svg"
+          alt="Square Up"
+          style={{ height: "clamp(38px, 10vw, 54px)", width: "auto", marginTop: "max(6px, env(safe-area-inset-top, 6px))" }}
+        />
+      </a>
 
       {/* Notch background */}
       <div

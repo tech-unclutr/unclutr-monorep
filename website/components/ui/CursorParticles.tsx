@@ -89,6 +89,8 @@ export default function CursorParticles() {
     };
 
     const render = () => {
+      if (document.hidden) return; // Pause when tab not visible
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const { x, y, lastX, lastY } = mouseRef.current;
@@ -179,6 +181,15 @@ export default function CursorParticles() {
 
     render();
 
+    // Resume RAF when tab becomes visible again
+    const onVisChange = () => {
+      if (!document.hidden) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(render);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisChange);
+
     const handleResize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
@@ -190,6 +201,7 @@ export default function CursorParticles() {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      document.removeEventListener("visibilitychange", onVisChange);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
     };

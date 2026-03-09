@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, RefObject } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo, RefObject } from "react";
 import {
     motion,
     AnimatePresence,
@@ -630,7 +630,7 @@ export default function ProblemSection() {
     const activeArc = ARCS_DATA[activeArcIndex];
 
     // Get items in display order (spotlight in center)
-    const getDisplayOrder = useCallback(() => {
+    const displayOrder = useMemo(() => {
         const items = [...activeArc.items];
         const spotlightItem = items[spotlightIndex];
         const otherItems = items.filter((_, i) => i !== spotlightIndex);
@@ -642,8 +642,6 @@ export default function ProblemSection() {
             rightOriginalIndex: items.indexOf(otherItems[1] || otherItems[0]),
         };
     }, [activeArc.items, spotlightIndex]);
-
-    const displayOrder = getDisplayOrder();
 
     // Register particle targets
     useRegisterParticleTargets("problem", sectionRef as unknown as RefObject<HTMLElement>, [".particle-target-problem"], isInView);
@@ -683,15 +681,18 @@ export default function ProblemSection() {
         };
     }, [isHovered, isInView, advanceArc]);
 
-    const handleArcClick = (idx: number) => {
+    const handleArcClick = useCallback((idx: number) => {
         trackArcCarousel(idx, "click");
         setActiveArcIndex(idx);
         setSpotlightIndex(1);
-    };
+    }, [trackArcCarousel]);
 
-    const handleSpotlightChange = (originalIndex: number) => {
+    const handleSpotlightChange = useCallback((originalIndex: number) => {
         setSpotlightIndex(originalIndex);
-    };
+    }, []);
+
+    const handleSectionMouseEnter = useCallback(() => setIsHovered(true), []);
+    const handleSectionMouseLeave = useCallback(() => setIsHovered(false), []);
 
     // Scroll-based transforms
     const headerY = useTransform(scrollYProgress, [0, 0.5], [60, 0]);
@@ -707,8 +708,8 @@ export default function ProblemSection() {
             ref={sectionRef}
             id="problem"
             className="relative overflow-hidden bg-transparent min-h-screen flex flex-col pt-12 sm:pt-16"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={handleSectionMouseEnter}
+            onMouseLeave={handleSectionMouseLeave}
         >
             {/* Entry particles handled by ParticleNarrativeController */}
 

@@ -45,9 +45,13 @@ STRIPPED=$(node "$SCRIPT_DIR/strip-console.js" "$WEBSITE_DIR")
 ok "Stripped $STRIPPED unguarded console statement(s)"
 
 # Also strip debugger statements
-DEBUGGER_COUNT=$(grep -r --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
-  -l '^\s*debugger\s*;' "$WEBSITE_DIR" \
-  --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out --exclude-dir=pitch-deck 2>/dev/null | wc -l | tr -d ' ' || echo "0")
+DEBUGGER_FILES=$(grep -rl '^\s*debugger\s*;' "$WEBSITE_DIR" \
+  --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+  --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=out --exclude-dir=pitch-deck 2>/dev/null || true)
+DEBUGGER_COUNT=0
+if [ -n "$DEBUGGER_FILES" ]; then
+  DEBUGGER_COUNT=$(echo "$DEBUGGER_FILES" | wc -l | tr -d ' ')
+fi
 
 if [ "$DEBUGGER_COUNT" -gt 0 ]; then
   find "$WEBSITE_DIR" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) \
@@ -96,43 +100,16 @@ ok "Compressed $IMG_COUNT image(s), saved ${IMG_SAVED}KB"
 # 4. COMPRESS VIDEOS (MP4)
 # ══════════════════════════════════════════════════════════════════════════════
 
-header "4/7  Compressing videos"
+VIDEO_RESULT=$(bash "$SCRIPT_DIR/compress-videos.sh" "$PUBLIC_DIR")
 
-if command -v ffmpeg &>/dev/null; then
-  VIDEO_TOTAL_SAVED=0
-  VIDEO_COUNT=0
+VIDEO_STATUS=$(echo "$VIDEO_RESULT" | cut -d'|' -f1)
+VIDEO_COUNT=$(echo "$VIDEO_RESULT" | cut -d'|' -f2)
+VIDEO_TOTAL_SAVED=$(echo "$VIDEO_RESULT" | cut -d'|' -f3)
 
-  while IFS= read -r vid; do
-    [ -z "$vid" ] && continue
-    SIZE_BEFORE=$(stat -f%z "$vid" 2>/dev/null || stat -c%s "$vid" 2>/dev/null)
-    TMP_VID="${vid}.optimized.mp4"
-
-    # -crf 28: good compression, visually near-identical
-    # -preset slow: better compression at cost of encode time
-    # -movflags +faststart: streaming-friendly
-    ffmpeg -y -i "$vid" \
-      -c:v libx264 -crf 28 -preset slow \
-      -c:a aac -b:a 128k \
-      -movflags +faststart \
-      -loglevel error \
-      "$TMP_VID" 2>/dev/null || true
-
-    if [ -f "$TMP_VID" ]; then
-      SIZE_AFTER=$(stat -f%z "$TMP_VID" 2>/dev/null || stat -c%s "$TMP_VID" 2>/dev/null)
-      if [ "$SIZE_AFTER" -lt "$SIZE_BEFORE" ]; then
-        mv "$TMP_VID" "$vid"
-        SAVED=$(( (SIZE_BEFORE - SIZE_AFTER) / 1024 ))
-        VIDEO_TOTAL_SAVED=$((VIDEO_TOTAL_SAVED + SAVED))
-        VIDEO_COUNT=$((VIDEO_COUNT + 1))
-      else
-        rm -f "$TMP_VID"
-      fi
-    fi
-  done < <(find "$PUBLIC_DIR" -name "*.mp4" -not -path "*/investors/*" 2>/dev/null)
-
-  ok "Compressed $VIDEO_COUNT video(s), saved ${VIDEO_TOTAL_SAVED}KB"
-else
+if [ "$VIDEO_STATUS" = "skip" ]; then
   warn "ffmpeg not found — skipping video compression"
+else
+  ok "Compressed $VIDEO_COUNT video(s), saved ${VIDEO_TOTAL_SAVED}KB"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

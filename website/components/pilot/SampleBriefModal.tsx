@@ -65,7 +65,7 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
         className={
           isMobile
             ? "fixed inset-0 z-[101] bg-cream overflow-y-auto overscroll-contain"
-            : "fixed inset-0 z-[101] flex items-start justify-center pt-[5vh] pb-[5vh] overflow-y-auto overscroll-contain"
+            : "fixed inset-0 z-[101] flex items-start justify-center py-[2vh] overflow-y-auto overscroll-contain"
         }
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
@@ -84,7 +84,7 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
             }`}
           >
             <span className="text-sm font-semibold text-maze-black">
-              Sample Brief
+              Executive Summary
             </span>
             <div className="flex items-center gap-1">
               <a
@@ -105,9 +105,9 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 lg:p-10">
+          <div className="p-5 sm:p-6 lg:p-6">
             {/* Credibility line */}
-            <p className="text-[13px] text-maze-gray text-center italic mb-6">
+            <p className="text-[13px] text-maze-gray text-center italic mb-3">
               Built from real conversations, not assumptions.
             </p>
 
@@ -120,7 +120,7 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
               }}
             >
               {/* Decision strip */}
-              <div className="bg-lime/[0.06] border-b border-lime/[0.15] px-5 sm:px-8 py-4 sm:py-5">
+              <div className="bg-lime/[0.06] border-b border-lime/[0.15] px-5 sm:px-6 py-3 sm:py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-lime mb-1">
@@ -150,11 +150,11 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Body */}
-              <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-5 sm:gap-8 p-5 sm:p-8 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-5 sm:gap-5 p-5 sm:p-5 bg-white">
                 {/* Left — Evidence */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Quote */}
-                  <div className="rounded-2xl p-4 sm:p-5 bg-cream border border-neutral-200/60">
+                  <div className="rounded-2xl p-4 sm:p-4 bg-cream border border-neutral-200/60">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-maze-gray mb-2">
                       Customer Quote
                     </p>
@@ -165,8 +165,8 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
                   </div>
 
                   {/* Theme + Severity */}
-                  <div className="rounded-2xl p-4 sm:p-5 bg-cream border border-neutral-200/60">
-                    <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="rounded-2xl p-4 sm:p-4 bg-cream border border-neutral-200/60">
+                    <div className="flex items-start justify-between gap-3 mb-2">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-maze-gray mb-1">
                           Theme
@@ -216,9 +216,9 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {/* Right — Action */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Recommendation */}
-                  <div className="rounded-2xl p-4 sm:p-5 bg-lime/[0.06] border border-lime/[0.2]">
+                  <div className="rounded-2xl p-4 sm:p-4 bg-lime/[0.06] border border-lime/[0.2]">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-lime mb-2">
                       Recommendation
                     </p>
@@ -228,8 +228,8 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
                   </div>
 
                   {/* Route To */}
-                  <div className="rounded-2xl p-4 sm:p-5 bg-cream border border-neutral-200/60">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-maze-gray mb-3">
+                  <div className="rounded-2xl p-4 sm:p-4 bg-cream border border-neutral-200/60">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-maze-gray mb-2">
                       Route To
                     </p>
                     <div className="space-y-2">
@@ -262,7 +262,7 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* What we don't know yet */}
-              <div className="px-5 sm:px-8 py-4 sm:py-5 bg-white border-t border-neutral-200/50">
+              <div className="px-5 sm:px-6 py-3 sm:py-4 bg-white border-t border-neutral-200/50">
                 <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-maze-gray mb-3">
                   What this does not tell us yet
                 </p>
@@ -282,7 +282,7 @@ export default function SampleBriefModal({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Footer */}
-              <div className="px-5 sm:px-8 py-3 sm:py-4 bg-cream border-t border-neutral-200/30">
+              <div className="px-5 sm:px-6 py-2 sm:py-3 bg-cream border-t border-neutral-200/30">
                 <p className="text-[11px] text-maze-gray/60 text-center">
                   Every recommendation is traceable back to raw customer
                   evidence.

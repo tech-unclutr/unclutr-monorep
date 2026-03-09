@@ -94,7 +94,7 @@ export default function PilotFinalCTA({
               fullWidthMobile
             />
             <PilotCTAButton
-              label="See a sample brief"
+              label="See an executive summary"
               onClick={onShowBrief}
               section="pilot_final_cta"
               position="secondary"

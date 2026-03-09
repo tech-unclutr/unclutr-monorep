@@ -191,22 +191,44 @@ function InterviewPanel() {
       <p className="text-[15px] sm:text-base text-maze-gray leading-relaxed">
         {STEPS[1].body}
       </p>
-      {/* Waveform visualization */}
+      {/* Chat transcript mockup */}
       <div className="rounded-2xl p-5 sm:p-6" style={{ background: "linear-gradient(135deg, rgba(255,138,76,0.03) 0%, transparent 60%)", border: "1px solid rgba(0,0,0,0.04)" }}>
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-maze-gray/40 mb-3">
           Live conversation
         </p>
-        <div className="flex items-end gap-[3px] h-8">
-          {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.35, 0.6, 0.95, 0.45, 0.7, 0.3, 0.85, 0.5, 0.65, 0.4, 0.8, 0.55, 0.3, 0.7].map((h, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-full bg-lime/40"
-              style={{
-                height: `${h * 100}%`,
-                animation: `waveform-bar 1.2s ease-in-out ${i * 0.08}s infinite alternate`,
-              }}
-            />
-          ))}
+        <div className="space-y-2.5">
+          {/* AI bubble */}
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-xl rounded-tl-sm px-3.5 py-2 bg-lime/10 border border-lime/20">
+              <p className="text-[13px] text-maze-black leading-relaxed">&ldquo;What made you try us the first time?&rdquo;</p>
+            </div>
+          </div>
+          {/* Customer bubble */}
+          <div className="flex justify-end">
+            <div className="max-w-[80%] rounded-xl rounded-tr-sm px-3.5 py-2 bg-maze-black/[0.03] border border-maze-black/[0.06]">
+              <p className="text-[13px] text-maze-gray leading-relaxed">&ldquo;A friend recommended it, but delivery took too long&rdquo;</p>
+            </div>
+          </div>
+          {/* AI bubble */}
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-xl rounded-tl-sm px-3.5 py-2 bg-lime/10 border border-lime/20">
+              <p className="text-[13px] text-maze-black leading-relaxed">&ldquo;Got it — was that the main reason you didn&rsquo;t reorder?&rdquo;</p>
+            </div>
+          </div>
+          {/* Typing indicator */}
+          <div className="flex justify-end">
+            <div className="rounded-xl rounded-tr-sm px-3.5 py-2.5 bg-maze-black/[0.03] border border-maze-black/[0.06] flex items-center gap-1">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full bg-maze-gray/30"
+                  style={{
+                    animation: `waveform-bar 0.8s ease-in-out ${i * 0.15}s infinite alternate`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -265,7 +287,7 @@ function DeliverPanel({ onShowBrief }: { onShowBrief: () => void }) {
         onClick={onShowBrief}
         className="min-h-[42px] px-6 py-2.5 text-[13px] font-display tracking-[-0.01em] text-lime border border-lime/25 rounded-full hover:bg-lime/[0.05] hover:border-lime/40 active:scale-[0.97] transition-all"
       >
-        See the full brief →
+        See the full executive summary →
       </button>
     </motion.div>
   );

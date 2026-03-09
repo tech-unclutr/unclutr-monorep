@@ -17,6 +17,10 @@ export default function CustomCursor() {
 
   useEffect(() => {
     setMounted(true);
+    document.body.classList.add("custom-cursor-active");
+    return () => {
+      document.body.classList.remove("custom-cursor-active");
+    };
   }, []);
 
   // Apply visual state via direct DOM manipulation (no React re-render)

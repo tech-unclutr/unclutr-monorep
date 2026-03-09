@@ -215,8 +215,8 @@ export default function FeaturesMarquee() {
           <div className="absolute inset-[-4px] rounded-full bg-gradient-to-r from-[#FF5A36] via-[#FF8A66] to-[#FF5A36] opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-700 animate-pulse pointer-events-none" />
 
           <a
-            href="#book-call"
-            onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "See it in action", cta_href: "#book-call", source_section: "cta_text", cta_position: "main" })}
+            href="/pilot"
+            onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "See it in action", cta_href: "/pilot", source_section: "cta_text", cta_position: "main" })}
             className="group relative flex items-center gap-3 px-8 py-4 text-[16px] font-semibold rounded-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
             style={{
               background: "linear-gradient(180deg, #1a243a 0%, #0b132b 100%)",

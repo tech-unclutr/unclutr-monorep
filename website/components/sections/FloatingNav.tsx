@@ -234,8 +234,8 @@ export default function FloatingNav() {
                                     </div>
                                 </div>
                                 <a
-                                    href="#book-call"
-                                    onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Book Pilot", cta_href: "#book-call", source_section: "floating_nav", cta_position: "nav_bar" })}
+                                    href="/pilot"
+                                    onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Book Pilot", cta_href: "/pilot", source_section: "floating_nav", cta_position: "nav_bar" })}
                                     className="relative bg-white w-full h-full rounded-[18px] font-bold text-[13px] flex items-center justify-center gap-2 z-10"
                                 >
                                     <Zap size={14} className="fill-current text-brand-orange" />

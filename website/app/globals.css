@@ -432,9 +432,78 @@ html.lenis body {
   }
 }
 
-/* Custom cursor - hide default on desktop only */
+/* ── Waveform bars ── */
+@keyframes waveform-bar {
+  0% { transform: scaleY(1); }
+  100% { transform: scaleY(0.3); }
+}
+
+/* ── Pilot CTA button effects ── */
+.pilot-cta-shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 45%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.12) 55%,
+    transparent 60%
+  );
+  background-size: 250% 100%;
+  background-position: 200% 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.group:hover .pilot-cta-shimmer {
+  animation: cta-shimmer 0.75s ease-out forwards;
+}
+
+@keyframes cta-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -100% 0; }
+}
+
+.pilot-cta-glow {
+  box-shadow: 0 4px 20px -4px rgba(33, 33, 33, 0.25);
+  transition: box-shadow 0.3s ease, transform 0.15s ease;
+}
+
+.pilot-cta-glow:hover {
+  box-shadow: 0 8px 32px -4px rgba(33, 33, 33, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.pilot-cta-glow-orange {
+  box-shadow: 0 4px 24px -4px rgba(255, 138, 76, 0.35);
+  transition: box-shadow 0.3s ease, transform 0.15s ease;
+}
+
+.pilot-cta-glow-orange:hover {
+  box-shadow: 0 8px 40px -4px rgba(255, 138, 76, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* ── Dot grid background ── */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Custom cursor - hide default on desktop only when custom cursor is active */
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
-  body {
-    cursor: none;
+  body.custom-cursor-active,
+  body.custom-cursor-active a,
+  body.custom-cursor-active button,
+  body.custom-cursor-active [role="button"],
+  body.custom-cursor-active input,
+  body.custom-cursor-active textarea,
+  body.custom-cursor-active select,
+  body.custom-cursor-active label,
+  body.custom-cursor-active .cursor-pointer,
+  body.custom-cursor-active [data-cursor-hover] {
+    cursor: none !important;
   }
 }

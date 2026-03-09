@@ -12,6 +12,17 @@ export const SECTION_MAP = {
   book_call: 8,
   cta: 9,
   footer: 10,
+  // Pilot page sections
+  pilot_hero: 100,
+  pilot_who: 101,
+  pilot_how: 102,
+  pilot_testimonials: 103,
+  pilot_pricing: 104,
+  pilot_slots: 105,
+  pilot_faq: 106,
+  pilot_final_cta: 107,
+  pilot_footer: 108,
+  pilot_metrics: 109,
 } as const;
 
 export type SectionId = keyof typeof SECTION_MAP;
@@ -24,6 +35,8 @@ export const CAROUSEL_IDS = {
   PROBLEM_AVATAR: "problem_avatar",
   INTERVIEW_STUDIO: "interview_studio",
   AGENTS: "agents",
+  PILOT_HOW_IT_WORKS: "pilot_how_it_works",
+  PILOT_TESTIMONIALS: "pilot_testimonials",
 } as const;
 
 // Performance thresholds

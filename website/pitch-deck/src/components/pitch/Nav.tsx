@@ -58,7 +58,7 @@ export default function Nav({ mode, onModeChange, deckLength, onDeckLengthChange
           <div className="flex items-center justify-between h-[60px]">
 
             {/* Logo */}
-            <a href="#hero" className="flex items-center gap-2 flex-shrink-0 group">
+            <a href="https://joinsquareup.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 flex-shrink-0 group">
               <img src={iconSvg} alt="SquareUp" className="h-5 w-auto transition-transform duration-200 group-hover:scale-105" />
               <span className="font-black text-[17px] tracking-[-0.02em]" style={{ color: "hsl(var(--sq-text))" }}>
                 Square<span style={{ color: "hsl(var(--sq-orange))" }}>Up</span>

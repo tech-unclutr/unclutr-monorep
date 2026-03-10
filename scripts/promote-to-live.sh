@@ -139,7 +139,9 @@ header "Step 1: Preparing $TARGET_BRANCH"
 
 if git rev-parse --verify "$TARGET_BRANCH" > /dev/null 2>&1; then
   git checkout "$TARGET_BRANCH"
-  ok "Switched to existing '$TARGET_BRANCH'"
+  git rm -rf . > /dev/null 2>&1 || true
+  git clean -fd > /dev/null 2>&1 || true
+  ok "Switched to existing '$TARGET_BRANCH' and cleaned working tree"
 else
   git checkout --orphan "$TARGET_BRANCH"
   git rm -rf --cached . > /dev/null 2>&1 || true

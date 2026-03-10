@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3005",
-    "build:pitch-deck": "cd pitch-deck && npm run build",
+    "build:pitch-deck": "if [ -f pitch-deck/package.json ]; then cd pitch-deck && npm run build; else echo 'Error: pitch-deck/package.json not found! Is it an uninitialized submodule?'; exit 1; fi",
     "build": "npm run build:pitch-deck && next build",
     "start": "next start -p 3005",
     "lint": "next lint",

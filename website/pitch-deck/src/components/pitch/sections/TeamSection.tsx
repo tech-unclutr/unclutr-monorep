@@ -9,7 +9,7 @@ const TEAM = [
     name: "Param Jain",
     role: "Co-Founder · Product & AI",
     tags: ["Ex–EA Sports", "AI/ML", "Voice AI", "Full-Stack"],
-    bio: "Shipped AI systems at Electronic Arts used by millions of players globally. Took that same engineering discipline to build SquareUp's entire stack — voice agent, real-time synthesis, and Insight Brief generation — from first line of code to working MVP in 15 days. Owns every layer of the product.",
+    bio: "Ran 100 Ascent and shipped built product at scale at EA. Faced the same customer insight gap firsthand while making global products. Built SquareUp's entire stack — voice agent, real-time synthesis, Insight generation and routing engine — from first line of code to working MVP in 15 days.",
     linkedin: "https://www.linkedin.com/in/param-jain/",
     photo: paramImg,
     achievements: [
@@ -22,13 +22,13 @@ const TEAM = [
     name: "Kunj Dhamsaniya",
     role: "Co-Founder · GTM & Strategy",
     tags: ["D2C Founder", "Consumer Brands", "GTM", "Ops"],
-    bio: "Founded and scaled Ollymix, a D2C consumer brand — lived the exact pain of making product decisions without reliable customer signal. Then validated the problem across 50+ leaders at Zepto, Swiggy, Meesho, and Titan. Converted 3 LOIs in under 90 days cold — before the product existed.",
+    bio: "Founded and scaled Ollymix, a D2C consumer brand — lived the exact pain of making decisions on instinct because real customer data was too slow or didn't exist. Validated the problem across 50+ leaders at Zepto, Swiggy, Meesho, and Titan. Signed 6 pilots and built the MVP in 90 days.",
     linkedin: "https://linkedin.com/in/kunjdhamsaniya/",
     photo: kunjImg,
     achievements: [
       { stat: "1", label: "D2C Brand Built" },
       { stat: "50+", label: "Leaders Validated" },
-      { stat: "3", label: "LOIs in <90d" },
+      { stat: "6", label: "Pilots Signed" },
     ],
   },
 ];
@@ -36,11 +36,11 @@ const TEAM = [
 const WHY_THIS_TEAM = [
   {
     title: "Founder-Market Fit",
-    desc: "Kunj ran a consumer brand. He is the customer. He felt the pain, lived it, then went and proved 50+ other leaders feel it too.",
+    desc: "Both founders ran consumer brands. Both hit the same wall — decisions made on instinct, not data. They proved 50+ other leaders feel the same pain.",
   },
   {
     title: "Execution Speed",
-    desc: "Founded Dec '25. MVP shipped in 15 days. 3 LOIs signed by Feb '26. This team doesn't theorize — it ships.",
+    desc: "Founded Dec '25. MVP shipped in 15 days. 6 pilots signed by Mar '26. This team doesn't theorize — it ships.",
   },
   {
     title: "Zero Overlap",
@@ -61,7 +61,7 @@ const PHOTO_BORDER_SAFE: React.CSSProperties = {
 
 export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode }) {
   const isPresenter = mode === "presenter";
-  const { ref, revealed } = useScrollAnimation(0.15, mode === "presenter");
+  const { ref, revealed } = useScrollAnimation(0.15, mode === "presenter" || mode === "download");
 
   /* ═══════════════════════════════════════════
    * PRESENTER MODE — fully print-safe layout
@@ -174,11 +174,24 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
             </p>
           </div>
 
-          {/* Mesa badge */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <div style={{ ...GLASS_PRINT_SAFE, display: "flex", alignItems: "center", gap: "10px", borderRadius: "12px", padding: "6px 16px" }}>
-              <img src={mesaLogo} alt="Mesa" style={{ height: "16px", width: "auto" }} loading="eager" />
-              <span style={{ fontSize: "10px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Mesa School of Business — backed by Elevation Capital</span>
+          {/* Backed By */}
+          <div style={{ textAlign: "center", marginBottom: "8px" }}>
+            <p style={{ color: "rgba(255,255,255,0.3)", fontWeight: 800, fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "6px" }}>
+              Backed By
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <div style={{ ...GLASS_PRINT_SAFE, display: "flex", alignItems: "center", gap: "8px", borderRadius: "10px", padding: "5px 14px" }}>
+                <img src={mesaLogo} alt="Mesa" style={{ height: "14px", width: "auto" }} loading="eager" />
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Mesa School of Business</span>
+              </div>
+              <div style={{ ...GLASS_PRINT_SAFE, display: "flex", alignItems: "center", gap: "6px", borderRadius: "10px", padding: "5px 14px" }}>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Elevation Capital</span>
+                <span style={{ fontSize: "8px", fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>(via Mesa)</span>
+              </div>
+              <div style={{ ...GLASS_PRINT_SAFE, display: "flex", alignItems: "center", gap: "6px", borderRadius: "10px", padding: "5px 14px" }}>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Mesa Mentor Network</span>
+                <span style={{ fontSize: "8px", fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>Operators & founders</span>
+              </div>
             </div>
           </div>
         </div>
@@ -236,14 +249,12 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
           <p className="text-sm font-medium leading-relaxed text-white/70">
             Kunj{" "}
             <span className="font-bold text-white">ran a D2C brand</span>.
-            He made product decisions on gut feel because real customer data was too slow, too expensive, or didn't exist.
-            That frustration became SquareUp. He validated the pain with{" "}
-            <span className="font-bold text-white">50+ brand leaders</span> and signed{" "}
-            <span className="font-bold text-white">3 LOIs cold in 90 days</span>.
-            Param{" "}
-            <span className="font-bold text-white">shipped AI at EA Sports</span> to millions of users, then built SquareUp's entire AI engine —
-            voice agent, synthesis, brief generation —{" "}
-            <span className="font-bold text-white">solo, in 15 days</span>.
+            He had to make a lot of decisions on instinct because real customer data was too slow, too expensive, or didn't exist.
+            Param faced the same problem while{" "}
+            <span className="font-bold text-white">running 100 Ascent</span>.
+            That frustration became SquareUp. We validated the pain with{" "}
+            <span className="font-bold text-white">50+ brand leaders</span>, signed{" "}
+            <span className="font-bold text-white">6 pilots</span>, and built our MVP in 90 days.
           </p>
         </div>
 
@@ -345,11 +356,24 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
           </p>
         </div>
 
-        {/* Mesa badge */}
-        <div className={`flex justify-center transition-all duration-700 delay-400 ${revealed ? "opacity-100" : "opacity-0"}`}>
-          <div className="sq-glass flex items-center gap-3 rounded-xl px-5 py-2.5">
-            <img src={mesaLogo} alt="Mesa" className="h-5 w-auto object-contain" />
-            <span className="text-xs font-bold text-white/60">Mesa School of Business — backed by Elevation Capital</span>
+        {/* Backed By */}
+        <div className={`transition-all duration-700 delay-400 ${revealed ? "opacity-100" : "opacity-0"}`}>
+          <p className="text-center text-[10px] font-black uppercase tracking-widest mb-4 text-white/30">
+            Backed By
+          </p>
+          <div className="flex flex-wrap justify-center items-center gap-3">
+            <div className="sq-glass flex items-center gap-3 rounded-xl px-5 py-2.5">
+              <img src={mesaLogo} alt="Mesa" className="h-5 w-auto object-contain" />
+              <span className="text-xs font-bold text-white/60">Mesa School of Business</span>
+            </div>
+            <div className="sq-glass flex items-center gap-2 rounded-xl px-5 py-2.5">
+              <span className="text-xs font-bold text-white/60">Elevation Capital</span>
+              <span className="text-[10px] font-medium text-white/30">(via Mesa)</span>
+            </div>
+            <div className="sq-glass flex items-center gap-2 rounded-xl px-5 py-2.5">
+              <span className="text-xs font-bold text-white/60">Mesa Mentor Network</span>
+              <span className="text-[10px] font-medium text-white/30">Operators & founders</span>
+            </div>
           </div>
         </div>
       </div>

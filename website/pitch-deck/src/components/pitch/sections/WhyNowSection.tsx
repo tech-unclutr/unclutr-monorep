@@ -48,7 +48,7 @@ export default function WhyNowSection({ mode = "detailed" }: { mode?: SlideMode 
     >
       <div className="max-w-6xl mx-auto w-full" ref={ref}>
 
-        <div className={`${isPresenter ? "mb-8" : "mb-16"} text-center transition-all duration-700 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+        <div className={`${isPresenter ? "mb-8" : "mb-4"} text-center transition-all duration-700 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>The Catalyst</p>
           <h2 className={`font-black tracking-tight leading-[1.05] ${isPresenter ? "text-5xl" : "text-4xl sm:text-5xl"}`}
             style={{ color: "hsl(var(--sq-text))" }}>
@@ -60,7 +60,7 @@ export default function WhyNowSection({ mode = "detailed" }: { mode?: SlideMode 
         <div className={`grid ${isPresenter ? "grid-cols-4" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"} gap-6`}>
           {PILLARS.map((p, i) => (
             <div key={i}
-              className={`relative rounded-3xl overflow-hidden transition-all duration-700 ${isPresenter ? "p-5" : "p-8"} ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+              className={`relative rounded-3xl overflow-hidden transition-all duration-700 ${isPresenter ? "p-5" : "p-4"} ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 }`}
               style={{
                 transitionDelay: `${i * 150}ms`,
@@ -70,8 +70,8 @@ export default function WhyNowSection({ mode = "detailed" }: { mode?: SlideMode 
             >
               <div className="absolute top-0 left-0 right-0 h-1" style={{ background: "hsl(var(--sq-orange))" }} />
 
-              <div className={isPresenter ? "mb-4" : "mb-8"}>
-                <span className="inline-block font-black text-[10px] tracking-widest mb-4 px-3 py-1.5 rounded-full"
+              <div className={isPresenter ? "mb-4" : "mb-3"}>
+                <span className="inline-block font-black text-[10px] tracking-widest mb-2 px-3 py-1 rounded-full"
                   style={{ background: "hsl(var(--sq-orange) / 0.1)", color: "hsl(var(--sq-orange))" }}>
                   {p.tag}
                 </span>
@@ -80,7 +80,7 @@ export default function WhyNowSection({ mode = "detailed" }: { mode?: SlideMode 
                 </h3>
               </div>
 
-              <div className={`border-t ${isPresenter ? "pt-4" : "pt-6"}`} style={{ borderColor: "hsl(var(--sq-subtle))" }}>
+              <div className={`border-t ${isPresenter ? "pt-4" : "pt-3"}`} style={{ borderColor: "hsl(var(--sq-subtle))" }}>
                 <div className="flex items-baseline gap-2 mb-2">
                   <div className={`${isPresenter ? "text-4xl" : "sq-stat-section"} sq-glow-text font-black leading-none`}
                     style={{ color: "hsl(var(--sq-orange))" }}>
@@ -100,8 +100,8 @@ export default function WhyNowSection({ mode = "detailed" }: { mode?: SlideMode 
         </div>
 
         {/* Convergence statement */}
-        <div className={`mt-8 text-center transition-all duration-500 delay-500 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          <div className="inline-block rounded-2xl px-8 py-5"
+        <div className={`mt-4 text-center transition-all duration-500 delay-500 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+          <div className="inline-block rounded-2xl px-6 py-3"
             style={{ background: "hsl(var(--sq-orange) / 0.06)", border: "1px solid hsl(var(--sq-orange) / 0.2)" }}>
             <p className="font-black text-sm" style={{ color: "hsl(var(--sq-text))" }}>
               These forces converged in 2024–25.{" "}

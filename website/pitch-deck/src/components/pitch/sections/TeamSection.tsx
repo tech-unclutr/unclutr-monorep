@@ -205,7 +205,7 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
   return (
     <section
       id="team"
-      className="relative overflow-hidden py-32 px-6 sm:px-16"
+      className="relative overflow-hidden py-10 px-6 sm:px-16"
       style={{ background: "linear-gradient(135deg, #0a0a0f 0%, #0d1117 50%, #0a0a12 100%)" }}
     >
       {/* Ambient orbs */}
@@ -223,25 +223,21 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
       <div className="max-w-6xl mx-auto w-full relative z-10" ref={ref}>
 
         {/* Header */}
-        <div className={`mb-14 text-center transition-all duration-700 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
+        <div className={`mb-4 text-center transition-all duration-700 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
             The Founders
           </p>
           <h2
-            className="font-black tracking-tight leading-[1.0] mb-2 text-[2.5rem] sm:text-[3.2rem]"
+            className="font-black tracking-tight leading-[1.0] mb-1 text-2xl sm:text-3xl"
             style={{ color: "white" }}
           >
             One lived the problem.{" "}
-            <br />
             <span className="sq-gradient-text">One built the engine.</span>
           </h2>
-          <p className="text-sm text-white/40 max-w-lg mx-auto">
-            Met at Mesa. Quit everything. Full-time since day one.
-          </p>
         </div>
 
         {/* Founder-Market Fit narrative */}
-        <div className="rounded-2xl px-8 py-6 mb-10 max-w-3xl mx-auto transition-all duration-700 delay-100"
+        <div className="rounded-2xl px-5 py-3 mb-4 max-w-3xl mx-auto transition-all duration-700 delay-100"
           style={{ background: "hsl(var(--sq-orange) / 0.06)", border: "1px solid hsl(var(--sq-orange) / 0.2)", opacity: revealed ? 1 : 0, transform: revealed ? "translateY(0)" : "translateY(24px)" }}>
           <p className="font-black text-xs uppercase tracking-widest mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
             Why us
@@ -260,17 +256,17 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
 
         {/* Founder cards */}
         <div
-          className={`grid md:grid-cols-2 gap-6 mb-10 transition-all duration-700 delay-200 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+          className={`grid md:grid-cols-2 gap-4 mb-4 transition-all duration-700 delay-200 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
         >
           {TEAM.map((member, idx) => (
             <div key={member.name}
-              className="sq-glass rounded-3xl overflow-hidden transition-all duration-500"
+              className="sq-glass rounded-2xl overflow-hidden transition-all duration-500"
               style={{ transitionDelay: `${idx * 150}ms` }}
             >
               {/* Photo + identity header */}
-              <div className="flex items-center gap-6 px-8 py-7">
+              <div className="flex items-center gap-4 px-5 py-4">
                 <div className="flex-shrink-0">
-                  <div className="w-[140px] h-[140px] rounded-2xl overflow-hidden"
+                  <div className="w-[80px] h-[80px] rounded-xl overflow-hidden"
                     style={{
                       border: "3px solid transparent",
                       backgroundImage: "linear-gradient(#0d1117, #0d1117), linear-gradient(135deg, hsl(var(--sq-orange)), hsl(var(--sq-amber)))",
@@ -298,26 +294,22 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
               </div>
 
               {/* Bio */}
-              <div className="px-8 pb-4">
-                <p className="text-sm leading-relaxed text-white/50">{member.bio}</p>
+              <div className="px-5 pb-2">
+                <p className="text-xs leading-relaxed text-white/50 line-clamp-2">{member.bio}</p>
               </div>
 
-              {/* Achievement stats */}
-              <div className="px-8 pb-5 pt-2">
-                <div className="flex gap-6">
+              {/* Achievement stats + LinkedIn */}
+              <div className="px-5 pb-3 pt-1 flex items-center justify-between">
+                <div className="flex gap-4">
                   {member.achievements.map((a) => (
                     <div key={a.label}>
-                      <div className="font-black text-2xl sq-glow-text" style={{ color: "hsl(var(--sq-orange))" }}>
+                      <div className="font-black text-lg sq-glow-text" style={{ color: "hsl(var(--sq-orange))" }}>
                         {a.stat}
                       </div>
-                      <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider">{a.label}</div>
+                      <div className="text-[9px] font-bold text-white/30 uppercase tracking-wider">{a.label}</div>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* LinkedIn */}
-              <div className="px-8 pb-7">
                 <a href={member.linkedin} target="_blank" rel="noopener noreferrer"
                   className="font-bold text-xs hover:underline"
                   style={{ color: "hsl(var(--sq-orange))" }}>
@@ -330,26 +322,26 @@ export default function TeamSection({ mode = "detailed" }: { mode?: SlideMode })
 
         {/* Why this team wins */}
         <div
-          className={`grid sm:grid-cols-3 gap-4 mb-10 transition-all duration-700 delay-300 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+          className={`grid sm:grid-cols-3 gap-3 mb-3 transition-all duration-700 delay-300 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
         >
           {WHY_THIS_TEAM.map((item) => (
-            <div key={item.title} className="sq-glass rounded-2xl px-6 py-5">
-              <p className="font-black text-sm mb-0.5" style={{ color: "hsl(var(--sq-orange))" }}>{item.title}</p>
-              <p className="text-xs leading-relaxed text-white/50">{item.desc}</p>
+            <div key={item.title} className="sq-glass rounded-xl px-4 py-3">
+              <p className="font-black text-xs mb-0.5" style={{ color: "hsl(var(--sq-orange))" }}>{item.title}</p>
+              <p className="text-[10px] leading-relaxed text-white/50">{item.desc}</p>
             </div>
           ))}
         </div>
 
         {/* Founder truth — emotional anchor */}
-        <div className={`rounded-2xl px-8 py-6 mb-10 max-w-3xl mx-auto text-center transition-all duration-700 delay-150 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        <div className={`rounded-xl px-5 py-3 mb-3 max-w-3xl mx-auto text-center transition-all duration-700 delay-150 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             border: "1px solid rgba(255, 255, 255, 0.08)",
           }}>
-          <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "hsl(var(--sq-orange))" }}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "hsl(var(--sq-orange))" }}>
             The Honest Truth
           </p>
-          <p className="text-base font-semibold leading-relaxed text-white/70">
+          <p className="text-xs font-semibold leading-relaxed text-white/70">
             "The number one reason our past ventures failed?{" "}
             <span className="font-bold text-white">We didn't understand our customers deeply enough.</span>{" "}
             SquareUp exists so no founder makes that mistake again."

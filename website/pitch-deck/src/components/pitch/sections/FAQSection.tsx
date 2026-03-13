@@ -35,9 +35,9 @@ export default function FAQSection({ mode = "detailed" }: { mode?: SlideMode }) 
   const { ref, revealed } = useScrollAnimation(0.15, mode === "presenter" || mode === "download");
 
   return (
-    <section id="faq" className={`${isPresenter ? "min-h-screen flex items-center px-16 py-8" : "py-32 px-8 sm:px-16"}`} style={{ background: "hsl(var(--sq-off-white))" }}>
+    <section id="faq" className={`${isPresenter ? "min-h-screen flex items-center px-16 py-8" : "py-10 px-8 sm:px-16"}`} style={{ background: "hsl(var(--sq-off-white))" }}>
       <div className={`${isPresenter ? "max-w-4xl" : "max-w-3xl"} mx-auto w-full`} ref={ref}>
-        <div className={`${isPresenter ? "mb-6" : "mb-12"} text-center transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
+        <div className={`${isPresenter ? "mb-6" : "mb-4"} text-center transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
           <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
             FAQ
           </p>
@@ -81,7 +81,7 @@ export default function FAQSection({ mode = "detailed" }: { mode?: SlideMode }) 
                   border: "1px solid hsl(var(--sq-subtle))"
                 }}
               >
-                <Accordion.Trigger className="flex w-full items-center justify-between px-6 py-4 text-left group">
+                <Accordion.Trigger className="flex w-full items-center justify-between px-5 py-3 text-left group">
                   <span className="font-bold text-sm sm:text-base" style={{ color: "hsl(var(--sq-text))" }}>{faq.q}</span>
                   <ChevronDown
                     size={16}
@@ -90,7 +90,7 @@ export default function FAQSection({ mode = "detailed" }: { mode?: SlideMode }) 
                   />
                 </Accordion.Trigger>
                 <Accordion.Content className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                  <div className="px-6 pb-5 pt-1 border-t" style={{ borderColor: "hsl(var(--sq-subtle))" }}>
+                  <div className="px-5 pb-3 pt-1 border-t" style={{ borderColor: "hsl(var(--sq-subtle))" }}>
                     <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--sq-muted))" }}>{faq.a}</p>
                   </div>
                 </Accordion.Content>

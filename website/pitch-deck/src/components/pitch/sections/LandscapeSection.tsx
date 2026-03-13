@@ -68,7 +68,7 @@ export default function LandscapeSection({ mode = "detailed" }: { mode?: SlideMo
     >
       <div className="max-w-6xl mx-auto w-full" ref={ref}>
 
-        <div className={`${isPresenter ? "mb-8" : "mb-14"} transition-all duration-500 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+        <div className={`${isPresenter ? "mb-8" : "mb-4"} transition-all duration-500 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
             Competitive Landscape
           </p>
@@ -81,7 +81,7 @@ export default function LandscapeSection({ mode = "detailed" }: { mode?: SlideMo
 
         {/* Compact existing stack tags */}
         {!isPresenter && (
-          <div className={`mb-10 transition-all duration-700 delay-100 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+          <div className={`mb-4 transition-all duration-700 delay-100 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
             <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "hsl(var(--sq-muted) / 0.5)" }}>
               Adjacent tools — useful, but not built for customer understanding
             </p>
@@ -151,7 +151,7 @@ export default function LandscapeSection({ mode = "detailed" }: { mode?: SlideMo
 
         {/* Category validation + summary */}
         {!isPresenter && (
-          <div className={`mt-8 flex flex-col sm:flex-row gap-4 transition-all duration-700 delay-400 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+          <div className={`mt-4 flex flex-col sm:flex-row gap-3 transition-all duration-700 delay-400 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
             <div className="flex-1 rounded-xl px-5 py-4"
               style={{ background: "hsl(var(--sq-orange) / 0.04)", border: "1px dashed hsl(var(--sq-orange) / 0.25)" }}>
               <p className="text-xs font-bold" style={{ color: "hsl(var(--sq-orange))" }}>Category validation</p>

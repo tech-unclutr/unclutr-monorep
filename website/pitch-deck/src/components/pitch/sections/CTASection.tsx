@@ -8,7 +8,7 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
   return (
     <section
       id="cta"
-      className={`relative overflow-hidden ${isPresenter ? "h-full flex items-center justify-center" : "py-32 px-6"}`}
+      className={`relative overflow-hidden ${isPresenter ? "h-full flex items-center justify-center" : "py-10 px-6"}`}
       style={{ background: "linear-gradient(135deg, #0a0a0f 0%, #0d1117 50%, #0a0a12 100%)" }}
     >
       {/* Ambient orbs */}
@@ -23,7 +23,7 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
           {/* Left — CTA content */}
           <div className={`${isPresenter ? "text-center" : ""}`}>
             {/* Logo mark */}
-            <div className={`mb-10 flex items-center gap-2 ${isPresenter ? "justify-center" : ""}`}>
+            <div className={`mb-4 flex items-center gap-2 ${isPresenter ? "justify-center" : ""}`}>
               <img src={iconSvg} alt="SquareUp" className="h-7 w-auto" />
               <span className="font-black text-xl tracking-tight text-white">
                 Square<span style={{ color: "hsl(var(--sq-orange))" }}>Up</span>
@@ -31,21 +31,21 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
             </div>
 
             <h2
-              className={`font-black tracking-tight leading-tight mb-5 ${isPresenter ? "text-6xl" : "text-4xl sm:text-5xl"}`}
+              className={`font-black tracking-tight leading-tight mb-3 ${isPresenter ? "text-6xl" : "text-3xl sm:text-4xl"}`}
               style={{ color: "white" }}
             >
               See how one conversation<br />
               <span className="sq-gradient-text">can change a million-rupee decision.</span>
             </h2>
 
-            <p className={`mb-10 font-medium ${isPresenter ? "text-xl" : "text-base sm:text-lg"} text-white/50`}>
+            <p className={`mb-4 font-medium ${isPresenter ? "text-xl" : "text-sm sm:text-base"} text-white/50`}>
               Customer truth infrastructure — live, with real data from our design partner sessions.
             </p>
 
-            <div className={`flex flex-col sm:flex-row gap-3 mb-14 ${isPresenter ? "justify-center" : ""}`}>
+            <div className={`flex flex-col sm:flex-row gap-3 mb-6 ${isPresenter ? "justify-center" : ""}`}>
               <a
                 href="mailto:hello@joinsquareup.com"
-                className="sq-glow-pulse font-bold px-10 py-4 rounded-full text-white transition-all hover:opacity-90"
+                className="sq-glow-pulse font-bold px-8 py-3 rounded-full text-white transition-all hover:opacity-90"
                 style={{
                   background: "hsl(var(--sq-orange))",
                   boxShadow: "0 12px 36px hsl(var(--sq-orange) / 0.28)"
@@ -57,7 +57,7 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
                 href="https://almost.joinsquareup.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-bold px-10 py-4 rounded-full transition-all hover:opacity-70 text-white"
+                className="font-bold px-8 py-3 rounded-full transition-all hover:opacity-70 text-white"
                 style={{ border: "1.5px solid rgba(255,255,255,0.12)" }}
               >
                 See Live Demo
@@ -65,7 +65,7 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
             </div>
 
             {/* Stats recap */}
-            <div className={`flex items-center gap-10 flex-wrap mb-10 ${isPresenter ? "justify-center" : ""}`}>
+            <div className={`flex items-center gap-10 flex-wrap mb-4 ${isPresenter ? "justify-center" : ""}`}>
               {[
                 { val: "3", label: "LOIs signed" },
                 { val: "50+", label: "leaders interviewed" },
@@ -85,7 +85,7 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
 
           {/* Right — Hero avatar (hidden on presenter + mobile) */}
           {!isPresenter && (
-            <div className="hidden lg:block relative" style={{ width: 320, height: 480 }}>
+            <div className="hidden lg:block relative" style={{ width: 240, height: 320 }}>
               <div className="absolute bottom-0 right-0 animate-avatar-float">
                 <img
                   src={avatarHero}
@@ -93,7 +93,7 @@ export default function CTASection({ mode = "detailed" }: { mode?: SlideMode }) 
                   className="select-none"
                   loading="lazy"
                   style={{
-                    width: 220,
+                    width: 180,
                     height: "auto",
                     objectFit: "contain",
                     maskImage: "linear-gradient(to top, transparent 0%, white 10%)",

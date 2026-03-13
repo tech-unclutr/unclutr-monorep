@@ -18,7 +18,7 @@ export default function TheAskSection({ mode = "detailed" }: { mode?: SlideMode 
   return (
     <section
       id="ask"
-      className={`relative overflow-hidden ${isPresenter ? "min-h-screen flex items-center px-16" : "py-32 px-6 sm:px-16"}`}
+      className={`relative overflow-hidden ${isPresenter ? "min-h-screen flex items-center px-16" : "py-10 px-6 sm:px-16"}`}
       style={{ background: "linear-gradient(135deg, #0a0a0f 0%, #0d1117 50%, #0a0a12 100%)" }}
     >
       {/* Ambient orbs */}
@@ -29,16 +29,16 @@ export default function TheAskSection({ mode = "detailed" }: { mode?: SlideMode 
 
       <div className="max-w-6xl mx-auto w-full relative z-10" ref={ref}>
 
-        <div className={`grid ${isPresenter ? "grid-cols-2" : "lg:grid-cols-2"} ${isPresenter ? "gap-8" : "gap-16"} items-center`}>
+        <div className={`grid ${isPresenter ? "grid-cols-2" : "lg:grid-cols-2"} ${isPresenter ? "gap-8" : "gap-6"} items-center`}>
 
           {/* Left — amount + allocation */}
           <div className={`transition-all duration-500 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-            <p className="font-bold text-xs uppercase tracking-[0.2em] mb-5" style={{ color: "hsl(var(--sq-orange))" }}>
+            <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
               The Ask
             </p>
             <AskCounter forceStart={mode === "presenter" || mode === "download"} />
             <p className={`font-black ${isPresenter ? "text-lg" : "text-xl"} mb-2 mt-1 text-white`}>Seed Round 2026</p>
-            <p className={`text-sm ${isPresenter ? "mb-6" : "mb-10"} text-white/50`}>
+            <p className={`text-sm ${isPresenter ? "mb-6" : "mb-4"} text-white/50`}>
               Two founders. Full-time. Revenue in 90 days.
             </p>
 
@@ -49,7 +49,7 @@ export default function TheAskSection({ mode = "detailed" }: { mode?: SlideMode 
                 { pct: "40%", label: "GTM", detail: "Convert pilots → paying → case studies" },
                 { pct: "10%", label: "Ops", detail: "Tools, infra, legal. Stays lean." },
               ].map((f) => (
-                <div key={f.label} className={`sq-glass flex items-center gap-4 rounded-xl ${isPresenter ? "px-4 py-2" : "px-5 py-3"}`}>
+                <div key={f.label} className={`sq-glass flex items-center gap-4 rounded-xl ${isPresenter ? "px-4 py-2" : "px-4 py-2"}`}>
                   <span className={`font-black ${isPresenter ? "text-lg" : "text-xl"} w-14 flex-shrink-0 sq-glow-text`} style={{ color: "hsl(var(--sq-orange))" }}>{f.pct}</span>
                   <div>
                     <span className="font-black text-sm text-white">{f.label}</span>
@@ -61,8 +61,8 @@ export default function TheAskSection({ mode = "detailed" }: { mode?: SlideMode 
 
             {/* FOMO urgency card — hidden in presenter */}
             {!isPresenter && (
-              <div className="sq-glass rounded-2xl p-6 mt-8">
-                <p className="font-black text-sm mb-3" style={{ color: "hsl(var(--sq-orange))" }}>
+              <div className="sq-glass rounded-xl p-4 mt-4">
+                <p className="font-black text-xs mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
                   Why this window is narrow
                 </p>
                 <div className="space-y-2">
@@ -84,11 +84,11 @@ export default function TheAskSection({ mode = "detailed" }: { mode?: SlideMode 
 
           {/* Right — 18-month proof points */}
           <div className={`transition-all duration-500 delay-200 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-            <div className={`sq-glass rounded-3xl ${isPresenter ? "p-6" : "p-8"}`}>
-              <p className={`font-black text-xs uppercase tracking-wider ${isPresenter ? "mb-5" : "mb-8"} text-white/40`}>
+            <div className={`sq-glass rounded-2xl ${isPresenter ? "p-6" : "p-5"}`}>
+              <p className={`font-black text-xs uppercase tracking-wider ${isPresenter ? "mb-5" : "mb-4"} text-white/40`}>
                 18-month milestones
               </p>
-              <div className={isPresenter ? "space-y-5" : "space-y-8"}>
+              <div className={isPresenter ? "space-y-5" : "space-y-4"}>
                 {[
                   { label: "First Revenue", desc: "Pilot partners convert to paid. First ₹10L+ in revenue.", tag: "Month 3" },
                   { label: "Proof on Paper", desc: "5+ paying brands. Published case studies. Repeatable motion.", tag: "Month 9" },

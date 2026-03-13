@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { flushSync } from "react-dom";
 import Nav from "@/components/pitch/Nav";
 import HeroSection from "@/components/pitch/sections/HeroSection";
 import CostSection from "@/components/pitch/sections/CostSection";
@@ -20,10 +21,11 @@ import InsightBriefSection from "@/components/pitch/sections/InsightBriefSection
 
 import PresenterMode from "@/components/pitch/presenter/PresenterMode";
 import PresenterBuilder from "@/components/pitch/presenter/PresenterBuilder";
-import type { SlideMode, DeckLength, SlideDefinition } from "@/lib/slides";
+import { ALL_SLIDES, type SlideMode, type DeckLength, type SlideDefinition } from "@/lib/slides";
 
 import DownloadMode from "@/components/pitch/download/DownloadMode";
 import PrintTemplate from "@/components/pitch/download/PrintTemplate";
+import { useFullPageScroll } from "@/lib/useFullPageScroll";
 
 // 10-Slide Founder Pitch (Short Mode)
 // Story: Hook → Pain → Solution → Product → Timing → Proof → Market → Team → Ask → Close
@@ -69,68 +71,96 @@ export default function Index() {
   const [deckLength, setDeckLength] = useState<DeckLength>(8); // Default to 8-slide
   const [sessionSlides, setSessionSlides] = useState<SlideDefinition[] | null>(null);
   const [printSlides, setPrintSlides] = useState<SlideDefinition[] | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  useFullPageScroll(mainRef, mode === "short" || mode === "detailed");
+
+  const handleStartPresentation = (slides: SlideDefinition[]) => {
+    if (slides.length > 0) {
+      // Find the stable wrapper
+      const el = document.querySelector<HTMLElement>("[data-presenter]");
+      if (el) {
+        el.requestFullscreen({ navigationUI: "hide" })
+          .then(() => {
+            setSessionSlides(slides);
+            setMode("presenter");
+          })
+          .catch((err) => {
+            console.error("Fullscreen request failed", err);
+            // Fallback: still show the mode even if fullscreen fails
+            setSessionSlides(slides);
+            setMode("presenter");
+          });
+      } else {
+        // Fallback if el not found
+        setSessionSlides(slides);
+        setMode("presenter");
+      }
+    }
+  };
 
   if (printSlides) {
     return <PrintTemplate slides={printSlides} onFinish={() => setPrintSlides(null)} />;
   }
 
-  if (mode === "presenter") {
-    if (sessionSlides) {
-      return (
-        <PresenterMode
-          onExit={() => setSessionSlides(null)}
-          slides={sessionSlides}
-        />
-      );
-    }
+  if (mode === "presenter" && !sessionSlides) {
     return (
       <PresenterBuilder
         onExit={() => setMode("short")}
-        onStartPresentation={setSessionSlides}
+        onStartPresentation={handleStartPresentation}
         onDownloadPDF={setPrintSlides}
       />
     );
   }
 
+  const isPresenting = mode === "presenter" && !!sessionSlides;
+
   return (
     <div className="font-sans" style={{ background: "hsl(var(--sq-off-white))" }}>
-      <Nav
-        mode={mode}
-        onModeChange={setMode}
-        deckLength={deckLength}
-        onDeckLengthChange={setDeckLength}
-      />
+      {!isPresenting && (
+        <Nav
+          mode={mode}
+          onModeChange={setMode}
+          deckLength={deckLength}
+          onDeckLengthChange={setDeckLength}
+        />
+      )}
 
-      {/* Info banner */}
-      <div className="pt-[72px] pb-2 px-5 sm:px-8 max-w-6xl mx-auto">
-        <div
-          className="rounded-xl px-5 py-4 sm:px-6 sm:py-5 text-[13px] leading-relaxed"
-          style={{
-            background: "hsl(var(--sq-subtle))",
-            color: "hsl(var(--sq-muted))",
-          }}
-        >
-          <p className="font-semibold mb-2" style={{ color: "hsl(var(--sq-text))" }}>
-            Investor pitch deck.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
-            <p><span className="font-semibold" style={{ color: "hsl(var(--sq-text))" }}>Pitch</span> — crisp, YC-style sendable version</p>
-            <p><span className="font-semibold" style={{ color: "hsl(var(--sq-text))" }}>Deep Dive</span> — full story with competitors, ICP & more</p>
-            <p><span className="font-semibold" style={{ color: "hsl(var(--sq-text))" }}>Download</span> — export either version as PDF</p>
-            <p><span className="font-semibold" style={{ color: "hsl(var(--sq-text))" }}>Present</span> — distilled, less-cluttered slideshow for live presenting</p>
-          </div>
+      {!isPresenting && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button
+            onClick={() => {
+              const slides = ALL_SLIDES.filter((s) => s.lengths.includes(deckLength));
+              handleStartPresentation(slides);
+            }}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background font-bold text-sm tracking-wide shadow-lg hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+          >
+            Presenter Mode
+          </button>
         </div>
-      </div>
+      )}
 
-      <main>
+      <main ref={mainRef}>
         {mode === "download" ? (
           <DownloadMode onDownloadPDF={setPrintSlides} />
         ) : mode === "short" ? (
           FOUNDER_SECTIONS
-        ) : (
+        ) : mode === "detailed" ? (
           MASTER_SECTIONS
-        )}
+        ) : null}
       </main>
+
+      {/* Stable Presenter wrapper — always in DOM to anchor the fullscreen gesture reliably */}
+      <div 
+        data-presenter
+        className={`fixed inset-0 z-[100] bg-[hsl(var(--sq-off-white))] transition-opacity duration-300 ${isPresenting ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+      >
+        {isPresenting && (
+          <PresenterMode
+            onExit={() => { setSessionSlides(null); setMode("short"); }}
+            slides={sessionSlides}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -55,11 +55,11 @@ export default function SolutionSection({ mode = "detailed" }: { mode?: SlideMod
 
       <div className="max-w-6xl mx-auto relative z-10 w-full" ref={ref}>
 
-        <div className={`${isPresenter ? "mb-8" : "mb-16"} text-center transition-all duration-700 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+        <div className={`${isPresenter ? "mb-8" : "mb-4"} text-center transition-all duration-700 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
             The Category
           </p>
-          <p className={`font-semibold ${isPresenter ? "text-sm" : "text-base"} mb-4`} style={{ color: "hsl(var(--sq-muted))" }}>
+          <p className={`font-semibold ${isPresenter ? "text-sm" : "text-sm"} mb-2`} style={{ color: "hsl(var(--sq-muted))" }}>
             Customer understanding should not be an occasional project. It should be a compounding system.
           </p>
           <h2
@@ -70,7 +70,7 @@ export default function SolutionSection({ mode = "detailed" }: { mode?: SlideMod
             The <span style={{ color: "hsl(var(--sq-orange))" }}>customer understanding department</span> most brands never build.
           </h2>
           {!isPresenter && (
-            <p className="mt-6 text-lg font-medium max-w-3xl mx-auto" style={{ color: "hsl(var(--sq-muted))" }}>
+            <p className="mt-3 text-sm font-medium max-w-3xl mx-auto" style={{ color: "hsl(var(--sq-muted))" }}>
               The gap is not lack of conversations — it's the lack of a customer intelligence system.
               SquareUp generates fresh signal on demand, synthesizes it into decision-ready briefs, and routes truth to the right team — with a full audit trail.
             </p>
@@ -79,24 +79,24 @@ export default function SolutionSection({ mode = "detailed" }: { mode?: SlideMod
 
         <div className={`grid ${isPresenter ? "grid-cols-4" : "md:grid-cols-2 lg:grid-cols-4"} gap-6 transition-all duration-700 delay-200 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           {PILLARS.map((p, i) => (
-            <div key={i} className={`rounded-2xl ${isPresenter ? "p-4" : "p-6"} border flex flex-col items-start transition-all duration-300 ${isPresenter && i >= revealIndex ? "opacity-0 translate-y-4 pointer-events-none" : "opacity-100 translate-y-0 hover:-translate-y-1"}`}
+            <div key={i} className={`rounded-2xl ${isPresenter ? "p-4" : "p-4"} border flex flex-col items-start transition-all duration-300 ${isPresenter && i >= revealIndex ? "opacity-0 translate-y-4 pointer-events-none" : "opacity-100 translate-y-0 hover:-translate-y-1"}`}
               style={{
                 background: "hsl(var(--sq-off-white))",
                 borderColor: "hsl(var(--sq-subtle))",
                 boxShadow: "0 8px 30px rgba(0,0,0,0.03)"
               }}
             >
-              <div className={`${isPresenter ? "w-10 h-10 mb-3" : "w-14 h-14 mb-6"} rounded-xl flex items-center justify-center`} style={{ background: "linear-gradient(135deg, hsl(var(--sq-orange)), hsl(var(--sq-text)))" }}>
-                <p.icon className="text-white" size={isPresenter ? 18 : 24} />
+              <div className={`${isPresenter ? "w-10 h-10 mb-3" : "w-10 h-10 mb-3"} rounded-xl flex items-center justify-center`} style={{ background: "linear-gradient(135deg, hsl(var(--sq-orange)), hsl(var(--sq-text)))" }}>
+                <p.icon className="text-white" size={isPresenter ? 18 : 20} />
               </div>
-              <h3 className={`font-black ${isPresenter ? "text-base mb-2" : "text-xl mb-3"}`} style={{ color: "hsl(var(--sq-text))" }}>{p.title}</h3>
-              <p className={`${isPresenter ? "text-xs" : "text-sm"} font-medium leading-relaxed`} style={{ color: "hsl(var(--sq-muted))" }}>{p.desc}</p>
+              <h3 className={`font-black ${isPresenter ? "text-base mb-2" : "text-base mb-1"}`} style={{ color: "hsl(var(--sq-text))" }}>{p.title}</h3>
+              <p className={`${isPresenter ? "text-xs" : "text-xs"} font-medium leading-snug`} style={{ color: "hsl(var(--sq-muted))" }}>{p.desc}</p>
             </div>
           ))}
         </div>
 
         {/* Decision Flow — merged from DecisionFlowSection */}
-        <div className={`${isPresenter ? "mt-8" : "mt-14"} transition-all duration-700 delay-300 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+        <div className={`${isPresenter ? "mt-8" : "mt-4"} transition-all duration-700 delay-300 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <div className={`grid ${isPresenter ? "grid-cols-[1fr_auto_1.4fr_auto_1fr]" : "md:grid-cols-[1fr_auto_1.4fr_auto_1fr]"} items-center ${isPresenter ? "gap-3" : "gap-4"}`}>
             {/* Signals In */}
             <div className={`rounded-xl ${isPresenter ? "p-3" : "p-4"} border`} style={{ borderColor: "hsl(var(--sq-subtle))", background: "hsl(var(--sq-off-white))" }}>

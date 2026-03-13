@@ -21,7 +21,7 @@ function Counter({ target, prefix = "", suffix = "", label, sublabel, mode }: {
   return (
     <div ref={ref as React.RefObject<HTMLDivElement>} className="text-center">
       <div className="sq-glow-text font-black leading-none tracking-tight mb-1"
-        style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)", color: "hsl(var(--sq-orange))" }}>
+        style={{ fontSize: "clamp(1.8rem, 4vw, 2.5rem)", color: "hsl(var(--sq-orange))" }}>
         {display}
       </div>
       <div className="font-bold text-xs" style={{ color: "hsl(var(--sq-text))" }}>{label}</div>
@@ -43,7 +43,7 @@ export default function TractionSection({ mode = "detailed" }: { mode?: SlideMod
       <div className="max-w-5xl mx-auto w-full" ref={ref}>
 
         {/* Header */}
-        <div className={`${isPresenter ? "mb-6" : "mb-12"} text-center transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
+        <div className={`${isPresenter ? "mb-6" : "mb-4"} text-center transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
           <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
             The Velocity
           </p>
@@ -55,7 +55,7 @@ export default function TractionSection({ mode = "detailed" }: { mode?: SlideMod
         </div>
 
         {/* 2-col: stats + engagement highlight */}
-        <div className={`grid ${isPresenter ? "grid-cols-2" : "lg:grid-cols-2"} gap-6 ${isPresenter ? "mb-4" : "mb-8"}`}>
+        <div className={`grid ${isPresenter ? "grid-cols-2" : "lg:grid-cols-2"} gap-4 ${isPresenter ? "mb-4" : "mb-3"}`}>
 
           {/* Counter grid */}
           <div className={`grid grid-cols-2 gap-4 transition-all duration-500 delay-150 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
@@ -65,7 +65,7 @@ export default function TractionSection({ mode = "detailed" }: { mode?: SlideMod
               { target: 15, label: "days to MVP", sublabel: "shipped v1" },
               { target: 2, label: "pilots running", sublabel: "Skinn · Big Basket" },
             ].map((c, i) => (
-              <div key={i} className={`rounded-2xl ${isPresenter ? "p-3" : "p-5"} flex flex-col items-center justify-center`}
+              <div key={i} className={`rounded-2xl ${isPresenter ? "p-3" : "p-3"} flex flex-col items-center justify-center`}
                 style={{ background: "hsl(var(--sq-off-white))", border: "1px solid hsl(var(--sq-subtle))" }}>
                 <Counter {...c} mode={mode} />
               </div>
@@ -73,10 +73,10 @@ export default function TractionSection({ mode = "detailed" }: { mode?: SlideMod
           </div>
 
           {/* Engagement banner */}
-          <div className={`sq-glow-pulse rounded-3xl flex flex-col justify-center ${isPresenter ? "px-6 py-5" : "px-8 py-8"} transition-all duration-500 delay-300 ${revealed ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+          <div className={`sq-glow-pulse rounded-3xl flex flex-col justify-center ${isPresenter ? "px-6 py-5" : "px-5 py-4"} transition-all duration-500 delay-300 ${revealed ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
             style={{ background: "hsl(var(--sq-orange))", boxShadow: "0 16px 48px hsl(var(--sq-orange) / 0.2)" }}>
-            <div className="font-black text-white" style={{ fontSize: isPresenter ? "3rem" : "clamp(3rem, 8vw, 5rem)", lineHeight: 1 }}>6</div>
-            <div className={`font-black text-white ${isPresenter ? "text-base" : "text-xl"} mt-1 mb-3`}>Brands Engaged</div>
+            <div className="font-black text-white" style={{ fontSize: isPresenter ? "3rem" : "clamp(2rem, 5vw, 3rem)", lineHeight: 1 }}>6</div>
+            <div className={`font-black text-white ${isPresenter ? "text-base" : "text-base"} mt-1 mb-2`}>Brands Engaged</div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white/90 bg-white/20 px-2.5 py-1 rounded-full">2 Pilots</span>
@@ -87,7 +87,7 @@ export default function TractionSection({ mode = "detailed" }: { mode?: SlideMod
                 <span className="text-xs font-bold text-white/60">Bloc · V BOG · MPC · Super Sheldon</span>
               </div>
             </div>
-            <div className="mt-4 flex flex-col gap-1.5">
+            <div className="mt-2 flex flex-col gap-1">
               {[
                 "Dec '25 — Founded, began discovery",
                 "Jan '26 — MVP shipped in 15 days",

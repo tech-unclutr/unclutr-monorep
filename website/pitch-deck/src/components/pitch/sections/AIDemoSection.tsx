@@ -145,24 +145,24 @@ export default function AIDemoSection({ mode = "detailed" }: { mode?: SlideMode 
       <div className="max-w-5xl mx-auto w-full" ref={sectionRef}>
 
         {/* Header */}
-        <div className={`${isPresenter ? "mb-6" : "mb-12"} text-center`}>
-          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
+        <div className={`${isPresenter ? "mb-6" : "mb-3"} text-center`}>
+          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
             The Magic Demo
           </p>
-          <h2 className={`font-black tracking-tight leading-[1.05] ${isPresenter ? "text-4xl" : "text-4xl sm:text-5xl"}`}
+          <h2 className={`font-black tracking-tight leading-[1.05] ${isPresenter ? "text-4xl" : "text-3xl sm:text-4xl"}`}
             style={{ color: "hsl(var(--sq-text))" }}>
             Not a transcript. <br />
             <span style={{ color: "hsl(var(--sq-orange))" }}>A live customer truth engine.</span>
           </h2>
           {!isPresenter && (
-            <p className="mt-4 text-sm font-medium max-w-sm mx-auto" style={{ color: "hsl(var(--sq-muted))" }}>
+            <p className="mt-2 text-sm font-medium max-w-sm mx-auto" style={{ color: "hsl(var(--sq-muted))" }}>
               As the AI probes, actionable intelligence is synthesized and assigned immediately.
             </p>
           )}
         </div>
 
         {/* Demo tabs */}
-        <div className={`flex items-center justify-center gap-2 ${isPresenter ? "mb-4" : "mb-6"}`}>
+        <div className={`flex items-center justify-center gap-2 ${isPresenter ? "mb-4" : "mb-3"}`}>
           {DEMOS.map((d, i) => (
             <button
               key={d.tab}
@@ -200,7 +200,7 @@ export default function AIDemoSection({ mode = "detailed" }: { mode?: SlideMode 
 
           <div className={`grid ${isPresenter ? "grid-cols-2" : "grid-cols-1 lg:grid-cols-2"}`}>
             {/* LEFT — Chat */}
-            <div className={`${isPresenter ? "p-4 space-y-2" : "p-6 space-y-3 min-h-[340px]"}`} style={{ borderRight: "1px solid hsl(var(--sq-subtle))" }}>
+            <div className={`${isPresenter ? "p-4 space-y-2" : "p-4 space-y-2 min-h-[200px]"}`} style={{ borderRight: "1px solid hsl(var(--sq-subtle))" }}>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "hsl(var(--sq-orange))" }} />
                 <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "hsl(var(--sq-muted))" }}>Live Call Interview</span>
@@ -213,7 +213,7 @@ export default function AIDemoSection({ mode = "detailed" }: { mode?: SlideMode 
             </div>
 
             {/* RIGHT — Insights */}
-            <div className={`${isPresenter ? "p-4 space-y-2" : "p-6 space-y-3 min-h-[340px]"}`}>
+            <div className={`${isPresenter ? "p-4 space-y-2" : "p-4 space-y-2 min-h-[200px]"}`}>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-1.5 h-1.5 rounded-full sq-live-pulse" style={{ background: "#33C748" }} />
                 <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "hsl(var(--sq-muted))" }}>Live Extraction</span>
@@ -253,7 +253,7 @@ export default function AIDemoSection({ mode = "detailed" }: { mode?: SlideMode 
 
         {/* Audio player — hear the AI interview */}
         {!isPresenter && mode !== "download" && (
-          <div className="mt-8 flex flex-col items-center gap-3">
+          <div className="mt-3 flex flex-col items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "hsl(var(--sq-muted))" }}>
               Hear a real AI interview
             </p>

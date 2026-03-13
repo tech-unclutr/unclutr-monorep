@@ -90,32 +90,31 @@ export default function MarketSection({ mode = "detailed" }: { mode?: SlideMode 
     >
       <div className="max-w-5xl mx-auto w-full" ref={ref}>
 
-        <div className={`${isPresenter ? "mb-8" : "mb-14"} transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
-          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
+        <div className={`${isPresenter ? "mb-8" : "mb-3"} transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
+          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
             Market Size
           </p>
           <h2
-            className={`font-black tracking-tight leading-tight ${isPresenter ? "text-4xl" : "text-3xl sm:text-4xl"}`}
+            className={`font-black tracking-tight leading-tight ${isPresenter ? "text-4xl" : "text-2xl sm:text-3xl"}`}
             style={{ color: "hsl(var(--sq-text))" }}
           >
             Not just replacing agencies.<br />
             <span style={{ color: "hsl(var(--sq-orange))" }}>Creating a market that didn't exist.</span>
           </h2>
-          <p className={`mt-3 text-sm max-w-xl`} style={{ color: "hsl(var(--sq-muted))" }}>
-            India is the world's 3rd largest research & insights market at $3.2B (MRSI FY2024). Today, only the top 100-200 companies can afford structured qualitative research. AI makes it accessible to tens of thousands more.
+          <p className={`mt-2 text-xs max-w-xl`} style={{ color: "hsl(var(--sq-muted))" }}>
+            India is the world's 3rd largest research & insights market at $3.2B (MRSI FY2024). AI makes structured qualitative research accessible to tens of thousands more companies.
           </p>
           {!isPresenter && (
-            <div className="mt-4 flex flex-wrap gap-3 max-w-2xl">
+            <div className="mt-2 flex flex-wrap gap-2 max-w-2xl">
               {[
-                { val: "$3.2B", label: "India research industry (MRSI FY2024)", desc: "3rd largest globally, 12.6% YoY growth" },
-                { val: "$930M", label: "Custom research segment (29%)", desc: "Tailored qual & quant for business decisions" },
-                { val: "$140B", label: "Global research industry (ESOMAR)", desc: "SquareUp's long-term market" },
+                { val: "$3.2B", label: "India research industry", desc: "3rd largest globally" },
+                { val: "$930M", label: "Custom research (29%)", desc: "Qual & quant for decisions" },
+                { val: "$140B", label: "Global market (ESOMAR)", desc: "Long-term opportunity" },
               ].map((a) => (
-                <div key={a.label} className="flex-1 min-w-[160px] rounded-xl px-4 py-3"
+                <div key={a.label} className="flex-1 min-w-[140px] rounded-xl px-3 py-2"
                   style={{ background: "hsl(var(--sq-orange) / 0.05)", border: "1px solid hsl(var(--sq-orange) / 0.15)" }}>
-                  <p className="font-black text-base" style={{ color: "hsl(var(--sq-orange))" }}>{a.val}</p>
-                  <p className="text-xs font-bold mt-0.5" style={{ color: "hsl(var(--sq-text))" }}>{a.label}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: "hsl(var(--sq-muted))" }}>{a.desc}</p>
+                  <p className="font-black text-sm" style={{ color: "hsl(var(--sq-orange))" }}>{a.val}</p>
+                  <p className="text-[10px] font-bold mt-0.5" style={{ color: "hsl(var(--sq-text))" }}>{a.label}</p>
                 </div>
               ))}
             </div>
@@ -123,7 +122,7 @@ export default function MarketSection({ mode = "detailed" }: { mode?: SlideMode 
         </div>
 
         {/* Two-column: India TAM + Global expansion */}
-        <div className={`grid grid-cols-1 ${isPresenter ? "grid-cols-2" : "md:grid-cols-2"} gap-10 items-start transition-all duration-600 delay-200 ${revealed ? "opacity-100" : "opacity-0 translate-y-8"}`}>
+        <div className={`grid grid-cols-1 ${isPresenter ? "grid-cols-2" : "md:grid-cols-2"} gap-4 items-start transition-all duration-600 delay-200 ${revealed ? "opacity-100" : "opacity-0 translate-y-8"}`}>
 
           {/* Left — India TAM funnel */}
           <div className="space-y-2">
@@ -135,7 +134,7 @@ export default function MarketSection({ mode = "detailed" }: { mode?: SlideMode 
               return (
                 <div
                   key={item.label}
-                  className={`flex items-center justify-between rounded-xl ${isPresenter ? "px-4 py-3" : "px-5 py-4"} transition-all duration-500 ${isPresenter && i >= funnelReveal ? "opacity-0 translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}`}
+                  className={`flex items-center justify-between rounded-xl ${isPresenter ? "px-4 py-3" : "px-3 py-2"} transition-all duration-500 ${isPresenter && i >= funnelReveal ? "opacity-0 translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}`}
                   style={{
                     width: `${widthPct}%`,
                     marginLeft: "auto",
@@ -146,12 +145,12 @@ export default function MarketSection({ mode = "detailed" }: { mode?: SlideMode 
                   }}
                 >
                   <div className="min-w-0 mr-3">
-                    <p className="font-bold text-sm" style={{ color: item.highlight ? "hsl(var(--sq-orange))" : "hsl(var(--sq-text))" }}>
+                    <p className="font-bold text-xs" style={{ color: item.highlight ? "hsl(var(--sq-orange))" : "hsl(var(--sq-text))" }}>
                       {item.label}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: "hsl(var(--sq-muted))" }}>{item.sub}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "hsl(var(--sq-muted))" }}>{item.sub}</p>
                   </div>
-                  <span className="font-black text-base ml-4 flex-shrink-0" style={{ color: item.highlight ? "hsl(var(--sq-orange))" : "hsl(var(--sq-text))" }}>
+                  <span className="font-black text-sm ml-4 flex-shrink-0" style={{ color: item.highlight ? "hsl(var(--sq-orange))" : "hsl(var(--sq-text))" }}>
                     {item.value}
                   </span>
                 </div>
@@ -214,48 +213,8 @@ export default function MarketSection({ mode = "detailed" }: { mode?: SlideMode 
           </div>
         </div>
 
-        {/* ARR trajectory — India → Global (hidden in presenter) */}
-        {!isPresenter && (
-          <div className={`mt-12 transition-all duration-500 delay-400 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
-            <p className="font-bold text-xs uppercase tracking-wider mb-4" style={{ color: "hsl(var(--sq-muted))" }}>
-              SquareUp ARR trajectory — India → Global ($M)
-            </p>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={BAR_DATA} barCategoryGap="30%">
-                <XAxis
-                  dataKey="year"
-                  tick={{ fill: "hsl(0,0%,50%)", fontSize: 11, fontWeight: 600 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis hide />
-                <Tooltip
-                  formatter={(v, _name, props) => [`$${v}M ARR`, props.payload?.note ?? "SquareUp"]}
-                  contentStyle={{
-                    background: "white",
-                    border: "1px solid hsl(0,0%,90%)",
-                    borderRadius: 10,
-                    fontSize: 12,
-                    fontWeight: 700
-                  }}
-                />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {BAR_DATA.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={index === BAR_DATA.length - 1
-                        ? "hsl(var(--sq-orange))"
-                        : "hsl(var(--sq-orange) / 0.35)"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
         {/* Footer callout */}
-        <div className={`${isPresenter ? "mt-6" : "mt-10"} text-center transition-all duration-500 delay-500 ${revealed ? "opacity-100" : "opacity-0"}`}>
+        <div className={`${isPresenter ? "mt-6" : "mt-3"} text-center transition-all duration-500 delay-500 ${revealed ? "opacity-100" : "opacity-0"}`}>
           <p className="font-black" style={{ fontSize: "clamp(1.2rem, 3vw, 1.75rem)", color: "hsl(var(--sq-text))" }}>
             $140B global research industry.{" "}
             <span style={{ color: "hsl(var(--sq-orange))" }}>India is proving ground. Global is the prize.</span>

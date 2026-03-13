@@ -32,19 +32,19 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
   return (
     <section
       id="businessmodel"
-      className={`${isPresenter ? "min-h-screen flex items-center px-16" : "py-32 px-8 sm:px-16"}`}
+      className={`${isPresenter ? "min-h-screen flex items-center px-16" : "py-10 px-8 sm:px-16"}`}
       style={{ background: "hsl(var(--sq-off-white))" }}
     >
       <div className="max-w-6xl mx-auto w-full" ref={ref}>
 
-        <div className={`grid ${isPresenter ? "grid-cols-2" : "lg:grid-cols-2"} ${isPresenter ? "gap-8" : "gap-16"} items-center`}>
+        <div className={`grid ${isPresenter ? "grid-cols-2" : "lg:grid-cols-2"} ${isPresenter ? "gap-8" : "gap-6"} items-center`}>
 
           {/* Left — headline */}
           <div className={`transition-all duration-500 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-            <p className="font-bold text-xs uppercase tracking-[0.2em] mb-5" style={{ color: "hsl(var(--sq-orange))" }}>
+            <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
               Revenue Model & GTM
             </p>
-            <h2 className={`font-black tracking-tight leading-[1.05] mb-6 ${isPresenter ? "text-4xl" : "text-4xl sm:text-[3rem]"}`}
+            <h2 className={`font-black tracking-tight leading-[1.05] mb-3 ${isPresenter ? "text-4xl" : "text-3xl sm:text-4xl"}`}
               style={{ color: "hsl(var(--sq-text))" }}>
               Start with one decision.<br />
               <span style={{ color: "hsl(var(--sq-orange))" }}>Become the customer truth system of record.</span>
@@ -54,7 +54,7 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
             </p>
 
             {/* Unit economics */}
-            <div className={`${isPresenter ? "mt-5" : "mt-8"} space-y-2`}>
+            <div className={`${isPresenter ? "mt-5" : "mt-4"} space-y-1.5`}>
               {[
                 { label: "Cost per AI interview", val: "~₹800" },
                 { label: "vs human researcher", val: "₹15,000+" },
@@ -70,10 +70,10 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
           </div>
 
           {/* Right — tier cards */}
-          <div className={`space-y-4 transition-all duration-600 delay-200 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+          <div className={`space-y-3 transition-all duration-600 delay-200 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
 
             {/* Per study */}
-            <div className={`rounded-2xl ${isPresenter ? "p-5" : "p-7"}`}
+            <div className={`rounded-2xl ${isPresenter ? "p-5" : "p-4"}`}
               style={{ background: "hsl(var(--sq-card))", border: "1px solid hsl(var(--sq-subtle))" }}>
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -97,7 +97,7 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
             </div>
 
             {/* Subscription — highlighted */}
-            <div className={`rounded-2xl ${isPresenter ? "p-5" : "p-7"} relative overflow-hidden`}
+            <div className={`rounded-2xl ${isPresenter ? "p-5" : "p-4"} relative overflow-hidden`}
               style={{ background: "hsl(var(--sq-off-white))", border: "2px solid hsl(var(--sq-orange) / 0.5)" }}>
               <div className={`absolute ${isPresenter ? "top-3 right-3" : "top-4 right-4"}`}>
                 <span className="text-white text-xs font-black px-3 py-1 rounded-full"
@@ -142,8 +142,8 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
         {!isPresenter && (
           <>
             {/* Path to Platform */}
-            <div className={`mt-12 transition-all duration-500 delay-300 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-              <p className="font-bold text-xs uppercase tracking-widest mb-5" style={{ color: "hsl(var(--sq-muted))" }}>
+            <div className={`mt-4 transition-all duration-500 delay-300 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+              <p className="font-bold text-xs uppercase tracking-widest mb-2" style={{ color: "hsl(var(--sq-muted))" }}>
                 Path to Platform
               </p>
               <div className="grid md:grid-cols-3 gap-4">
@@ -152,7 +152,7 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
                   { phase: "Phase 2", title: "Always-On Signal", desc: "Monthly subscription. Lock in as the ongoing customer truth layer.", tag: "Month 6+" },
                   { phase: "Phase 3", title: "Customer Truth System of Record", desc: "Platform revenue. Proprietary data moat. Improving decision-quality models built on real brand workflows.", tag: "Month 12+" },
                 ].map((p) => (
-                  <div key={p.phase} className="rounded-xl px-5 py-4"
+                  <div key={p.phase} className="rounded-xl px-4 py-3"
                     style={{ background: "hsl(var(--sq-card))", border: "1px solid hsl(var(--sq-subtle))" }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "hsl(var(--sq-orange))" }}>{p.phase}</span>
@@ -167,15 +167,15 @@ export default function BusinessModelSection({ mode = "detailed" }: { mode?: Sli
             </div>
 
             {/* GTM Strategy */}
-            <div className={`mt-10 transition-all duration-500 delay-400 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-              <p className="font-bold text-xs uppercase tracking-widest mb-5" style={{ color: "hsl(var(--sq-orange))" }}>
+            <div className={`mt-3 transition-all duration-500 delay-400 ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+              <p className="font-bold text-xs uppercase tracking-widest mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
                 Go-To-Market Strategy
               </p>
               <div className="grid md:grid-cols-3 gap-4">
                 {GTM_PHASES.map((g) => (
-                  <div key={g.phase} className="rounded-xl px-5 py-5"
+                  <div key={g.phase} className="rounded-xl px-4 py-3"
                     style={{ background: "hsl(var(--sq-card))", border: "1px solid hsl(var(--sq-subtle))" }}>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "hsl(var(--sq-orange))" }}>{g.phase}</span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                         style={{ background: "hsl(var(--sq-orange) / 0.1)", color: "hsl(var(--sq-orange))" }}>{g.tag}</span>

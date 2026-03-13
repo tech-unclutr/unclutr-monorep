@@ -19,7 +19,7 @@ import FAQSection from "@/components/pitch/sections/FAQSection";
 import InsightBriefSection from "@/components/pitch/sections/InsightBriefSection";
 import type { SlideMode } from "@/lib/slides";
 
-export const SLIDE_COMPONENTS: Record<string, React.ComponentType<{ mode?: SlideMode }>> = {
+export const SLIDE_COMPONENTS: Record<string, React.ComponentType<{ mode?: SlideMode; revealStep?: number }>> = {
   hero: HeroSection,
   cost: CostSection,
   problem: ProblemSection,

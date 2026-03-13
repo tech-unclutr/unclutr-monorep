@@ -9,12 +9,15 @@ export interface SlideDefinition {
   lengths: DeckLength[];
   inShort: boolean;
   speakerNotes?: string;
+  /** Number of progressive-reveal sub-steps in presenter mode (0 = no reveal) */
+  revealSteps?: number;
 }
 
 export const ALL_SLIDES: SlideDefinition[] = [
-  { id: "hero", title: "The Hook", lengths: [8, 12], inShort: true,
-    speakerNotes: "Open strong. 'Everyone knows they should talk to customers — almost nobody does it well.' Pause. Let it land. Mention: 3 LOIs, MVP live, first paid pilot running." },
-  { id: "cost", title: "The Bleed", lengths: [8, 12], inShort: true,
+  { id: "hero", title: "The Hook", lengths: [8, 12], inShort: true, revealSteps: 2,
+    speakerNotes: "Resting slide: Let the logo and tagline sit while people settle. (→) 'What separates great consumer companies from the rest?' Pause. (→) 'They talk to their customers. Relentlessly.' Let the gradient text land. (→) 'Everyone knows this. Almost nobody does it well.' Testimonial swoops in. (→) Bottom anchor fades in. Then advance to next slide." },
+  { id: "cost", title: "The Bleed", lengths: [8, 12], inShort: true, revealSteps: 4,
+
     speakerNotes: "Make it visceral. ₹2-3Cr inventory committed on instinct. 80% product failures. This is the status quo — and brands KNOW it but can't fix it." },
   { id: "problem", title: "The Structural Flaw", lengths: [8, 12], inShort: true,
     speakerNotes: "Click through 4 buckets one by one. Transparency → Hallucination → Lost Context → Siloed Intelligence. Key stat: >80% FMCG launches fail (NielsenIQ). This isn't a people problem — it's a structural one." },

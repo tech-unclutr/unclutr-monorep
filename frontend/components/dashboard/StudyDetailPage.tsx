@@ -341,7 +341,7 @@ export function StudyDetailPage({ studyId }: { studyId: string }) {
                 <div className="flex items-center justify-between px-6 lg:px-10 py-3.5 max-w-[1400px] mx-auto">
                     <div className="flex items-center gap-3 min-w-0">
                         <button
-                            onClick={() => router.push("/dashboard/study")}
+                            onClick={() => router.back()}
                             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
                             aria-label="Go back"
                         >

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
     ChevronLeft,
     ChevronRight,
@@ -20,8 +20,6 @@ import {
     familyGradient,
     familyIcon,
 } from "./study-explorer-shared";
-import { StudyBrowsePage } from "./StudyBrowsePage";
-
 // Re-export types for external consumers
 export type { Study, Industry } from "./study-explorer-shared";
 
@@ -325,12 +323,10 @@ function IndustryGrid({
 
 export function StudyExplorer() {
     const router = useRouter();
-    const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
 
     // ── API Data State ──
     const [studies, setStudies] = useState<Study[]>([]);
     const [INDUSTRIES, setIndustries] = useState<string[]>([]);
-    const [DEPARTMENTS, setDepartments] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // ── Fetch data from API ──
@@ -350,9 +346,6 @@ export function StudyExplorer() {
                 setIndustries(
                     metaData.industries.map((i: any) => i.name)
                 );
-                setDepartments(
-                    metaData.departments.map((d: any) => d.name)
-                );
                 setStudies(studiesData);
             } catch (err) {
                 console.error("Failed to load study data:", err);
@@ -365,55 +358,9 @@ export function StudyExplorer() {
         return () => { cancelled = true; };
     }, []);
 
-    const openStudy = useCallback((study: Study) => {
-        router.push(`/dashboard/study/${study.id}`);
+    const selectIndustry = useCallback((industry: Industry) => {
+        router.push(`/dashboard/studies/${encodeURIComponent(industry)}`);
     }, [router]);
-
-    // Group studies by department for the selected industry
-    const departmentSections = useMemo(() => {
-        if (!selectedIndustry) return [];
-
-        const filtered = studies.filter((s) =>
-            s.industries.includes(selectedIndustry)
-        );
-
-        const sortByUrgency = (a: Study, b: Study) => {
-            const order = { P0: 0, P1: 1, P2: 2, P3: 3 };
-            return (order[a.urgency] ?? 9) - (order[b.urgency] ?? 9);
-        };
-
-        const grouped: { department: string; items: Study[] }[] = [];
-
-        for (const dept of DEPARTMENTS) {
-            const items = filtered
-                .filter((s) => s.departments.includes(dept))
-                .sort(sortByUrgency);
-            if (items.length > 0) {
-                grouped.push({ department: dept, items });
-            }
-        }
-
-        return grouped;
-    }, [selectedIndustry, studies, DEPARTMENTS]);
-
-    // Featured study: first P0 study
-    const featuredStudy = useMemo(() => {
-        if (!selectedIndustry) return null;
-        return studies.find(
-            (s) => s.industries.includes(selectedIndustry) && s.urgency === "P0"
-        ) || null;
-    }, [selectedIndustry, studies]);
-
-    const totalStudies = useMemo(() => {
-        if (!selectedIndustry) return 0;
-        return studies.filter((s) => s.industries.includes(selectedIndustry)).length;
-    }, [selectedIndustry, studies]);
-
-    // All studies for the selected industry (for recommendation engines)
-    const allIndustryStudies = useMemo(() => {
-        if (!selectedIndustry) return [];
-        return studies.filter((s) => s.industries.includes(selectedIndustry));
-    }, [selectedIndustry, studies]);
 
     // Industry study counts
     const industryCounts = useMemo(() => {
@@ -454,122 +401,93 @@ export function StudyExplorer() {
     }
 
     // ═══════════════════════════════════════════════
-    // RENDER
+    // RENDER — Industry Selection Landing
     // ═══════════════════════════════════════════════
 
     return (
-        <AnimatePresence mode="wait">
-            {!selectedIndustry ? (
-                /* ═══════ LANDING PAGE — Industry Selection ═══════ */
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="h-screen flex flex-col overflow-hidden w-full bg-[#FAFAFA] dark:bg-[#0C0C0E] relative selection:bg-[#FF8A4C]/20"
+        >
+            {/* Ambient spotlight */}
+            <div className="absolute -top-20 -left-20 w-80 h-80 bg-[#FF8A4C]/[0.03] dark:bg-[#FF8A4C]/[0.02] blur-[100px] rounded-full pointer-events-none" />
+            <div className="absolute top-1/3 -right-32 w-64 h-64 bg-violet-500/[0.02] dark:bg-violet-500/[0.015] blur-[80px] rounded-full pointer-events-none" />
+
+            {/* ──── Hero area ──── */}
+            <div className="px-8 pt-10 pb-5 shrink-0 relative z-10">
+                {/* Brand tag */}
                 <motion.div
-                    key="landing"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, x: -16 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="h-screen flex flex-col overflow-hidden w-full bg-[#FAFAFA] dark:bg-[#0C0C0E] relative selection:bg-[#FF8A4C]/20"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.05 }}
+                    className="flex items-center gap-2 mb-4"
                 >
-                    {/* Ambient spotlight */}
-                    <div className="absolute -top-20 -left-20 w-80 h-80 bg-[#FF8A4C]/[0.03] dark:bg-[#FF8A4C]/[0.02] blur-[100px] rounded-full pointer-events-none" />
-                    <div className="absolute top-1/3 -right-32 w-64 h-64 bg-violet-500/[0.02] dark:bg-violet-500/[0.015] blur-[80px] rounded-full pointer-events-none" />
-
-                    {/* ──── Hero area ──── */}
-                    <div className="px-8 pt-10 pb-5 shrink-0 relative z-10">
-                        {/* Brand tag */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: 0.05 }}
-                            className="flex items-center gap-2 mb-4"
-                        >
-                            <div className="w-5 h-5 rounded bg-[#FF8A4C] flex items-center justify-center">
-                                <img src="/brand/icon.svg" alt="" className="w-3.5 h-3.5 brightness-0 invert" />
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                                Research Catalog
-                            </span>
-                        </motion.div>
-
-                        {/* Conversational headline */}
-                        <motion.h1
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.1 }}
-                            className="text-[32px] font-bold text-foreground tracking-tight leading-[1.15] font-display mb-2.5"
-                        >
-                            What should you study{" "}
-                            <span className="text-[#FF8A4C]">next?</span>
-                        </motion.h1>
-
-                        {/* Value proposition subtitle */}
-                        <motion.p
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.45, delay: 0.2 }}
-                            className="text-[14px] text-muted-foreground leading-relaxed max-w-md mb-4"
-                        >
-                            <span className="text-foreground font-semibold">{studies.length} studies</span> across{" "}
-                            <span className="text-foreground font-semibold">{INDUSTRIES.length} industries</span>,
-                            organized by department, ranked by what moves the needle.
-                            Pick an industry to get started.
-                        </motion.p>
-
-                        {/* Breathing gradient accent */}
-                        <motion.div
-                            initial={{ scaleX: 0, opacity: 0 }}
-                            animate={{ scaleX: 1, opacity: 1 }}
-                            transition={{ duration: 0.6, delay: 0.35, ease: "easeOut" }}
-                            className="origin-left"
-                        >
-                            <motion.div
-                                animate={{ opacity: [0.4, 1, 0.4] }}
-                                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                                className="h-[2px] w-12 rounded-full bg-gradient-to-r from-[#FF8A4C] via-[#FF8A4C]/40 to-transparent"
-                            />
-                        </motion.div>
+                    <div className="w-5 h-5 rounded bg-[#FF8A4C] flex items-center justify-center">
+                        <img src="/brand/icon.svg" alt="" className="w-3.5 h-3.5 brightness-0 invert" />
                     </div>
-
-                    {/* ──── Industry Rails ──── */}
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-subtle pb-8 space-y-6">
-                        <IndustryRail
-                            title="Popular Industries"
-                            items={popularIndustries}
-                            onSelect={setSelectedIndustry}
-                            industryCounts={industryCounts}
-                        />
-                        {exploreIndustries.length > 0 && (
-                            <IndustryGrid
-                                title="Explore More"
-                                items={exploreIndustries}
-                                onSelect={setSelectedIndustry}
-                                industryCounts={industryCounts}
-                            />
-                        )}
-                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                        Research Catalog
+                    </span>
                 </motion.div>
-            ) : (
-                /* ═══════ BROWSE PAGE — Studies for Industry ═══════ */
-                <motion.div
-                    key={`browse-${selectedIndustry}`}
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="min-h-screen bg-[#FAFAFA] dark:bg-[#0C0C0E] relative selection:bg-[#FF8A4C]/20"
+
+                {/* Conversational headline */}
+                <motion.h1
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="text-[32px] font-bold text-foreground tracking-tight leading-[1.15] font-display mb-2.5"
                 >
-                    <StudyBrowsePage
-                        selectedIndustry={selectedIndustry}
-                        onBack={() => setSelectedIndustry(null)}
-                        onSwitchIndustry={setSelectedIndustry}
-                        industries={INDUSTRIES}
-                        departmentSections={departmentSections}
-                        featuredStudy={featuredStudy}
-                        totalStudies={totalStudies}
-                        openStudy={openStudy}
-                        allStudies={allIndustryStudies}
+                    What should you study{" "}
+                    <span className="text-[#FF8A4C]">next?</span>
+                </motion.h1>
+
+                {/* Value proposition subtitle */}
+                <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, delay: 0.2 }}
+                    className="text-[14px] text-muted-foreground leading-relaxed max-w-md mb-4"
+                >
+                    <span className="text-foreground font-semibold">{studies.length} studies</span> across{" "}
+                    <span className="text-foreground font-semibold">{INDUSTRIES.length} industries</span>,
+                    organized by department, ranked by what moves the needle.
+                    Pick an industry to get started.
+                </motion.p>
+
+                {/* Breathing gradient accent */}
+                <motion.div
+                    initial={{ scaleX: 0, opacity: 0 }}
+                    animate={{ scaleX: 1, opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.35, ease: "easeOut" }}
+                    className="origin-left"
+                >
+                    <motion.div
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="h-[2px] w-12 rounded-full bg-gradient-to-r from-[#FF8A4C] via-[#FF8A4C]/40 to-transparent"
                     />
                 </motion.div>
-            )}
-        </AnimatePresence>
+            </div>
+
+            {/* ──── Industry Rails ──── */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-subtle pb-8 space-y-6">
+                <IndustryRail
+                    title="Popular Industries"
+                    items={popularIndustries}
+                    onSelect={selectIndustry}
+                    industryCounts={industryCounts}
+                />
+                {exploreIndustries.length > 0 && (
+                    <IndustryGrid
+                        title="Explore More"
+                        items={exploreIndustries}
+                        onSelect={selectIndustry}
+                        industryCounts={industryCounts}
+                    />
+                )}
+            </div>
+        </motion.div>
     );
 }

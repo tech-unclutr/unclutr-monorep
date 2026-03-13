@@ -544,7 +544,7 @@ export function StudyPlanner({ studyId }: { studyId: string }) {
                 <p className="text-muted-foreground text-sm mb-6">
                     We couldn&apos;t find the study you&apos;re looking for.
                 </p>
-                <Button onClick={() => router.push("/dashboard/study")} variant="outline">
+                <Button onClick={() => router.push("/dashboard/studies")} variant="outline">
                     Back to Study Explorer
                 </Button>
             </div>
@@ -560,7 +560,7 @@ export function StudyPlanner({ studyId }: { studyId: string }) {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => router.push("/dashboard/study")}
+                        onClick={() => router.push("/dashboard/studies")}
                         className="hover:bg-gray-100 dark:hover:bg-[#27272A] rounded-full shrink-0"
                     >
                         <ArrowLeft className="w-4 h-4" />

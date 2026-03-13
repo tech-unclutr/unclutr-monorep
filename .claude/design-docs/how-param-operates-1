@@ -1,0 +1,450 @@
+# How Param Operates — The Vibe Coding Playbook
+
+> **For the Team.** This is the operating manual. Not a suggestion doc. This is how we build, how we think, and the bar we hold. Read it front to back before your first commit.
+
+---
+
+## 🧠 The Core Philosophy
+
+Param doesn't "code features." Param **architects experiences**. Every ticket, every component, every API endpoint is a chance to build something that makes the user feel *something*. The bar is never "does it work?" — the bar is **"would this make someone stop scrolling and say 'holy shit, this is premium'?"**
+
+Three non-negotiable pillars:
+
+| Pillar | What It Means | What It Doesn't Mean |
+|--------|--------------|---------------------|
+| **Truth-First** | The data must be penny-perfect. No approximations. No "close enough." | Sacrificing speed for accuracy is acceptable. The reverse is not. |
+| **AI-Native** | AI isn't bolted on — it's woven into the architecture. Every decision considers what AI needs downstream. | It doesn't mean using AI for everything. It means *designing for* AI from day one. |
+| **15/10 Aesthetic** | Every pixel matters. The UI must feel alive, premium, and intentional. | It doesn't mean over-designed. Minimalism *is* the aesthetic — but premium minimalism. |
+
+---
+
+## 🎨 The "15/10" UI Standard
+
+This is the single most important concept. **We do not ship 7/10 screens.** Period.
+
+### What 15/10 Looks Like
+
+```
+❌ Generic colors (plain red, blue, green)
+✅ Curated, harmonious palettes (HSL-tuned, dark mode first)
+
+❌ Browser-default fonts
+✅ Modern typography (Inter, Roboto, Outfit — loaded via Google Fonts)
+
+❌ Flat, static elements
+✅ Glassmorphism, smooth gradients, subtle depth
+
+❌ Click → instant result
+✅ Click → micro-animation → smooth transition → result with feedback
+
+❌ Simple cards with text
+✅ Hover-reveal content, colored shadows, lift effects, pulse badges
+```
+
+### The Audit Loop
+
+Every screen goes through this before shipping:
+
+1. **Navigate** to the page
+2. **Screenshot** it
+3. **Grade it 1–10** against these criteria:
+   - **Aesthetics**: Color harmony, typography, gradient quality
+   - **Dynamic Feel**: Micro-animations, hover effects, glassmorphism, responsiveness
+   - **Spacing**: Balanced padding/margins — nothing cramped, nothing wastefully empty
+   - **Purpose & Importance**: Does the visual weight match the functional importance?
+4. **If grade < 9**: List specific flaws. Propose and implement fixes.
+5. **Target: 15/10.** Always.
+
+> [!IMPORTANT]
+> The `/ui-audit` and `/ux-audit` workflows exist specifically for this. Use them. They are not optional.
+
+### Reference Aesthetic
+
+Our north star: **Notion × Tally.so × Linear**. High signal. Zero noise. Minimalist but premium. The kind of interface where everything feels *intentional* — like every pixel was placed on purpose.
+
+---
+
+## 🧭 The UX Standard
+
+UI is how it looks. UX is how it *feels*. Both matter equally.
+
+### The Cognitive Walkthrough
+
+Every flow gets this analysis before shipping:
+
+| Dimension | Question |
+|-----------|----------|
+| **Clarity** | Is the next step *obvious* without reading instructions? |
+| **Efficiency** | Can we remove a click? A field? A page? |
+| **Information Hierarchy** | Does the most important thing visually dominate? |
+| **Feedback** | Does every action produce clear feedback? (Loaders, toasts, success animations) |
+| **Error Prevention** | Are there traps? Confusing labels? Ambiguous buttons? |
+
+### Time-to-Value Obsession
+
+The user should have their **"Aha!" moment in the first 10 seconds.** Not 10 minutes. Not after onboarding. *Immediately.*
+
+Ask yourself: What would make a D2C brand owner feel **100% safe** and **genuinely excited** within the first interaction?
+
+---
+
+## 📐 Feature Planning — The 9-Step Framework
+
+This is how new features are planned. Not a subset. Not "whatever seems right." All 9 steps. Every time.
+
+### Step 1: Define Core Values & Constraints
+- What are the dominant themes? (Privacy? Speed? Simplicity?)
+- How will these be upheld in *both* UI and API?
+- Example: Privacy → tooltips explaining data usage. Speed → skeleton loaders, not spinners.
+
+### Step 2: Map ALL Functional States
+
+> [!CAUTION]
+> This is where most teams fail. They build for the happy path and ship bugs for every other state. We don't.
+
+Every feature must define behavior for **all 5 states**:
+
+| State | Example |
+|-------|---------|
+| **Empty** | No data. First-time user. What do they see? |
+| **In-Progress** | Partial data. One integration connected, others pending. |
+| **Full** | Everything connected. All data loaded. The "ideal" screen. |
+| **Partial/Limbo** | Data exists but isn't linked. External data added but no mapping. |
+| **Error** | API failed. Invalid credentials. Network timeout. |
+
+### Step 3: Data & Schema Audit
+- List *every* table affected
+- Define schema changes or new JSON structures
+- Plan how the "Source of Truth" is maintained
+- Consider composite unique constraints for external IDs (lesson learned from Shopify)
+
+### Step 4: Component & Service Breakdown
+- **Frontend**: New components to create, existing ones to modify
+- **Backend**: New endpoints, middleware changes, service logic (full CRUD)
+- Dependencies between components
+
+### Step 5: UX Journey & Friction Check
+- Map the user journey for *each state* (not just the happy path)
+- Identify "Encouragement Points" — moments where the UI nudges the user forward
+- Plan all feedback loops: Toasts, loaders, success animations, error states
+- Transitions between states must be *smooth*, never jarring
+
+### Step 6: Safety & Security Checklist
+- Verify data isolation (Stamping System: `company_id` on everything)
+- Ensure credentials never hit the frontend
+- Check RBAC enforcement (Owner → Admin → Member → Viewer)
+- Validate tenant middleware is covering all new routes
+
+### Step 7: The "100x Magical Things"
+This is the secret sauce. After the plan is "complete," ask:
+
+- *What would make them feel 100% safe?*
+  - Example: A "Privacy Shield" visual indicator on every data card
+- *What would give them an "Aha!" moment?*
+  - Example: Proactive data health checks that surface issues before the user notices
+- *What goes way beyond the status quo?*
+  - Example: Automated mapping previews, live sync pulse indicators
+
+### Step 8: Grade the Plan (1–10)
+- Criteria: Technical depth, state coverage, value alignment, **Magic Factor**
+- **If grade < 10**: Rework immediately. Identify what's "standard" and replace with "magical"
+- Iterate until solid 10+
+
+### Step 9: Sync to `implementation_plan.md`
+- Synthesize everything into the standard plan format
+- **Boldly highlight the "Magical" features**
+- Get user approval before a single line of code is written
+
+> [!TIP]
+> The `/feature-plan` workflow automates this entire process. Use it for every non-trivial feature.
+
+---
+
+## 🏗️ Architecture Principles
+
+### The Monorepo
+
+```
+/frontend   → Next.js 14 (App Router), TypeScript, Tailwind v4, ShadcnUI
+/backend    → FastAPI, Python 3.10+, SQLAlchemy 2 (Async), SQLModel
+/website    → Marketing website (separate Next.js app)
+/docs       → Technical documentation
+/scripts    → Utility scripts (health checks, migrations, diagnostics)
+/.agent     → AI workflow definitions (the team's operational playbook)
+```
+
+### Multi-Tenancy (Non-Negotiable)
+
+Every table, every query, every API call is scoped to a tenant:
+
+```
+Company → Workspace → Integration
+   ↓
+X-Company-ID header on every request
+   ↓
+TenantMiddleware validates against CompanyMembership
+   ↓
+contextvars store company_id for the request lifecycle
+```
+
+**Rules:**
+- Every data table includes `company_id`
+- External IDs use **composite unique constraints** `(integration_id, external_object_id)`
+- Frontend auto-injects `X-Company-ID` via the base API client
+- Switching companies clears or revalidates all caches
+
+### Data Ingestion: Fetch → Ingest → Refine
+
+This 3-step pipeline prevents data loss and ensures modularity:
+
+1. **Fetch** — Pull from source API or receive via webhook
+2. **Ingest (Raw)** — Dump the exact JSON into an immutable raw table. This is the **source of truth.**
+3. **Refine (Structured)** — Parse raw JSON into domain models (Orders, Products, Customers)
+
+> [!NOTE]
+> The raw table is sacred. Never skip it. It allows us to re-refine data without re-fetching from external APIs, and it creates the "Interaction Data Lake" needed for future AI training.
+
+### The "Soft-Closure" Principle
+
+**Never delete user data.** Instead of deleting finished leads, use "Closure Reasons." This preserves the data lake for sentiment models and attribution. Archive, don't destroy.
+
+---
+
+## 🚀 Deployment & Safety
+
+### The Three Environments
+
+| Branch | Environment | URL | Purpose |
+|--------|------------|-----|---------|
+| `squareup-dev` | Development | local | Feature work |
+| `squareup-almost` | Staging | `almost.joinsquareup.com` | Pre-production validation |
+| `squareup-live` | Production | `app.joinsquareup.com` | Customer-facing |
+
+### Deployment Flow
+
+```
+Feature Branch  →  /deploy-almost  →  Test on Staging  →  /deploy-live  →  Production
+                         ↑                                        ↑
+                  Merge into squareup-almost              Merge almost → live
+                  CI/CD runs migrations                   CI/CD runs migrations
+                  Deploy to Cloud Run                     Deploy to Cloud Run
+```
+
+### The Checkpoint System
+
+This is the safety net. Use it religiously.
+
+| Command | When to Use |
+|---------|-------------|
+| `/mark-stable` | **Before** any risky change. Tags git + snapshots DB. |
+| `/revert-checkpoint` | Something broke. Revert to last marked stable state. |
+| `/revert-to-stable` | Nuclear option. Full revert to last completely stable state. |
+| `/revert-to-stable-data` | Schema is fine, but data is corrupted. Revert data only. |
+| `/verify-health` | After any revert. Checks architecture integrity + data isolation. |
+
+> [!WARNING]
+> **Always `/mark-stable` before risky migrations, schema changes, or large refactors.** This is not optional. "I forgot" is not an excuse. It takes 5 seconds and saves hours.
+
+---
+
+## 🧪 QA — The "QA Architect" Philosophy
+
+We don't do "manual testing" and call it QA. We build **test architectures**.
+
+### The QA Blueprint (Sections A–I)
+
+Every mission-critical feature gets a blueprint covering:
+
+| Section | Coverage |
+|---------|----------|
+| **A) Test Strategy** | Scope, risks, test pyramid (logic/integration/E2E) |
+| **B) Test Matrix** | Exhaustive table: ID, category (happy/edge/negative), steps, expected outcomes, priority |
+| **C) State Machine** | All states enumerated, transitions defined, "impossible states" identified |
+| **D) Edge Cases** | Timeouts, race conditions, permission breaks, webhook out-of-order delivery |
+| **E) Observability** | Log masking, traces, golden signals, kill switches |
+| **F) Implementation** | Stable selectors, data factories, contract tests, CI integration |
+| **G) Quality Gate** | Score out of 10 → iterate until 15/10 |
+| **H) Verdict** | Top 10 risks, P0 ship blockers, release checklist |
+| **I) Coding Practices** | Clean code audit, security audit, performance audit, maintenance audit |
+
+### Data Source QA (The `/qa-datasource` Workflow)
+
+For integrations specifically, verification covers **8 phases**:
+
+1. Configuration Verification (OAuth scopes, DB schema)
+2. Sync Function Coverage (fetch functions, pagination, rate limits)
+3. Webhook Coverage (registration, HMAC, CRUD events)
+4. Deduplication Verification (0 duplicate canonical hashes)
+5. Data Accuracy (source count = DB count ± 2)
+6. Real-time Sync Test (< 5s latency)
+7. Performance Check (error rates, failed refinements)
+8. Documentation
+
+**Production-ready criteria:**
+
+| Metric | Target |
+|--------|--------|
+| OAuth Scopes | 100% coverage |
+| Sync Functions | 100% coverage |
+| Webhooks | 100% registration |
+| Deduplication | 0 duplicate hashes |
+| Data Accuracy | ≥ 99% match |
+| Real-time Sync | < 5s latency |
+| Error Rate | < 1% |
+
+---
+
+## 🛠️ The Workflow System
+
+We have 20 codified workflows in `.agent/workflows/`. These aren't documentation — they're **executable playbooks** that the AI agent can run. Here's the full map:
+
+### Development Lifecycle
+| Workflow | Purpose |
+|----------|---------|
+| `/start-servers` | Force-restart all dev servers (kill → restart backend, frontend, ngrok) |
+| `/sync-api` | Regenerate TypeScript API client from backend OpenAPI spec |
+| `/feature-plan` | The 9-step feature planning framework |
+| `/clean-workspace` | Clean up stale test data and temp tables |
+
+### Deployment
+| Workflow | Purpose |
+|----------|---------|
+| `/deploy-almost` | Merge current branch → staging, trigger CI/CD |
+| `/deploy-live` | Promote staging → production |
+
+### Safety & Recovery
+| Workflow | Purpose |
+|----------|---------|
+| `/mark-stable` | Checkpoint: tag git + snapshot DB |
+| `/revert-checkpoint` | Revert to last checkpoint |
+| `/revert-to-stable` | Full revert (schema + data) |
+| `/revert-to-stable-data` | Data-only revert (preserves schema) |
+| `/verify-health` | Architecture integrity + data isolation check |
+
+### Debugging
+| Workflow | Purpose |
+|----------|---------|
+| `/fix-infinite-loading` | Systematic diagnosis for loading issues (5-step playbook) |
+| `/fix-db-sync` | Database sync 500 error — check & restart |
+| `/fix-integration-sync` | Fix 500/CORS on integrations page |
+
+### QA & Audits
+| Workflow | Purpose |
+|----------|---------|
+| `/ui-audit` | Grade UI aesthetics (target: 15/10) |
+| `/ux-audit` | Cognitive walkthrough for usability |
+| `/qa-blueprint` | Full E2E test architecture design |
+| `/qa-datasource` | Comprehensive data source QA (8 phases) |
+
+### Data Management
+| Workflow | Purpose |
+|----------|---------|
+| `/onboarding-reset` | Reset onboarding state to test from scratch |
+| `/reset-user-data` | Nuclear reset of all user data (preserves config) |
+
+---
+
+## 🔄 How Param Works with AI (The Vibe Coding Loop)
+
+This is the part that makes us fast. Param doesn't write code line-by-line. He **prompts architecturally** — describing the *what* and the *why*, then iterating on the *how* with the AI.
+
+### The Prompting Style
+
+```
+Level 1: "Build me a login page"           ← Never this.
+Level 2: "Build a login page with dark mode"  ← Not this either.
+Level 3: "Build a login page that feels like     ← This.
+          Notion — dark mode, glassmorphism,
+          micro-animations on focus, and an
+          auth flow that eliminates flickering
+          between states"
+```
+
+### The Iteration Loop
+
+```mermaid
+graph LR
+    A["Prompt with<br/>Intent + Standards"] --> B["AI Generates<br/>Implementation"]
+    B --> C["Visual Review<br/>(Browser Check)"]
+    C -->|"< 9/10"| D["Specific Feedback<br/>'The spacing is off on...'<br/>'Add hover lift to...'"]
+    D --> B
+    C -->|"≥ 9/10"| E["Ship It ✅"]
+    E --> F["Checkpoint<br/>(/mark-stable)"]
+```
+
+### Key Behaviors
+
+1. **Never accept the first output.** The first generation is a draft. Push for 15/10.
+2. **Always verify visually.** Screenshots and browser checks, not just "it compiles."
+3. **Grade everything.** UI gets a grade. UX gets a grade. QA plans get a grade. If < 9, iterate.
+4. **Think in states.** Empty → In-Progress → Full → Partial → Error. Always.
+5. **Checkpoint religiously.** `/mark-stable` before risky work. `/verify-health` after recovery.
+6. **Context is everything.** Provide the AI with your ICP, your aesthetic north star, and your non-negotiables *upfront*.
+7. **Architectural pivots are valued.** If the AI suggests a better approach mid-session (like "Soft-Closure" over deletion), *listen*. Ego kills architecture.
+
+---
+
+## 💡 The Decision-Making Framework
+
+When you're stuck on a decision, apply this filter:
+
+### The "Would Param Ship It?" Test
+
+| Question | If No → Action |
+|----------|----------------|
+| Does it feel premium at first glance? | Redesign. Use the 15/10 standard. |
+| Does it handle all 5 states? | Go back. Map empty, partial, error, limbo, full. |
+| Is the data penny-perfect? | Don't ship until it is. Approximation is a bug. |
+| Can a D2C brand owner understand it in 10 seconds? | Simplify. Reduce. Clarify. |
+| Is there a checkpoint before this risky change? | Stop. Run `/mark-stable` first. |
+| Would the user feel *safe* trusting us with their data? | Add trust indicators. Shield badges. Privacy cues. |
+
+---
+
+## 📝 Communication Standards
+
+### Changelogs
+
+Every release gets a structured changelog entry. Format:
+
+```markdown
+## [version-tag] - YYYY-MM-DD
+### Feature Title
+
+#### Backend
+- **Component**: What changed and why
+- **Architecture**: Structural improvements
+
+#### Frontend
+- **UI/UX**: What improved visually
+- **State Management**: What became more reliable
+- **Transitions**: What feels smoother
+```
+
+### Commit Philosophy
+
+- Commits should tell a story, not list changes
+- Prefix with context: `[Campaign] Fix auto-pause race condition`
+- Never commit broken states — checkpoint first, commit after verification
+
+---
+
+## 🏆 The Non-Negotiable Checklist
+
+Before you ship *anything*, verify:
+
+- [ ] UI graded ≥ 9/10 (target 15/10)
+- [ ] UX walkthrough completed (clarity, efficiency, hierarchy, feedback, error prevention)
+- [ ] All 5 states handled (empty, in-progress, full, partial/limbo, error)
+- [ ] Data isolation verified (company_id stamping, tenant middleware)
+- [ ] Checkpoint created (`/mark-stable`)
+- [ ] No credentials exposed to frontend
+- [ ] Transitions are smooth (no FOUC, no flickering, no jarring state changes)
+- [ ] Feedback loops in place (loaders, toasts, success animations)
+- [ ] Mobile/responsive checked
+- [ ] Deployed to staging first (`/deploy-almost`) before production
+
+---
+
+> *"Standard is the enemy of magical. If it looks like something anyone could build, we haven't finished yet."*
+> — The Param Standard

@@ -21,7 +21,7 @@ export default function DashboardLayout({
                 />
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 ease-in-out cubic-bezier(0.4, 0, 0.2, 1)",
+                        "flex-1 min-w-0 overflow-x-hidden transition-all duration-300 ease-in-out cubic-bezier(0.4, 0, 0.2, 1)",
                         isCollapsed ? "ml-[80px]" : "ml-[240px]"
                     )}
                 >

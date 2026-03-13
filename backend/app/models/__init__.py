@@ -60,4 +60,20 @@ from .shopify.product import ShopifyProduct as ShopifyProduct, ShopifyProductIma
 from .shopify.raw_ingest import ShopifyRawIngest as ShopifyRawIngest
 from .shopify.refund import ShopifyRefund as ShopifyRefund
 from .shopify.transaction import ShopifyTransaction as ShopifyTransaction
+from .study import (
+    StudyCategory as StudyCategory,
+    IndustryModel as IndustryModel,
+    Department as Department,
+    LifecycleStage as LifecycleStage,
+    StartupStage as StartupStage,
+    StudyModel as StudyModel,
+    StudyDepartment as StudyDepartment,
+    StudyLifecycleStage as StudyLifecycleStage,
+    StudyStartupStage as StudyStartupStage,
+    StudyIndustry as StudyIndustry,
+    IndustryRecommendation as IndustryRecommendation,
+    StudyCost as StudyCost,
+    StudyCadence as StudyCadence,
+)
 from .user import User as User
+

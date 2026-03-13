@@ -115,6 +115,18 @@
         }
     }
 
+    @keyframes fadeSlideIn {
+        from {
+            opacity: 0;
+            transform: translateX(12px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
     @keyframes slide-in-from-right {
         from {
             transform: translateX(100%);
@@ -212,5 +224,34 @@ body {
 
 .scrollbar-subtle {
     scrollbar-width: thin;
+    scrollbar-color: rgba(161, 161, 170, 0.3) transparent;
+}
+
+/* Show scrollbar only on hover */
+.scrollbar-show-on-hover::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.scrollbar-show-on-hover::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollbar-show-on-hover::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 10px;
+    transition: background-color 0.2s;
+}
+.scrollbar-show-on-hover:hover::-webkit-scrollbar-thumb {
+    background: rgba(161, 161, 170, 0.3);
+}
+.scrollbar-show-on-hover::-webkit-scrollbar-thumb:hover {
+    background: rgba(161, 161, 170, 0.5);
+}
+
+.scrollbar-show-on-hover {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.2s;
+}
+.scrollbar-show-on-hover:hover {
     scrollbar-color: rgba(161, 161, 170, 0.3) transparent;
 }

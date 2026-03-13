@@ -375,12 +375,7 @@ export function StudyExplorer() {
     const popularIndustries = useMemo(() => INDUSTRIES.slice(0, 7), [INDUSTRIES]);
     const exploreIndustries = useMemo(() => {
         const base = INDUSTRIES.slice(7);
-        const testExtras = [
-            "Logistics", "Real Estate", "Gaming", "Agriculture", "Insurance",
-            "Automotive", "Fitness & Wellness", "Pet Care", "Sustainability",
-            "Luxury", "SaaS",
-        ];
-        return [...base, ...testExtras.filter((t) => !INDUSTRIES.includes(t))].slice(0, 18);
+        return [...base].slice(0, 18);
     }, [INDUSTRIES]);
 
     // ── Loading state ──

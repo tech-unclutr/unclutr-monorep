@@ -3,10 +3,10 @@ import type { SlideMode } from "@/lib/slides";
 import { AlertCircle, EyeOff, Brain, RotateCcw, GitBranch } from "lucide-react";
 
 const problemBuckets = [
-  { icon: EyeOff, title: "Lack of Transparency", desc: "Be it with an agency or your own employees — you have no transparency into the quality of interviews, screening of candidates, or the actual conversations happening. You're trusting a black box." },
-  { icon: Brain, title: "Human Hallucination", desc: "Controlling quality of calls is nearly impossible. Human bias, recency bias, interviewer ability — every call is a variable. The 'insights' you get are filtered through someone else's interpretation." },
-  { icon: RotateCcw, title: "Lost Context", desc: "Every conversation is the first conversation. No context building, no memory, no incremental value. Study after study starts from zero." },
-  { icon: GitBranch, title: "Siloed Intelligence", desc: "Customer conversations never compound. A 50-interview growth study surfaces 2 ops insights — but they never reach the ops team. Intelligence stays locked in the team that commissioned it." },
+  { icon: EyeOff, title: "Zero Interview Visibility", desc: "You're paying for answers, but you never see the raw interviews. You don't know if the interviewer asked leading questions or if the candidate was even qualified. You just get a sanitized PDF and are told to trust it." },
+  { icon: Brain, title: "Filtered Findings", desc: "You aren't hearing the customer—you're hearing a researcher's filtered interpretation. Human bias, fatigue, and varying interviewer skill levels mean every 'insight' is heavily distorted before it reaches your desk." },
+  { icon: RotateCcw, title: "Starting From Scratch", desc: "Every time a new PM or marketer wants to learn something, they start from zero. Hundreds of past conversations are ignored because the data is unsearchable. You're constantly paying to ask the exact same questions again." },
+  { icon: GitBranch, title: "Trapped Insights", desc: "Your growth team uncovers a massive UX flaw. But because they don't share workflows with the product team, the insight dies in a Figma file. Customer knowledge never compounds across your business." },
 ];
 export default function ProblemSection({ mode = "detailed" }: { mode?: SlideMode }) {
   const isPresenter = mode === "presenter";

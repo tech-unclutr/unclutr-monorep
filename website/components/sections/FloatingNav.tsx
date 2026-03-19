@@ -14,13 +14,13 @@ const SOLUTIONS = [
     },
     {
         label: "Interview Studio",
-        description: "AI-POWERED RESEARCH AGENTS",
+        description: "AUTONOMOUS RESEARCH AGENTS",
         badge: null,
         href: "#interview-studio",
     },
     {
         label: "Studies",
-        description: "REAL CUSTOMER INSIGHTS",
+        description: "ON-DEMAND INTELLIGENCE",
         badge: null,
         href: "#studies",
     },
@@ -88,6 +88,18 @@ export default function FloatingNav() {
             clearTimeout(initTimeout);
         };
     }, []);
+
+    // Listen for keyboard shortcut (/ key) dispatched by useKeyboardNav
+    useEffect(() => {
+        const handleNavToggle = () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            const newState = activeTab === "solutions" ? null : "solutions";
+            trackEvent(EventName.NAV_DROPDOWN_TOGGLE, { state: newState ? "open" : "close", method: "keyboard" });
+            setActiveTab(newState);
+        };
+        window.addEventListener("squareup:nav-toggle", handleNavToggle as EventListener);
+        return () => window.removeEventListener("squareup:nav-toggle", handleNavToggle as EventListener);
+    }, [activeTab]);
 
     if (!mounted) return null;
 
@@ -209,10 +221,10 @@ export default function FloatingNav() {
                                     onClick={handleToggle}
                                     onMouseEnter={handleMouseEnter}
                                     aria-expanded={activeTab === "solutions"}
-                                    aria-label="Our Solutions menu"
+                                    aria-label="Platform menu"
                                     className={`w-full h-full flex items-center justify-center gap-2 rounded-[18px] cursor-pointer transition-colors border-none bg-transparent text-white ${activeTab === "solutions" ? "bg-white/30" : "hover:bg-white/10"}`}
                                 >
-                                    <span className="font-bold text-[13px] tracking-tight whitespace-nowrap uppercase">Our Solutions</span>
+                                    <span className="font-bold text-[13px] tracking-tight whitespace-nowrap uppercase">Platform</span>
                                     <ChevronUp size={14} className={`transition-transform duration-200 ${activeTab === "solutions" ? "rotate-180" : ""}`} />
                                 </button>
                             </div>

@@ -49,17 +49,19 @@ body {
 }
 
 
+/* ── Hide Native Scrollbar ── */
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  display: none; /* Chrome, Safari, Opera */
 }
 
-::-webkit-scrollbar-track {
-  background: var(--cream);
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c0b8ad;
-  border-radius: 4px;
+/* Ensure content occupies full width without gutter */
+html {
+  scrollbar-gutter: auto;
 }
 
 
@@ -409,6 +411,30 @@ html.lenis body {
     min-height: 44px;
     min-width: 44px;
   }
+}
+
+
+/* ── Performance tier gating (set by PerformanceProvider via data-perf-tier attribute) ── */
+
+/* Low tier: freeze all blob and marquee animations */
+html[data-perf-tier="low"] .blob-drift-1,
+html[data-perf-tier="low"] .blob-drift-2,
+html[data-perf-tier="low"] .blob-drift-3,
+html[data-perf-tier="low"] .blob-drift-4 {
+  animation: none !important;
+}
+
+html[data-perf-tier="low"] .animate-scroll-left,
+html[data-perf-tier="low"] .animate-scroll-right,
+html[data-perf-tier="low"] .animate-scroll-left-slow {
+  animation: none !important;
+}
+
+/* Medium tier: only animate blobs 1 and 2, hide 3 and 4 */
+html[data-perf-tier="medium"] .blob-drift-3,
+html[data-perf-tier="medium"] .blob-drift-4 {
+  animation: none !important;
+  opacity: 0;
 }
 
 

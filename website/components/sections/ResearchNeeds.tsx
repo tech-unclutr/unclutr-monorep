@@ -727,6 +727,25 @@ export default function StudiesSection() {
 
         {/* ── Section Header ───────────────────────── */}
         <div className="mb-14">
+          <motion.div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
+            style={{
+                background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)",
+                border: "1px solid rgba(0,0,0,0.06)",
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          >
+              <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-maze-black">
+                  Intelligence Platform
+              </span>
+              <span className="text-[12px] text-maze-black/30">|</span>
+              <span className="text-[12px] font-medium text-maze-black/60">
+                  Continuous Studies
+              </span>
+          </motion.div>
+
           <h2 className="font-display text-[40px] lg:text-[56px] text-maze-black leading-[1.05] tracking-tight mb-3">
             Studies
           </h2>

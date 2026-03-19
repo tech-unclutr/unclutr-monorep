@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { LIGHT_COLOR_PALETTE } from "./particles/config";
+import { usePerformance } from "@/lib/context/PerformanceContext";
 
 interface CursorParticle {
   x: number;
@@ -30,6 +31,7 @@ export default function CursorParticles() {
   const particlesRef = useRef<CursorParticle[]>([]);
   const mouseRef = useRef({ x: 0, y: 0, lastX: 0, lastY: 0 });
   const [mounted, setMounted] = useState(false);
+  const tier = usePerformance();
 
   useEffect(() => {
     setMounted(true);
@@ -38,9 +40,10 @@ export default function CursorParticles() {
   useEffect(() => {
     if (!mounted) return;
 
-    // Skip on mobile or reduced motion
+    // Skip on mobile, reduced motion, or non-high performance tier
     if (window.innerWidth < 768) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (tier !== "high") return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -205,7 +208,7 @@ export default function CursorParticles() {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
     };
-  }, [mounted]);
+  }, [mounted, tier]);
 
   if (!mounted) return null;
 

@@ -1,13 +1,31 @@
+import { useState, useEffect, useCallback } from "react";
 import type { SlideMode } from "@/lib/slides";
-import { AlertCircle, XCircle, FolderArchive, Users } from "lucide-react";
+import { AlertCircle, EyeOff, Brain, RotateCcw, GitBranch } from "lucide-react";
 
 const problemBuckets = [
-  { icon: XCircle, title: "Poor Quality", desc: "Garbage in, garbage out. Human bias distorts truth. Most 'insights' are just interpretations dressed as data." },
-  { icon: FolderArchive, title: "Insights Get Lost", desc: "Scattered across email, Slack, docs, and team memory. Nothing compounds. Every new study starts from scratch." },
-  { icon: Users, title: "Human Friction", desc: "100 calls placed → 20 pick up → 5 complete interviews → 1–2 meaningful outcomes. Terrible effort-to-insight ratio." },
+  { icon: EyeOff, title: "Zero Interview Visibility", desc: "You're paying for answers, but you never see the raw interviews. You don't know if the interviewer asked leading questions or if the candidate was even qualified. You just get a sanitized PDF and are told to trust it." },
+  { icon: Brain, title: "Filtered Findings", desc: "You aren't hearing the customer—you're hearing a researcher's filtered interpretation. Human bias, fatigue, and varying interviewer skill levels mean every 'insight' is heavily distorted before it reaches your desk." },
+  { icon: RotateCcw, title: "Starting From Scratch", desc: "Every time a new PM or marketer wants to learn something, they start from zero. Hundreds of past conversations are ignored because the data is unsearchable. You're constantly paying to ask the exact same questions again." },
+  { icon: GitBranch, title: "Trapped Insights", desc: "Your growth team uncovers a massive UX flaw. But because they don't share workflows with the product team, the insight dies in a Figma file. Customer knowledge never compounds across your business." },
 ];
 export default function ProblemSection({ mode = "detailed" }: { mode?: SlideMode }) {
   const isPresenter = mode === "presenter";
+  const [revealIndex, setRevealIndex] = useState(isPresenter ? 0 : problemBuckets.length);
+
+  const advanceReveal = useCallback(() => {
+    setRevealIndex(prev => Math.min(prev + 1, problemBuckets.length));
+  }, []);
+
+  useEffect(() => {
+    if (!isPresenter) { setRevealIndex(problemBuckets.length); return; }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "ArrowDown") {
+        if (revealIndex < problemBuckets.length) { e.preventDefault(); e.stopPropagation(); advanceReveal(); }
+      }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [isPresenter, revealIndex, advanceReveal]);
 
   return (
     <section
@@ -26,9 +44,9 @@ export default function ProblemSection({ mode = "detailed" }: { mode?: SlideMode
       <div className="relative z-10 w-full mx-auto" style={{ maxWidth: 1100 }}>
 
         {/* HEADLINE */}
-        <div className={isPresenter ? "mb-8" : "mb-14"}>
+        <div className={isPresenter ? "mb-8" : "mb-4"}>
           <p
-            className="animate-fade-up mb-3 font-bold uppercase tracking-[0.2em]"
+            className="animate-fade-up mb-2 font-bold uppercase tracking-[0.2em]"
             style={{ color: "hsl(var(--sq-orange))", fontSize: "11px", animationDelay: "0ms" }}
           >
             The Breakdown
@@ -37,35 +55,35 @@ export default function ProblemSection({ mode = "detailed" }: { mode?: SlideMode
             className="animate-fade-up font-black tracking-tight leading-[1.05]"
             style={{
               color: "hsl(var(--sq-text))",
-              fontSize: isPresenter ? "2.4rem" : "clamp(1.8rem, 3vw, 2.8rem)",
+              fontSize: isPresenter ? "2.4rem" : "clamp(1.6rem, 2.5vw, 2.2rem)",
               animationDelay: "50ms",
             }}
           >
-            The issue is not lack of intent. <br />
+            The issue is not lack of intent <br />
             <span style={{ color: "hsl(var(--sq-orange))", textDecoration: "underline", textDecorationStyle: "wavy", textDecorationColor: "hsl(var(--sq-orange) / 0.35)", textUnderlineOffset: "5px", textDecorationThickness: "2px" }}>
-              Customer understanding is structurally broken.
+              Customer understanding is structurally broken
             </span>
           </h2>
         </div>
 
         {/* MAIN GRID */}
-        <div className={`grid ${isPresenter ? "grid-cols-12 gap-10" : "lg:grid-cols-12 gap-12 lg:gap-16"} items-start`}>
+        <div className={`grid ${isPresenter ? "grid-cols-12 gap-10" : "lg:grid-cols-12 gap-4 lg:gap-6"} items-start`}>
 
           {/* LEFT COLUMN (7/12) - The Breakdown */}
-          <div className={`${isPresenter ? "col-span-7" : "lg:col-span-12 xl:col-span-7"} flex flex-col gap-${isPresenter ? "3" : "5"}`}>
-            <p className={`font-bold ${isPresenter ? "text-xs" : "text-sm"} tracking-widest uppercase mb-1`} style={{ color: "hsl(var(--sq-text))" }}>
-              Three ways it breaks
+          <div className={`${isPresenter ? "col-span-7" : "lg:col-span-12 xl:col-span-7"} flex flex-col gap-${isPresenter ? "3" : "2"}`}>
+            <p className={`font-bold ${isPresenter ? "text-xs" : "text-xs"} tracking-widest uppercase mb-0.5`} style={{ color: "hsl(var(--sq-text))" }}>
+              Four ways the current system fails
             </p>
 
-            <div className="animate-fade-up flex flex-col gap-3" style={{ animationDelay: "150ms" }}>
+            <div className="animate-fade-up flex flex-col gap-2" style={{ animationDelay: "150ms" }}>
               {problemBuckets.map((item, i) => (
-                <div key={i} className={`flex items-start gap-4 ${isPresenter ? "p-4" : "p-5"} rounded-xl border transition-colors hover:bg-[hsl(var(--sq-orange)/0.02)]`} style={{ borderColor: "hsl(var(--sq-subtle))" }}>
-                  <div className={`${isPresenter ? "w-10 h-10" : "w-12 h-12"} rounded-lg flex items-center justify-center bg-[hsl(var(--sq-card))] border border-[hsl(var(--sq-subtle))] shadow-sm flex-shrink-0`}>
-                    <item.icon size={isPresenter ? 18 : 22} style={{ color: "hsl(var(--sq-text))" }} />
+                <div key={i} className={`flex items-start gap-3 ${isPresenter ? "p-4" : "p-3"} rounded-xl border transition-all duration-300 ${isPresenter && i >= revealIndex ? "opacity-0 translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"} hover:bg-[hsl(var(--sq-orange)/0.02)]`} style={{ borderColor: "hsl(var(--sq-subtle))" }}>
+                  <div className={`${isPresenter ? "w-10 h-10" : "w-9 h-9"} rounded-lg flex items-center justify-center bg-[hsl(var(--sq-card))] border border-[hsl(var(--sq-subtle))] shadow-sm flex-shrink-0`}>
+                    <item.icon size={isPresenter ? 18 : 18} style={{ color: "hsl(var(--sq-text))" }} />
                   </div>
                   <div>
-                    <h4 className={`font-bold ${isPresenter ? "text-base" : "text-lg"} mb-1`} style={{ color: "hsl(var(--sq-text))" }}>{item.title}</h4>
-                    <p className={`${isPresenter ? "text-xs" : "text-sm"} font-medium leading-relaxed`} style={{ color: "hsl(var(--sq-muted))" }}>{item.desc}</p>
+                    <h4 className={`font-bold ${isPresenter ? "text-base" : "text-sm"} mb-0.5`} style={{ color: "hsl(var(--sq-text))" }}>{item.title}</h4>
+                    <p className={`${isPresenter ? "text-xs" : "text-xs"} font-medium leading-snug`} style={{ color: "hsl(var(--sq-muted))" }}>{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -73,51 +91,61 @@ export default function ProblemSection({ mode = "detailed" }: { mode?: SlideMode
           </div>
 
           {/* RIGHT COLUMN (5/12) - The Proof */}
-          <div className={`${isPresenter ? "col-span-5" : "lg:col-span-12 xl:col-span-5"} flex flex-col gap-${isPresenter ? "4" : "6"}`}>
+          <div className={`${isPresenter ? "col-span-5" : "lg:col-span-12 xl:col-span-5"} flex flex-col gap-${isPresenter ? "4" : "3"}`}>
 
-            <div className={`animate-fade-up rounded-2xl ${isPresenter ? "p-6" : "p-8"}`} style={{ background: "#1A1A1A", animationDelay: "200ms" }}>
-              <div className={`flex items-center gap-3 ${isPresenter ? "mb-4" : "mb-6"}`}>
-                <AlertCircle className="text-red-400" size={isPresenter ? 20 : 24} />
-                <h3 className="font-bold text-white tracking-wide uppercase text-sm">The Fallout</h3>
+            <div className={`animate-fade-up rounded-2xl ${isPresenter ? "p-6" : "p-5"}`} style={{ background: "#1A1A1A", animationDelay: "200ms" }}>
+              <div className={`flex items-center gap-3 ${isPresenter ? "mb-4" : "mb-3"}`}>
+                <AlertCircle className="text-red-400" size={isPresenter ? 20 : 20} />
+                <h3 className="font-bold text-white tracking-wide uppercase text-xs">The Fallout</h3>
               </div>
 
-              <div className={`space-y-${isPresenter ? "4" : "6"}`}>
+              <div className={`space-y-${isPresenter ? "4" : "3"}`}>
                 {/* Data point 1 */}
                 <div>
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className={`${isPresenter ? "text-4xl" : "text-5xl"} font-black text-red-500`}>{">"}80%</span>
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    <span className={`${isPresenter ? "text-4xl" : "text-3xl"} font-black text-red-500`}>{">"}80%</span>
                   </div>
-                  <p className="text-[13px] font-medium text-white/60 leading-relaxed">
+                  <p className="text-xs font-medium text-white/60 leading-snug">
                     of product launches fail within the fast-moving FMCG sector.
                   </p>
-                  <p className="text-[10px] font-bold text-white/30 mt-1 tracking-widest uppercase">— Source: NielsenIQ</p>
+                  <p className="text-[10px] font-bold text-white/30 mt-0.5 tracking-widest uppercase">— Source: NielsenIQ</p>
                 </div>
 
                 <div className="w-full h-px bg-white/10" />
 
                 {/* Data point 2 */}
                 <div>
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className={`${isPresenter ? "text-4xl" : "text-5xl"} font-black text-red-500`}>75%</span>
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    <span className={`${isPresenter ? "text-4xl" : "text-3xl"} font-black text-red-500`}>75%</span>
                   </div>
-                  <p className="text-[13px] font-medium text-white/60 leading-relaxed">
+                  <p className="text-xs font-medium text-white/60 leading-snug">
                     of all CPG innovations fail, despite executives calling innovation their #1 growth lever.
                   </p>
-                  <p className="text-[10px] font-bold text-white/30 mt-1 tracking-widest uppercase">— Source: McKinsey & Company</p>
+                  <p className="text-[10px] font-bold text-white/30 mt-0.5 tracking-widest uppercase">— Source: McKinsey & Company</p>
                 </div>
               </div>
             </div>
 
-            <div className="animate-fade-up p-5 rounded-2xl border" style={{ borderColor: "hsl(var(--sq-subtle))", animationDelay: "300ms", background: "hsl(var(--sq-card))" }}>
-              <p className="text-sm font-semibold leading-relaxed" style={{ color: "hsl(var(--sq-text))" }}>
+            <div className="animate-fade-up p-3 rounded-2xl border" style={{ borderColor: "hsl(var(--sq-subtle))", animationDelay: "300ms", background: "hsl(var(--sq-card))" }}>
+              <p className="text-xs font-semibold leading-snug" style={{ color: "hsl(var(--sq-text))" }}>
                 Consumer brands make these decisions <span style={{ color: "hsl(var(--sq-orange))" }}>constantly</span>:
               </p>
-              <ul className="mt-3 text-xs font-medium space-y-2" style={{ color: "hsl(var(--sq-muted))" }}>
+              <ul className="mt-1.5 text-xs font-medium space-y-1" style={{ color: "hsl(var(--sq-muted))" }}>
                 <li>· Is the pack-price architecture right?</li>
                 <li>· Which cohort is this really for?</li>
                 <li>· Why did this campaign not convert?</li>
                 <li>· What should growth and product do next?</li>
               </ul>
+            </div>
+
+            {/* Frequency callout — merged from DecisionVolume */}
+            <div className="animate-fade-up rounded-2xl p-3 border-2 border-dashed" style={{ borderColor: "hsl(var(--sq-orange) / 0.3)", background: "hsl(var(--sq-orange) / 0.04)", animationDelay: "400ms" }}>
+              <p className={`font-black ${isPresenter ? "text-lg" : "text-base"} leading-tight`} style={{ color: "hsl(var(--sq-text))" }}>
+                This isn't an annual research problem.
+              </p>
+              <p className={`${isPresenter ? "text-xs" : "text-xs"} font-medium mt-1 leading-snug`} style={{ color: "hsl(var(--sq-muted))" }}>
+                Brands face <span className="font-bold" style={{ color: "hsl(var(--sq-orange))" }}>10–30 high-stakes customer decisions per quarter</span> across product, pricing, growth, and CX. Most deserve fast validation. Very few get it.
+              </p>
             </div>
 
           </div>

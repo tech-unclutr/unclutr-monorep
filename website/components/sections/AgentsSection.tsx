@@ -265,10 +265,10 @@ export default function AgentsSection() {
                         hidden: { opacity: 0, y: 40, filter: "blur(8px)", scale: 0.98 },
                         visible: { opacity: 1, y: 0, filter: "blur(0px)", scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
                     }}
-                    className="font-display text-[clamp(44px,6vw,76px)] tracking-[-0.04em] text-[#0b132b] leading-[1.05] pointer-events-none max-w-4xl mx-auto"
+                    className="font-display text-[clamp(28px,6vw,76px)] md:text-[clamp(44px,6vw,76px)] tracking-[-0.04em] text-[#0b132b] leading-[1.05] pointer-events-none max-w-4xl mx-auto text-balance"
                 >
                     SquareUp makes customer
-                    <br className="hidden md:block" />
+                    <br />
                     understanding <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF5A36] to-[#FF8A66]">a system.</span>
                 </motion.h2>
                 <motion.p

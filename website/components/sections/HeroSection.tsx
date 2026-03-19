@@ -4,7 +4,9 @@ import { useRef, useEffect, useState } from "react";
 import { useScroll, motion, useTransform, useMotionValueEvent, useSpring, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useIsMobile } from "../ui/useIsMobile";
+import { useLenis } from "../ui/LenisProvider";
 import { useSectionVisibility } from "@/lib/analytics";
+import { usePerformance } from "@/lib/context/PerformanceContext";
 
 /* ─── Copy & Neural Network Data ─── */
 const SUBHEADLINES = [
@@ -23,6 +25,7 @@ interface Particle {
   globePos: { x: number; y: number; z: number };
   currentPos: { x: number; y: number; z: number };
   flyOutDir: { x: number; y: number; z: number };
+  noisePhase: { x: number; y: number; z: number };
   color: string;
   size: number;
   hasExited?: boolean; // Track if particle has dispatched exit event
@@ -36,15 +39,20 @@ export default function HeroSection() {
   const containerRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
+  const lenis = useLenis();
+  const tier = usePerformance();
   useSectionVisibility("hero", containerRef);
   const [mounted, setMounted] = useState(false);
   const [subheadlineIndex, setSubheadlineIndex] = useState(0);
+  const [snapOverlayVisible, setSnapOverlayVisible] = useState(false);
 
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
   const [isHoveringGlobe, setIsHoveringGlobe] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeTextIndex, setActiveTextIndex] = useState(0);
   const particlesRef = useRef<Particle[]>([]);
+  const bottomGlowRef = useRef<HTMLDivElement>(null);
+  const glowIntensityRef = useRef(0);
 
   useEffect(() => {
     if (isHoveringGlobe) return;
@@ -79,8 +87,69 @@ export default function HeroSection() {
   });
 
   const progressRef = useRef(0);
+  const displayProgressRef = useRef(0);
+  const isSnappingRef = useRef(false);
+  const isProgrammaticScrollRef = useRef(false);
+  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useMotionValueEvent(smoothProgress, "change", (latest) => {
+    // Always keep progressRef in sync (render loop needs it)
     progressRef.current = latest;
+
+    // Don't reset snap state or restart idle timer during our own programmatic scroll
+    if (isProgrammaticScrollRef.current) return;
+
+    // Reset snap when user actively scrolls
+    if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current);
+    isSnappingRef.current = false;
+    // Reset snap overlay once spring catches up or user scrolls past it
+    if (snapOverlayVisible && (latest > 0.6 || latest < 0.02)) {
+      setSnapOverlayVisible(false);
+    }
+
+    // After scroll stops for 400ms, snap globe + overlay text to rest position
+    // (400ms avoids false triggers during trackpad momentum scrolling)
+    scrollIdleTimerRef.current = setTimeout(() => {
+      // If user has started scrolling into transition but hasn't reached the
+      // overlay-text rest position (smoothProgress ≈ 0.55), snap forward
+      if (latest > 0.03 && latest < 0.52) {
+        isSnappingRef.current = true;
+        setSnapOverlayVisible(true);
+
+        // Use Lenis scrollTo to avoid fighting with Lenis smooth scrolling
+        if (containerRef.current) {
+          isProgrammaticScrollRef.current = true;
+          const sectionTop = containerRef.current.offsetTop;
+          const sectionHeight = containerRef.current.offsetHeight;
+          const targetScroll = sectionTop + sectionHeight * 0.5;
+
+          if (lenis) {
+            lenis.scrollTo(targetScroll, {
+              duration: 1,
+              easing: (t: number) => 1 - Math.pow(1 - t, 3), // ease-out cubic
+              onComplete: () => {
+                setTimeout(() => {
+                  isProgrammaticScrollRef.current = false;
+                }, 300);
+              },
+            });
+          } else {
+            // Fallback when Lenis is not available (e.g. mobile)
+            window.scrollTo({ top: targetScroll, behavior: "smooth" });
+            setTimeout(() => {
+              isProgrammaticScrollRef.current = false;
+            }, 1300);
+          }
+        }
+      }
+    }, 400);
+  });
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    if (latest > 0.7) {
+      // Clear the hover state when scrolled past the hero section
+      setIsHoveringGlobe(false);
+    }
   });
 
   const timeRef = useRef(0);
@@ -95,7 +164,12 @@ export default function HeroSection() {
     setMounted(true);
 
     const canvas = canvasRef.current;
-    const dpr = window.devicePixelRatio || 1;
+    // Cap DPR to save GPU fill rate without any visible quality change:
+    // low-end screens can't resolve sub-pixels beyond 1.5x anyway
+    const rawDpr = window.devicePixelRatio || 1;
+    const dpr = tier === "low" ? Math.min(rawDpr, 1.5)
+              : tier === "medium" ? Math.min(rawDpr, 2.0)
+              : rawDpr;
     const width = window.innerWidth;
     const height = window.innerHeight;
     canvas.width = width * dpr;
@@ -164,6 +238,7 @@ export default function HeroSection() {
               y: (flyOutVector.y / flyOutLen) * (Math.random() * 2000 + 1000),
               z: (flyOutVector.z / flyOutLen) * (Math.random() * 2000 + 1000)
             },
+            noisePhase: { x: Math.random() * 1000, y: Math.random() * 1000, z: Math.random() * 1000 },
             color: rColor,
             size: isMobileSize
               ? (isHighlight ? Math.random() * 1.2 + 0.8 : Math.random() * 0.8 + 0.4)
@@ -207,7 +282,7 @@ export default function HeroSection() {
 
     particlesRef.current = newParticles;
 
-  }, []);
+  }, [tier]);
 
   // 3. Render Loop (Canvas Animation)
   useEffect(() => {
@@ -217,7 +292,10 @@ export default function HeroSection() {
     if (!ctx) return;
 
     let animationFrameId: number;
-    const dpr = window.devicePixelRatio || 1;
+    const rawDpr = window.devicePixelRatio || 1;
+    const dpr = tier === "low" ? Math.min(rawDpr, 1.5)
+              : tier === "medium" ? Math.min(rawDpr, 2.0)
+              : rawDpr;
 
     // Visibility gating — skip rendering when offscreen
     const isVisibleRef = { current: true };
@@ -243,7 +321,18 @@ export default function HeroSection() {
 
       // Map global scroll to particle progress. 
       // 0 to 0.4 overall scroll = 0 to 1 text->globe transition
-      const rawProgress = Math.min(progressRef.current * 2.5, 1);
+      const scrollRawProgress = Math.min(progressRef.current * 2.5, 1);
+
+      // Snap-to-complete: when scroll is idle and globe is partially formed,
+      // smoothly animate displayProgress toward 1.0 so globe rests fully formed
+      if (isSnappingRef.current && scrollRawProgress > 0.08) {
+        displayProgressRef.current += (1 - displayProgressRef.current) * 0.15;
+        if (displayProgressRef.current > 0.995) displayProgressRef.current = 1;
+      } else {
+        displayProgressRef.current = scrollRawProgress;
+      }
+      const rawProgress = displayProgressRef.current;
+
 
       timeRef.current += 0.003;
 
@@ -258,6 +347,8 @@ export default function HeroSection() {
       // Easing for the disintegration (Start slow, explode, settle)
       const ease = rawProgress < 0.5 ? 4 * rawProgress * rawProgress * rawProgress : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
 
+      let hitCountThisFrame = 0;
+
       for (let i = 0; i < particlesRef.current.length; i++) {
         const p = particlesRef.current[i];
 
@@ -268,11 +359,11 @@ export default function HeroSection() {
         let gy = p.globePos.y * cosX - gz * sinX;
         gz = p.globePos.y * sinX + gz * cosX;
 
-        // Disintegration explosion force
+        // Disintegration explosion force — use sin-based continuous noise to avoid per-frame jitter
         const explosionForce = Math.sin(ease * Math.PI) * 200;
-        const noiseX = (Math.random() - 0.5) * explosionForce;
-        const noiseY = (Math.random() - 0.5) * explosionForce;
-        const noiseZ = (Math.random() - 0.5) * explosionForce;
+        const noiseX = Math.sin(timeRef.current * 2 + p.noisePhase.x) * explosionForce * 0.5;
+        const noiseY = Math.sin(timeRef.current * 2.3 + p.noisePhase.y) * explosionForce * 0.5;
+        const noiseZ = Math.sin(timeRef.current * 1.7 + p.noisePhase.z) * explosionForce * 0.5;
 
         // Globe Disintegration on scroll out
         // progress > 0.6 means we are scrolling out.
@@ -298,20 +389,25 @@ export default function HeroSection() {
         const projY = currentY * scale + (height / 2) - scrollOffset;
 
         // Dispatch exit event for particles exiting bottom during fly-out
-        if (flyOutProgress > 0.2 && projY > height * 0.9 && !p.hasExited) {
-          p.hasExited = true;
-          // Dispatch event for ParticleNarrativeController to spawn continuation particles
-          if (typeof window !== 'undefined' && Math.random() < 0.4) { // 40% of exiting particles spawn
-            window.dispatchEvent(new CustomEvent('hero-particle-exit', {
-              detail: {
-                x: projX,
-                y: height,
-                vx: (p.flyOutDir.x / 2000) * flyOutEase,
-                vy: Math.max(0.3, (p.flyOutDir.y / 2000) * flyOutEase * 0.5),
-                color: p.color
-              }
-            }));
+        if (flyOutProgress > 0.2 && projY > height * 0.9) {
+          if (!p.hasExited) {
+            p.hasExited = true;
+            hitCountThisFrame++;
+            // Dispatch event for ParticleNarrativeController to spawn continuation particles
+            if (typeof window !== 'undefined' && Math.random() < 0.4) { // 40% of exiting particles spawn
+              window.dispatchEvent(new CustomEvent('hero-particle-exit', {
+                detail: {
+                  x: projX,
+                  y: height,
+                  vx: (p.flyOutDir.x / 2000) * flyOutEase,
+                  vy: Math.max(0.3, (p.flyOutDir.y / 2000) * flyOutEase * 0.5),
+                  color: p.color
+                }
+              }));
+            }
           }
+        } else {
+          p.hasExited = false;
         }
 
         // Illumination and Depth (Fade back of globe)
@@ -334,9 +430,18 @@ export default function HeroSection() {
         // Make mobile particles tightly grouped but very bright
         const finalSize = isMobileRender ? Math.min(rawSize, 1.8) : rawSize;
 
-        ctx.beginPath();
         // Give the brightest particles a white core
         const isBright = p.color === "#ffffff" || p.color === "#ff9f43";
+
+        // Set shadow state BEFORE drawing to prevent bleed into next particle
+        if (isBright && finalSize > 2 && i % 10 === 0) {
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = p.color;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.beginPath();
         ctx.fillStyle = isBright ? '#ffffff' : p.color;
 
         // Boost alpha significantly on mobile so the tight points glow
@@ -351,14 +456,19 @@ export default function HeroSection() {
           ctx.arc(projX * dpr, projY * dpr, finalSize * dpr, 0, Math.PI * 2);
           ctx.fill();
         }
+      }
 
-        // Optional Glow on large particles (limited to ~10% for performance)
-        if (isBright && finalSize > 2 && i % 10 === 0) {
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = p.color;
+      // --- Particle Impact Glow Logic ---
+      if (bottomGlowRef.current) {
+        if (hitCountThisFrame > 0) {
+          // ANY particle hit instantly triggers a full 100% brightness pulse
+          glowIntensityRef.current = 1.0;
         } else {
-          ctx.shadowBlur = 0;
+          // Smooth decay over ~40 frames to create a distinct 'pulse' feel
+          glowIntensityRef.current = Math.max(0, glowIntensityRef.current - 0.025);
         }
+        
+        bottomGlowRef.current.style.opacity = glowIntensityRef.current.toString();
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -376,9 +486,10 @@ export default function HeroSection() {
   const textSubY = useTransform(smoothProgress, [0, 0.1], [0, 20]);
 
   // New hooks for Interactive Globe Overlay
-  // Sync appearance with globe formation completion (rawProgress ~1.0 at scroll 0.4)
-  const overlayOpacity = useTransform(smoothProgress, [0.4, 0.45, 0.6, 0.75], [0, 1, 1, 0]);
-  const overlayY = useTransform(smoothProgress, [0.4, 0.45], [40, 0]);
+  // Use scrollYProgress directly (not the spring) so the overlay responds immediately
+  // to programmatic scroll during snap, without spring lag delay
+  const overlayOpacity = useTransform(scrollYProgress, [0.38, 0.44, 0.6, 0.75], [0, 1, 1, 0]);
+  const overlayY = useTransform(scrollYProgress, [0.38, 0.44], [40, 0]);
 
   return (
     <section id="hero" ref={containerRef} className="relative z-0 h-[250vh] bg-black text-white font-sans selection:bg-brand-orange/30">
@@ -507,7 +618,7 @@ export default function HeroSection() {
         )}
 
         {/* Bottom edge fade */}
-        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black to-transparent pointer-events-none z-[5]" />
+        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black to-transparent pointer-events-none z-[20]" />
 
         {/* Option 4: Hover Tooltip */}
         <motion.div

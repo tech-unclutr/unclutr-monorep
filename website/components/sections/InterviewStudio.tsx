@@ -174,7 +174,7 @@ function StudioCard({
             onPanEnd={handlePanEnd}
         >
             <motion.div
-                className="relative w-[calc(100%-32px)] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
+                className="relative w-[280px] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
                 style={{
                     background: isActive
                         ? "linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.95) 100%)"
@@ -241,7 +241,7 @@ function StudioCard({
                 </div>
 
                 {/* Content Area */}
-                <div className="relative p-5 sm:p-6 lg:p-7">
+                <div className="relative p-4 sm:p-6 lg:p-7">
                     {/* Accent glow blob */}
                     <motion.div
                         className="absolute -top-16 -right-8 w-32 h-32 rounded-full blur-3xl pointer-events-none"
@@ -279,12 +279,12 @@ function StudioCard({
                     </div>
 
                     {/* Agent name */}
-                    <h3 className="font-display text-[28px] sm:text-[32px] lg:text-[36px] font-bold text-[#1d1d1f] tracking-[-0.02em] leading-[1.05] mb-3">
+                    <h3 className="font-display text-[24px] sm:text-[32px] lg:text-[36px] font-bold text-[#1d1d1f] tracking-[-0.02em] leading-[1.05] mb-2 sm:mb-3">
                         {agent.name}
                     </h3>
 
                     {/* Agent intro */}
-                    <p className="text-[14px] sm:text-[15px] text-[#3a3a3a] font-medium leading-[1.5] mb-4">
+                    <p className="text-[13px] sm:text-[15px] text-[#3a3a3a] font-medium leading-[1.45] sm:leading-[1.5] mb-3 sm:mb-4">
                         {agent.intro}
                     </p>
 
@@ -520,7 +520,7 @@ export default function InterviewStudio() {
             tabIndex={0}
             onKeyDown={handleKeyDown}
             onClick={() => sectionRef.current?.focus()}
-            className="relative overflow-hidden bg-transparent outline-none min-h-[600px] sm:min-h-[700px] lg:min-h-[800px] h-screen max-h-[1000px]"
+            className="relative overflow-hidden bg-transparent outline-none min-h-[580px] sm:min-h-[700px] lg:min-h-[800px] h-[100svh] max-h-[1000px]"
             style={{ overscrollBehaviorX: "none" }}
         >
             {/* Subtle grain texture */}
@@ -561,10 +561,10 @@ export default function InterviewStudio() {
             />
 
             {/* Content Container */}
-            <div className="relative z-10 h-full flex flex-col justify-center max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12">
+            <div className="relative z-10 h-full flex flex-col justify-center max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12">
                 {/* Header */}
                 <motion.div
-                    className="mb-8 sm:mb-10 lg:mb-12"
+                    className="mb-3 sm:mb-10 lg:mb-12"
                     style={{ y: smoothY, opacity: headlineOpacity }}
                 >
                     {/* Badge */}
@@ -579,11 +579,11 @@ export default function InterviewStudio() {
                         transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
                     >
                         <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#FF6B00]">
-                            5 AI Agents
+                            Intelligence Platform
                         </span>
                         <span className="text-[12px] text-[#FF6B00]/60">|</span>
                         <span className="text-[12px] font-medium text-[#FF6B00]/80">
-                            Zero Overhead
+                            Interview Studio
                         </span>
                     </motion.div>
 
@@ -619,7 +619,7 @@ export default function InterviewStudio() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                     </button>
 
-                    <div className="relative w-full h-[400px] xs:h-[440px] sm:h-[520px] lg:h-[540px] flex items-center justify-center">
+                    <div className="relative w-full h-[420px] xs:h-[440px] sm:h-[520px] lg:h-[540px] flex items-center justify-center">
                         {STUDIO_TEAM.map((agent, idx) => (
                             <StudioCard
                                 key={agent.name}
@@ -655,7 +655,7 @@ export default function InterviewStudio() {
 
                 {/* Bottom Controls */}
                 <motion.div
-                    className="flex items-center justify-between mt-4 sm:mt-6"
+                    className="flex items-center justify-between mt-5 sm:mt-6"
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView && hasRevealed ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6, delay: 0.5 }}
@@ -694,7 +694,7 @@ export default function InterviewStudio() {
 
                 {/* Mobile swipe hint */}
                 <motion.div
-                    className="absolute bottom-6 left-1/2 -translate-x-1/2 flex sm:hidden items-center gap-2 text-[11px] text-[#86868b]/60"
+                    className="absolute bottom-3 left-1/2 -translate-x-1/2 flex sm:hidden items-center gap-2 text-[11px] text-[#86868b]/60"
                     initial={{ opacity: 0 }}
                     animate={isInView && hasRevealed ? { opacity: [0, 1, 1, 0] } : {}}
                     transition={{ delay: 1.8, duration: 3, times: [0, 0.1, 0.7, 1] }}

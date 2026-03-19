@@ -60,7 +60,7 @@ const PERSONAS = [
 
 export default function WhoIsItForSection({ mode = "detailed" }: { mode?: SlideMode }) {
   const isPresenter = mode === "presenter";
-  const { ref, revealed } = useScrollAnimation(0.15, mode === "presenter");
+  const { ref, revealed } = useScrollAnimation(0.15, mode === "presenter" || mode === "download");
 
   return (
     <section
@@ -71,24 +71,24 @@ export default function WhoIsItForSection({ mode = "detailed" }: { mode?: SlideM
       <div className="max-w-6xl mx-auto w-full" ref={ref}>
 
         {/* Header */}
-        <div className={`${isPresenter ? "mb-6" : "mb-14"} text-center transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
-          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-4" style={{ color: "hsl(var(--sq-orange))" }}>
+        <div className={`${isPresenter ? "mb-6" : "mb-3"} text-center transition-all duration-500 ${revealed ? "opacity-100" : "opacity-0 translate-y-6"}`}>
+          <p className="font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: "hsl(var(--sq-orange))" }}>
             Who It's For
           </p>
-          <h2 className={`font-black tracking-tight leading-tight ${isPresenter ? "text-5xl" : "text-3xl sm:text-4xl lg:text-5xl"}`}
+          <h2 className={`font-black tracking-tight leading-tight ${isPresenter ? "text-5xl" : "text-2xl sm:text-3xl"}`}
             style={{ color: "hsl(var(--sq-text))" }}>
             The teams where being wrong{" "}
             <span style={{ color: "hsl(var(--sq-orange))" }}>costs the most.</span>
           </h2>
           {!isPresenter && (
-            <p className="mt-4 text-base font-medium max-w-2xl mx-auto" style={{ color: "hsl(var(--sq-muted))" }}>
+            <p className="mt-1 text-sm font-medium max-w-2xl mx-auto" style={{ color: "hsl(var(--sq-muted))" }}>
               Three roles. Three real decisions. Same pattern: the signal existed — it just wasn't surfaced in time.
             </p>
           )}
         </div>
 
         {/* Persona cards */}
-        <div className={`space-y-${isPresenter ? "4" : "8"}`}>
+        <div className={`space-y-${isPresenter ? "4" : "2"}`}>
           {PERSONAS.map(({ Avatar, role, tag, decision, without, withSQ, industries }, i) => (
             <div
               key={role}
@@ -103,7 +103,7 @@ export default function WhoIsItForSection({ mode = "detailed" }: { mode?: SlideM
               }}
             >
               {/* Top bar */}
-              <div className={`${isPresenter ? "px-5 py-3" : "px-6 py-4"} flex items-center justify-between flex-wrap gap-3`}
+              <div className={`${isPresenter ? "px-5 py-3" : "px-4 py-2"} flex items-center justify-between flex-wrap gap-2`}
                 style={{ borderBottom: "1px solid hsl(var(--sq-subtle))" }}>
                 <div className="flex items-center gap-3">
                   <Avatar size={isPresenter ? 36 : 44} />
@@ -119,10 +119,10 @@ export default function WhoIsItForSection({ mode = "detailed" }: { mode?: SlideM
               </div>
 
               {/* Decision question */}
-              <div className={`${isPresenter ? "px-5 py-3" : "px-6 py-4"}`}
+              <div className={`${isPresenter ? "px-5 py-3" : "px-4 py-1.5"}`}
                 style={{ background: "hsl(var(--sq-off-white))" }}>
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "hsl(var(--sq-muted))" }}>The Decision</p>
-                <p className={`font-black ${isPresenter ? "text-sm" : "text-base"} italic`} style={{ color: "hsl(var(--sq-text))" }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "hsl(var(--sq-muted))" }}>The Decision</p>
+                <p className={`font-black ${isPresenter ? "text-sm" : "text-xs"} italic`} style={{ color: "hsl(var(--sq-text))" }}>
                   "{decision}"
                 </p>
               </div>
@@ -130,9 +130,9 @@ export default function WhoIsItForSection({ mode = "detailed" }: { mode?: SlideM
               {/* Two-column: Without vs With */}
               <div className={`grid ${isPresenter ? "grid-cols-2" : "md:grid-cols-2"}`}>
                 {/* Without */}
-                <div className={`${isPresenter ? "p-4" : "p-6"}`}
+                <div className={`${isPresenter ? "p-4" : "p-3"}`}
                   style={{ borderRight: "1px solid hsl(var(--sq-subtle))" }}>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-1.5">
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "hsl(0, 72%, 51%)" }} />
                     <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "hsl(0, 72%, 51%)" }}>Without SquareUp</p>
                   </div>
@@ -153,9 +153,9 @@ export default function WhoIsItForSection({ mode = "detailed" }: { mode?: SlideM
                 </div>
 
                 {/* With */}
-                <div className={`${isPresenter ? "p-4" : "p-6"}`}
+                <div className={`${isPresenter ? "p-4" : "p-3"}`}
                   style={{ background: "hsl(var(--sq-orange) / 0.02)" }}>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-1.5">
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "hsl(var(--sq-orange))" }} />
                     <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "hsl(var(--sq-orange))" }}>With SquareUp</p>
                   </div>

@@ -97,6 +97,11 @@ export default function LogoNotch() {
         href="/"
         aria-label="Square Up"
         className="block relative hover:opacity-80 cursor-pointer"
+        initial={false}
+        style={{
+          width: isHero ? heroWidth : scrolledWidth,
+          height: isHero ? 64 : 40,
+        }}
         animate={{
           width: isHero ? heroWidth : scrolledWidth,
           height: isHero ? 64 : 40,

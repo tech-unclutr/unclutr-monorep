@@ -20,8 +20,10 @@ from app.api.v1.endpoints import (
     metrics,
     monitoring,
     onboarding,
+
     settings,
     studies,
+    study_designer,
     user_queue,
     users,
 )
@@ -50,6 +52,7 @@ api_router.include_router(bolna_webhook.router, tags=["Bolna Webhook"])
 api_router.include_router(user_queue.router, prefix="/user-queue", tags=["User Queue"])
 api_router.include_router(calendar_booking.router, prefix="/execution", tags=["Calendar Booking"])
 api_router.include_router(studies.router, prefix="/studies", tags=["Studies"])
+api_router.include_router(study_designer.router, prefix="/study-designer", tags=["Study Designer"])
 
 
 

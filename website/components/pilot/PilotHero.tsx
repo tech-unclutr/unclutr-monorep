@@ -214,7 +214,7 @@ export default function PilotHero() {
       </div>
 
       {/* Trust strip — full width below the grid */}
-      <div className="relative z-10 w-full max-w-[1200px] mx-auto">
+      <div className="relative z-10 w-full max-w-[1200px] mx-auto hidden">
         <Reveal width="100%" delay={0.56}>
           <div className="mt-10 sm:mt-14">
             <p className="text-xs font-bold uppercase tracking-[0.15em] text-maze-black/50 mb-5 text-center">

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { FlaskConical, Sparkles, BookOpen, X } from "lucide-react";
+import { FlaskConical, BookOpen, X, Mic, Users, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Copilot } from "./components/Copilot";
 import { StudyHomePage } from "@/components/study-designer/StudyHomePage";
+import { InterviewBuilder } from "./components/InterviewBuilder";
+import { RecruitmentPage } from "@/components/recruitment/RecruitmentPage";
+import { StudyPlanner } from "./components/StudyPlanner";
 
 interface ComponentEntry {
     name: string;
@@ -18,14 +20,6 @@ interface ComponentEntry {
 
 const COMPONENTS: ComponentEntry[] = [
     {
-        name: "Copilot",
-        description: "Conversational AI assistant",
-        icon: <Sparkles className="w-5 h-5 text-white" />,
-        gradient: "from-[#FF8A4C] to-[#FF6B2C]",
-        shadowColor: "shadow-orange-500/20",
-        render: () => <Copilot />,
-    },
-    {
         name: "Study Designer",
         description: "AI-powered research study creation",
         icon: <BookOpen className="w-5 h-5 text-white" />,
@@ -33,6 +27,33 @@ const COMPONENTS: ComponentEntry[] = [
         shadowColor: "shadow-indigo-500/20",
         fullWidth: true,
         render: () => <StudyHomePage />,
+    },
+    {
+        name: "Interview Builder",
+        description: "Organize questions across interview categories",
+        icon: <Mic className="w-5 h-5 text-white" />,
+        gradient: "from-indigo-500 to-blue-600",
+        shadowColor: "shadow-indigo-500/20",
+        fullWidth: true,
+        render: () => <InterviewBuilder />,
+    },
+    {
+        name: "Recruitment",
+        description: "AI-powered participant recruitment pipeline",
+        icon: <Users className="w-5 h-5 text-white" />,
+        gradient: "from-emerald-500 to-teal-600",
+        shadowColor: "shadow-emerald-500/20",
+        fullWidth: true,
+        render: () => <RecruitmentPage />,
+    },
+    {
+        name: "Study Planner",
+        description: "End-to-end study design & recruitment flow",
+        icon: <ClipboardList className="w-5 h-5 text-white" />,
+        gradient: "from-violet-600 to-indigo-500",
+        shadowColor: "shadow-violet-500/20",
+        fullWidth: true,
+        render: () => <StudyPlanner />,
     },
 ];
 

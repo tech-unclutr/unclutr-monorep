@@ -22,6 +22,7 @@ export interface ParsedFileState {
 
 type CohortInterviewMap = Record<string, InterviewCategories>;
 type CohortIncentivesMap = Record<string, Record<AudioBucket, string>>;
+type CombinationCustomPrompts = Record<string, string>;
 
 const DEFAULT_INCENTIVES: Record<AudioBucket, string> = { audioA: "", audioB: "", audioC: "" };
 const UNSELECTED_QUESTIONS = SAMPLE_QUESTIONS.map((q) => ({ ...q, selected: false }));
@@ -34,6 +35,7 @@ interface RecruitmentState {
     activeCohort: string | null;
     cohortInterviews: CohortInterviewMap;
     cohortIncentives: CohortIncentivesMap;
+    combinationCustomPrompts: CombinationCustomPrompts;
 }
 
 interface RecruitmentContextValue extends RecruitmentState {
@@ -46,6 +48,8 @@ interface RecruitmentContextValue extends RecruitmentState {
     setCohortCategories: (cohort: string, categories: InterviewCategories) => void;
     getCohortIncentives: (cohort: string) => Record<AudioBucket, string>;
     setCohortIncentives: (cohort: string, incentives: Record<AudioBucket, string>) => void;
+    getCombinationCustomPrompt: (key: string) => string | undefined;
+    setCombinationCustomPrompt: (key: string, prompt: string | null) => void;
     reset: () => void;
 }
 
@@ -69,6 +73,7 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
     const [activeCohort, setActiveCohort] = useState<string | null>(null);
     const [cohortInterviews, setCohortInterviews] = useState<CohortInterviewMap>({});
     const [cohortIncentives, setCohortIncentivesMap] = useState<CohortIncentivesMap>({});
+    const [combinationCustomPrompts, setCombinationCustomPromptsMap] = useState<CombinationCustomPrompts>({});
 
     const getCohortCategories = useCallback((cohort: string): InterviewCategories => {
         return cohortInterviews[cohort] ?? initializeCategories(UNSELECTED_QUESTIONS);
@@ -86,6 +91,21 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
         setCohortIncentivesMap((prev) => ({ ...prev, [cohort]: incentives }));
     }, []);
 
+    const getCombinationCustomPrompt = useCallback((key: string): string | undefined => {
+        return combinationCustomPrompts[key];
+    }, [combinationCustomPrompts]);
+
+    const setCombinationCustomPrompt = useCallback((key: string, prompt: string | null) => {
+        setCombinationCustomPromptsMap((prev) => {
+            if (prompt === null) {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+            }
+            return { ...prev, [key]: prompt };
+        });
+    }, []);
+
     const reset = useCallback(() => {
         setStep("upload");
         setParsedFile(null);
@@ -94,6 +114,7 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
         setActiveCohort(null);
         setCohortInterviews({});
         setCohortIncentivesMap({});
+        setCombinationCustomPromptsMap({});
     }, []);
 
     return (
@@ -105,9 +126,12 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
             activeCohort, setActiveCohort,
             cohortInterviews,
             cohortIncentives,
+            combinationCustomPrompts,
             getCohortCategories, setCohortCategories,
             getCohortIncentives,
             setCohortIncentives: setCohortIncentivesForCohort,
+            getCombinationCustomPrompt,
+            setCombinationCustomPrompt,
             reset,
         }}>
             {children}

@@ -1,7 +1,30 @@
 import { capitalizeCohortName } from "@/lib/utils";
-import { type InterviewQuestion } from "@/app/dashboard/playground/components/InterviewBuilder";
+import { type InterviewQuestion, type AudioBucket } from "@/app/dashboard/playground/components/InterviewBuilder";
 import { type StudyContext } from "@/components/recruitment/ExecutionPromptView";
 import { api } from "@/lib/api";
+
+// ── Combination prompt types ──────────────────────────────────────────────
+
+export type InterviewTypeKey = AudioBucket | "chat";
+
+export interface CombinationPrompt {
+    cohort: string;
+    interviewType: InterviewTypeKey;
+    label: string;
+    questionCount: number;
+    prompt: string;
+}
+
+export const INTERVIEW_TYPE_LABELS: Record<InterviewTypeKey, string> = {
+    chat: "Chat Screening",
+    audioA: "Interview A",
+    audioB: "Interview B",
+    audioC: "Interview C",
+};
+
+export function combinationKey(cohort: string, interviewType: InterviewTypeKey): string {
+    return `${cohort}::${interviewType}`;
+}
 
 // ── Context shape ──────────────────────────────────────────────────────────
 
@@ -129,14 +152,10 @@ function formatInterviewType(
     return types.size ? Array.from(types).join(" + ") : "[not specified]";
 }
 
-// ── Main builder ───────────────────────────────────────────────────────────
-// Accepts the template string fetched from the backend and substitutes variables.
+// ── Runtime variable base (shared across builders) ────────────────────────
 
-export function buildExecutionPrompt(template: string, ctx: PromptBuildContext): string {
-    const { studyContext, selectedCohorts, getCohortCategories, getCohortIncentives } = ctx;
-
-    const variables: Record<string, string> = {
-        // Runtime-only — left as placeholders for the execution engine
+function runtimeVariables(): Record<string, string> {
+    return {
         agent_name: "{agent_name}",
         participant_name: "{participant_name}",
         company_name: "{company_name}",
@@ -148,13 +167,26 @@ export function buildExecutionPrompt(template: string, ctx: PromptBuildContext):
         whatsapp_followup_link: "{whatsapp_followup_link}",
         email_followup_address: "{email_followup_address}",
         support_contact: "{support_contact}",
+    };
+}
 
-        // Derived from study context
+function substituteVariables(template: string, variables: Record<string, string>): string {
+    return Object.entries(variables).reduce(
+        (result, [key, value]) => result.replaceAll(`{${key}}`, value),
+        template,
+    );
+}
+
+// ── Main builder (legacy — all cohorts combined) ──────────────────────────
+
+export function buildExecutionPrompt(template: string, ctx: PromptBuildContext): string {
+    const { studyContext, selectedCohorts, getCohortCategories, getCohortIncentives } = ctx;
+
+    const variables: Record<string, string> = {
+        ...runtimeVariables(),
         study_title: studyContext?.title || "[study title not set]",
         research_brief: studyContext?.briefing || "[research brief not provided]",
         research_objectives: formatObjectives(studyContext),
-
-        // Derived from cohort / question config
         cohort_name: selectedCohorts.map(capitalizeCohortName).join(", ") || "[no cohorts selected]",
         interview_type: formatInterviewType(selectedCohorts, getCohortCategories),
         question_set: formatQuestionSet(selectedCohorts, getCohortCategories, getCohortIncentives),
@@ -162,8 +194,63 @@ export function buildExecutionPrompt(template: string, ctx: PromptBuildContext):
         incentive_line: formatIncentiveLine(selectedCohorts, getCohortIncentives),
     };
 
-    return Object.entries(variables).reduce(
-        (result, [key, value]) => result.replaceAll(`{${key}}`, value),
-        template,
-    );
+    return substituteVariables(template, variables);
+}
+
+// ── Per-combination builder ───────────────────────────────────────────────
+
+function formatSingleBucketQuestions(questions: InterviewQuestion[]): string {
+    if (!questions.length) return "[no questions]";
+    return questions
+        .map((q, i) => `${i + 1}. ${q.text}${q.objective ? ` (${q.objective})` : ""} [${q.type}]`)
+        .join("\n");
+}
+
+export function buildPerCombinationPrompts(
+    template: string,
+    ctx: PromptBuildContext,
+): CombinationPrompt[] {
+    const { studyContext, selectedCohorts, getCohortCategories, getCohortIncentives } = ctx;
+    const results: CombinationPrompt[] = [];
+
+    const allInterviewTypes: InterviewTypeKey[] = ["chat", "audioA", "audioB", "audioC"];
+
+    for (const cohort of selectedCohorts) {
+        const categories = getCohortCategories(cohort);
+        const incentives = getCohortIncentives(cohort);
+
+        for (const type of allInterviewTypes) {
+            const questions = categories[type].filter((q) => q.selected);
+            if (!questions.length) continue;
+
+            const label = `${capitalizeCohortName(cohort)} — ${INTERVIEW_TYPE_LABELS[type]}`;
+            const isChat = type === "chat";
+            const interviewTypeLabel = isChat ? "chat screening" : "audio interview";
+            const incentive = isChat ? undefined : incentives[type as AudioBucket];
+
+            const variables: Record<string, string> = {
+                ...runtimeVariables(),
+                study_title: studyContext?.title || "[study title not set]",
+                research_brief: studyContext?.briefing || "[research brief not provided]",
+                research_objectives: formatObjectives(studyContext),
+                cohort_name: capitalizeCohortName(cohort),
+                interview_type: interviewTypeLabel,
+                question_set: formatSingleBucketQuestions(questions),
+                qualification_criteria: isChat
+                    ? formatSingleBucketQuestions(questions)
+                    : "[see chat screening prompt for qualification]",
+                incentive_line: incentive || "[no incentive configured]",
+            };
+
+            results.push({
+                cohort,
+                interviewType: type,
+                label,
+                questionCount: questions.length,
+                prompt: substituteVariables(template, variables),
+            });
+        }
+    }
+
+    return results;
 }

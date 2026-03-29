@@ -105,3 +105,49 @@ export interface AssistantResponse {
     actions: AIAction[];
     followUpChips: string[];
 }
+
+// ── Progress Tracking ──
+
+export type StudyStep = "title" | "briefing" | "welcome_page" | "objectives" | "questions";
+
+export const STUDY_STEPS: { key: StudyStep; label: string }[] = [
+    { key: "title", label: "Title" },
+    { key: "briefing", label: "Research Brief" },
+    { key: "welcome_page", label: "Welcome Page" },
+    { key: "objectives", label: "Objectives" },
+    { key: "questions", label: "Questions" },
+];
+
+export interface StudyProgress {
+    completedSteps: StudyStep[];
+    totalSteps: number;
+    currentStep: StudyStep | null;
+    isComplete: boolean;
+    percentage: number;
+}
+
+export function getStudyProgress(study: StudyState): StudyProgress {
+    const completed: StudyStep[] = [];
+
+    if (study.title) completed.push("title");
+    if (study.briefing) completed.push("briefing");
+    if (study.welcomePage.title && study.welcomePage.description) completed.push("welcome_page");
+    if (study.topicGuide.objectives.length > 0) completed.push("objectives");
+    if (
+        study.topicGuide.objectives.length > 0 &&
+        study.topicGuide.objectives.every((o) => o.questions.length > 0)
+    ) {
+        completed.push("questions");
+    }
+
+    const total = STUDY_STEPS.length;
+    const nextStep = STUDY_STEPS.find((s) => !completed.includes(s.key));
+
+    return {
+        completedSteps: completed,
+        totalSteps: total,
+        currentStep: nextStep?.key ?? null,
+        isComplete: completed.length === total,
+        percentage: Math.round((completed.length / total) * 100),
+    };
+}

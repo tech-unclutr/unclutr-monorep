@@ -1,13 +1,68 @@
 import json
+import uuid
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.db import get_session
+from app.core.security import get_current_user
+from app.models.designed_study import DesignedStudy
+from app.models.user import User
+from app.models.iam import CompanyMembership
 from app.services.intelligence.llm_service import llm_service
 
 router = APIRouter()
+
+_PROMPT_TEMPLATE_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "execution_prompt_template.md"
+
+
+def _extract_prompt_from_md(content: str) -> str:
+    """Extract the raw prompt text from between the first ``` fences after '## PROMPT TEMPLATE'."""
+    marker = "## PROMPT TEMPLATE"
+    idx = content.find(marker)
+    if idx == -1:
+        return content
+    after_marker = content[idx + len(marker):]
+    start = after_marker.find("```")
+    if start == -1:
+        return after_marker.strip()
+    # skip the opening fence line
+    start = after_marker.find("\n", start) + 1
+    end = after_marker.find("```", start)
+    return after_marker[start:end].strip() if end != -1 else after_marker[start:].strip()
+
+
+@router.get("/prompt-template")
+async def get_execution_prompt_template():
+    """Return the raw execution prompt template for client-side variable substitution."""
+    try:
+        content = _PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+        return {"template": _extract_prompt_from_md(content)}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Prompt template file not found")
+
+
+# ── Auth helpers ──
+
+async def _get_company_id(
+    session: AsyncSession = Depends(get_session),
+    current_user_token: dict = Depends(get_current_user),
+) -> uuid.UUID:
+    user_id = current_user_token.get("uid")
+    user = await session.get(User, user_id)
+    if user and user.current_company_id:
+        return user.current_company_id
+    stmt = select(CompanyMembership).where(CompanyMembership.user_id == user_id)
+    membership = (await session.exec(stmt)).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="No company found for user")
+    return membership.company_id
 
 
 # ── Request / Response schemas ──
@@ -292,3 +347,138 @@ async def study_designer_chat(request: StudyDesignerChatRequest):
     except Exception as e:
         logger.error(f"Study designer chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Persistence schemas ──
+
+class StudySaveRequest(BaseModel):
+    title: str
+    initial_prompt: Optional[str] = ""
+    briefing: Optional[str] = ""
+    emotion_detection: bool = False
+    participant_languages: List[str] = ["English"]
+    reporting_language: str = "English"
+    advanced_settings: Dict[str, Any] = {}
+    welcome_page: Dict[str, Any] = {}
+    topic_guide: Dict[str, Any] = {}
+    conversation_history: List[Dict[str, Any]] = []
+    status: Optional[str] = "DRAFT"
+
+
+class StudySummary(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: str
+    initial_prompt: Optional[str]
+    briefing: Optional[str]
+    welcome_page: Optional[Dict[str, Any]] = None
+    topic_guide: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── CRUD endpoints ──
+
+@router.post("/save")
+async def save_study(
+    req: StudySaveRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user_token: dict = Depends(get_current_user),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Create or update a designed study. Upserts by (company_id, title)."""
+    user_id = current_user_token.get("uid")
+
+    # Check if study with same title exists for this company
+    stmt = select(DesignedStudy).where(
+        DesignedStudy.company_id == company_id,
+        DesignedStudy.title == req.title,
+    )
+    existing = (await session.exec(stmt)).first()
+
+    if existing:
+        # Update
+        existing.briefing = req.briefing
+        existing.initial_prompt = req.initial_prompt
+        existing.emotion_detection = req.emotion_detection
+        existing.participant_languages = req.participant_languages
+        existing.reporting_language = req.reporting_language
+        existing.advanced_settings = req.advanced_settings
+        existing.welcome_page = req.welcome_page
+        existing.topic_guide = req.topic_guide
+        existing.conversation_history = req.conversation_history
+        existing.status = req.status or existing.status
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+        await session.commit()
+        await session.refresh(existing)
+        return {"id": str(existing.id), "status": "updated"}
+    else:
+        # Create
+        study = DesignedStudy(
+            company_id=company_id,
+            user_id=user_id,
+            title=req.title,
+            initial_prompt=req.initial_prompt,
+            briefing=req.briefing,
+            emotion_detection=req.emotion_detection,
+            participant_languages=req.participant_languages,
+            reporting_language=req.reporting_language,
+            advanced_settings=req.advanced_settings,
+            welcome_page=req.welcome_page,
+            topic_guide=req.topic_guide,
+            conversation_history=req.conversation_history,
+            status=req.status or "DRAFT",
+        )
+        session.add(study)
+        await session.commit()
+        await session.refresh(study)
+        return {"id": str(study.id), "status": "created"}
+
+
+@router.get("/studies", response_model=List[StudySummary])
+async def list_studies(
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """List all designed studies for the current company."""
+    stmt = (
+        select(DesignedStudy)
+        .where(DesignedStudy.company_id == company_id, DesignedStudy.status != "ARCHIVED")
+        .order_by(DesignedStudy.updated_at.desc())
+    )
+    results = await session.exec(stmt)
+    return results.all()
+
+
+@router.get("/studies/{study_id}")
+async def get_study(
+    study_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Get a single designed study with full data."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+    return study
+
+
+@router.delete("/studies/{study_id}")
+async def archive_study(
+    study_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Soft-delete a study by setting status to ARCHIVED."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+    study.status = "ARCHIVED"
+    study.updated_at = datetime.utcnow()
+    session.add(study)
+    await session.commit()
+    return {"status": "archived"}

@@ -17,6 +17,8 @@ import {
     AIAction,
     ResearchObjective,
     Question,
+    getStudyProgress,
+    type StudyStep,
 } from "./types";
 import { api } from "@/lib/api";
 
@@ -74,7 +76,8 @@ type Action =
     | { type: "SET_LOADING"; loading: boolean }
     | { type: "ACCEPT_CHANGE"; changeId: string }
     | { type: "REJECT_CHANGE"; changeId: string }
-    | { type: "EXECUTE_ACTION"; action: AIAction };
+    | { type: "EXECUTE_ACTION"; action: AIAction }
+    | { type: "RESTORE_STATE"; state: DesignerState };
 
 // ── Reducer ──
 
@@ -443,6 +446,9 @@ function reducer(state: DesignerState, action: Action): DesignerState {
             };
         }
 
+        case "RESTORE_STATE":
+            return action.state;
+
         default:
             return state;
     }
@@ -471,12 +477,15 @@ export function useDesigner() {
 
 interface ProviderProps {
     initialPrompt: string;
+    savedStudyId?: string;
     children: ReactNode;
+    onStudyUpdate?: (study: StudyState) => void;
 }
 
-export function StudyDesignerProvider({ initialPrompt, children }: ProviderProps) {
+export function StudyDesignerProvider({ initialPrompt, savedStudyId, children, onStudyUpdate }: ProviderProps) {
     const [state, dispatch] = useReducer(reducer, { ...initialState, initialPrompt });
     const initialPromptSent = useRef(false);
+    const restoredFromSave = useRef(false);
 
     const callAssistant = useCallback(
         async (userText: string, currentState: DesignerState) => {
@@ -577,7 +586,72 @@ export function StudyDesignerProvider({ initialPrompt, children }: ProviderProps
         []
     );
 
+    // Restore saved study from backend if resuming
+    useEffect(() => {
+        if (!savedStudyId || restoredFromSave.current) return;
+        restoredFromSave.current = true;
+        initialPromptSent.current = true; // Skip initial LLM call
+
+        (async () => {
+            try {
+                const data = await api.get(`/study-designer/studies/${savedStudyId}`);
+                const restoredStudy: StudyState = {
+                    id: data.id,
+                    title: data.title || "",
+                    briefing: data.briefing || "",
+                    emotionDetection: data.emotion_detection ?? false,
+                    participantLanguages: data.participant_languages || ["English"],
+                    reportingLanguage: data.reporting_language || "English",
+                    advancedSettings: data.advanced_settings || initialState.study.advancedSettings,
+                    welcomePage: data.welcome_page || { title: "", description: "" },
+                    topicGuide: data.topic_guide || { introQuestions: [], objectives: [] },
+                };
+
+                const restoredConversation: ConversationMessage[] = (data.conversation_history || []).map(
+                    (m: any, i: number) => ({
+                        id: `restored-${i}`,
+                        role: m.role,
+                        content: m.content,
+                        timestamp: Date.now() - (data.conversation_history.length - i) * 1000,
+                    })
+                );
+
+                const restoredState: DesignerState = {
+                    study: restoredStudy,
+                    pendingChanges: [],
+                    conversation: restoredConversation,
+                    isLoading: false,
+                    initialPrompt: data.initial_prompt || initialPrompt,
+                };
+
+                dispatch({ type: "RESTORE_STATE", state: restoredState });
+
+                // Auto-generate the next incomplete section
+                const progress = getStudyProgress(restoredStudy);
+                if (!progress.isComplete && progress.currentStep) {
+                    const prompts: Partial<Record<StudyStep, string>> = {
+                        welcome_page: "Generate the welcome page title and message for participants.",
+                        objectives: "Create 2-3 research objectives with questions for this study.",
+                        questions: (() => {
+                            const obj = restoredStudy.topicGuide.objectives.find((o) => o.questions.length === 0);
+                            return obj
+                                ? `Generate interview questions for the objective "${obj.title}".`
+                                : "Add one more research objective with questions to round out the study.";
+                        })(),
+                    };
+                    const prompt = prompts[progress.currentStep];
+                    if (prompt) {
+                        setTimeout(() => callAssistant(prompt, restoredState), 300);
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to restore study:", e);
+            }
+        })();
+    }, [savedStudyId, initialPrompt]);
+
     // Send initial prompt on mount — AI will generate the title + brief
+    // Skipped when restoring a saved study
     useEffect(() => {
         if (initialPromptSent.current || !initialPrompt) return;
         initialPromptSent.current = true;
@@ -620,27 +694,30 @@ export function StudyDesignerProvider({ initialPrompt, children }: ProviderProps
     const generateNextSection = useCallback(() => {
         if (state.isLoading) return;
 
-        // Determine what to ask for based on what's empty
-        const { study } = state;
-        let prompt: string;
+        const progress = getStudyProgress(state.study);
+        if (progress.isComplete) return;
 
-        if (!study.welcomePage.title || !study.welcomePage.description) {
-            prompt = "Generate the welcome page title and message for participants.";
-        } else if (study.topicGuide.objectives.length === 0) {
-            prompt = "Create 2-3 research objectives with questions for this study.";
-        } else if (study.topicGuide.objectives.some((o) => o.questions.length === 0)) {
-            const obj = study.topicGuide.objectives.find((o) => o.questions.length === 0);
-            prompt = `Generate interview questions for the objective "${obj?.title}".`;
-        } else if (study.topicGuide.objectives.length < 2) {
-            prompt = "Add one more research objective with questions to round out the study.";
-        } else {
-            return; // Study is complete
-        }
+        const STEP_PROMPTS: Record<string, string | (() => string)> = {
+            welcome_page: "Generate the welcome page title and message for participants.",
+            objectives: "Create 2-3 research objectives with questions for this study.",
+            questions: () => {
+                const obj = state.study.topicGuide.objectives.find((o) => o.questions.length === 0);
+                return obj
+                    ? `Generate interview questions for the objective "${obj.title}".`
+                    : "Add one more research objective with questions to round out the study.";
+            },
+        };
 
-        // Send as a system-initiated message (not shown as user bubble)
+        const step = progress.currentStep;
+        if (!step || !(step in STEP_PROMPTS)) return;
+
+        const entry = STEP_PROMPTS[step];
+        const prompt = typeof entry === "function" ? entry() : entry;
+
         const stateSnapshot: DesignerState = { ...state };
         callAssistant(prompt, stateSnapshot);
     }, [state, callAssistant]);
+
 
     const acceptChange = useCallback(
         (changeId: string) => dispatch({ type: "ACCEPT_CHANGE", changeId }),
@@ -649,6 +726,36 @@ export function StudyDesignerProvider({ initialPrompt, children }: ProviderProps
 
     const rejectChange = useCallback(
         (changeId: string) => dispatch({ type: "REJECT_CHANGE", changeId }),
+        []
+    );
+
+    // ── Auto-save to backend ──
+    const saveStudy = useCallback(
+        async (currentState: DesignerState) => {
+            const { study } = currentState;
+            if (!study.title) return; // Don't save untitled studies
+            try {
+                await api.post("/study-designer/save", {
+                    title: study.title,
+                    initial_prompt: currentState.initialPrompt,
+                    briefing: study.briefing,
+                    emotion_detection: study.emotionDetection,
+                    participant_languages: study.participantLanguages,
+                    reporting_language: study.reportingLanguage,
+                    advanced_settings: study.advancedSettings,
+                    welcome_page: study.welcomePage,
+                    topic_guide: study.topicGuide,
+                    conversation_history: currentState.conversation.map((m) => ({
+                        role: m.role,
+                        content: m.content,
+                    })),
+                    status: "DRAFT",
+                });
+            } catch (e) {
+                // Silent fail — save is best-effort, don't block the design flow
+                console.warn("Auto-save failed:", e);
+            }
+        },
         []
     );
 
@@ -662,11 +769,18 @@ export function StudyDesignerProvider({ initialPrompt, children }: ProviderProps
 
         // Trigger next section only when pending goes from >0 to 0 (user resolved all proposals)
         if (wasPending && nowClear && !state.isLoading) {
+            // Auto-save on every batch resolution
+            saveStudy(state);
             // Small delay so the UI settles before next batch appears
             const timer = setTimeout(() => generateNextSection(), 600);
             return () => clearTimeout(timer);
         }
-    }, [state.pendingChanges, state.isLoading, generateNextSection]);
+    }, [state.pendingChanges, state.isLoading, generateNextSection, saveStudy, state]);
+
+    // Notify parent of study state changes (used by StudyPlanner to pass context to recruitment)
+    useEffect(() => {
+        onStudyUpdate?.(state.study);
+    }, [state.study, onStudyUpdate]);
 
     return (
         <DesignerContext.Provider value={{ state, dispatch, sendMessage, acceptChange, rejectChange, generateNextSection }}>

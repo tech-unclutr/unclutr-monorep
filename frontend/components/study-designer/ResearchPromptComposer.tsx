@@ -2,32 +2,41 @@
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Paperclip, Mic, ArrowUp, Loader2, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowUp, Loader2, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface ResearchPromptComposerProps {
     onSubmit: (prompt: string) => void;
     isLoading?: boolean;
+    templatePrompt?: string;
+    onValueChange?: (value: string) => void;
 }
 
 const EXAMPLE_PROMPTS = [
     "Why are Indian millennials switching from traditional banks to neobanks?",
-    "How do Gen Z consumers discover and evaluate sustainable fashion brands?",
-    "What drives repeat purchases in the premium skincare category?",
-    "How do working parents decide between meal kits and eating out?",
+    "What makes Gen Z trust a new skincare brand enough to buy?",
+    "How do working parents choose between cooking at home and ordering in?",
+    "What drives repeat purchases in the premium coffee subscription space?",
 ];
 
-export function ResearchPromptComposer({ onSubmit, isLoading = false }: ResearchPromptComposerProps) {
+export function ResearchPromptComposer({
+    onSubmit,
+    isLoading = false,
+    templatePrompt,
+    onValueChange,
+}: ResearchPromptComposerProps) {
     const [value, setValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
     const [placeholderIdx, setPlaceholderIdx] = useState(0);
     const [displayedPlaceholder, setDisplayedPlaceholder] = useState("");
     const [isTypingPlaceholder, setIsTypingPlaceholder] = useState(true);
+    const [shiftEnterUsed, setShiftEnterUsed] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const templateAnimRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Typewriter effect for rotating placeholder
     useEffect(() => {
-        if (value || isFocused) return; // Stop when user is interacting
+        if (value || isFocused) return;
 
         const fullText = EXAMPLE_PROMPTS[placeholderIdx];
         let charIdx = 0;
@@ -40,15 +49,55 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
             if (charIdx >= fullText.length) {
                 clearInterval(typeInterval);
                 setIsTypingPlaceholder(false);
-                // Pause, then move to next
                 setTimeout(() => {
                     setPlaceholderIdx((prev) => (prev + 1) % EXAMPLE_PROMPTS.length);
-                }, 3000);
+                }, 4000);
             }
-        }, 35);
+        }, 42);
 
         return () => clearInterval(typeInterval);
     }, [placeholderIdx, value, isFocused]);
+
+    // Animate template prompt fill at 15ms/char
+    useEffect(() => {
+        if (!templatePrompt) return;
+
+        if (templateAnimRef.current) clearInterval(templateAnimRef.current);
+        setValue("");
+        let charIdx = 0;
+
+        templateAnimRef.current = setInterval(() => {
+            charIdx++;
+            const next = templatePrompt.slice(0, charIdx);
+            setValue(next);
+            onValueChange?.(next);
+            if (charIdx >= templatePrompt.length) {
+                clearInterval(templateAnimRef.current!);
+                templateAnimRef.current = null;
+                // Focus and move cursor to first bracket
+                setTimeout(() => {
+                    const el = textareaRef.current;
+                    if (!el) return;
+                    el.focus();
+                    const bracketIdx = templatePrompt.indexOf("[");
+                    if (bracketIdx !== -1) {
+                        const closeBracket = templatePrompt.indexOf("]", bracketIdx);
+                        el.setSelectionRange(bracketIdx, closeBracket + 1);
+                    }
+                }, 50);
+            }
+        }, 15);
+
+        return () => {
+            if (templateAnimRef.current) clearInterval(templateAnimRef.current);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [templatePrompt]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setValue(e.target.value);
+        onValueChange?.(e.target.value);
+    };
 
     const handleSubmit = () => {
         const trimmed = value.trim();
@@ -61,17 +110,15 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
             e.preventDefault();
             handleSubmit();
         }
-    };
-
-    const handleExampleClick = (example: string) => {
-        setValue(example);
-        textareaRef.current?.focus();
+        if (e.key === "Enter" && e.shiftKey) {
+            setShiftEnterUsed(true);
+        }
     };
 
     const hasValue = value.trim().length > 0;
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -80,15 +127,15 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
                 className="text-center mb-8"
             >
                 <div className="flex items-center justify-center gap-2.5 mb-4">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF8A4C] to-[#FF6B2C] flex items-center justify-center shadow-lg shadow-orange-500/20">
-                        <Sparkles className="w-4.5 h-4.5 text-white" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF8A4C] to-[#FF6B2C] flex items-center justify-center shadow-lg shadow-orange-500/20">
+                        <Sparkles className="w-5 h-5 text-white" />
                     </div>
                 </div>
                 <h2 className="text-[28px] font-bold text-foreground tracking-tight leading-tight font-display">
-                    What do you want to research?
+                    Design your next study
                 </h2>
                 <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-                    Describe your research goal and our AI will help you design a complete study.
+                    Describe what you want to learn — our AI builds the complete study for you.
                 </p>
             </motion.div>
 
@@ -112,7 +159,7 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
                         <textarea
                             ref={textareaRef}
                             value={value}
-                            onChange={(e) => setValue(e.target.value)}
+                            onChange={handleChange}
                             onKeyDown={handleKeyDown}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
@@ -136,22 +183,13 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
 
                     {/* Toolbar */}
                     <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 dark:border-[#27272A]/50">
-                        <div className="flex items-center gap-1">
-                            <button
-                                type="button"
-                                className="flex items-center gap-1.5 text-muted-foreground/60 hover:text-foreground text-[12px] font-medium px-2.5 py-1.5 rounded-lg hover:bg-muted/50 transition-all active:scale-[0.97]"
-                            >
-                                <Paperclip className="w-3.5 h-3.5" />
-                                Attach
-                            </button>
-                            <button
-                                type="button"
-                                className="flex items-center gap-1.5 text-muted-foreground/60 hover:text-foreground text-[12px] font-medium px-2.5 py-1.5 rounded-lg hover:bg-muted/50 transition-all active:scale-[0.97]"
-                            >
-                                <Mic className="w-3.5 h-3.5" />
-                                Voice
-                            </button>
-                        </div>
+                        <motion.span
+                            animate={{ opacity: shiftEnterUsed ? 0 : 1 }}
+                            transition={{ duration: 0.4 }}
+                            className="text-[10px] text-muted-foreground/30 font-medium select-none"
+                        >
+                            Shift+Enter for new line
+                        </motion.span>
                         <motion.button
                             type="button"
                             onClick={handleSubmit}
@@ -168,7 +206,7 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : hasValue ? (
                                 <>
-                                    <span className="text-[12px] font-semibold">Start</span>
+                                    <span className="text-[12px] font-semibold">Start Research</span>
                                     <ArrowUp className="w-3.5 h-3.5" strokeWidth={2.5} />
                                 </>
                             ) : (
@@ -177,33 +215,15 @@ export function ResearchPromptComposer({ onSubmit, isLoading = false }: Research
                         </motion.button>
                     </div>
                 </div>
-            </motion.div>
 
-            {/* Example prompts */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="mt-6 w-full max-w-[640px]"
-            >
-                <p className="text-[10px] font-medium text-muted-foreground/40 uppercase tracking-widest mb-2.5 px-1">
-                    Try an example
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                    {EXAMPLE_PROMPTS.map((example, i) => (
-                        <motion.button
-                            key={i}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: 0.35 + i * 0.06 }}
-                            onClick={() => handleExampleClick(example)}
-                            className="text-left px-3.5 py-2.5 rounded-xl border border-gray-100 dark:border-[#27272A] text-[12px] text-muted-foreground leading-relaxed hover:border-[#FF8A4C]/30 hover:text-foreground hover:bg-[#FF8A4C]/[0.03] transition-all active:scale-[0.98] group"
-                        >
-                            <span className="text-[#FF8A4C]/50 group-hover:text-[#FF8A4C] mr-1 transition-colors">&rarr;</span>
-                            {example}
-                        </motion.button>
-                    ))}
-                </div>
+                {/* Guidance tip */}
+                <motion.p
+                    animate={{ opacity: hasValue ? 0 : 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-[11px] text-muted-foreground/50 text-center font-medium mt-3"
+                >
+                    Tip: Include your target audience, product category, and what you want to learn
+                </motion.p>
             </motion.div>
         </div>
     );

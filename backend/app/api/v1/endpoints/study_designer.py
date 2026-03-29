@@ -349,6 +349,136 @@ async def study_designer_chat(request: StudyDesignerChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Prompt Chat (execution prompt assistant) ──
+
+class PromptChatRequest(BaseModel):
+    prompt: str
+    messages: List[ChatMessage]
+    user_message: str
+
+
+class PromptSuggestion(BaseModel):
+    section: str
+    description: str
+    modified_prompt: str
+
+
+class PromptChatResponse(BaseModel):
+    reply: str
+    suggestion: Optional[PromptSuggestion] = None
+    follow_up_chips: List[str]
+
+
+PROMPT_CHAT_SYSTEM = """You are an execution prompt assistant for SquareUp, a consumer research platform.
+Your job is to help users refine the AI voice agent's execution prompt before launching a campaign.
+
+The execution prompt controls how the AI voice agent conducts research interviews. It contains:
+- ROLE: The agent's persona and purpose
+- CORE CONTEXT: Study title, research brief, objectives (filled with real data)
+- TONE guidelines
+- HARD BEHAVIOR RULES
+- CALL FLOW: 10 states (OPENING → CONSENT → SCREENING → QUALIFICATION DECISION → MAIN INTERVIEW → PROBING → STUDY-SPECIFIC BRANCHES → TRANSITIONS → WRAP-UP → SCHEDULING)
+- POST-CALL LOGIC
+
+WHAT YOU CAN HELP WITH:
+- Modifying the TONE (e.g., "make it warmer", "sound more formal")
+- Adjusting CALL FLOW states (e.g., "add a case for churned users", "skip the incentive mention")
+- Editing HARD BEHAVIOR RULES (e.g., "allow up to 3 probing questions", "never mention competitors")
+- Updating the ROLE or CORE CONTEXT framing
+- Adding new STUDY-SPECIFIC BRANCHES for cohorts or decision trees
+- Rewording any section for clarity or brand voice
+
+BEHAVIOR:
+- When the user requests a change, apply it precisely to the prompt and return the full modified prompt
+- When the user asks a question (not a change request), answer it without modifying the prompt
+- Keep replies to 1-2 sentences — be direct and confident
+- Always return valid JSON only
+
+RESPONSE FORMAT (no markdown, no code blocks):
+{
+  "reply": "Conversational 1-2 sentence response",
+  "suggestion": {
+    "section": "The section name you modified (e.g., TONE, CALL FLOW, HARD BEHAVIOR RULES)",
+    "description": "Short description of what changed",
+    "modified_prompt": "The full modified prompt text here"
+  },
+  "follow_up_chips": ["Chip 1", "Chip 2", "Chip 3"]
+}
+
+If no modification is needed (informational query only), set "suggestion" to null.
+
+Follow-up chips should be actionable next edits the user might want, e.g.:
+- "Make the tone warmer"
+- "Add a case for churned users"
+- "Remove the incentive mention"
+- "Shorten the opening script"
+- "Add more probing questions"
+
+Always return valid JSON only."""
+
+
+def _build_prompt_chat_prompt(request: PromptChatRequest) -> str:
+    parts = [PROMPT_CHAT_SYSTEM]
+    parts.append(f"\n\nCURRENT EXECUTION PROMPT:\n{request.prompt}")
+    if request.messages:
+        parts.append("\n\nCONVERSATION HISTORY:")
+        for msg in request.messages[-6:]:
+            parts.append(f"\n{msg.role}: {msg.content}")
+    parts.append(f"\n\nuser: {request.user_message}")
+    parts.append("\n\nRespond with ONLY valid JSON:")
+    return "\n".join(parts)
+
+
+def _parse_prompt_chat_response(raw_text: str) -> PromptChatResponse:
+    text = raw_text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+    if text.endswith("```"):
+        text = text.rsplit("```", 1)[0]
+    text = text.replace("```json", "").replace("```", "").strip()
+
+    try:
+        data = json.loads(text)
+        suggestion_data = data.get("suggestion")
+        suggestion = PromptSuggestion(**suggestion_data) if suggestion_data else None
+        return PromptChatResponse(
+            reply=data.get("reply", "I've updated the prompt."),
+            suggestion=suggestion,
+            follow_up_chips=data.get("follow_up_chips", []),
+        )
+    except Exception as e:
+        logger.warning(f"Failed to parse prompt chat LLM response: {e}\nRaw: {text[:500]}")
+        return PromptChatResponse(
+            reply=text[:500] if text else "I can help you refine the execution prompt. What would you like to change?",
+            suggestion=None,
+            follow_up_chips=["Make the tone warmer", "Add a decision tree case", "Adjust behavior rules"],
+        )
+
+
+@router.post("/prompt-chat", response_model=PromptChatResponse)
+async def prompt_chat(request: PromptChatRequest):
+    """Chat endpoint for refining the execution agent prompt using Gemini."""
+    llm_prompt = _build_prompt_chat_prompt(request)
+
+    try:
+        llm_service._ensure_configured()
+        if not llm_service.model:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
+            )
+        raw_text = await llm_service._generate(llm_prompt)
+        return _parse_prompt_chat_response(raw_text)
+    except HTTPException:
+        raise
+    except TimeoutError:
+        logger.error("Gemini prompt-chat request timed out")
+        raise HTTPException(status_code=504, detail="AI service timed out.")
+    except Exception as e:
+        logger.error(f"Prompt chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Persistence schemas ──
 
 class StudySaveRequest(BaseModel):

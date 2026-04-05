@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { FlaskConical, BookOpen, X, Mic, Users, ClipboardList } from "lucide-react";
+import { FlaskConical, BookOpen, X, Mic, Users, ClipboardList, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StudyHomePage } from "@/components/study-designer/StudyHomePage";
 import { InterviewBuilder } from "./components/InterviewBuilder";
 import { RecruitmentPage } from "@/components/recruitment/RecruitmentPage";
 import { StudyPlanner } from "./components/StudyPlanner";
+import { VoiceSandbox } from "@/components/voice-sandbox/VoiceSandbox";
 
 interface ComponentEntry {
     name: string;
@@ -54,6 +55,15 @@ const COMPONENTS: ComponentEntry[] = [
         shadowColor: "shadow-violet-500/20",
         fullWidth: true,
         render: () => <StudyPlanner />,
+    },
+    {
+        name: "Voice Sandbox",
+        description: "Live execution command center with AI agents",
+        icon: <Radio className="w-5 h-5 text-white" />,
+        gradient: "from-emerald-600 to-teal-500",
+        shadowColor: "shadow-emerald-500/20",
+        fullWidth: true,
+        render: () => <VoiceSandbox />,
     },
 ];
 

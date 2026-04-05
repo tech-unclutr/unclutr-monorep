@@ -2,17 +2,19 @@
 
 import React, { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { BookOpen, Users, CheckCircle2 } from "lucide-react";
+import { BookOpen, Users, CheckCircle2, Radio } from "lucide-react";
 import { StudyHomePage } from "@/components/study-designer/StudyHomePage";
 import { RecruitmentPage } from "@/components/recruitment/RecruitmentPage";
 import { type StudyContext } from "@/components/recruitment/ExecutionPromptView";
 import { type StudyState } from "@/components/study-designer/types";
+import { VoiceSandbox } from "@/components/voice-sandbox/VoiceSandbox";
 
-type Phase = "design" | "recruit";
+type Phase = "design" | "recruit" | "execute";
 
 const PHASES = [
     { key: "design" as const, label: "Study Design", icon: BookOpen },
     { key: "recruit" as const, label: "Recruitment", icon: Users },
+    { key: "execute" as const, label: "Execution", icon: Radio },
 ];
 
 export function StudyPlanner() {
@@ -108,6 +110,10 @@ export function StudyPlanner() {
 
                 {phase === "recruit" && (
                     <RecruitmentPage studyContext={studyContext} />
+                )}
+
+                {phase === "execute" && (
+                    <VoiceSandbox className="h-full" />
                 )}
             </div>
         </div>

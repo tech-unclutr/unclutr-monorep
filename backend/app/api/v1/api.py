@@ -26,6 +26,7 @@ from app.api.v1.endpoints import (
     study_designer,
     user_queue,
     users,
+    voice_sandbox,
 )
 
 api_router = APIRouter()
@@ -53,6 +54,7 @@ api_router.include_router(user_queue.router, prefix="/user-queue", tags=["User Q
 api_router.include_router(calendar_booking.router, prefix="/execution", tags=["Calendar Booking"])
 api_router.include_router(studies.router, prefix="/studies", tags=["Studies"])
 api_router.include_router(study_designer.router, prefix="/study-designer", tags=["Study Designer"])
+api_router.include_router(voice_sandbox.router, prefix="/voice-sandbox", tags=["Voice Sandbox"])
 
 
 

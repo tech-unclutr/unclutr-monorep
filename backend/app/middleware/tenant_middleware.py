@@ -85,7 +85,8 @@ class TenantMiddleware:
             "/intelligence/interview/bolna-webhook",
             "/webhook/bolna",
             "/debug/queue-status",
-            "/research"
+            "/research",
+            "/voice-sandbox"
         ]
         
         # Check if path starts with any public path OR contains /webhooks/ OR is exactly / OR ends with /ws

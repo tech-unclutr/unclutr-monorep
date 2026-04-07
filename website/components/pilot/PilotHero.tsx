@@ -8,7 +8,7 @@ import HeroBriefPreview from "@/components/pilot/HeroBriefPreview";
 import PilotCTAButton from "@/components/pilot/PilotCTAButton";
 import { useSectionVisibility, useCTATracking } from "@/lib/analytics";
 
-const CALENDLY_URL = "https://cal.com/squareup-ai/discovery-setup-call";
+const CALENDLY_URL = "https://calendar.app.google/WyiQUVRZxAdJJ5Yu7";
 
 const QUESTIONS = [
   "What do first-time buyers actually think when they see your brand?",

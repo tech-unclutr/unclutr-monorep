@@ -91,8 +91,8 @@ export default function PilotSlots() {
 
         <Reveal width="100%" delay={0.24}>
           <a
-            href="https://cal.com/squareup-ai/discovery-setup-call"
-            onClick={() => trackCTA("Claim your pilot slot", "https://cal.com/squareup-ai/discovery-setup-call", "pilot_slots", "main")}
+            href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
+            onClick={() => trackCTA("Claim your pilot slot", "https://calendar.app.google/WyiQUVRZxAdJJ5Yu7", "pilot_slots", "main")}
             className="inline-flex items-center justify-center mt-8 bg-lime text-white rounded-xl font-display text-base min-h-[56px] w-full sm:w-auto sm:min-w-[240px] px-8 hover:brightness-110 active:scale-[0.97] transition-all"
           >
             Claim your pilot slot →

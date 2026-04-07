@@ -5,7 +5,7 @@ import Reveal from "@/components/ui/Reveal";
 import PilotCTAButton from "@/components/pilot/PilotCTAButton";
 import { useSectionVisibility } from "@/lib/analytics";
 
-const CALENDLY_URL = "https://cal.com/squareup-ai/discovery-setup-call";
+const CALENDLY_URL = "https://calendar.app.google/WyiQUVRZxAdJJ5Yu7";
 const TOTAL_SLOTS = 4;
 const FILLED_SLOTS = 2;
 const OPEN_SLOTS = TOTAL_SLOTS - FILLED_SLOTS;

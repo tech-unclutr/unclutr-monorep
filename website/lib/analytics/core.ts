@@ -12,7 +12,7 @@ declare global {
   }
 }
 
-const GA_MEASUREMENT_ID = "G-367H1C279N";
+const GA_MEASUREMENT_ID = "G-61SMHLG5RJ";
 
 // ── Privacy & Consent ────────────────────────────────────────────────────────
 

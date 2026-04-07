@@ -45,8 +45,8 @@ export default function PilotNav() {
         style={{ height: "clamp(52px, 15vw, 72px)" }}
       >
         <a
-          href="https://cal.com/squareup-ai/discovery-setup-call"
-          onClick={() => trackCTA("Book a call", "https://cal.com/squareup-ai/discovery-setup-call", "pilot_nav", "nav_bar")}
+          href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
+          onClick={() => trackCTA("Book a call", "https://calendar.app.google/WyiQUVRZxAdJJ5Yu7", "pilot_nav", "nav_bar")}
           className="bg-maze-black text-white rounded-full px-3 sm:px-4 py-1.5 text-[12px] sm:text-[13px] font-bold hover:bg-black active:scale-[0.97] transition-all"
         >
           Book a call

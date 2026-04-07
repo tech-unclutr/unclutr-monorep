@@ -116,7 +116,7 @@ export default function PilotFAQ() {
           <div className="mt-10 flex justify-center">
             <PilotCTAButton
               label="Book a 20-min call"
-              href="https://cal.com/squareup-ai/discovery-setup-call"
+              href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
               section="pilot_faq"
             />
           </div>

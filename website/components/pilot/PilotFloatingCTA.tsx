@@ -46,8 +46,8 @@ export default function PilotFloatingCTA() {
         </div>
 
         <a
-          href="https://cal.com/squareup-ai/discovery-setup-call"
-          onClick={() => trackCTA("Book pilot call", "https://cal.com/squareup-ai/discovery-setup-call", "pilot_floating_cta", "floating")}
+          href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
+          onClick={() => trackCTA("Book pilot call", "https://calendar.app.google/WyiQUVRZxAdJJ5Yu7", "pilot_floating_cta", "floating")}
           className="bg-white text-lime h-full px-5 rounded-[18px] font-bold text-[13px] uppercase tracking-tight hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap shadow-lg"
         >
           <Zap size={14} className="fill-current" />

@@ -441,7 +441,7 @@ export default function HowItWorks({
           <div className="mt-6 flex justify-center">
             <PilotCTAButton
               label="Book a 20-min call"
-              href="https://cal.com/squareup-ai/discovery-setup-call"
+              href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
               section="pilot_how"
             />
           </div>

@@ -135,7 +135,7 @@ export default function PilotPricing() {
             <div className="mt-8 flex justify-center">
               <PilotCTAButton
                 label="Get a quote in 20 minutes"
-                href="https://cal.com/squareup-ai/discovery-setup-call"
+                href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
                 section="pilot_pricing"
                 fullWidthMobile
               />

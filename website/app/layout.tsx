@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: "/og-image.png?v=4",
+        url: `${siteUrl}/og-image.png?v=4`,
         width: 1200,
         height: 630,
         alt: "SquareUp — Customer Understanding for Consumer Companies",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: ["/og-image.png?v=4"],
+    images: [`${siteUrl}/og-image.png?v=4`],
   },
   icons: {
     icon: "/favicon.ico",

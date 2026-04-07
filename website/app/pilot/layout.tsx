@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.png?v=4",
+        url: "https://joinsquareup.com/og-image.png?v=4",
         width: 1200,
         height: 630,
         alt: "SquareUp — 48-Hour Customer Research Pilot",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "48-Hour Customer Research Pilot | SquareUp",
     description:
       "Get a decision-ready customer research brief in 48 hours. 10x less cost than traditional agencies.",
-    images: ["/og-image.png?v=4"],
+    images: ["https://joinsquareup.com/og-image.png?v=4"],
   },
   robots: {
     index: true,

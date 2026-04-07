@@ -13,9 +13,13 @@
         ],
         "development": [
           "unclutr-monorep"
-        ],
+        ]
+      }
+    },
+    "squareup-website": {
+      "hosting": {
         "website-production": [
-          "joinsquareup-website"
+          "squareup-website"
         ]
       }
     }

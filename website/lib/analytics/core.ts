@@ -28,7 +28,7 @@ function hasConsentBlocked(): boolean {
   try {
     if (typeof localStorage === "undefined") return false;
     return localStorage.getItem("sq_analytics_consent") === "denied";
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -46,7 +46,7 @@ function isDebugMode(): boolean {
   try {
     if (typeof localStorage === "undefined") return false;
     return localStorage.getItem("sq_analytics_debug") === "true";
-  } catch (e) {
+  } catch {
     return false;
   }
 }

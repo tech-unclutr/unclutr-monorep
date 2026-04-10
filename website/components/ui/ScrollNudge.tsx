@@ -15,7 +15,7 @@ export default function ScrollNudge() {
         setDismissed(true);
         return;
       }
-    } catch (error) {
+    } catch {
       // Ignore sessionStorage access errors in restrictive incognito modes
     }
 
@@ -40,7 +40,7 @@ export default function ScrollNudge() {
         setDismissed(true);
         try {
           sessionStorage.setItem("scroll-nudge-dismissed", "1");
-        } catch (error) {}
+        } catch {}
         return;
       }
       startIdleTimer();

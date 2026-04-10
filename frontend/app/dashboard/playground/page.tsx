@@ -1,13 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FlaskConical, BookOpen, X, Mic, Users, ClipboardList, Radio } from "lucide-react";
+import { FlaskConical, BookOpen, X, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StudyHomePage } from "@/components/study-designer/StudyHomePage";
-import { InterviewBuilder } from "./components/InterviewBuilder";
-import { RecruitmentPage } from "@/components/recruitment/RecruitmentPage";
 import { StudyPlanner } from "./components/StudyPlanner";
-import { VoiceSandbox } from "@/components/voice-sandbox/VoiceSandbox";
 
 interface ComponentEntry {
     name: string;
@@ -30,40 +27,13 @@ const COMPONENTS: ComponentEntry[] = [
         render: () => <StudyHomePage />,
     },
     {
-        name: "Interview Builder",
-        description: "Organize questions across interview categories",
-        icon: <Mic className="w-5 h-5 text-white" />,
-        gradient: "from-indigo-500 to-blue-600",
-        shadowColor: "shadow-indigo-500/20",
-        fullWidth: true,
-        render: () => <InterviewBuilder />,
-    },
-    {
-        name: "Recruitment",
-        description: "AI-powered participant recruitment pipeline",
-        icon: <Users className="w-5 h-5 text-white" />,
-        gradient: "from-emerald-500 to-teal-600",
-        shadowColor: "shadow-emerald-500/20",
-        fullWidth: true,
-        render: () => <RecruitmentPage />,
-    },
-    {
         name: "Study Planner",
-        description: "End-to-end study design & recruitment flow",
+        description: "End-to-end study design, recruitment & execution",
         icon: <ClipboardList className="w-5 h-5 text-white" />,
         gradient: "from-violet-600 to-indigo-500",
         shadowColor: "shadow-violet-500/20",
         fullWidth: true,
         render: () => <StudyPlanner />,
-    },
-    {
-        name: "Voice Sandbox",
-        description: "Live execution command center with AI agents",
-        icon: <Radio className="w-5 h-5 text-white" />,
-        gradient: "from-emerald-600 to-teal-500",
-        shadowColor: "shadow-emerald-500/20",
-        fullWidth: true,
-        render: () => <VoiceSandbox />,
     },
 ];
 

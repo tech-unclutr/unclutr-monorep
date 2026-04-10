@@ -1,11 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { X, FileText, Copy, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { LeadPipeline } from "./LeadPipeline";
 import { ExecutionEngine } from "./ExecutionEngine";
 import { ActivityStream } from "./ActivityStream";
+import { useRecruitment } from "@/components/recruitment/RecruitmentContext";
+import {
+    buildPerCombinationPrompts,
+    fetchPromptTemplate,
+    combinationKey,
+    INTERVIEW_TYPE_LABELS,
+    type CombinationPrompt,
+    type InterviewTypeKey,
+} from "@/lib/executionPromptTemplate";
 import {
     COHORT_META,
     type Lead,
@@ -16,10 +26,25 @@ import {
 
 interface VoiceSandboxProps {
     className?: string;
+    studyId?: string;
 }
 
 const POLL_INTERVAL_MS = 1_500;
 const DURATIONS: InterviewDuration[] = [15, 30, 60];
+
+/** Maps InterviewBuilder audio buckets to interview durations. */
+const BUCKET_TO_DURATION: Record<string, InterviewDuration> = {
+    audioA: 15,
+    audioB: 30,
+    audioC: 60,
+};
+
+/** Reverse: duration → InterviewTypeKey for prompt lookup. */
+const DURATION_TO_BUCKET: Record<number, InterviewTypeKey> = {
+    15: "audioA",
+    30: "audioB",
+    60: "audioC",
+};
 
 // ── Map backend agent shape to frontend Agent type ─────────────────
 
@@ -50,6 +75,7 @@ function mapLead(raw: any): Lead {
         company: raw.company,
         score: raw.score,
         cohort: raw.cohort,
+        cohortName: raw.cohortName ?? undefined,
         status: raw.status,
         assignedAgentId: raw.assignedAgentId ?? null,
         sentiment: raw.sentiment ?? undefined,
@@ -70,7 +96,9 @@ function mapActivity(raw: any): ActivityEntry {
 
 // ── Component ──────────────────────────────────────────────────────
 
-export function VoiceSandbox({ className }: VoiceSandboxProps) {
+export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
+    const { selectedCohorts, getCohortCategories, getCohortIncentives, getCombinationCustomPrompt, cohortInterviews, cohortIncentives } = useRecruitment();
+
     const [leads, setLeads] = useState<Lead[]>([]);
     const [agents, setAgents] = useState<Agent[]>([]);
     const [activity, setActivity] = useState<ActivityEntry[]>([]);
@@ -79,6 +107,65 @@ export function VoiceSandbox({ className }: VoiceSandboxProps) {
     const [loading, setLoading] = useState(true);
 
     const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+    // ── Build cohort → interview type mapping from RecruitmentContext ──
+
+    const cohortInterviewMap = useMemo(() => {
+        const map: Record<string, number[]> = {};
+        for (const cohort of selectedCohorts) {
+            const cats = getCohortCategories(cohort);
+            const durations: number[] = [];
+            for (const [bucket, duration] of Object.entries(BUCKET_TO_DURATION)) {
+                const questions = cats[bucket as keyof typeof cats] || [];
+                if (questions.some((q: any) => q.selected)) {
+                    durations.push(duration);
+                }
+            }
+            if (durations.length > 0) {
+                map[cohort] = durations;
+            }
+        }
+        return map;
+    }, [selectedCohorts, getCohortCategories]);
+
+    // ── Prompt lookup for lead click modal ──────────────────────────
+
+    const [promptTemplate, setPromptTemplate] = useState("");
+    const [promptModalLead, setPromptModalLead] = useState<Lead | null>(null);
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        fetchPromptTemplate().then(setPromptTemplate).catch(console.error);
+    }, []);
+
+    const combinations = useMemo(() =>
+        promptTemplate
+            ? buildPerCombinationPrompts(promptTemplate, {
+                studyContext: studyId ? { studyId, title: "" } : undefined,
+                selectedCohorts,
+                getCohortCategories,
+                getCohortIncentives,
+            })
+            : [],
+    [promptTemplate, studyId, selectedCohorts, cohortInterviews, cohortIncentives, getCohortCategories, getCohortIncentives]);
+
+    const getPromptForLead = useCallback((lead: Lead): string | null => {
+        if (!lead.cohortName) return null;
+        const bucket = DURATION_TO_BUCKET[lead.cohort];
+        if (!bucket) return null;
+        const key = combinationKey(lead.cohortName, bucket);
+        const custom = getCombinationCustomPrompt(key);
+        if (custom) return custom;
+        const combo = combinations.find(
+            (c) => c.cohort === lead.cohortName && c.interviewType === bucket,
+        );
+        return combo?.prompt ?? null;
+    }, [combinations, getCombinationCustomPrompt]);
+
+    const handleLeadClick = useCallback((lead: Lead) => {
+        setPromptModalLead(lead);
+        setCopied(false);
+    }, []);
 
     // ── Apply backend state to local state ─────────────────────────
 
@@ -123,21 +210,28 @@ export function VoiceSandbox({ className }: VoiceSandboxProps) {
 
     // ── Initial load ───────────────────────────────────────────────
 
+    // ── Load leads into engine on mount (populates pipeline before Start) ──
+
     useEffect(() => {
-        async function fetchInitial() {
+        async function loadLeads() {
+            if (!studyId || Object.keys(cohortInterviewMap).length === 0) {
+                setLoading(false);
+                return;
+            }
             try {
-                // Always reset on mount to get a clean initial state
-                const data = await api.request("/voice-sandbox/reset", { method: "POST" });
+                const data = await api.post(`/voice-sandbox/load/${studyId}`, {
+                    cohort_interview_map: cohortInterviewMap,
+                });
                 applyState(data);
             } catch (err) {
-                console.error("[VoiceSandbox] Failed to fetch initial state:", err);
+                console.error("[VoiceSandbox] Failed to load leads:", err);
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchInitial();
-    }, [applyState]);
+        loadLeads();
+    }, [studyId, cohortInterviewMap, applyState]);
 
     // ── Polling loop: tick the backend engine ──────────────────────
 
@@ -175,7 +269,7 @@ export function VoiceSandbox({ className }: VoiceSandboxProps) {
 
     const handleStart = async () => {
         try {
-            const data = await api.request("/voice-sandbox/start", { method: "POST" });
+            const data = await api.post("/voice-sandbox/start");
             applyState(data);
         } catch (err) {
             console.error("[VoiceSandbox] Start failed:", err);
@@ -237,13 +331,6 @@ export function VoiceSandbox({ className }: VoiceSandboxProps) {
                                 Pause
                             </button>
                         )}
-                        <button
-                            onClick={handleReset}
-                            className="px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
-                        >
-                            Reset
-                        </button>
-
                         {/* Status badge */}
                         <div className={cn(
                             "flex items-center gap-2 px-4 py-2 rounded-full border",
@@ -296,6 +383,7 @@ export function VoiceSandbox({ className }: VoiceSandboxProps) {
                                         totalCount={pipelineCounts[d]}
                                         cohortLabel={meta.label}
                                         cohortAccent={meta.accent}
+                                        onLeadClick={handleLeadClick}
                                     />
                                 );
                             })}
@@ -306,6 +394,86 @@ export function VoiceSandbox({ className }: VoiceSandboxProps) {
                     <ActivityStream entries={activity} />
                 </div>
             </div>
+
+            {/* ── Lead Prompt Modal ─────────────────────────────────── */}
+            {promptModalLead && (() => {
+                const prompt = getPromptForLead(promptModalLead);
+                const bucket = DURATION_TO_BUCKET[promptModalLead.cohort];
+                const label = bucket ? INTERVIEW_TYPE_LABELS[bucket] : `${promptModalLead.cohort}-Min`;
+
+                return (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        onClick={() => setPromptModalLead(null)}
+                    >
+                        <div
+                            className="relative w-full max-w-2xl max-h-[80vh] mx-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                                        <FileText className="w-4 h-4 text-indigo-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                            {promptModalLead.name}
+                                        </p>
+                                        <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                                            {promptModalLead.cohortName && (
+                                                <span className="font-medium text-indigo-600 dark:text-indigo-400">{promptModalLead.cohortName}</span>
+                                            )}
+                                            {promptModalLead.cohortName && " · "}
+                                            {label}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {prompt && (
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(prompt);
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                                        >
+                                            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                            {copied ? "Copied" : "Copy"}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setPromptModalLead(null)}
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Prompt content */}
+                            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-subtle p-6">
+                                {prompt ? (
+                                    <pre className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono">
+                                        {prompt}
+                                    </pre>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <FileText className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mb-3" />
+                                        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                            No prompt configured
+                                        </p>
+                                        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                                            This cohort/interview type combination doesn't have a prompt assigned yet.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

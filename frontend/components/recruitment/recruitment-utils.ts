@@ -1,7 +1,8 @@
 // ─── Shared types & helpers for recruitment leads ─────────────────────────────
 
 export interface ExtractedLead {
-    customer_name: string;
+    first_name: string;
+    last_name?: string;
     contact_number: string;
     cohort?: string;
     contact_profile?: Record<string, any>;
@@ -66,8 +67,11 @@ export function autoMapHeaders(headers: string[]): ColumnMapping {
 export function buildLeads(rows: any[], mapping: ColumnMapping): ExtractedLead[] {
     if (!mapping.customer_name || !mapping.contact_number) return [];
     return rows.map((row) => {
+        const fullName = String(row[mapping.customer_name] || "").trim();
+        const spaceIdx = fullName.indexOf(" ");
         const lead: ExtractedLead = {
-            customer_name: row[mapping.customer_name],
+            first_name: spaceIdx > 0 ? fullName.slice(0, spaceIdx) : fullName,
+            last_name: spaceIdx > 0 ? fullName.slice(spaceIdx + 1) : undefined,
             contact_number: String(row[mapping.contact_number]).trim(),
             meta_data: row,
         };

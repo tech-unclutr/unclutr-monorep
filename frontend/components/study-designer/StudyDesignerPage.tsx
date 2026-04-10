@@ -47,7 +47,7 @@ import type { StudyState, InterviewMode, ConversationMessage, PendingChange, Res
 // Main Page — Two-pane layout
 // ════════════════════════════════════════════════════════════
 
-const MIN_FIRST_LOAD_MS = 5000; // Let the thinking animation play out fully
+const MIN_FIRST_LOAD_MS = 2000; // Brief thinking animation before showing content
 
 export function StudyDesignerPage() {
     const { state } = useDesigner();
@@ -95,7 +95,7 @@ const THINKING_PHASES = [
     { text: "Structuring your study design", icon: "structuring" },
 ] as const;
 
-const PHASE_DELAYS = [800, 2200, 3600, 4800];
+const PHASE_DELAYS = [300, 800, 1400];
 
 function FirstLoadScreen({ prompt }: { prompt: string }) {
     const [phase, setPhase] = useState(0);

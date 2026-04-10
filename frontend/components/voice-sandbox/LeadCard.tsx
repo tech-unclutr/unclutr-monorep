@@ -16,6 +16,8 @@ interface LeadCardProps {
     variant?: LeadCardVariant;
     /** Mount-only stagger delay in seconds — ignored after initial render */
     staggerIndex?: number;
+    /** Called when the card is clicked */
+    onClick?: (lead: Lead) => void;
 }
 
 // ── Animation variants ──────────────────────────────────────────────
@@ -98,6 +100,7 @@ export function LeadCard({
     compact = false,
     variant = "default",
     staggerIndex = 0,
+    onClick,
 }: LeadCardProps) {
     // ── Compact variant (used inside AgentCard) ─────────────────────
     if (compact) {
@@ -131,8 +134,10 @@ export function LeadCard({
             exit="exit"
             transition={{ layout: layoutSpring }}
             role="listitem"
+            onClick={onClick ? () => onClick(lead) : undefined}
             className={cn(
                 "flex items-center gap-3 rounded-xl border transition-colors duration-200",
+                onClick && "cursor-pointer",
                 isNextUp
                     ? "px-4 py-3.5 bg-gradient-to-r from-rose-50/80 via-white to-white dark:from-rose-500/[0.06] dark:via-zinc-950 dark:to-zinc-950 border-rose-200/60 dark:border-rose-500/15 shadow-[0_0_12px_rgba(244,63,94,0.06)]"
                     : isHot
@@ -184,9 +189,16 @@ export function LeadCard({
                         <Flame className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
                     )}
                 </div>
-                <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wide truncate">
-                    {lead.company}
-                </p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                    {lead.cohortName && (
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                            {lead.cohortName}
+                        </span>
+                    )}
+                    <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wide truncate">
+                        {lead.company}
+                    </p>
+                </div>
             </div>
 
             {/* Score */}

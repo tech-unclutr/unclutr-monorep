@@ -12,6 +12,7 @@ interface LeadPipelineProps {
     totalCount: number;
     cohortLabel?: string;
     cohortAccent?: CohortAccent;
+    onLeadClick?: (lead: Lead) => void;
 }
 
 // ── Conversational status copy that changes with pipeline state ─────
@@ -58,7 +59,7 @@ const ACCENT_CLASSES: Record<CohortAccent, { icon: string; bg: string; nextLabel
     },
 };
 
-export function LeadPipeline({ leads, totalCount, cohortLabel, cohortAccent = "rose" }: LeadPipelineProps) {
+export function LeadPipeline({ leads, totalCount, cohortLabel, cohortAccent = "rose", onLeadClick }: LeadPipelineProps) {
     const accent = ACCENT_CLASSES[cohortAccent];
     const waitingLeads = useMemo(
         () => leads.filter((l) => l.status === "waiting"),
@@ -151,7 +152,7 @@ export function LeadPipeline({ leads, totalCount, cohortLabel, cohortAccent = "r
                         </span>
                     </div>
                     <AnimatePresence mode="popLayout">
-                        <LeadCard key={nextUp.id} lead={nextUp} variant="next-up" />
+                        <LeadCard key={nextUp.id} lead={nextUp} variant="next-up" onClick={onLeadClick} />
                     </AnimatePresence>
                 </div>
             )}
@@ -188,6 +189,7 @@ export function LeadPipeline({ leads, totalCount, cohortLabel, cohortAccent = "r
                                         lead={lead}
                                         variant={lead.score >= 80 ? "hot" : "default"}
                                         staggerIndex={isFirstRender.current ? i : 0}
+                                        onClick={onLeadClick}
                                     />
                                 ))}
                             </AnimatePresence>

@@ -14,17 +14,14 @@ Mirrors queue_warmer logic:
   - Simulated call duration (no Bolna)
 """
 
-import copy
 import random
 import time
 import logging
 from typing import Dict, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.services.voice_sandbox.lead_queue import (
-    SEED_LEADS,
     COHORT_META,
-    COHORT_PIPELINE_COUNTS,
     Lead,
     LeadStatus,
     SentimentType,
@@ -82,15 +79,6 @@ class ActivityEntry:
 
 # ── Config ──────────────────────────────────────────────────────────
 
-SEED_AGENTS = [
-    Agent(id="agent-ava",    name="Ava",    role="15-Min Interview", duration=15),
-    Agent(id="agent-leo",    name="Leo",    role="15-Min Interview", duration=15),
-    Agent(id="agent-marcus", name="Marcus", role="30-Min Interview", duration=30),
-    Agent(id="agent-nina",   name="Nina",   role="30-Min Interview", duration=30),
-    Agent(id="agent-sarah",  name="Sarah",  role="60-Min Interview", duration=60),
-    Agent(id="agent-raj",    name="Raj",    role="60-Min Interview", duration=60),
-]
-
 MAX_CONCURRENCY_PER_COHORT = 2
 MAX_EXECUTION_COUNT = 2
 RETRY_PRIORITY_BOOST = 999
@@ -107,6 +95,8 @@ SENTIMENTS = [SentimentType.POSITIVE, SentimentType.NEUTRAL, SentimentType.NEGAT
 RETRY_OUTCOMES = ["voicemail", "no_answer", "hangup", "busy"]
 SUCCESS_OUTCOMES = ["completed", "interested", "not_interested"]
 
+AGENT_NAMES = ["Ava", "Leo", "Marcus", "Nina", "Sarah", "Raj", "Zara", "Kai", "Maya", "Theo"]
+
 
 # ── Engine ──────────────────────────────────────────────────────────
 
@@ -114,22 +104,52 @@ class PromotionEngine:
     """
     In-memory state machine for the voice sandbox.
 
-    Call tick() periodically (via polling endpoint or background task).
+    Call load_leads() first to populate from DB, then start().
+    Call tick() periodically (via polling endpoint).
     Each tick:
       1. Check if any processing agents have finished their simulated call
       2. Promote waiting leads to idle agents (score-sorted, cohort-matched)
     """
 
     def __init__(self):
+        self._loaded_leads: List[Lead] = []
         self._reset()
 
     def _reset(self):
-        self.leads: List[Lead] = [self._clone_lead(l) for l in SEED_LEADS]
-        self.agents: List[Agent] = [self._clone_agent(a) for a in SEED_AGENTS]
+        self.leads: List[Lead] = [self._clone_lead(l) for l in self._loaded_leads]
+        self.agents: List[Agent] = self._build_agents()
         self.activity: List[ActivityEntry] = []
-        self.pipeline_counts: Dict[int, int] = dict(COHORT_PIPELINE_COUNTS)
+        self.pipeline_counts: Dict[int, int] = {
+            d: len([l for l in self.leads if l.cohort == d])
+            for d in COHORT_META
+        }
         self.running: bool = False
         self._activity_counter: int = 0
+
+    def load_leads(self, leads: List[Lead]):
+        """Load leads from the database and rebuild engine state."""
+        self._loaded_leads = leads
+        self._reset()
+        logger.info(f"[PromotionEngine] Loaded {len(leads)} leads from DB")
+
+    def _build_agents(self) -> List[Agent]:
+        """Create 2 agents per active duration lane (only lanes that have leads)."""
+        active_durations = set(l.cohort for l in self.leads)
+        agents = []
+        name_idx = 0
+        for duration in sorted(active_durations):
+            meta = COHORT_META.get(duration, {"label": f"{duration}-Min Interview"})
+            label = meta.get("label", f"{duration}-Min Interview")
+            for _ in range(MAX_CONCURRENCY_PER_COHORT):
+                name = AGENT_NAMES[name_idx % len(AGENT_NAMES)]
+                agents.append(Agent(
+                    id=f"agent-{name.lower()}-{duration}",
+                    name=name,
+                    role=label,
+                    duration=duration,
+                ))
+                name_idx += 1
+        return agents
 
     def _clone_lead(self, lead: Lead) -> Lead:
         return Lead(
@@ -138,17 +158,11 @@ class PromotionEngine:
             company=lead.company,
             score=lead.score,
             cohort=lead.cohort,
+            contact_number=lead.contact_number,
+            cohort_name=lead.cohort_name,
             status=LeadStatus.WAITING,
             execution_count=0,
             priority_score=0,
-        )
-
-    def _clone_agent(self, agent: Agent) -> Agent:
-        return Agent(
-            id=agent.id,
-            name=agent.name,
-            role=agent.role,
-            duration=agent.duration,
         )
 
     # ── Public API ──────────────────────────────────────────────────
@@ -164,23 +178,19 @@ class PromotionEngine:
         logger.info("[PromotionEngine] Stopped")
 
     def reset(self):
-        """Reset all state to initial seed data."""
+        """Reset all state back to loaded leads."""
         self._reset()
-        logger.info("[PromotionEngine] Reset to initial state")
+        logger.info("[PromotionEngine] Reset")
 
     def tick(self) -> dict:
         """
         One cycle of the engine. Call this from a polling endpoint.
-
         Returns the full state after the tick.
         """
         if not self.running:
             return self.get_state()
 
-        # Step 1: Complete any agents whose simulated call is done
         self._check_completions()
-
-        # Step 2: Promote waiting leads to idle agents
         self._promote()
 
         return self.get_state()
@@ -202,7 +212,7 @@ class PromotionEngine:
 
             leads_by_cohort[cohort_duration] = {
                 **meta,
-                "totalCount": self.pipeline_counts[cohort_duration],
+                "totalCount": self.pipeline_counts.get(cohort_duration, 0),
                 "waiting": [l.to_dict() for l in waiting],
                 "processing": [l.to_dict() for l in processing],
                 "completed": [l.to_dict() for l in completed],
@@ -215,7 +225,7 @@ class PromotionEngine:
             "running": self.running,
             "leads": leads_by_cohort,
             "agents": [a.to_dict() for a in self.agents],
-            "activity": [a.to_dict() for a in self.activity[:50]],  # cap at 50 recent
+            "activity": [a.to_dict() for a in self.activity[:50]],
         }
 
     # ── Internal logic ──────────────────────────────────────────────
@@ -225,18 +235,11 @@ class PromotionEngine:
         Find ONE idle agent and assign the highest-priority waiting lead
         from its cohort. Only one promotion per tick — creates natural
         staggered pickup as the frontend polls every 1.5s.
-
-        Mirrors queue_warmer._promote_buffer():
-          - Cohort-scoped
-          - priority_score DESC, score DESC
-          - Respects max concurrency per cohort
-          - Skips leads with execution_count >= MAX_EXECUTION_COUNT
         """
         for agent in self.agents:
             if agent.status != "idle":
                 continue
 
-            # Check concurrency cap for this cohort
             active_in_cohort = sum(
                 1 for a in self.agents
                 if a.duration == agent.duration and a.status == "processing"
@@ -244,7 +247,6 @@ class PromotionEngine:
             if active_in_cohort >= MAX_CONCURRENCY_PER_COHORT:
                 continue
 
-            # Find best waiting lead in this cohort
             candidates = [
                 l for l in self.leads
                 if l.status == LeadStatus.WAITING
@@ -255,11 +257,9 @@ class PromotionEngine:
             if not candidates:
                 continue
 
-            # Sort: priority_score DESC, score DESC (matches queue_warmer ORDER BY)
             candidates.sort(key=lambda l: (l.priority_score, l.score), reverse=True)
             lead = candidates[0]
 
-            # Assign
             lead.status = LeadStatus.PROCESSING
             lead.assigned_agent_id = agent.id
             lead.execution_count += 1
@@ -274,8 +274,7 @@ class PromotionEngine:
                 f"→ {agent.name} [{agent.duration}-min]"
             )
 
-            # Only one promotion per tick — staggered pickup
-            return
+            return  # one promotion per tick
 
     def _check_completions(self):
         """
@@ -288,7 +287,6 @@ class PromotionEngine:
             if agent.status != "processing" or not agent.call_started_at:
                 continue
 
-            # Simulated call duration (randomized per call on first check)
             elapsed = now - agent.call_started_at
             call_duration = CALL_DURATION_MIN + (
                 hash(agent.current_lead_id or "") % (CALL_DURATION_MAX - CALL_DURATION_MIN + 1)
@@ -297,23 +295,19 @@ class PromotionEngine:
             if elapsed < call_duration:
                 continue
 
-            # Call is done — find the lead
             lead = next((l for l in self.leads if l.id == agent.current_lead_id), None)
             if not lead:
-                # Safety: free the agent anyway
                 agent.status = "idle"
                 agent.current_lead_id = None
                 agent.call_started_at = None
                 continue
 
-            # Determine outcome
             should_retry = (
                 random.random() < RETRY_PROBABILITY
                 and lead.execution_count < MAX_EXECUTION_COUNT
             )
 
             if should_retry:
-                # Retry: lead goes back to waiting with boosted priority
                 outcome = random.choice(RETRY_OUTCOMES)
                 lead.status = LeadStatus.WAITING
                 lead.assigned_agent_id = None
@@ -324,7 +318,6 @@ class PromotionEngine:
                     f"(attempt {lead.execution_count}/{MAX_EXECUTION_COUNT}, priority boosted to {RETRY_PRIORITY_BOOST})"
                 )
             else:
-                # Completed: lead is done
                 outcome = random.choice(SUCCESS_OUTCOMES)
                 lead.status = LeadStatus.COMPLETED
                 lead.assigned_agent_id = None
@@ -332,7 +325,7 @@ class PromotionEngine:
                 lead.completed_at = int(now * 1000)
 
                 self.pipeline_counts[lead.cohort] = max(
-                    0, self.pipeline_counts[lead.cohort] - 1
+                    0, self.pipeline_counts.get(lead.cohort, 0) - 1
                 )
 
                 logger.info(
@@ -340,7 +333,6 @@ class PromotionEngine:
                     f"(sentiment={lead.sentiment.value})"
                 )
 
-            # Log activity
             self._activity_counter += 1
             self.activity.insert(0, ActivityEntry(
                 id=f"act-{self._activity_counter}",
@@ -353,7 +345,6 @@ class PromotionEngine:
                 completed_at=now * 1000,
             ))
 
-            # Free the agent
             agent.status = "idle"
             agent.current_lead_id = None
             agent.call_started_at = None

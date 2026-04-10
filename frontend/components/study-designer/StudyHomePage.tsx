@@ -127,11 +127,12 @@ const VISIBLE_DRAFTS_LIMIT = 3;
 
 interface StudyHomePageProps {
     onStudyUpdate?: (study: StudyState) => void;
+    activeStudyId?: string;
 }
 
-export function StudyHomePage({ onStudyUpdate }: StudyHomePageProps = {}) {
-    const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
-    const [resumeStudyId, setResumeStudyId] = useState<string | null>(null);
+export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePageProps = {}) {
+    const [initialPrompt, setInitialPrompt] = useState<string | null>(activeStudyId ? "__resume__" : null);
+    const [resumeStudyId, setResumeStudyId] = useState<string | null>(activeStudyId || null);
     const [savedStudies, setSavedStudies] = useState<SavedStudy[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -141,7 +142,7 @@ export function StudyHomePage({ onStudyUpdate }: StudyHomePageProps = {}) {
     const prevComposerValueRef = useRef("");
 
     useEffect(() => {
-        api.get("/study-designer/studies")
+        api.get("/study-planner/studies")
             .then((data) => setSavedStudies(data))
             .catch(() => {})
             .finally(() => setLoading(false));
@@ -160,7 +161,7 @@ export function StudyHomePage({ onStudyUpdate }: StudyHomePageProps = {}) {
         e.stopPropagation();
         setConfirmDeleteId(null);
         try {
-            await api.delete(`/study-designer/studies/${id}`);
+            await api.delete(`/study-planner/studies/${id}`);
             setSavedStudies((prev) => prev.filter((s) => s.id !== id));
         } catch {}
     };

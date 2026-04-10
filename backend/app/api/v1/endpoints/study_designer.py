@@ -10,9 +10,12 @@ from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from sqlalchemy import delete
+
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.designed_study import DesignedStudy
+from app.models.study_designer import ResearchCohort, ResearchLead, ResearchParticipant, ResearchQuestion
 from app.models.user import User
 from app.models.iam import CompanyMembership
 from app.services.intelligence.llm_service import llm_service
@@ -512,6 +515,65 @@ class StudySummary(BaseModel):
 
 # ── CRUD endpoints ──
 
+async def _sync_research_questions(
+    session: AsyncSession, study_id: uuid.UUID, company_id: uuid.UUID, topic_guide: Dict[str, Any]
+):
+    """Delete existing research_questions for this study and re-insert from topic_guide JSON."""
+    # Delete all existing questions for this study
+    await session.exec(
+        delete(ResearchQuestion).where(ResearchQuestion.study_id == study_id)
+    )
+
+    # Extract questions from objectives and insert
+    objectives = topic_guide.get("objectives", [])
+    sort_counter = 0
+    for objective in objectives:
+        for q in objective.get("questions", []):
+            # Map frontend type format ("open-ended") to DB format ("open_ended")
+            q_type = (q.get("type") or "open_ended").replace("-", "_")
+            rq = ResearchQuestion(
+                study_id=study_id,
+                company_id=company_id,
+                text=q.get("text", ""),
+                type=q_type,
+                context=q.get("context"),
+                interview_mode=q.get("interviewMode"),
+                participant_count=q.get("participantCount"),
+                sort_order=sort_counter,
+                options=q.get("options", []),
+                probes=q.get("probes", []),
+                stimulus=q.get("stimulus", []),
+                meta_data={"objective_title": objective.get("title", ""), "objective_id": objective.get("id", "")},
+            )
+            session.add(rq)
+            sort_counter += 1
+
+
+async def _sync_research_cohorts(
+    session: AsyncSession, company_id: uuid.UUID, topic_guide: Dict[str, Any]
+):
+    """Upsert cohorts from topic_guide objectives into research_cohorts (company-scoped).
+
+    Uses the objective title as the cohort name. Skips duplicates via the
+    unique constraint (company_id, name).
+    """
+    objectives = topic_guide.get("objectives", [])
+    existing_stmt = select(ResearchCohort.name).where(ResearchCohort.company_id == company_id)
+    existing_names = set((await session.exec(existing_stmt)).all())
+
+    for objective in objectives:
+        name = (objective.get("title") or "").strip()
+        if not name or name in existing_names:
+            continue
+        cohort = ResearchCohort(
+            company_id=company_id,
+            name=name,
+            description=objective.get("description"),
+        )
+        session.add(cohort)
+        existing_names.add(name)
+
+
 @router.post("/save")
 async def save_study(
     req: StudySaveRequest,
@@ -545,6 +607,9 @@ async def save_study(
         session.add(existing)
         await session.commit()
         await session.refresh(existing)
+        await _sync_research_questions(session, existing.id, company_id, req.topic_guide)
+        await _sync_research_cohorts(session, company_id, req.topic_guide)
+        await session.commit()
         return {"id": str(existing.id), "status": "updated"}
     else:
         # Create
@@ -566,6 +631,9 @@ async def save_study(
         session.add(study)
         await session.commit()
         await session.refresh(study)
+        await _sync_research_questions(session, study.id, company_id, req.topic_guide)
+        await _sync_research_cohorts(session, company_id, req.topic_guide)
+        await session.commit()
         return {"id": str(study.id), "status": "created"}
 
 
@@ -612,3 +680,103 @@ async def archive_study(
     session.add(study)
     await session.commit()
     return {"status": "archived"}
+
+
+# ── Cohorts ──
+
+@router.get("/cohorts")
+async def list_cohorts(
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """List all research cohorts for the current company."""
+    stmt = (
+        select(ResearchCohort)
+        .where(ResearchCohort.company_id == company_id)
+        .order_by(ResearchCohort.created_at.desc())
+    )
+    results = await session.exec(stmt)
+    return results.all()
+
+
+# ── Questions ──
+
+@router.get("/studies/{study_id}/questions")
+async def list_study_questions(
+    study_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """List all research questions for a given study, scoped by company."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    stmt = (
+        select(ResearchQuestion)
+        .where(ResearchQuestion.study_id == study_id, ResearchQuestion.company_id == company_id)
+        .order_by(ResearchQuestion.sort_order)
+    )
+    results = await session.exec(stmt)
+    return results.all()
+
+
+# ── Leads & Participants ──
+
+@router.get("/studies/{study_id}/leads")
+async def list_study_leads(
+    study_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """List all leads enrolled in a study via research_participants."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    stmt = (
+        select(ResearchLead, ResearchParticipant.status, ResearchCohort.name)
+        .join(ResearchParticipant, ResearchParticipant.lead_id == ResearchLead.id)
+        .outerjoin(ResearchCohort, ResearchCohort.id == ResearchLead.cohort_id)
+        .where(ResearchParticipant.study_id == study_id)
+        .order_by(ResearchLead.created_at.desc())
+    )
+    rows = (await session.exec(stmt)).all()
+
+    return [
+        {
+            "id": str(lead.id),
+            "first_name": lead.first_name,
+            "last_name": lead.last_name,
+            "contact_number": lead.contact_number,
+            "cohort_name": cohort_name,
+            "participant_status": participant_status,
+            "contact_profile": lead.contact_profile,
+        }
+        for lead, participant_status, cohort_name in rows
+    ]
+
+
+@router.delete("/studies/{study_id}/participants/{lead_id}")
+async def remove_participant(
+    study_id: uuid.UUID,
+    lead_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Remove a lead from a study (deletes research_participants row only, keeps the lead)."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    stmt = delete(ResearchParticipant).where(
+        ResearchParticipant.study_id == study_id,
+        ResearchParticipant.lead_id == lead_id,
+    )
+    result = await session.exec(stmt)
+    await session.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Participant not found")
+
+    return {"status": "removed"}

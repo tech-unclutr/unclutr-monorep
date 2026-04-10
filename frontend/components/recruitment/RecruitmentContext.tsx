@@ -5,8 +5,6 @@ import { type ExtractedLead, type ColumnMapping } from "./recruitment-utils";
 import {
     type InterviewCategories,
     type AudioBucket,
-    SAMPLE_QUESTIONS,
-    initializeCategories,
 } from "@/app/dashboard/playground/components/InterviewBuilder";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,7 +23,7 @@ type CohortIncentivesMap = Record<string, Record<AudioBucket, string>>;
 type CombinationCustomPrompts = Record<string, string>;
 
 const DEFAULT_INCENTIVES: Record<AudioBucket, string> = { audioA: "", audioB: "", audioC: "" };
-const UNSELECTED_QUESTIONS = SAMPLE_QUESTIONS.map((q) => ({ ...q, selected: false }));
+const EMPTY_CATEGORIES: InterviewCategories = { chat: [], audioA: [], audioB: [], audioC: [] };
 
 interface RecruitmentState {
     step: Step;
@@ -76,7 +74,7 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
     const [combinationCustomPrompts, setCombinationCustomPromptsMap] = useState<CombinationCustomPrompts>({});
 
     const getCohortCategories = useCallback((cohort: string): InterviewCategories => {
-        return cohortInterviews[cohort] ?? initializeCategories(UNSELECTED_QUESTIONS);
+        return cohortInterviews[cohort] ?? EMPTY_CATEGORIES;
     }, [cohortInterviews]);
 
     const setCohortCategories = useCallback((cohort: string, categories: InterviewCategories) => {

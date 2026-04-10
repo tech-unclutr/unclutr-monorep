@@ -43,7 +43,7 @@ export interface PromptBuildContext {
 // ── Template fetcher ───────────────────────────────────────────────────────
 
 export async function fetchPromptTemplate(): Promise<string> {
-    const data = await api.request("/study-designer/prompt-template");
+    const data = await api.request("/study-planner/prompt-template");
     return data.template as string;
 }
 

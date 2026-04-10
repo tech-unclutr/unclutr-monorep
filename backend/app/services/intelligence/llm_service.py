@@ -48,9 +48,8 @@ class LLMService:
 
         try:
             genai.configure(api_key=self.api_key)
-            # Use 'gemini-2.0-flash' as it is the currently available model
-            self.model = genai.GenerativeModel('gemini-2.0-flash')
-            self.pro_model = genai.GenerativeModel('gemini-2.0-flash')
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
+            self.pro_model = genai.GenerativeModel('gemini-2.5-flash')
             self._configured = True
             logger.info("LLM Service initialized lazily.")
         except Exception as e:

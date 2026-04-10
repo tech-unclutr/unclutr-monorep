@@ -492,7 +492,7 @@ export function StudyDesignerProvider({ initialPrompt, savedStudyId, children, o
             dispatch({ type: "SET_LOADING", loading: true });
 
             try {
-                const backendRes = await api.post("/study-designer/chat", {
+                const backendRes = await api.post("/study-planner/chat", {
                     study_state: currentState.study,
                     messages: currentState.conversation.map((m) => ({
                         role: m.role,
@@ -594,7 +594,7 @@ export function StudyDesignerProvider({ initialPrompt, savedStudyId, children, o
 
         (async () => {
             try {
-                const data = await api.get(`/study-designer/studies/${savedStudyId}`);
+                const data = await api.get(`/study-planner/studies/${savedStudyId}`);
                 const restoredStudy: StudyState = {
                     id: data.id,
                     title: data.title || "",
@@ -735,7 +735,7 @@ export function StudyDesignerProvider({ initialPrompt, savedStudyId, children, o
             const { study } = currentState;
             if (!study.title) return; // Don't save untitled studies
             try {
-                await api.post("/study-designer/save", {
+                const res = await api.post("/study-planner/save", {
                     title: study.title,
                     initial_prompt: currentState.initialPrompt,
                     briefing: study.briefing,
@@ -751,6 +751,10 @@ export function StudyDesignerProvider({ initialPrompt, savedStudyId, children, o
                     })),
                     status: "DRAFT",
                 });
+                // Replace local crypto.randomUUID() with the persisted DB ID
+                if (res?.id && res.id !== study.id) {
+                    dispatch({ type: "FIELD_UPDATE", field: "id", value: res.id });
+                }
             } catch (e) {
                 // Silent fail — save is best-effort, don't block the design flow
                 console.warn("Auto-save failed:", e);

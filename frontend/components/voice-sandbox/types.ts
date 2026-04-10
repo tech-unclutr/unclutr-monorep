@@ -10,6 +10,7 @@ export interface Lead {
     company: string;
     score: number;
     cohort: InterviewDuration;
+    cohortName?: string;
     status: LeadStatus;
     /** Which agent is handling this lead (null = in pipeline) */
     assignedAgentId: string | null;

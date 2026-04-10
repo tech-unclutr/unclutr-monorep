@@ -33,6 +33,7 @@ import {
 import { api } from "@/lib/api";
 
 export interface StudyContext {
+    studyId?: string;
     title: string;
     briefing?: string;
     objectives?: Array<{
@@ -204,7 +205,7 @@ export function ExecutionPromptView({
         setIsChatLoading(true);
 
         try {
-            const data = await api.request("/study-designer/prompt-chat", {
+            const data = await api.request("/study-planner/prompt-chat", {
                 method: "POST",
                 body: JSON.stringify({
                     prompt: displayPrompt,

@@ -86,15 +86,12 @@
     },
     {
       "target": "website-production",
-      "source": "website",
+      "public": "website/out",
       "ignore": [
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
-      ],
-      "frameworksBackend": {
-        "region": "asia-south1"
-      }
+      ]
     }
   ],
   "emulators": {

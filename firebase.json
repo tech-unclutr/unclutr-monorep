@@ -87,6 +87,7 @@
     {
       "target": "website-production",
       "public": "website/out",
+      "cleanUrls": true,
       "ignore": [
         "firebase.json",
         "**/.*",

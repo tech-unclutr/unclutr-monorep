@@ -22,6 +22,7 @@ export function StudyPlanner() {
     const [phase, setPhase] = useState<Phase>("design");
     const [completedPhases, setCompletedPhases] = useState<Set<Phase>>(new Set());
     const [studyContext, setStudyContext] = useState<StudyContext | undefined>(undefined);
+    const [cohortInterviewMap, setCohortInterviewMap] = useState<Record<string, number[]>>({});
 
     const markComplete = (p: Phase) => {
         setCompletedPhases((prev) => new Set(prev).add(p));
@@ -120,7 +121,8 @@ export function StudyPlanner() {
                     {phase === "recruit" && (
                         <RecruitmentPage
                             studyContext={studyContext}
-                            onStartExecution={() => {
+                            onStartExecution={(map) => {
+                                setCohortInterviewMap(map);
                                 markComplete("recruit");
                                 setPhase("execute");
                             }}
@@ -128,7 +130,11 @@ export function StudyPlanner() {
                     )}
 
                     {phase === "execute" && (
-                        <VoiceSandbox className="h-full" studyId={studyContext?.studyId} />
+                        <VoiceSandbox
+                            className="h-full"
+                            studyId={studyContext?.studyId}
+                            initialCohortInterviewMap={cohortInterviewMap}
+                        />
                     )}
                 </RecruitmentProvider>
             </div>

@@ -6,9 +6,10 @@ import type { ActivityEntry } from "./types";
 
 interface ActivityStreamProps {
     entries: ActivityEntry[];
+    onEntryClick?: (entry: ActivityEntry) => void;
 }
 
-export function ActivityStream({ entries }: ActivityStreamProps) {
+export function ActivityStream({ entries, onEntryClick }: ActivityStreamProps) {
     return (
         <div className="space-y-4">
             <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
@@ -27,7 +28,7 @@ export function ActivityStream({ entries }: ActivityStreamProps) {
             ) : (
                 <div className="space-y-2">
                     {entries.map((entry) => (
-                        <ActivityRow key={entry.id} entry={entry} />
+                        <ActivityRow key={entry.id} entry={entry} onClick={onEntryClick} />
                     ))}
                 </div>
             )}

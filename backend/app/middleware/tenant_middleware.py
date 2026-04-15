@@ -84,6 +84,7 @@ class TenantMiddleware:
             "/intelligence/calendar/google/callback",
             "/intelligence/interview/bolna-webhook",
             "/webhook/bolna",
+            "/webhook/study-bolna",
             "/debug/queue-status",
             "/research",
             "/voice-sandbox",

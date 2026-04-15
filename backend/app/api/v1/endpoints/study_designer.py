@@ -15,7 +15,7 @@ from sqlalchemy import delete
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.designed_study import DesignedStudy
-from app.models.study_designer import ResearchCohort, ResearchLead, ResearchParticipant, ResearchQuestion
+from app.models.study_designer import ResearchCohort, ResearchCohortQuestion, ResearchLead, ResearchParticipant, ResearchQuestion
 from app.models.user import User
 from app.models.iam import CompanyMembership
 from app.services.intelligence.llm_service import llm_service
@@ -719,6 +719,106 @@ async def list_study_questions(
     )
     results = await session.exec(stmt)
     return results.all()
+
+
+# ── Cohort × Question Assignments ──
+
+class CohortBucketAssignment(BaseModel):
+    """Question IDs assigned to each interview type bucket for one cohort."""
+    chat: List[str] = []
+    audioA: List[str] = []
+    audioB: List[str] = []
+    audioC: List[str] = []
+
+
+class SaveCohortQuestionsRequest(BaseModel):
+    """Map of cohort name → bucket → list of question IDs."""
+    assignments: Dict[str, CohortBucketAssignment]
+
+
+@router.post("/studies/{study_id}/cohort-questions")
+async def save_cohort_questions(
+    study_id: uuid.UUID,
+    req: SaveCohortQuestionsRequest,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """
+    Persist the user's question → cohort → bucket assignments from the
+    LeadsCohortConfigurator into research_cohort_questions.
+
+    Replaces all existing rows for this study's cohorts (idempotent).
+    """
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    # Resolve cohort name → cohort_id for this company
+    cohort_stmt = select(ResearchCohort).where(
+        ResearchCohort.company_id == company_id
+    )
+    cohorts = (await session.exec(cohort_stmt)).all()
+    cohort_id_by_name: Dict[str, uuid.UUID] = {c.name: c.id for c in cohorts}
+
+    # Validate all referenced cohorts exist
+    unknown_cohorts = [name for name in req.assignments if name not in cohort_id_by_name]
+    if unknown_cohorts:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown cohorts for this company: {unknown_cohorts}",
+        )
+
+    referenced_cohort_ids = [cohort_id_by_name[name] for name in req.assignments]
+
+    # Validate all referenced questions belong to this study
+    all_question_ids: set[str] = set()
+    for assignment in req.assignments.values():
+        all_question_ids.update(assignment.chat)
+        all_question_ids.update(assignment.audioA)
+        all_question_ids.update(assignment.audioB)
+        all_question_ids.update(assignment.audioC)
+
+    if all_question_ids:
+        q_uuids = [uuid.UUID(qid) for qid in all_question_ids]
+        valid_q_stmt = select(ResearchQuestion.id).where(
+            ResearchQuestion.id.in_(q_uuids),
+            ResearchQuestion.study_id == study_id,
+        )
+        valid_q_ids = {row for row in (await session.exec(valid_q_stmt)).all()}
+        invalid = [str(qid) for qid in q_uuids if qid not in valid_q_ids]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Question IDs do not belong to this study: {invalid}",
+            )
+
+    # Wipe existing rows for the referenced cohorts (idempotent replace)
+    await session.exec(
+        delete(ResearchCohortQuestion).where(
+            ResearchCohortQuestion.cohort_id.in_(referenced_cohort_ids)
+        )
+    )
+
+    # Insert new rows
+    inserted = 0
+    for cohort_name, assignment in req.assignments.items():
+        cohort_id = cohort_id_by_name[cohort_name]
+        for bucket_name in ("chat", "audioA", "audioB", "audioC"):
+            question_ids: List[str] = getattr(assignment, bucket_name)
+            for sort_order, qid in enumerate(question_ids):
+                session.add(ResearchCohortQuestion(
+                    cohort_id=cohort_id,
+                    question_id=uuid.UUID(qid),
+                    interview_type=bucket_name,
+                    sort_order=sort_order,
+                ))
+                inserted += 1
+
+    await session.commit()
+    logger.info(
+        f"[StudyDesigner] Saved {inserted} cohort-question assignments for study {study_id}"
+    )
+    return {"inserted": inserted, "cohorts": list(req.assignments.keys())}
 
 
 # ── Leads & Participants ──

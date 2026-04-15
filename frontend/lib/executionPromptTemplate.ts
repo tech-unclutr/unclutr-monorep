@@ -17,9 +17,9 @@ export interface CombinationPrompt {
 
 export const INTERVIEW_TYPE_LABELS: Record<InterviewTypeKey, string> = {
     chat: "Chat Screening",
-    audioA: "Interview A",
-    audioB: "Interview B",
-    audioC: "Interview C",
+    audioA: "Quick Call",
+    audioB: "Deep Dive",
+    audioC: "Extended Session",
 };
 
 export function combinationKey(cohort: string, interviewType: InterviewTypeKey): string {
@@ -84,9 +84,9 @@ function formatQuestionSet(
             }
 
             const audioBuckets = [
-                { key: "audioA" as const, label: "Interview A", items: cat.audioA.filter((q) => q.selected) },
-                { key: "audioB" as const, label: "Interview B", items: cat.audioB.filter((q) => q.selected) },
-                { key: "audioC" as const, label: "Interview C", items: cat.audioC.filter((q) => q.selected) },
+                { key: "audioA" as const, label: "Quick Call", items: cat.audioA.filter((q) => q.selected) },
+                { key: "audioB" as const, label: "Deep Dive", items: cat.audioB.filter((q) => q.selected) },
+                { key: "audioC" as const, label: "Extended Session", items: cat.audioC.filter((q) => q.selected) },
             ];
 
             audioBuckets.forEach((bucket) => {
@@ -130,7 +130,7 @@ function formatIncentiveLine(
         const entries = Object.entries(incentives).filter(([, v]) => v);
         if (entries.length) {
             entries.forEach(([key, value]) => {
-                const label = key === "audioA" ? "Interview A" : key === "audioB" ? "Interview B" : "Interview C";
+                const label = key === "audioA" ? "Quick Call" : key === "audioB" ? "Deep Dive" : "Extended Session";
                 parts.push(`${capitalizeCohortName(cohort)} / ${label}: ${value}`);
             });
         }

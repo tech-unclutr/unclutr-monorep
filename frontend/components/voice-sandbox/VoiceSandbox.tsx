@@ -7,13 +7,10 @@ import { api } from "@/lib/api";
 import { LeadPipeline } from "./LeadPipeline";
 import { ExecutionEngine } from "./ExecutionEngine";
 import { ActivityStream } from "./ActivityStream";
+import { CallDetailsModal } from "./CallDetailsModal";
 import { useRecruitment } from "@/components/recruitment/RecruitmentContext";
 import {
-    buildPerCombinationPrompts,
-    fetchPromptTemplate,
-    combinationKey,
     INTERVIEW_TYPE_LABELS,
-    type CombinationPrompt,
     type InterviewTypeKey,
 } from "@/lib/executionPromptTemplate";
 import {
@@ -27,6 +24,7 @@ import {
 interface VoiceSandboxProps {
     className?: string;
     studyId?: string;
+    initialCohortInterviewMap?: Record<string, number[]>;
 }
 
 const POLL_INTERVAL_MS = 1_500;
@@ -71,6 +69,7 @@ function mapAgent(raw: any): Agent {
 function mapLead(raw: any): Lead {
     return {
         id: raw.id,
+        queueItemId: raw.queueItemId ?? undefined,
         name: raw.name,
         company: raw.company,
         score: raw.score,
@@ -96,8 +95,8 @@ function mapActivity(raw: any): ActivityEntry {
 
 // ── Component ──────────────────────────────────────────────────────
 
-export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
-    const { selectedCohorts, getCohortCategories, getCohortIncentives, getCombinationCustomPrompt, cohortInterviews, cohortIncentives } = useRecruitment();
+export function VoiceSandbox({ className, studyId, initialCohortInterviewMap }: VoiceSandboxProps) {
+    const { selectedCohorts, getCohortCategories } = useRecruitment();
 
     const [leads, setLeads] = useState<Lead[]>([]);
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -108,9 +107,11 @@ export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
 
     const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-    // ── Build cohort → interview type mapping from RecruitmentContext ──
+    // ── Build cohort → interview type mapping ──
+    // Prefer the prop (passed at the moment the user clicks "Start Execution",
+    // before React has flushed the context update) over the context read.
 
-    const cohortInterviewMap = useMemo(() => {
+    const cohortInterviewMapFromContext = useMemo(() => {
         const map: Record<string, number[]> = {};
         for (const cohort of selectedCohorts) {
             const cats = getCohortCategories(cohort);
@@ -128,44 +129,45 @@ export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
         return map;
     }, [selectedCohorts, getCohortCategories]);
 
-    // ── Prompt lookup for lead click modal ──────────────────────────
+    const cohortInterviewMap = initialCohortInterviewMap ?? cohortInterviewMapFromContext;
 
-    const [promptTemplate, setPromptTemplate] = useState("");
+    // ── Prompt modal state ─────────────────────────────────────────
+    // The modal fetches the fully resolved prompt from the backend
+    // (`/voice-sandbox/queue-item/{id}/resolved-prompt`) — no client-side
+    // prompt building needed.
+
     const [promptModalLead, setPromptModalLead] = useState<Lead | null>(null);
+    const [resolvedPrompt, setResolvedPrompt] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
-
-    useEffect(() => {
-        fetchPromptTemplate().then(setPromptTemplate).catch(console.error);
-    }, []);
-
-    const combinations = useMemo(() =>
-        promptTemplate
-            ? buildPerCombinationPrompts(promptTemplate, {
-                studyContext: studyId ? { studyId, title: "" } : undefined,
-                selectedCohorts,
-                getCohortCategories,
-                getCohortIncentives,
-            })
-            : [],
-    [promptTemplate, studyId, selectedCohorts, cohortInterviews, cohortIncentives, getCohortCategories, getCohortIncentives]);
-
-    const getPromptForLead = useCallback((lead: Lead): string | null => {
-        if (!lead.cohortName) return null;
-        const bucket = DURATION_TO_BUCKET[lead.cohort];
-        if (!bucket) return null;
-        const key = combinationKey(lead.cohortName, bucket);
-        const custom = getCombinationCustomPrompt(key);
-        if (custom) return custom;
-        const combo = combinations.find(
-            (c) => c.cohort === lead.cohortName && c.interviewType === bucket,
-        );
-        return combo?.prompt ?? null;
-    }, [combinations, getCombinationCustomPrompt]);
+    const [activeCallLogId, setActiveCallLogId] = useState<string | null>(null);
 
     const handleLeadClick = useCallback((lead: Lead) => {
         setPromptModalLead(lead);
+        setResolvedPrompt(null);
         setCopied(false);
     }, []);
+
+    // Fetch the fully resolved prompt from the backend when the modal opens.
+    // The backend substitutes every {runtime_var} using the lead's real data,
+    // so what's shown here is byte-identical to what Bolna receives at call time.
+    useEffect(() => {
+        if (!promptModalLead?.queueItemId) {
+            setResolvedPrompt(null);
+            return;
+        }
+        let cancelled = false;
+        api.request(`/voice-sandbox/queue-item/${promptModalLead.queueItemId}/resolved-prompt`)
+            .then((data: any) => {
+                if (!cancelled) setResolvedPrompt(data?.prompt ?? "");
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    console.error("[VoiceSandbox] Failed to fetch resolved prompt:", err);
+                    setResolvedPrompt("");
+                }
+            });
+        return () => { cancelled = true; };
+    }, [promptModalLead]);
 
     // ── Apply backend state to local state ─────────────────────────
 
@@ -391,13 +393,17 @@ export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
                     </div>
 
                     {/* Activity Stream — full width */}
-                    <ActivityStream entries={activity} />
+                    <ActivityStream
+                        entries={activity}
+                        onEntryClick={(entry) => setActiveCallLogId(entry.id)}
+                    />
                 </div>
             </div>
 
             {/* ── Lead Prompt Modal ─────────────────────────────────── */}
             {promptModalLead && (() => {
-                const prompt = getPromptForLead(promptModalLead);
+                const prompt = resolvedPrompt;
+                const isLoading = resolvedPrompt === null;
                 const bucket = DURATION_TO_BUCKET[promptModalLead.cohort];
                 const label = bucket ? INTERVIEW_TYPE_LABELS[bucket] : `${promptModalLead.cohort}-Min`;
 
@@ -454,7 +460,14 @@ export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
 
                             {/* Prompt content */}
                             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-subtle p-6">
-                                {prompt ? (
+                                {isLoading ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <div className="w-6 h-6 rounded-full border-2 border-zinc-200 dark:border-zinc-700 border-t-zinc-900 dark:border-t-white animate-spin mb-3" />
+                                        <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                                            Loading prompt...
+                                        </p>
+                                    </div>
+                                ) : prompt ? (
                                     <pre className="text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono">
                                         {prompt}
                                     </pre>
@@ -474,6 +487,12 @@ export function VoiceSandbox({ className, studyId }: VoiceSandboxProps) {
                     </div>
                 );
             })()}
+
+            {/* ── Activity Stream Call Details Modal ──────────────── */}
+            <CallDetailsModal
+                callLogId={activeCallLogId}
+                onClose={() => setActiveCallLogId(null)}
+            />
         </div>
     );
 }

@@ -28,6 +28,7 @@ from app.api.v1.endpoints import (
     users,
     persist_leads,
     voice_sandbox,
+    study_webhook,
 )
 
 api_router = APIRouter()
@@ -57,6 +58,7 @@ api_router.include_router(studies.router, prefix="/studies", tags=["Studies"])
 api_router.include_router(study_designer.router, prefix="/study-planner", tags=["Study Planner"])
 api_router.include_router(voice_sandbox.router, prefix="/voice-sandbox", tags=["Voice Sandbox"])
 api_router.include_router(persist_leads.router, prefix="/leads", tags=["Leads"])
+api_router.include_router(study_webhook.router, tags=["Study Webhook"])
 
 
 

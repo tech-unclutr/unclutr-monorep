@@ -21,7 +21,7 @@ export interface ExistingLead {
     contact_profile?: Record<string, any>;
 }
 
-function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: StudyContext; onStartExecution?: () => void }) {
+function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: StudyContext; onStartExecution?: (cohortInterviewMap: Record<string, number[]>) => void }) {
     const ctx = useRecruitment();
     const [saving, setSaving] = useState(false);
     const [existingLeads, setExistingLeads] = useState<ExistingLead[]>([]);
@@ -132,7 +132,7 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
             {ctx.step === "cohorts" && ctx.extractedLeads.length > 0 && (
                 <LeadsCohortConfigurator
                     onBack={() => ctx.setStep("mapping")}
-                    onComplete={() => onStartExecution ? onStartExecution() : ctx.setStep("execution")}
+                    onComplete={(map) => onStartExecution ? onStartExecution(map) : ctx.setStep("execution")}
                     className="min-h-[400px] shadow-sm border-gray-200/80 dark:border-white/[0.08]"
                     studyContext={studyContext}
                 />
@@ -167,7 +167,7 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
     );
 }
 
-export function RecruitmentPage({ studyContext, onStartExecution }: { studyContext?: StudyContext; onStartExecution?: () => void }) {
+export function RecruitmentPage({ studyContext, onStartExecution }: { studyContext?: StudyContext; onStartExecution?: (cohortInterviewMap: Record<string, number[]>) => void }) {
     return (
         <div className="h-full overflow-y-auto scrollbar-subtle">
             <div className="max-w-5xl mx-auto px-6 py-10">

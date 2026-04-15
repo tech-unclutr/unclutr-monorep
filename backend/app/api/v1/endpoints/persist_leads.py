@@ -87,26 +87,42 @@ async def upload_leads(
             cohort_map[name] = new_cohort.id
             logger.info(f"[PersistLeads] Created cohort '{name}' → {new_cohort.id}")
 
-    # 3. Fetch existing leads for this company to skip duplicates
-    existing_phones_result = await session.exec(
-        select(ResearchLead.contact_number).where(
+    # 3. Fetch existing leads for this company (phone → lead) to handle duplicates
+    existing_leads_result = await session.exec(
+        select(ResearchLead).where(
             ResearchLead.company_id == company_id,
         )
     )
-    existing_phones = set(existing_phones_result.all())
+    existing_leads_by_phone: Dict[str, ResearchLead] = {
+        l.contact_number: l for l in existing_leads_result.all()
+    }
 
-    # 4. Insert leads
+    # 4. Insert new leads; collect all lead IDs (new + existing) for participant linking
     inserted = 0
     skipped = 0
     response_leads: List[LeadResponse] = []
 
     for lp in req.leads:
         phone = lp.contact_number.strip()
-        if not phone or phone in existing_phones:
+        if not phone:
             skipped += 1
             continue
 
         cohort_id = cohort_map.get(lp.cohort) if lp.cohort else None
+
+        if phone in existing_leads_by_phone:
+            # Lead already exists — still collect it for participant linking below
+            existing_lead = existing_leads_by_phone[phone]
+            skipped += 1
+            response_leads.append(LeadResponse(
+                id=str(existing_lead.id),
+                first_name=existing_lead.first_name,
+                last_name=existing_lead.last_name,
+                contact_number=existing_lead.contact_number,
+                cohort_id=str(existing_lead.cohort_id) if existing_lead.cohort_id else None,
+                cohort_name=lp.cohort,
+            ))
+            continue
 
         lead = ResearchLead(
             company_id=company_id,
@@ -118,7 +134,7 @@ async def upload_leads(
             meta_data=lp.meta_data or {},
         )
         session.add(lead)
-        existing_phones.add(phone)
+        existing_leads_by_phone[phone] = lead
         inserted += 1
 
         response_leads.append(LeadResponse(
@@ -130,13 +146,29 @@ async def upload_leads(
             cohort_name=lp.cohort,
         ))
 
-    # 5. Link leads to study via research_participants
+    # 5. Link all leads (new + existing) to study via research_participants
     if req.study_id:
         study_uuid = UUID(req.study_id)
-        await session.flush()  # ensure lead IDs are assigned
+        await session.flush()  # ensure new lead IDs are assigned
+
+        # Fetch already-linked participant lead_ids for this study
+        existing_participants_result = await session.exec(
+            select(ResearchParticipant.lead_id).where(
+                ResearchParticipant.study_id == study_uuid,
+            )
+        )
+        already_linked = set(existing_participants_result.all())
+
+        # Deduplicate response_leads by lead ID before inserting
+        # (same phone appearing twice in the CSV would otherwise create two rows)
+        seen_lead_ids: set[UUID] = set()
         for lr in response_leads:
+            lead_uuid = UUID(lr.id)
+            if lead_uuid in already_linked or lead_uuid in seen_lead_ids:
+                continue
+            seen_lead_ids.add(lead_uuid)
             participant = ResearchParticipant(
-                lead_id=UUID(lr.id),
+                lead_id=lead_uuid,
                 study_id=study_uuid,
             )
             session.add(participant)

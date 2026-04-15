@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useEffect, useState } from "react";
-import { UsersIcon } from "lucide-react";
+import { UsersIcon, BookOpenIcon } from "lucide-react";
 import { cn, capitalizeCohortName } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { InterviewBuilder, initializeCategories, type InterviewQuestion } from "
 import { api } from "@/lib/api";
 import { type StudyContext } from "./ExecutionPromptView";
 import { useRecruitment } from "./RecruitmentContext";
+import { BriefPreviewModal } from "./BriefPreviewModal";
 
 interface DbQuestion {
     id: string;
@@ -24,7 +25,7 @@ interface DbQuestion {
 
 interface LeadsCohortConfiguratorProps {
     onBack: () => void;
-    onComplete: () => void;
+    onComplete: (cohortInterviewMap: Record<string, number[]>) => void;
     className?: string;
     studyContext?: StudyContext;
 }
@@ -57,6 +58,7 @@ export function LeadsCohortConfigurator({
     // ── Active tab ──────────────────────────────────────────────────────
 
     const [activeTab, setActiveTab] = useState<string | null>(null);
+    const [briefOpen, setBriefOpen] = useState(false);
 
     // Default to first cohort
     useEffect(() => {
@@ -78,6 +80,8 @@ export function LeadsCohortConfigurator({
                     interviewMode: (q.interview_mode || "chat") as InterviewQuestion["interviewMode"],
                     objective: q.meta_data?.objective_title,
                     selected: false,
+                    participantCount: q.participant_count ?? undefined,
+                    context: q.context ?? undefined,
                 })));
             })
             .catch(() => setDbQuestions([]));
@@ -100,14 +104,61 @@ export function LeadsCohortConfigurator({
 
     const canContinue = readyCohorts.length > 0;
 
-    const handleStartExecution = () => {
+    const handleStartExecution = async () => {
+        // Persist the question → cohort → bucket assignments to the backend
+        // so the prompt builder can pick them up when execution starts.
+        if (studyContext?.studyId) {
+            const assignments: Record<string, {
+                chat: string[]; audioA: string[]; audioB: string[]; audioC: string[];
+            }> = {};
+            for (const cohort of readyCohorts) {
+                const cats = getCohortCategories(cohort);
+                assignments[cohort] = {
+                    chat: cats.chat.filter((q) => q.selected).map((q) => q.id),
+                    audioA: cats.audioA.filter((q) => q.selected).map((q) => q.id),
+                    audioB: cats.audioB.filter((q) => q.selected).map((q) => q.id),
+                    audioC: cats.audioC.filter((q) => q.selected).map((q) => q.id),
+                };
+            }
+            try {
+                await api.post(
+                    `/study-planner/studies/${studyContext.studyId}/cohort-questions`,
+                    { assignments },
+                );
+            } catch (err) {
+                console.error("[LeadsCohortConfigurator] Failed to persist cohort assignments:", err);
+                // Continue anyway — the user can still proceed; prompts will be empty
+                // until they re-run this step, but at least they're not blocked.
+            }
+        }
+
+        // Build the map synchronously before any state updates, so it can be
+        // passed directly to VoiceSandbox — React's async batching means
+        // setSelectedCohorts won't be visible in context by the time VoiceSandbox mounts.
+        const cohortInterviewMap: Record<string, number[]> = {};
+        for (const cohort of readyCohorts) {
+            const cats = getCohortCategories(cohort);
+            const durations: number[] = [];
+            const BUCKET_TO_DURATION: Record<string, number> = { audioA: 15, audioB: 30, audioC: 60 };
+            for (const [bucket, duration] of Object.entries(BUCKET_TO_DURATION)) {
+                const questions = cats[bucket as keyof typeof cats] || [];
+                if (questions.some((q) => q.selected)) {
+                    durations.push(duration);
+                }
+            }
+            if (durations.length > 0) {
+                cohortInterviewMap[cohort] = durations;
+            }
+        }
+
         setSelectedCohorts(readyCohorts);
-        onComplete();
+        onComplete(cohortInterviewMap);
     };
 
     // ── Render ────────────────────────────────────────────────────────────
 
     return (
+        <>
         <Card className={cn(
             "relative overflow-hidden transition-all duration-300",
             "bg-white dark:bg-zinc-950 border-gray-200 dark:border-white/[0.08] shadow-sm rounded-xl",
@@ -204,6 +255,18 @@ export function LeadsCohortConfigurator({
                             Back
                         </Button>
 
+                        <div className="flex items-center gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={cohorts.length === 0}
+                                onClick={() => setBriefOpen(true)}
+                                className="rounded-xl h-11 px-5 text-sm font-semibold border-gray-200 dark:border-white/10 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center gap-2"
+                            >
+                                <BookOpenIcon className="w-4 h-4" />
+                                Preview Brief
+                            </Button>
+
                         <Button
                             type="button"
                             disabled={!canContinue}
@@ -217,9 +280,20 @@ export function LeadsCohortConfigurator({
                         >
                             Start Execution
                         </Button>
+                        </div>
                     </div>
                 </div>
             </CardContent>
         </Card>
+
+        <BriefPreviewModal
+            open={briefOpen}
+            onClose={() => setBriefOpen(false)}
+            studyContext={studyContext}
+            cohorts={cohorts}
+            cohortCounts={cohortCounts}
+            getCohortCategories={getCohortCategories}
+        />
+        </>
     );
 }

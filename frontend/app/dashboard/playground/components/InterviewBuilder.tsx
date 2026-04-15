@@ -50,6 +50,8 @@ export interface InterviewQuestion {
     interviewMode: "chat" | "audio_call" | "video_call";
     objective?: string;
     selected: boolean;
+    participantCount?: number;
+    context?: string;
 }
 
 export interface InterviewCategories {
@@ -111,9 +113,9 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const BUCKET_LABELS: Record<AudioBucket, string> = {
-    audioA: "Interview A",
-    audioB: "Interview B",
-    audioC: "Interview C",
+    audioA: "Quick Call",
+    audioB: "Deep Dive",
+    audioC: "Extended Session",
 };
 
 const BUCKET_COLORS: Record<AudioBucket, { ring: string; bg: string; text: string }> = {

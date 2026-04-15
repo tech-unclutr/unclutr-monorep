@@ -6,6 +6,8 @@ export type SentimentType = "Positive" | "Neutral" | "Negative";
 
 export interface Lead {
     id: string;
+    /** UUID of the StudyCallQueue row — used to fetch the resolved prompt for this specific lead */
+    queueItemId?: string;
     name: string;
     company: string;
     score: number;

@@ -39,7 +39,6 @@ export interface StudyContext {
     objectives?: Array<{
         title: string;
         description?: string;
-        questions: Array<{ text: string; type: string }>;
     }>;
 }
 

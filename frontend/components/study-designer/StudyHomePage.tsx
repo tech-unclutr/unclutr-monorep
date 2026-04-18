@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { ResearchPromptComposer } from "./ResearchPromptComposer";
 import { StudyDesignerProvider } from "./StudyDesignerContext";
 import { StudyDesignerPage } from "./StudyDesignerPage";
-import { type StudyState, getStudyProgress, STUDY_STEPS } from "./types";
+import { type StudyState, getStudyProgress } from "./types";
 
 interface SavedStudy {
     id: string;
@@ -17,7 +17,7 @@ interface SavedStudy {
     initial_prompt: string | null;
     briefing: string | null;
     welcome_page: { title: string; description: string } | null;
-    topic_guide: { introQuestions: any[]; objectives: any[] } | null;
+    topic_guide: { objectives: any[] } | null;
     created_at: string;
     updated_at: string;
 }
@@ -90,12 +90,14 @@ function savedStudyToProgress(s: SavedStudy) {
         id: s.id,
         title: s.title || "",
         briefing: s.briefing || "",
+        executiveSummary: "",
         emotionDetection: false,
         participantLanguages: [],
         reportingLanguage: "English",
         advancedSettings: { maxDuration: 30, recordVideo: true, recordAudio: true, allowSkipQuestions: false },
         welcomePage: s.welcome_page || { title: "", description: "" },
-        topicGuide: s.topic_guide || { introQuestions: [], objectives: [] },
+        topicGuide: s.topic_guide || { objectives: [] },
+        keyResearchQuestions: [],
     };
     return getStudyProgress(study);
 }
@@ -120,17 +122,17 @@ const STEP_LABEL: Record<string, string> = {
     briefing: "Research Brief",
     welcome_page: "Welcome Page",
     objectives: "Objectives",
-    questions: "Questions",
 };
 
 const VISIBLE_DRAFTS_LIMIT = 3;
 
 interface StudyHomePageProps {
     onStudyUpdate?: (study: StudyState) => void;
+    onDesignComplete?: () => void;
     activeStudyId?: string;
 }
 
-export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePageProps = {}) {
+export function StudyHomePage({ onStudyUpdate, onDesignComplete, activeStudyId }: StudyHomePageProps = {}) {
     const [initialPrompt, setInitialPrompt] = useState<string | null>(activeStudyId ? "__resume__" : null);
     const [resumeStudyId, setResumeStudyId] = useState<string | null>(activeStudyId || null);
     const [savedStudies, setSavedStudies] = useState<SavedStudy[]>([]);
@@ -168,15 +170,14 @@ export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePagePro
 
     if (initialPrompt) {
         return (
-            <StudyDesignerProvider initialPrompt={initialPrompt} savedStudyId={resumeStudyId || undefined} onStudyUpdate={onStudyUpdate}>
+            <StudyDesignerProvider initialPrompt={initialPrompt} savedStudyId={resumeStudyId || undefined} onStudyUpdate={onStudyUpdate} onDesignComplete={onDesignComplete}>
                 <StudyDesignerPage />
             </StudyDesignerProvider>
         );
     }
 
-    const draftStudies = savedStudies.filter((s) => s.status === "DRAFT");
-    const visibleDrafts = showAllDrafts ? draftStudies : draftStudies.slice(0, VISIBLE_DRAFTS_LIMIT);
-    const hasMoreDrafts = draftStudies.length > VISIBLE_DRAFTS_LIMIT && !showAllDrafts;
+    const visibleStudies = showAllDrafts ? savedStudies : savedStudies.slice(0, VISIBLE_DRAFTS_LIMIT);
+    const hasMoreStudies = savedStudies.length > VISIBLE_DRAFTS_LIMIT && !showAllDrafts;
 
     return (
         <div className="w-full h-full overflow-y-auto scrollbar-subtle bg-background">
@@ -251,8 +252,8 @@ export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePagePro
                     </div>
                 </motion.div>
 
-                {/* Saved Drafts */}
-                {!loading && draftStudies.length > 0 && (
+                {/* Saved Studies */}
+                {!loading && savedStudies.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -262,12 +263,12 @@ export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePagePro
                         <div className="flex items-center gap-2 px-1">
                             <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                Continue Designing
+                                Your Studies
                             </span>
                         </div>
 
                         <div className="grid gap-3">
-                            {visibleDrafts.map((study) => {
+                            {visibleStudies.map((study) => {
                                 const progress = savedStudyToProgress(study);
                                 const isConfirming = confirmDeleteId === study.id;
 
@@ -345,9 +346,11 @@ export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePagePro
                                                 )}
                                                 <div className={cn(
                                                     "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border",
-                                                    "text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20",
+                                                    study.status === "READY"
+                                                        ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20"
+                                                        : "text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20",
                                                 )}>
-                                                    Draft
+                                                    {study.status === "READY" ? "Ready" : "Draft"}
                                                 </div>
                                                 <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground/50 transition-colors" />
                                             </div>
@@ -357,13 +360,13 @@ export function StudyHomePage({ onStudyUpdate, activeStudyId }: StudyHomePagePro
                             })}
                         </div>
 
-                        {hasMoreDrafts && (
+                        {hasMoreStudies && (
                             <button
                                 type="button"
                                 onClick={() => setShowAllDrafts(true)}
                                 className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors text-center w-full mt-1"
                             >
-                                View all {draftStudies.length} drafts
+                                View all {savedStudies.length} studies
                             </button>
                         )}
                     </motion.div>

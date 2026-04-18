@@ -1,11 +1,10 @@
 // ── Study State ──
 
-export type InterviewMode = "video_call" | "audio_call" | "chat";
-
 export interface StudyState {
     id: string;
     title: string;
     briefing: string;
+    executiveSummary: string;
     emotionDetection: boolean;
     participantLanguages: string[];
     reportingLanguage: string;
@@ -20,43 +19,34 @@ export interface StudyState {
         description: string;
     };
     topicGuide: {
-        introQuestions: Question[];
         objectives: ResearchObjective[];
     };
+    keyResearchQuestions: KeyResearchQuestion[];
 }
 
 export interface ResearchObjective {
     id: string;
     title: string;
     description: string;
-    questions: Question[];
 }
 
-export type QuestionType = "open-ended" | "single-select" | "multiselect";
-
-export interface Question {
+export interface KeyResearchQuestion {
     id: string;
-    text: string;
-    type: QuestionType;
-    context: string;
-    participantCount: number;
-    interviewMode: InterviewMode;
-    options?: string[];
-    probes?: string[];
-    stimulus?: string[];
+    title: string;
+    question: string;
 }
 
 // ── AI Proposals ──
 
 export type ChangeType =
+    | "update_executive_summary"
     | "update_title"
     | "update_briefing"
     | "update_welcome_title"
     | "update_welcome_description"
     | "add_objective"
     | "update_objective"
-    | "add_question"
-    | "update_question"
+    | "set_research_questions"
     | "toggle_emotion_detection"
     | "set_languages"
     | "update_advanced_settings";
@@ -84,16 +74,11 @@ export interface ConversationMessage {
 
 // ── AI Actions (auto-executed, no accept/reject) ──
 
-export type ActionType =
-    | "delete_question"
-    | "delete_objective"
-    | "reorder_question"
-    | "reorder_objective";
+export type ActionType = "delete_objective" | "reorder_objective";
 
 export interface AIAction {
     type: ActionType;
     objectiveIndex?: number;
-    questionIndex?: number;
     toIndex?: number;
 }
 
@@ -108,14 +93,21 @@ export interface AssistantResponse {
 
 // ── Progress Tracking ──
 
-export type StudyStep = "title" | "briefing" | "welcome_page" | "objectives" | "questions";
+export type StudyStep =
+    | "executive_summary"
+    | "title"
+    | "briefing"
+    | "welcome_page"
+    | "objectives"
+    | "research_questions";
 
 export const STUDY_STEPS: { key: StudyStep; label: string }[] = [
+    { key: "executive_summary", label: "Executive Summary" },
     { key: "title", label: "Title" },
     { key: "briefing", label: "Research Brief" },
     { key: "welcome_page", label: "Welcome Page" },
     { key: "objectives", label: "Objectives" },
-    { key: "questions", label: "Questions" },
+    { key: "research_questions", label: "Key Research Questions" },
 ];
 
 export interface StudyProgress {
@@ -129,16 +121,12 @@ export interface StudyProgress {
 export function getStudyProgress(study: StudyState): StudyProgress {
     const completed: StudyStep[] = [];
 
+    if (study.executiveSummary) completed.push("executive_summary");
     if (study.title) completed.push("title");
     if (study.briefing) completed.push("briefing");
     if (study.welcomePage.title && study.welcomePage.description) completed.push("welcome_page");
     if (study.topicGuide.objectives.length > 0) completed.push("objectives");
-    if (
-        study.topicGuide.objectives.length > 0 &&
-        study.topicGuide.objectives.every((o) => o.questions.length > 0)
-    ) {
-        completed.push("questions");
-    }
+    if (study.keyResearchQuestions.length > 0) completed.push("research_questions");
 
     const total = STUDY_STEPS.length;
     const nextStep = STUDY_STEPS.find((s) => !completed.includes(s.key));

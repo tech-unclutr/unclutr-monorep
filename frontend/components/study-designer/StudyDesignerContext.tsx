@@ -12,87 +12,23 @@ import {
 import {
     StudyState,
     ResearchObjective,
-    Question,
-    QuestionType,
-    InterviewMode,
     getStudyProgress,
 } from "./types";
+import {
+    Phase,
+    Step,
+    Mode,
+    PHASE_FOR_LOADING,
+    PHASE_FOR_REVIEW,
+    STEP_REQUESTS,
+    DesignerState,
+    createEmptyStudy,
+} from "./study-designer-helpers";
 import { api } from "@/lib/api";
 
-// ── Phase machine ──
-
-export type Phase =
-    | "loading_title"
-    | "review_title"
-    | "loading_welcome"
-    | "review_welcome"
-    | "loading_objectives"
-    | "review_objectives"
-    | "done";
-
-type Step = "title" | "welcome" | "objectives";
-type Mode = "initial" | "regenerate";
-
-const PHASE_FOR_LOADING: Record<Step, Phase> = {
-    title: "loading_title",
-    welcome: "loading_welcome",
-    objectives: "loading_objectives",
-};
-
-const PHASE_FOR_REVIEW: Record<Step, Phase> = {
-    title: "review_title",
-    welcome: "review_welcome",
-    objectives: "review_objectives",
-};
-
-const REGENERATE_MESSAGES: Record<Step, string> = {
-    title: "Regenerate a different title and research brief for this study.",
-    welcome: "Regenerate a different welcome page title and description.",
-    objectives:
-        "Regenerate different research objectives and questions for this study.",
-};
-
-const INITIAL_MESSAGES: Record<Exclude<Step, "title">, string> = {
-    welcome: "Generate the welcome page title and description for participants.",
-    objectives:
-        "Create 2-3 research objectives for this study, each with 3-5 interview questions.",
-};
-
-// ── State ──
-
-interface DesignerState {
-    phase: Phase;
-    study: StudyState;
-    initialPrompt: string;
-    isBusy: boolean;
-    isSaving: boolean;
-    error: string | null;
-}
-
-const SAVE_DEBOUNCE_MS = 800;
-
-function createEmptyStudy(): StudyState {
-    return {
-        id: crypto.randomUUID(),
-        title: "",
-        briefing: "",
-        emotionDetection: false,
-        participantLanguages: ["English"],
-        reportingLanguage: "English",
-        advancedSettings: {
-            maxDuration: 30,
-            recordVideo: true,
-            recordAudio: true,
-            allowSkipQuestions: false,
-        },
-        welcomePage: { title: "", description: "" },
-        topicGuide: { introQuestions: [], objectives: [] },
-    };
-}
+export type { Phase } from "./study-designer-helpers";
 
 // ── Context ──
-
-type QuestionFieldValue = string | number | string[] | QuestionType | InterviewMode;
 
 interface DesignerContextValue {
     phase: Phase;
@@ -105,6 +41,7 @@ interface DesignerContextValue {
         path:
             | "title"
             | "briefing"
+            | "executiveSummary"
             | "welcomePage.title"
             | "welcomePage.description",
         value: string
@@ -116,14 +53,6 @@ interface DesignerContextValue {
     ) => void;
     deleteObjective: (objectiveId: string) => void;
     addObjective: () => void;
-    updateQuestion: (
-        objectiveId: string,
-        questionId: string,
-        field: keyof Question,
-        value: QuestionFieldValue
-    ) => void;
-    deleteQuestion: (objectiveId: string, questionId: string) => void;
-    addQuestion: (objectiveId: string) => void;
     looksGood: () => Promise<void>;
     regenerate: () => Promise<void>;
 }
@@ -144,6 +73,7 @@ interface ProviderProps {
     savedStudyId?: string;
     children: ReactNode;
     onStudyUpdate?: (study: StudyState) => void;
+    onDesignComplete?: () => void;
 }
 
 export function StudyDesignerProvider({
@@ -151,9 +81,10 @@ export function StudyDesignerProvider({
     savedStudyId,
     children,
     onStudyUpdate,
+    onDesignComplete,
 }: ProviderProps) {
     const [state, setState] = useState<DesignerState>(() => ({
-        phase: "loading_title",
+        phase: "loading_executive_summary",
         study: createEmptyStudy(),
         initialPrompt,
         isBusy: false,
@@ -182,19 +113,12 @@ export function StudyDesignerProvider({
                 error: null,
             }));
 
-            const userMessage =
-                mode === "regenerate"
-                    ? REGENERATE_MESSAGES[step]
-                    : step === "title"
-                    ? stateRef.current.initialPrompt
-                    : INITIAL_MESSAGES[step];
-
             try {
-                const res = await api.post("/study-planner/chat", {
-                    study_state: stateRef.current.study,
-                    messages: [],
-                    user_message: userMessage,
-                });
+                const { endpoint, buildBody } = STEP_REQUESTS[step];
+                const res = await api.post(
+                    endpoint,
+                    buildBody(stateRef.current, mode)
+                );
 
                 const proposals: Array<{ type: string; value: any }> =
                     res.proposals ?? [];
@@ -202,7 +126,18 @@ export function StudyDesignerProvider({
                 setState((s) => {
                     let study = s.study;
 
-                    if (step === "title") {
+                    if (step === "executive_summary") {
+                        const summaryProp = proposals.find(
+                            (p) => p.type === "update_executive_summary"
+                        );
+                        study = {
+                            ...study,
+                            executiveSummary:
+                                typeof summaryProp?.value === "string"
+                                    ? summaryProp.value
+                                    : study.executiveSummary,
+                        };
+                    } else if (step === "title") {
                         const titleProp = proposals.find(
                             (p) => p.type === "update_title"
                         );
@@ -240,32 +175,17 @@ export function StudyDesignerProvider({
                                         : study.welcomePage.description,
                             },
                         };
-                    } else {
+                    } else if (step === "objectives") {
                         const objectiveProps = proposals.filter(
                             (p) => p.type === "add_objective"
                         );
                         const objectives: ResearchObjective[] = objectiveProps.map(
                             (p) => {
                                 const v = p.value ?? {};
-                                const questions: Question[] = (v.questions ?? []).map(
-                                    (q: any) => ({
-                                        id: crypto.randomUUID(),
-                                        text: q.text ?? "",
-                                        type: q.type ?? "open-ended",
-                                        context: q.context ?? "",
-                                        participantCount: q.participantCount ?? 8,
-                                        interviewMode:
-                                            q.interviewMode ?? "video_call",
-                                        options: q.options,
-                                        probes: q.probes,
-                                        stimulus: q.stimulus,
-                                    })
-                                );
                                 return {
                                     id: crypto.randomUUID(),
                                     title: v.title ?? "",
                                     description: v.description ?? "",
-                                    questions,
                                 };
                             }
                         );
@@ -275,6 +195,26 @@ export function StudyDesignerProvider({
                                 ...study.topicGuide,
                                 objectives,
                             },
+                        };
+                    } else {
+                        // research_questions
+                        const setProp = proposals.find(
+                            (p) => p.type === "set_research_questions"
+                        );
+                        const items = Array.isArray(setProp?.value)
+                            ? setProp.value
+                            : [];
+                        const keyResearchQuestions = items.map((q: any) => ({
+                            id: crypto.randomUUID(),
+                            title: typeof q?.title === "string" ? q.title : "",
+                            question:
+                                typeof q?.question === "string"
+                                    ? q.question
+                                    : "",
+                        }));
+                        study = {
+                            ...study,
+                            keyResearchQuestions,
                         };
                     }
 
@@ -308,12 +248,14 @@ export function StudyDesignerProvider({
                 title: study.title,
                 initial_prompt: prompt,
                 briefing: study.briefing,
+                executive_summary: study.executiveSummary,
                 emotion_detection: study.emotionDetection,
                 participant_languages: study.participantLanguages,
                 reporting_language: study.reportingLanguage,
                 advanced_settings: study.advancedSettings,
                 welcome_page: study.welcomePage,
                 topic_guide: study.topicGuide,
+                key_research_questions: study.keyResearchQuestions,
                 conversation_history: [],
                 status,
             });
@@ -338,6 +280,12 @@ export function StudyDesignerProvider({
                 }
                 if (path === "briefing") {
                     return { ...s, study: { ...s.study, briefing: value } };
+                }
+                if (path === "executiveSummary") {
+                    return {
+                        ...s,
+                        study: { ...s.study, executiveSummary: value },
+                    };
                 }
                 if (path === "welcomePage.title") {
                     return {
@@ -399,76 +347,19 @@ export function StudyDesignerProvider({
                 id: crypto.randomUUID(),
                 title: "",
                 description: "",
-                questions: [],
             },
         ]);
     }, [mapObjectives]);
-
-    const updateQuestion = useCallback<DesignerContextValue["updateQuestion"]>(
-        (objectiveId, questionId, field, value) => {
-            mapObjectives((objs) =>
-                objs.map((o) =>
-                    o.id === objectiveId
-                        ? {
-                              ...o,
-                              questions: o.questions.map((q) =>
-                                  q.id === questionId ? { ...q, [field]: value } : q
-                              ),
-                          }
-                        : o
-                )
-            );
-        },
-        [mapObjectives]
-    );
-
-    const deleteQuestion = useCallback<DesignerContextValue["deleteQuestion"]>(
-        (objectiveId, questionId) => {
-            mapObjectives((objs) =>
-                objs.map((o) =>
-                    o.id === objectiveId
-                        ? {
-                              ...o,
-                              questions: o.questions.filter((q) => q.id !== questionId),
-                          }
-                        : o
-                )
-            );
-        },
-        [mapObjectives]
-    );
-
-    const addQuestion = useCallback<DesignerContextValue["addQuestion"]>(
-        (objectiveId) => {
-            mapObjectives((objs) =>
-                objs.map((o) =>
-                    o.id === objectiveId
-                        ? {
-                              ...o,
-                              questions: [
-                                  ...o.questions,
-                                  {
-                                      id: crypto.randomUUID(),
-                                      text: "",
-                                      type: "open-ended",
-                                      context: "",
-                                      participantCount: 8,
-                                      interviewMode: "video_call",
-                                  },
-                              ],
-                          }
-                        : o
-                )
-            );
-        },
-        [mapObjectives]
-    );
 
     const looksGood = useCallback(async () => {
         if (stateRef.current.isBusy) return;
         const phase = stateRef.current.phase;
 
-        if (phase === "review_title") {
+        if (phase === "review_executive_summary") {
+            setState((s) => ({ ...s, isBusy: true }));
+            await saveStudy("DRAFT");
+            await runStep("title", "initial");
+        } else if (phase === "review_title") {
             setState((s) => ({ ...s, isBusy: true }));
             await saveStudy("DRAFT");
             await runStep("welcome", "initial");
@@ -478,30 +369,40 @@ export function StudyDesignerProvider({
             await runStep("objectives", "initial");
         } else if (phase === "review_objectives") {
             setState((s) => ({ ...s, isBusy: true }));
+            await saveStudy("DRAFT");
+            await runStep("research_questions", "initial");
+        } else if (phase === "review_research_questions") {
+            setState((s) => ({ ...s, isBusy: true }));
             await saveStudy("READY");
             setState((s) => ({ ...s, phase: "done", isBusy: false }));
+            onDesignComplete?.();
         }
-    }, [saveStudy, runStep]);
+    }, [saveStudy, runStep, onDesignComplete]);
 
     const regenerate = useCallback(async () => {
         if (stateRef.current.isBusy) return;
         const phase = stateRef.current.phase;
-        if (phase === "review_title") await runStep("title", "regenerate");
+        if (phase === "review_executive_summary")
+            await runStep("executive_summary", "regenerate");
+        else if (phase === "review_title")
+            await runStep("title", "regenerate");
         else if (phase === "review_welcome")
             await runStep("welcome", "regenerate");
         else if (phase === "review_objectives")
             await runStep("objectives", "regenerate");
+        else if (phase === "review_research_questions")
+            await runStep("research_questions", "regenerate");
     }, [runStep]);
 
     // ── Lifecycle effects ──
 
-    // Initial mount: fire the title step. Skipped when resuming a saved study.
+    // Initial mount: fire the executive summary step. Skipped when resuming a saved study.
     useEffect(() => {
         if (savedStudyId) return;
         if (initialMountFired.current) return;
         if (!initialPrompt) return;
         initialMountFired.current = true;
-        runStep("title", "initial");
+        runStep("executive_summary", "initial");
     }, [savedStudyId, initialPrompt, runStep]);
 
     // Resume from saved: hydrate state, then run the first incomplete step.
@@ -520,6 +421,7 @@ export function StudyDesignerProvider({
                     id: data.id,
                     title: data.title || "",
                     briefing: data.briefing || "",
+                    executiveSummary: data.executive_summary || "",
                     emotionDetection: data.emotion_detection ?? false,
                     participantLanguages: data.participant_languages || [
                         "English",
@@ -531,7 +433,8 @@ export function StudyDesignerProvider({
                     welcomePage:
                         data.welcome_page || { title: "", description: "" },
                     topicGuide:
-                        data.topic_guide || { introQuestions: [], objectives: [] },
+                        data.topic_guide || { objectives: [] },
+                    keyResearchQuestions: data.key_research_questions || [],
                 };
 
                 setState((s) => ({
@@ -543,16 +446,21 @@ export function StudyDesignerProvider({
                 const progress = getStudyProgress(restored);
                 if (progress.isComplete) {
                     setState((s) => ({ ...s, phase: "done" }));
+                    onDesignComplete?.();
                     return;
                 }
 
                 const next = progress.currentStep;
-                if (next === "title" || next === "briefing") {
+                if (next === "executive_summary") {
+                    runStep("executive_summary", "initial");
+                } else if (next === "title" || next === "briefing") {
                     runStep("title", "initial");
                 } else if (next === "welcome_page") {
                     runStep("welcome", "initial");
-                } else if (next === "objectives" || next === "questions") {
+                } else if (next === "objectives") {
                     runStep("objectives", "initial");
+                } else if (next === "research_questions") {
+                    runStep("research_questions", "initial");
                 }
             } catch (e) {
                 console.warn("Failed to restore study:", e);
@@ -562,29 +470,12 @@ export function StudyDesignerProvider({
                 }));
             }
         })();
-    }, [savedStudyId, runStep]);
+    }, [savedStudyId, runStep, onDesignComplete]);
 
     // Propagate study changes to parent.
     useEffect(() => {
         onStudyUpdate?.(state.study);
     }, [state.study, onStudyUpdate]);
-
-    // Debounced auto-save for free edits to already-confirmed sections.
-    // Skipped while an LLM call is running (looksGood saves explicitly), and
-    // skipped on the first render so we don't fire a save for the empty study.
-    const skipFirstAutoSave = useRef(true);
-    useEffect(() => {
-        if (skipFirstAutoSave.current) {
-            skipFirstAutoSave.current = false;
-            return;
-        }
-        if (state.isBusy) return;
-        if (!state.study.title) return;
-        const t = setTimeout(() => {
-            saveStudy("DRAFT");
-        }, SAVE_DEBOUNCE_MS);
-        return () => clearTimeout(t);
-    }, [state.study, state.isBusy, saveStudy]);
 
     return (
         <DesignerContext.Provider
@@ -599,9 +490,6 @@ export function StudyDesignerProvider({
                 updateObjective,
                 deleteObjective,
                 addObjective,
-                updateQuestion,
-                deleteQuestion,
-                addQuestion,
                 looksGood,
                 regenerate,
             }}

@@ -76,18 +76,6 @@ export const INCENTIVE_OPTIONS = [
     "No Incentive",
 ];
 
-export const SAMPLE_QUESTIONS: InterviewQuestion[] = [
-    { id: "sq-1", text: "What was the main reason you chose our product over alternatives?", type: "open-ended", interviewMode: "chat", objective: "Purchase Drivers", selected: true },
-    { id: "sq-2", text: "How would you describe your overall experience with our brand?", type: "open-ended", interviewMode: "chat", objective: "Brand Perception", selected: true },
-    { id: "sq-3", text: "What features do you use most frequently?", type: "multiselect", interviewMode: "chat", objective: "Usage Patterns", selected: true },
-    { id: "sq-4", text: "Walk me through your typical ordering journey from start to finish.", type: "open-ended", interviewMode: "audio_call", objective: "Customer Journey", selected: true },
-    { id: "sq-5", text: "What frustrations or pain points have you experienced?", type: "open-ended", interviewMode: "audio_call", objective: "Pain Points", selected: true },
-    { id: "sq-6", text: "How does our pricing compare to what you'd expect to pay?", type: "open-ended", interviewMode: "audio_call", objective: "Price Sensitivity", selected: true },
-    { id: "sq-7", text: "If you could change one thing about our product, what would it be?", type: "open-ended", interviewMode: "audio_call", objective: "Product Feedback", selected: true },
-    { id: "sq-8", text: "How likely are you to recommend us to a friend or colleague?", type: "single-select", interviewMode: "audio_call", objective: "NPS / Loyalty", selected: true },
-    { id: "sq-9", text: "What would make you increase your order frequency?", type: "open-ended", interviewMode: "audio_call", objective: "Growth Levers", selected: true },
-];
-
 // ── Helpers ──
 
 export function initializeCategories(questions: InterviewQuestion[]): InterviewCategories {
@@ -273,7 +261,6 @@ function AudioColumn({ bucket, items, onToggle, incentive, onIncentiveChange }: 
 // ── Main Component ──
 
 export interface InterviewBuilderProps {
-    questions?: InterviewQuestion[];
     categories?: InterviewCategories;
     onCategoriesChange?: (categories: InterviewCategories) => void;
     bucketIncentives?: Record<AudioBucket, string>;
@@ -281,13 +268,12 @@ export interface InterviewBuilderProps {
 }
 
 export function InterviewBuilder({
-    questions = SAMPLE_QUESTIONS,
     categories: controlledCategories,
     onCategoriesChange,
     bucketIncentives: controlledIncentives,
     onBucketIncentivesChange,
 }: InterviewBuilderProps) {
-    const [internalCategories, setInternalCategories] = useState<InterviewCategories>(() => initializeCategories(questions));
+    const [internalCategories, setInternalCategories] = useState<InterviewCategories>(() => initializeCategories([]));
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
     const [chatExpanded, setChatExpanded] = useState(true);
     const [internalIncentives, setInternalIncentives] = useState<Record<AudioBucket, string>>({

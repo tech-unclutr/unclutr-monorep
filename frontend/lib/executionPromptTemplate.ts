@@ -55,7 +55,6 @@ function formatObjectives(studyContext?: StudyContext): string {
         .map((obj, i) => {
             const lines: string[] = [`${i + 1}. ${obj.title}`];
             if (obj.description) lines.push(`   ${obj.description}`);
-            obj.questions.forEach((q) => lines.push(`   - ${q.text} [${q.type}]`));
             return lines.join("\n");
         })
         .join("\n");

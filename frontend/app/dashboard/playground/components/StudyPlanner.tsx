@@ -22,6 +22,7 @@ export function StudyPlanner() {
     const [phase, setPhase] = useState<Phase>("design");
     const [completedPhases, setCompletedPhases] = useState<Set<Phase>>(new Set());
     const [studyContext, setStudyContext] = useState<StudyContext | undefined>(undefined);
+    const [designComplete, setDesignComplete] = useState(false);
     const [cohortInterviewMap, setCohortInterviewMap] = useState<Record<string, number[]>>({});
 
     const markComplete = (p: Phase) => {
@@ -30,16 +31,24 @@ export function StudyPlanner() {
 
     const handleStudyUpdate = useCallback((study: StudyState) => {
         if (!study.title) return;
-        setStudyContext({
-            studyId: study.id,
-            title: study.title,
-            briefing: study.briefing || undefined,
-            objectives: study.topicGuide.objectives.map((o) => ({
-                title: o.title,
-                description: o.description || undefined,
-                questions: o.questions.map((q) => ({ text: q.text, type: q.type })),
-            })),
+        setStudyContext((prev) => {
+            if (prev?.studyId && prev.studyId !== study.id) {
+                setDesignComplete(false);
+            }
+            return {
+                studyId: study.id,
+                title: study.title,
+                briefing: study.briefing || undefined,
+                objectives: study.topicGuide.objectives.map((o) => ({
+                    title: o.title,
+                    description: o.description || undefined,
+                })),
+            };
         });
+    }, []);
+
+    const handleDesignComplete = useCallback(() => {
+        setDesignComplete(true);
     }, []);
 
     const phaseIndex = PHASES.findIndex((p) => p.key === phase);
@@ -99,9 +108,13 @@ export function StudyPlanner() {
                 {phase === "design" && (
                     <div className="h-full flex flex-col">
                         <div className="flex-1 min-h-0">
-                            <StudyHomePage onStudyUpdate={handleStudyUpdate} activeStudyId={studyContext?.studyId} />
+                            <StudyHomePage
+                                onStudyUpdate={handleStudyUpdate}
+                                onDesignComplete={handleDesignComplete}
+                                activeStudyId={studyContext?.studyId}
+                            />
                         </div>
-                        {hasStudy && (
+                        {designComplete && (
                             <div className="shrink-0 border-t border-gray-100 dark:border-[#27272A] px-6 py-4 flex justify-end bg-background/80 backdrop-blur-sm">
                                 <button
                                     onClick={() => {

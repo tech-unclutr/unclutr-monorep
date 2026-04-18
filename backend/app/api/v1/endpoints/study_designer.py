@@ -23,6 +23,21 @@ from app.services.intelligence.llm_service import llm_service
 router = APIRouter()
 
 _PROMPT_TEMPLATE_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "execution_prompt_template.md"
+_EXEC_SUMMARY_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "executive_summary_prompt.md"
+_TITLE_BRIEF_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "title_brief_prompt.md"
+_OBJECTIVES_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "objectives_prompt.md"
+_RESEARCH_QUESTIONS_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "research_questions_prompt.md"
+_WELCOME_PAGE_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "welcome_page_prompt.md"
+
+
+def _strip_json_fences(raw_text: str) -> str:
+    """Strip markdown code fences from LLM output so it can be JSON-parsed."""
+    text = (raw_text or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+    if text.endswith("```"):
+        text = text.rsplit("```", 1)[0]
+    return text.replace("```json", "").replace("```", "").strip()
 
 
 def _extract_prompt_from_md(content: str) -> str:
@@ -75,12 +90,6 @@ class ChatMessage(BaseModel):
     content: str
 
 
-class StudyDesignerChatRequest(BaseModel):
-    study_state: Dict[str, Any]
-    messages: List[ChatMessage]
-    user_message: str
-
-
 class Proposal(BaseModel):
     type: str
     label: str
@@ -96,242 +105,109 @@ class AIAction(BaseModel):
     toIndex: Optional[int] = None
 
 
-class StudyDesignerChatResponse(BaseModel):
+# ── Executive Summary (first-step synthesis from raw brief) ──
+
+class ExecutiveSummaryRequest(BaseModel):
+    research_brief: str
+    mode: Optional[str] = "initial"  # "initial" | "regenerate"
+
+
+class ProposalEnvelopeResponse(BaseModel):
     reply: str
     proposals: List[Proposal]
     actions: List[AIAction]
     follow_up_chips: List[str]
 
 
-# ── System prompt ──
+def _parse_executive_summary_json(raw_text: str) -> tuple[str, list[dict]]:
+    """Extract the executive summary and cohort candidates from the LLM's JSON output.
 
-SYSTEM_PROMPT = """You are a research study design assistant for SquareUp, a consumer research platform.
-Your job is to guide users step-by-step through designing a complete qualitative research study.
-
-YOU HAVE A CLEAR GOAL: Help the user complete ALL of these fields, in order:
-1. Study Title — a concise, descriptive title for the study
-2. Research Brief — 2-3 sentences explaining what this study is about and why it matters
-3. Welcome Page Title — a warm greeting title for participants
-4. Welcome Page Message — a reassuring message explaining what participants can expect
-5. Research Objectives — 2-4 objectives in the topic guide, each with a title and description
-6. Questions per Objective — 2-4 open-ended interview questions under each objective
-
-YOUR WORKFLOW:
-- Look at the current study state to see which fields are EMPTY or INCOMPLETE
-- Focus on the NEXT incomplete field in the order above
-- Propose concrete values for that field
-- Once the user accepts or discusses it, move to the next incomplete field
-- When everything is filled, congratulate the user and offer to refine any section
-
-IMPORTANT BEHAVIORS:
-- On the FIRST message, the user provides their research goal/topic. The study state starts EMPTY. You must analyze their research goal and propose:
-  1. A concise, professional study title (not just repeating their prompt)
-  2. A proper research brief (2-3 sentences explaining the study's purpose, methodology, and expected outcomes — NOT just copying the user's prompt)
-- The research brief should read like a professional document, e.g.: "This qualitative study aims to explore [topic]. Through in-depth interviews with [target audience], we will uncover [what]. The findings will inform [decisions]."
-- Always propose structured changes — never just describe what you'd do, actually propose it
-- Ask clarifying questions ONLY if the user's intent is genuinely unclear
-- Keep replies to 1-2 sentences — be direct, not chatty
-- Follow-up chips MUST suggest actions to populate the NEXT empty fields in the study. Examples:
-  - If welcome page is next: "Define the welcome page title", "Write a message for participants", "Set up the welcome page for me"
-  - If objectives are next: "Create research objectives for this study", "Suggest 3 key research themes", "What objectives should I focus on?"
-  - If questions are next: "Generate questions for [objective name]", "Write interview questions", "What should I ask participants?"
-  - Never use generic chips like "Suggestion 1" or "Continue" — always reference the specific next field to fill
-
-RESPONSE FORMAT:
-You must respond with ONLY valid JSON (no markdown, no code blocks) in this exact format:
-{
-  "reply": "Your conversational response",
-  "proposals": [
-    {
-      "type": "<change_type>",
-      "label": "Short description",
-      "value": <the value>,
-      "targetId": null,
-      "parentId": null
-    }
-  ],
-  "actions": [
-    {
-      "type": "<action_type>",
-      "objectiveIndex": 0,
-      "questionIndex": 0
-    }
-  ],
-  "follow_up_chips": ["Chip 1", "Chip 2", "Chip 3"]
-}
-
-PROPOSALS vs ACTIONS:
-- "proposals" are SUGGESTIONS that the user reviews and accepts/rejects (adding content, updating fields)
-- "actions" are DIRECT COMMANDS that execute immediately (deleting, reordering) — use these when the user explicitly asks to remove or move something
-- When the user says "remove", "delete", "drop", "get rid of" → use actions, NOT proposals
-- When the user says "add", "create", "suggest", "write" → use proposals
-
-Available action types:
-- "delete_question": removes a question. Requires "objectiveIndex" (0-based) and "questionIndex" (0-based)
-  Example: user says "remove 3rd question from 2nd objective" → {"type": "delete_question", "objectiveIndex": 1, "questionIndex": 2}
-- "delete_objective": removes an entire objective. Requires "objectiveIndex" (0-based)
-  Example: user says "remove the first objective" → {"type": "delete_objective", "objectiveIndex": 0}
-- "reorder_question": moves a question within an objective. Requires "objectiveIndex", "questionIndex" (from), "toIndex" (to)
-- "reorder_objective": moves an objective. Requires "objectiveIndex" (from), "toIndex" (to)
-
-IMPORTANT: Use the STUDY COMPLETION STATUS section to find the correct indices. The indices shown there are 0-based.
-
-Available proposal change types:
-- "update_title": value is a string
-- "update_briefing": value is a string
-- "update_welcome_title": value is a string
-- "update_welcome_description": value is a string
-- "add_objective": value is {"title": "...", "description": "...", "questions": [{"text": "...", "context": "...", "participantCount": N, "interviewMode": "video_call|audio_call|chat"}]}. CRITICAL: "questions" array is REQUIRED and must contain 2-4 questions. NEVER propose an objective without questions.
-- "update_objective": value is {"title": "...", "description": "..."}, requires targetId
-- "add_question": value is {"text": "...", "context": "...", "participantCount": N, "interviewMode": "video_call|audio_call|chat"}, requires parentId (the objective ID). "context" is interviewer guidance — what to probe for, how to use the question, what to listen for.
-- "toggle_emotion_detection": value is true or false
-- "set_languages": value is {"participantLanguages": [...], "reportingLanguage": "..."}
-
-Questions MUST be open-ended, conversational, and suitable for qualitative in-depth interviews.
-Every question MUST include:
-- "context": interviewer guidance — what to probe for, how to use the question, what to listen for
-- "participantCount": recommended number of participants (integer). Guidelines:
-  - Deep exploratory questions (emotions, motivations, stories) → 6-8 participants, video_call
-  - Behavioral/preference questions → 10-15 participants, audio_call or video_call
-  - Quick opinion/association questions → 15-25 participants, chat
-- "interviewMode": one of "video_call", "audio_call", "chat". Choose based on:
-  - "video_call" — when you need to observe reactions, show stimuli, or explore emotions
-  - "audio_call" — when conversational depth matters but face-to-face isn't needed
-  - "chat" — when you need scale, quick responses, or the question is straightforward
-
-Example: {"text": "When you think about healthy drinks, what comes to mind?", "context": "Probe for specific attributes, ingredients, or brands.", "participantCount": 15, "interviewMode": "chat"}
-Always return valid JSON only."""
-
-
-def _analyze_completion(study: Dict[str, Any]) -> str:
-    """Analyze which fields are complete vs empty, with indexed objective/question listings."""
-    status = []
-    title = study.get("title", "")
-    briefing = study.get("briefing", "")
-    welcome = study.get("welcomePage", {})
-    objectives = study.get("topicGuide", {}).get("objectives", [])
-
-    status.append(f"- Title: {'FILLED' if title else 'EMPTY'}")
-    status.append(f"- Research Brief: {'FILLED' if briefing else 'EMPTY'}")
-    status.append(f"- Welcome Page Title: {'FILLED' if welcome.get('title') else 'EMPTY'}")
-    status.append(f"- Welcome Page Message: {'FILLED' if welcome.get('description') else 'EMPTY'}")
-
-    if not objectives:
-        status.append("- Research Objectives: EMPTY (need 2-4)")
-    else:
-        status.append(f"\nOBJECTIVES ({len(objectives)} total):")
-        for i, obj in enumerate(objectives):
-            questions = obj.get("questions", [])
-            status.append(f"  Objective {i + 1} (index {i}): \"{obj.get('title', 'Untitled')}\"")
-            if questions:
-                for j, q in enumerate(questions):
-                    status.append(f"    Question {j + 1} (index {j}): \"{q.get('text', '')[:80]}\"")
-            else:
-                status.append(f"    (no questions)")
-
-    # Determine next step
-    if not welcome.get("title") or not welcome.get("description"):
-        next_step = "NEXT STEP: Propose welcome page title and message"
-    elif not objectives:
-        next_step = "NEXT STEP: Propose 2-3 research objectives with questions"
-    elif any(not o.get("questions") for o in objectives):
-        empty_obj = next(o for o in objectives if not o.get("questions"))
-        next_step = f"NEXT STEP: Add questions to objective '{empty_obj.get('title', 'Untitled')}'"
-    elif len(objectives) < 2:
-        next_step = "NEXT STEP: Propose more objectives (aim for 2-4 total)"
-    else:
-        next_step = "ALL FIELDS COMPLETE. Offer to refine any section or add more depth."
-
-    status.append(f"\n{next_step}")
-    return "\n".join(status)
-
-
-def _build_prompt(request: StudyDesignerChatRequest) -> str:
-    """Build the full prompt with system instructions, study state, and conversation."""
-    parts = [SYSTEM_PROMPT]
-
-    # Completion analysis
-    completion = _analyze_completion(request.study_state)
-    parts.append(f"\n\nSTUDY COMPLETION STATUS:\n{completion}")
-
-    parts.append(f"\n\nCurrent study state:\n{json.dumps(request.study_state, indent=2)}")
-
-    if request.messages:
-        parts.append("\n\nConversation history:")
-        for msg in request.messages[-6:]:  # Keep last 6 messages for context window
-            parts.append(f"\n{msg.role}: {msg.content}")
-
-    parts.append(f"\n\nuser: {request.user_message}")
-    parts.append("\n\nRespond with ONLY valid JSON:")
-
-    return "\n".join(parts)
-
-
-def _parse_llm_response(raw_text: str) -> StudyDesignerChatResponse:
-    """Parse the LLM response, handling common formatting issues."""
-    text = raw_text.strip()
-
-    # Strip markdown code blocks if present
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1]  # Remove first line
-    if text.endswith("```"):
-        text = text.rsplit("```", 1)[0]
-    text = text.replace("```json", "").replace("```", "").strip()
+    Returns (summary, cohorts) where cohorts is a list of {"name", "description"} dicts.
+    Falls back to treating the whole payload as a plain summary if the JSON is malformed —
+    cohort extraction is best-effort and must never break the summary flow.
+    """
+    text = _strip_json_fences(raw_text)
 
     try:
         data = json.loads(text)
-
-        # Validate and fix proposals
-        proposals = data.get("proposals", [])
-        for p in proposals:
-            # Ensure add_objective always has questions with required fields
-            if p.get("type") == "add_objective":
-                value = p.get("value", {})
-                if not isinstance(value, dict):
+        summary = str(data.get("summary", "")).strip()
+        raw_cohorts = data.get("cohorts") or []
+        cohorts: list[dict] = []
+        if isinstance(raw_cohorts, list):
+            for c in raw_cohorts:
+                if not isinstance(c, dict):
                     continue
-                questions = value.get("questions")
-                if not questions or not isinstance(questions, list) or len(questions) == 0:
-                    title = value.get("title", "this topic")
-                    value["questions"] = [
-                        {"text": f"Tell me about your experience with {title.lower()}. What stands out?", "context": f"Open exploration of {title.lower()}. Let the participant set the frame.", "participantCount": 8, "interviewMode": "video_call"},
-                        {"text": f"What matters most to you when it comes to {title.lower()}?", "context": "Probe for priorities and values. Ask them to rank if they mention multiple factors.", "participantCount": 10, "interviewMode": "audio_call"},
-                    ]
-                else:
-                    # Ensure each question has participantCount and interviewMode
-                    for q in questions:
-                        if isinstance(q, dict):
-                            q.setdefault("participantCount", 8)
-                            q.setdefault("interviewMode", "video_call")
-                p["value"] = value
+                name = str(c.get("name", "")).strip()
+                description = str(c.get("description", "")).strip()
+                if name:
+                    cohorts.append({"name": name, "description": description})
+        if summary:
+            return summary, cohorts
+    except (json.JSONDecodeError, Exception):
+        pass
 
-            # Ensure add_question has participantCount and interviewMode
-            if p.get("type") == "add_question":
-                value = p.get("value", {})
-                if isinstance(value, dict):
-                    value.setdefault("participantCount", 8)
-                    value.setdefault("interviewMode", "video_call")
-                    p["value"] = value
+    # Fallback: model returned plain text instead of JSON. Keep the prose as the summary.
+    logger.warning(f"Exec summary JSON parse failed; treating as plain text. Raw: {text[:300]}")
+    return text, []
 
-        return StudyDesignerChatResponse(
-            reply=data.get("reply", "I've updated the study based on your input."),
-            proposals=[Proposal(**p) for p in proposals],
-            actions=[AIAction(**a) for a in data.get("actions", [])],
-            follow_up_chips=data.get("follow_up_chips", []),
+
+async def _persist_cohort_candidates(
+    session: AsyncSession, company_id: uuid.UUID, cohorts: list[dict]
+) -> None:
+    """Upsert cohort candidates into research_cohorts (company-scoped).
+
+    Uses the name verbatim (no normalization). Duplicates are silently skipped via the
+    uq_research_cohort_company_name unique constraint. Best-effort: any failure is logged
+    and swallowed — cohort extraction must never break the exec-summary response.
+    """
+    if not cohorts:
+        return
+    try:
+        existing_stmt = select(ResearchCohort.name).where(
+            ResearchCohort.company_id == company_id
         )
-    except (json.JSONDecodeError, Exception) as e:
-        logger.warning(f"Failed to parse LLM JSON response: {e}\nRaw: {text[:500]}")
-        return StudyDesignerChatResponse(
-            reply=text[:500] if text else "I can help you design your study. What would you like to work on?",
-            proposals=[],
-            actions=[],
-            follow_up_chips=["Add research objectives", "Set up welcome page", "Configure study settings"],
-        )
+        existing_names = set((await session.exec(existing_stmt)).all())
+
+        for c in cohorts:
+            name = c["name"]
+            if name in existing_names:
+                continue
+            session.add(
+                ResearchCohort(
+                    company_id=company_id,
+                    name=name,
+                    description=c.get("description") or None,
+                )
+            )
+            existing_names.add(name)
+        await session.commit()
+    except Exception as e:
+        logger.warning(f"Failed to persist cohort candidates: {e}")
+        await session.rollback()
 
 
-@router.post("/chat", response_model=StudyDesignerChatResponse)
-async def study_designer_chat(request: StudyDesignerChatRequest):
-    """Chat endpoint for the AI study designer assistant. Uses Gemini via llm_service."""
-    prompt = _build_prompt(request)
+@router.post("/executive-summary", response_model=ProposalEnvelopeResponse)
+async def generate_executive_summary(
+    request: ExecutiveSummaryRequest,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Generate an executive summary from the raw research brief. Uses a dedicated prompt file.
+
+    Also silently extracts cohort candidates from the brief (when the user named them) and
+    persists them to research_cohorts. The response shape is unchanged from the frontend's
+    perspective — cohort persistence is a side effect.
+    """
+    try:
+        content = _EXEC_SUMMARY_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Executive summary prompt file not found")
+
+    template = _extract_prompt_from_md(content)
+    prompt = template.replace("{{research_brief}}", request.research_brief or "")
+
+    if (request.mode or "initial").lower() == "regenerate":
+        prompt += "\n\nProduce a distinctly different angle than a typical first pass — vary the framing, cohort cuts, or strategic lens."
 
     try:
         llm_service._ensure_configured()
@@ -341,14 +217,447 @@ async def study_designer_chat(request: StudyDesignerChatRequest):
                 detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
             )
         raw_text = await llm_service._generate(prompt)
-        return _parse_llm_response(raw_text)
+        summary, cohorts = _parse_executive_summary_json(raw_text)
+
+        await _persist_cohort_candidates(session, company_id, cohorts)
+
+        return ProposalEnvelopeResponse(
+            reply="Here's your executive summary.",
+            proposals=[
+                Proposal(
+                    type="update_executive_summary",
+                    label="Executive Summary",
+                    value=summary,
+                )
+            ],
+            actions=[],
+            follow_up_chips=[],
+        )
     except HTTPException:
         raise
     except TimeoutError:
-        logger.error("Gemini request timed out")
+        logger.error("Gemini request timed out (executive summary)")
         raise HTTPException(status_code=504, detail="AI service timed out.")
     except Exception as e:
-        logger.error(f"Study designer chat error: {e}")
+        logger.error(f"Executive summary generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Title + Brief (dedicated, single-call JSON generation) ──
+
+class TitleBriefRequest(BaseModel):
+    research_brief: str
+    mode: Optional[str] = "initial"  # "initial" | "regenerate"
+
+
+def _parse_title_brief_json(raw_text: str) -> tuple[str, str]:
+    """Extract title and brief from the LLM's JSON output, tolerating common formatting quirks."""
+    text = _strip_json_fences(raw_text)
+
+    try:
+        data = json.loads(text)
+        title = str(data.get("title", "")).strip()
+        brief = str(data.get("brief", "")).strip()
+        if title and brief:
+            return title, brief
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    # Regex fallback: pull "title" and "brief" string values
+    import re
+    title_match = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+    brief_match = re.search(r'"brief"\s*:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
+    if title_match and brief_match:
+        return title_match.group(1).strip(), brief_match.group(1).encode().decode("unicode_escape").strip()
+
+    raise ValueError("Could not parse title/brief JSON from LLM output")
+
+
+@router.post("/title-brief", response_model=ProposalEnvelopeResponse)
+async def generate_title_brief(request: TitleBriefRequest):
+    """Generate the study Title and Research Brief in a single LLM call. Uses a dedicated prompt file."""
+    try:
+        content = _TITLE_BRIEF_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Title/brief prompt file not found")
+
+    template = _extract_prompt_from_md(content)
+    prompt = template.replace("{{research_brief}}", request.research_brief or "")
+
+    if (request.mode or "initial").lower() == "regenerate":
+        prompt += "\n\nProduce a distinctly different framing, wording, and emphasis than a typical first pass."
+
+    try:
+        llm_service._ensure_configured()
+        if not llm_service.model:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
+            )
+        raw_text = await llm_service._generate(prompt)
+
+        try:
+            title, brief = _parse_title_brief_json(raw_text)
+        except ValueError as e:
+            logger.warning(f"Title/brief parse failure. Raw: {raw_text[:400]}")
+            raise HTTPException(status_code=502, detail=f"AI returned unparseable output: {e}")
+
+        return ProposalEnvelopeResponse(
+            reply="Here's your title and research brief.",
+            proposals=[
+                Proposal(type="update_title", label="Study Title", value=title),
+                Proposal(type="update_briefing", label="Research Brief", value=brief),
+            ],
+            actions=[],
+            follow_up_chips=[],
+        )
+    except HTTPException:
+        raise
+    except TimeoutError:
+        logger.error("Gemini request timed out (title/brief)")
+        raise HTTPException(status_code=504, detail="AI service timed out.")
+    except Exception as e:
+        logger.error(f"Title/brief generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Objectives (dedicated, grounded in brief + executive summary) ──
+
+class ObjectivesRequest(BaseModel):
+    research_brief: str
+    executive_summary: str
+    mode: Optional[str] = "initial"  # "initial" | "regenerate"
+
+
+def _parse_objectives_json(raw_text: str) -> list[dict]:
+    """Extract the objectives array from the LLM's JSON output, tolerating common formatting quirks."""
+    text = _strip_json_fences(raw_text)
+
+    try:
+        data = json.loads(text)
+        objectives = data.get("objectives")
+        if isinstance(objectives, list) and objectives:
+            clean: list[dict] = []
+            for obj in objectives:
+                if not isinstance(obj, dict):
+                    continue
+                title = str(obj.get("title", "")).strip()
+                description = str(obj.get("description", "")).strip()
+                if title and description:
+                    clean.append({"title": title, "description": description})
+            if clean:
+                return clean
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    raise ValueError("Could not parse objectives JSON from LLM output")
+
+
+@router.post("/objectives", response_model=ProposalEnvelopeResponse)
+async def generate_objectives(request: ObjectivesRequest):
+    """Generate research objectives from the research brief + executive summary. Uses a dedicated prompt file."""
+    try:
+        content = _OBJECTIVES_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Objectives prompt file not found")
+
+    template = _extract_prompt_from_md(content)
+    prompt = (
+        template
+        .replace("{{research_brief}}", request.research_brief or "")
+        .replace("{{executive_summary}}", request.executive_summary or "")
+    )
+
+    if (request.mode or "initial").lower() == "regenerate":
+        prompt += "\n\nProduce a distinctly different set of research angles than a typical first pass — vary the framing, ordering, and emphasis across the three objectives."
+
+    try:
+        llm_service._ensure_configured()
+        if not llm_service.model:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
+            )
+        raw_text = await llm_service._generate(prompt)
+
+        try:
+            objectives = _parse_objectives_json(raw_text)
+        except ValueError as e:
+            logger.warning(f"Objectives parse failure. Raw: {raw_text[:400]}")
+            raise HTTPException(status_code=502, detail=f"AI returned unparseable output: {e}")
+
+        return ProposalEnvelopeResponse(
+            reply="Here are your research objectives.",
+            proposals=[
+                Proposal(
+                    type="add_objective",
+                    label=obj["title"],
+                    value={"title": obj["title"], "description": obj["description"]},
+                )
+                for obj in objectives
+            ],
+            actions=[],
+            follow_up_chips=[],
+        )
+    except HTTPException:
+        raise
+    except TimeoutError:
+        logger.error("Gemini request timed out (objectives)")
+        raise HTTPException(status_code=504, detail="AI service timed out.")
+    except Exception as e:
+        logger.error(f"Objectives generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Key Research Questions (dedicated, grounded in brief + executive summary) ──
+
+class ResearchObjectiveInput(BaseModel):
+    title: str
+    description: str
+
+
+class ResearchQuestionsRequest(BaseModel):
+    research_brief: str
+    executive_summary: str
+    objectives: List[ResearchObjectiveInput] = []
+    mode: Optional[str] = "initial"  # "initial" | "regenerate"
+
+
+def _parse_research_questions_text(raw_text: str) -> list[dict]:
+    """Parse the strict 'KEY RESEARCH QUESTIONS' text format into structured items.
+
+    Tolerates markdown (bold `**...**`, italic `*...*`/`_..._`) and handles titles
+    that wrap to the next line when the model uses multi-line formatting.
+    """
+    import re
+
+    text = _strip_json_fences(raw_text)
+
+    def _clean(s: str) -> str:
+        s = s.strip()
+        # Strip markdown bold/italic wrappers repeatedly in case of nesting
+        while True:
+            original = s
+            s = re.sub(r"^\*{1,3}\s*", "", s)
+            s = re.sub(r"\s*\*{1,3}$", "", s)
+            s = re.sub(r"^_{1,2}\s*", "", s)
+            s = re.sub(r"\s*_{1,2}$", "", s)
+            s = s.strip()
+            if s == original:
+                break
+        # Also strip a leading colon/dash that may be left behind when the
+        # model put the delimiter on the question line ("** What specific...").
+        s = re.sub(r"^[:\-–]\s*", "", s).strip()
+        return s
+
+    # Drop heading / blank lines
+    lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.upper().startswith("KEY RESEARCH QUESTIONS"):
+            continue
+        lines.append(stripped)
+
+    items: list[dict] = []
+    numbered_re = re.compile(r"^\s*\d+\s*[\.\)]\s*(.+)$")
+    inline_split_re = re.compile(r"^(.+?)\s*[:\-–]\s*(.+)$")
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        m = numbered_re.match(line)
+        if not m:
+            i += 1
+            continue
+
+        rest = m.group(1).strip()
+        title = ""
+        question = ""
+
+        # Case A: title and question on the same line, separated by : - –
+        split = inline_split_re.match(rest)
+        if split and not split.group(1).endswith("*") and not split.group(1).endswith("_"):
+            # Simple inline split (title does not end with stray markdown marker)
+            title = split.group(1)
+            question = split.group(2)
+        elif split:
+            # The split may still be valid even if title ends with ** — take it
+            title = split.group(1)
+            question = split.group(2)
+        else:
+            # Case B: title alone on this line; question on the following non-numbered line(s)
+            title = rest
+            # Gather the next lines until we hit another numbered item
+            j = i + 1
+            collected: list[str] = []
+            while j < len(lines) and not numbered_re.match(lines[j]):
+                collected.append(lines[j])
+                j += 1
+            question = " ".join(collected)
+            i = j - 1  # outer loop will i+=1
+
+        title = _clean(title)
+        question = _clean(question)
+
+        if title and question:
+            items.append({"title": title, "question": question})
+
+        i += 1
+
+    if not items:
+        raise ValueError("Could not parse any key research questions from LLM output")
+
+    return items
+
+
+@router.post("/research-questions", response_model=ProposalEnvelopeResponse)
+async def generate_research_questions(request: ResearchQuestionsRequest):
+    """Generate key research questions from the research brief + executive summary. Uses a dedicated prompt file."""
+    try:
+        content = _RESEARCH_QUESTIONS_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Research questions prompt file not found")
+
+    if request.objectives:
+        objectives_block = "\n".join(
+            f"{i + 1}. {o.title}: {o.description}"
+            for i, o in enumerate(request.objectives)
+        )
+    else:
+        objectives_block = "(none provided)"
+
+    template = _extract_prompt_from_md(content)
+    prompt = (
+        template
+        .replace("{{research_brief}}", request.research_brief or "")
+        .replace("{{executive_summary}}", request.executive_summary or "")
+        .replace("{{objectives}}", objectives_block)
+    )
+
+    if (request.mode or "initial").lower() == "regenerate":
+        prompt += "\n\nProduce a distinctly different set of high-impact questions than a typical first pass — vary the journey stages, decision areas, and emphasis."
+
+    try:
+        llm_service._ensure_configured()
+        if not llm_service.model:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
+            )
+        raw_text = await llm_service._generate(prompt)
+
+        try:
+            items = _parse_research_questions_text(raw_text)
+        except ValueError as e:
+            logger.warning(f"Research questions parse failure. Raw: {raw_text[:400]}")
+            raise HTTPException(status_code=502, detail=f"AI returned unparseable output: {e}")
+
+        return ProposalEnvelopeResponse(
+            reply="Here are your key research questions.",
+            proposals=[
+                Proposal(
+                    type="set_research_questions",
+                    label="Key Research Questions",
+                    value=items,
+                )
+            ],
+            actions=[],
+            follow_up_chips=[],
+        )
+    except HTTPException:
+        raise
+    except TimeoutError:
+        logger.error("Gemini request timed out (research questions)")
+        raise HTTPException(status_code=504, detail="AI service timed out.")
+    except Exception as e:
+        logger.error(f"Research questions generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Welcome Page (dedicated, grounded in brief + executive summary) ──
+
+class WelcomePageRequest(BaseModel):
+    research_brief: str
+    executive_summary: str
+    mode: Optional[str] = "initial"  # "initial" | "regenerate"
+
+
+def _parse_welcome_page_json(raw_text: str) -> tuple[str, str]:
+    """Extract title and description from the LLM's JSON output, tolerating common formatting quirks."""
+    text = _strip_json_fences(raw_text)
+
+    try:
+        data = json.loads(text)
+        title = str(data.get("title", "")).strip()
+        description = str(data.get("description", "")).strip()
+        if title and description:
+            return title, description
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    import re
+    title_match = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+    desc_match = re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
+    if title_match and desc_match:
+        return (
+            title_match.group(1).strip(),
+            desc_match.group(1).encode().decode("unicode_escape").strip(),
+        )
+
+    raise ValueError("Could not parse title/description JSON from LLM output")
+
+
+@router.post("/welcome-page", response_model=ProposalEnvelopeResponse)
+async def generate_welcome_page(request: WelcomePageRequest):
+    """Generate the participant-facing Welcome Page title and description. Uses a dedicated prompt file."""
+    try:
+        content = _WELCOME_PAGE_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Welcome page prompt file not found")
+
+    template = _extract_prompt_from_md(content)
+    prompt = (
+        template
+        .replace("{{research_brief}}", request.research_brief or "")
+        .replace("{{executive_summary}}", request.executive_summary or "")
+    )
+
+    if (request.mode or "initial").lower() == "regenerate":
+        prompt += "\n\nProduce a distinctly different welcome framing than a typical first pass — vary the opening hook, phrasing, and emphasis."
+
+    try:
+        llm_service._ensure_configured()
+        if not llm_service.model:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
+            )
+        raw_text = await llm_service._generate(prompt)
+
+        try:
+            title, description = _parse_welcome_page_json(raw_text)
+        except ValueError as e:
+            logger.warning(f"Welcome page parse failure. Raw: {raw_text[:400]}")
+            raise HTTPException(status_code=502, detail=f"AI returned unparseable output: {e}")
+
+        return ProposalEnvelopeResponse(
+            reply="Here's your welcome page.",
+            proposals=[
+                Proposal(type="update_welcome_title", label="Welcome Title", value=title),
+                Proposal(type="update_welcome_description", label="Welcome Description", value=description),
+            ],
+            actions=[],
+            follow_up_chips=[],
+        )
+    except HTTPException:
+        raise
+    except TimeoutError:
+        logger.error("Gemini request timed out (welcome page)")
+        raise HTTPException(status_code=504, detail="AI service timed out.")
+    except Exception as e:
+        logger.error(f"Welcome page generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -433,12 +742,7 @@ def _build_prompt_chat_prompt(request: PromptChatRequest) -> str:
 
 
 def _parse_prompt_chat_response(raw_text: str) -> PromptChatResponse:
-    text = raw_text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1]
-    if text.endswith("```"):
-        text = text.rsplit("```", 1)[0]
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _strip_json_fences(raw_text)
 
     try:
         data = json.loads(text)
@@ -488,12 +792,14 @@ class StudySaveRequest(BaseModel):
     title: str
     initial_prompt: Optional[str] = ""
     briefing: Optional[str] = ""
+    executive_summary: Optional[str] = ""
     emotion_detection: bool = False
     participant_languages: List[str] = ["English"]
     reporting_language: str = "English"
     advanced_settings: Dict[str, Any] = {}
     welcome_page: Dict[str, Any] = {}
     topic_guide: Dict[str, Any] = {}
+    key_research_questions: List[Dict[str, Any]] = []
     conversation_history: List[Dict[str, Any]] = []
     status: Optional[str] = "DRAFT"
 
@@ -549,31 +855,6 @@ async def _sync_research_questions(
             sort_counter += 1
 
 
-async def _sync_research_cohorts(
-    session: AsyncSession, company_id: uuid.UUID, topic_guide: Dict[str, Any]
-):
-    """Upsert cohorts from topic_guide objectives into research_cohorts (company-scoped).
-
-    Uses the objective title as the cohort name. Skips duplicates via the
-    unique constraint (company_id, name).
-    """
-    objectives = topic_guide.get("objectives", [])
-    existing_stmt = select(ResearchCohort.name).where(ResearchCohort.company_id == company_id)
-    existing_names = set((await session.exec(existing_stmt)).all())
-
-    for objective in objectives:
-        name = (objective.get("title") or "").strip()
-        if not name or name in existing_names:
-            continue
-        cohort = ResearchCohort(
-            company_id=company_id,
-            name=name,
-            description=objective.get("description"),
-        )
-        session.add(cohort)
-        existing_names.add(name)
-
-
 @router.post("/save")
 async def save_study(
     req: StudySaveRequest,
@@ -594,6 +875,7 @@ async def save_study(
     if existing:
         # Update
         existing.briefing = req.briefing
+        existing.executive_summary = req.executive_summary
         existing.initial_prompt = req.initial_prompt
         existing.emotion_detection = req.emotion_detection
         existing.participant_languages = req.participant_languages
@@ -601,15 +883,13 @@ async def save_study(
         existing.advanced_settings = req.advanced_settings
         existing.welcome_page = req.welcome_page
         existing.topic_guide = req.topic_guide
+        existing.key_research_questions = req.key_research_questions
         existing.conversation_history = req.conversation_history
         existing.status = req.status or existing.status
         existing.updated_at = datetime.utcnow()
         session.add(existing)
         await session.commit()
         await session.refresh(existing)
-        await _sync_research_questions(session, existing.id, company_id, req.topic_guide)
-        await _sync_research_cohorts(session, company_id, req.topic_guide)
-        await session.commit()
         return {"id": str(existing.id), "status": "updated"}
     else:
         # Create
@@ -619,21 +899,20 @@ async def save_study(
             title=req.title,
             initial_prompt=req.initial_prompt,
             briefing=req.briefing,
+            executive_summary=req.executive_summary,
             emotion_detection=req.emotion_detection,
             participant_languages=req.participant_languages,
             reporting_language=req.reporting_language,
             advanced_settings=req.advanced_settings,
             welcome_page=req.welcome_page,
             topic_guide=req.topic_guide,
+            key_research_questions=req.key_research_questions,
             conversation_history=req.conversation_history,
             status=req.status or "DRAFT",
         )
         session.add(study)
         await session.commit()
         await session.refresh(study)
-        await _sync_research_questions(session, study.id, company_id, req.topic_guide)
-        await _sync_research_cohorts(session, company_id, req.topic_guide)
-        await session.commit()
         return {"id": str(study.id), "status": "created"}
 
 

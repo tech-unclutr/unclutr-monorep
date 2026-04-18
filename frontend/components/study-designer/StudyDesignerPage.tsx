@@ -10,22 +10,10 @@ import {
     AlertCircle,
     Plus,
     Trash2,
-    ChevronDown,
-    Video,
-    Phone,
-    MessageSquare,
-    Users,
-    Minus,
-    X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDesigner, type Phase } from "./StudyDesignerContext";
-import type {
-    ResearchObjective,
-    Question,
-    QuestionType,
-    InterviewMode,
-} from "./types";
+import type { ResearchObjective, KeyResearchQuestion } from "./types";
 
 // ════════════════════════════════════════════════════════════
 // Root
@@ -47,18 +35,40 @@ export function StudyDesignerPage() {
     // First-time generation: full-screen FirstLoadScreen, but only when there
     // is genuinely nothing to show yet. After the user has confirmed at least
     // one section, the loading state for the next section appears inline.
-    if (phase === "loading_title" && !study.title) {
+    if (phase === "loading_executive_summary" && !study.executiveSummary) {
         return <FirstLoadScreen prompt={initialPrompt} />;
     }
 
+    const execSummaryConfirmed = isPhaseAfter(phase, "review_executive_summary");
     const titleConfirmed = isPhaseAfter(phase, "review_title");
     const welcomeConfirmed = isPhaseAfter(phase, "review_welcome");
     const objectivesConfirmed = isPhaseAfter(phase, "review_objectives");
+    const researchQuestionsConfirmed = isPhaseAfter(phase, "review_research_questions");
 
     return (
         <div className="h-full w-full overflow-y-auto scrollbar-subtle bg-background">
             <div className="mx-auto max-w-[760px] px-8 py-12 space-y-6">
                 <SaveIndicator isSaving={isSaving} />
+
+                {/* Executive Summary — always first */}
+                {execSummaryConfirmed ? (
+                    <ExecutiveSummaryStep
+                        summary={study.executiveSummary}
+                        isBusy={isBusy}
+                        confirmed
+                        onSummary={(v) => updateField("executiveSummary", v)}
+                        onLooksGood={looksGood}
+                        onRegenerate={regenerate}
+                    />
+                ) : phase === "review_executive_summary" ? (
+                    <ExecutiveSummaryStep
+                        summary={study.executiveSummary}
+                        isBusy={isBusy}
+                        onSummary={(v) => updateField("executiveSummary", v)}
+                        onLooksGood={looksGood}
+                        onRegenerate={regenerate}
+                    />
+                ) : null}
 
                 {/* Title & Brief — confirmed (editable, no buttons) or active review */}
                 {titleConfirmed ? (
@@ -82,6 +92,8 @@ export function StudyDesignerPage() {
                         onLooksGood={looksGood}
                         onRegenerate={regenerate}
                     />
+                ) : phase === "loading_title" ? (
+                    <LoadingCard label="Drafting your title and brief..." />
                 ) : null}
 
                 {/* Welcome page */}
@@ -134,6 +146,26 @@ export function StudyDesignerPage() {
                     <LoadingCard label="Structuring your research objectives..." />
                 ) : null}
 
+                {/* Key Research Questions — view-only */}
+                {researchQuestionsConfirmed ? (
+                    <ResearchQuestionsStep
+                        items={study.keyResearchQuestions}
+                        isBusy={isBusy}
+                        confirmed
+                        onLooksGood={looksGood}
+                        onRegenerate={regenerate}
+                    />
+                ) : phase === "review_research_questions" ? (
+                    <ResearchQuestionsStep
+                        items={study.keyResearchQuestions}
+                        isBusy={isBusy}
+                        onLooksGood={looksGood}
+                        onRegenerate={regenerate}
+                    />
+                ) : phase === "loading_research_questions" ? (
+                    <LoadingCard label="Distilling your key research questions..." />
+                ) : null}
+
                 {error && <ErrorBanner message={error} />}
             </div>
         </div>
@@ -141,12 +173,16 @@ export function StudyDesignerPage() {
 }
 
 const PHASE_ORDER: Phase[] = [
+    "loading_executive_summary",
+    "review_executive_summary",
     "loading_title",
     "review_title",
     "loading_welcome",
     "review_welcome",
     "loading_objectives",
     "review_objectives",
+    "loading_research_questions",
+    "review_research_questions",
     "done",
 ];
 
@@ -244,6 +280,66 @@ function StepActions({
                 Looks Good
                 <ArrowRight className="h-3.5 w-3.5" />
             </button>
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════
+// Step 0 — Executive Summary
+// ════════════════════════════════════════════════════════════
+
+function ExecutiveSummaryStep({
+    summary,
+    isBusy,
+    confirmed = false,
+    onSummary,
+    onLooksGood,
+    onRegenerate,
+}: {
+    summary: string;
+    isBusy: boolean;
+    confirmed?: boolean;
+    onSummary: (v: string) => void;
+    onLooksGood: () => void;
+    onRegenerate: () => void;
+}) {
+    return (
+        <div className={CARD_CLASS}>
+            <CardHeader
+                title={
+                    confirmed
+                        ? "Executive Summary"
+                        : "Here's your executive summary"
+                }
+                subtitle={
+                    confirmed
+                        ? "Edit anytime — changes save automatically."
+                        : "A strategic restatement of purpose, cohorts, hypotheses, and business impact. Refine as you like."
+                }
+            />
+
+            <div className="space-y-5">
+                <div>
+                    <FieldLabel>Executive Summary</FieldLabel>
+                    <textarea
+                        className={cn(
+                            INPUT_CLASS,
+                            "min-h-[240px] resize-y leading-relaxed"
+                        )}
+                        value={summary}
+                        onChange={(e) => onSummary(e.target.value)}
+                        placeholder="A concise executive summary will appear here..."
+                    />
+                </div>
+            </div>
+
+            {!confirmed && (
+                <StepActions
+                    isBusy={isBusy}
+                    onLooksGood={onLooksGood}
+                    onRegenerate={onRegenerate}
+                />
+            )}
         </div>
     );
 }
@@ -383,24 +479,8 @@ function WelcomeStep({
 }
 
 // ════════════════════════════════════════════════════════════
-// Step 3 — Objectives + Questions (editable)
+// Step 3 — Objectives (document-style, review-first)
 // ════════════════════════════════════════════════════════════
-
-const QUESTION_TYPES: { value: QuestionType; label: string; description: string }[] = [
-    { value: "open-ended", label: "Open-ended", description: "Answer freely" },
-    { value: "single-select", label: "Single-select", description: "One answer from predefined options" },
-    { value: "multiselect", label: "Multiselect", description: "Many answers from predefined options" },
-];
-
-const INTERVIEW_MODES: {
-    value: InterviewMode;
-    label: string;
-    icon: React.ReactNode;
-}[] = [
-    { value: "video_call", label: "Video", icon: <Video className="w-3.5 h-3.5" /> },
-    { value: "audio_call", label: "Audio", icon: <Phone className="w-3.5 h-3.5" /> },
-    { value: "chat", label: "Chat", icon: <MessageSquare className="w-3.5 h-3.5" /> },
-];
 
 function ObjectivesStep({
     objectives,
@@ -415,29 +495,22 @@ function ObjectivesStep({
     onLooksGood: () => void;
     onRegenerate: () => void;
 }) {
-    const {
-        updateObjective,
-        deleteObjective,
-        addObjective,
-        updateQuestion,
-        deleteQuestion,
-        addQuestion,
-    } = useDesigner();
-
-    const totalQuestions = objectives.reduce((n, o) => n + o.questions.length, 0);
+    const { updateObjective, deleteObjective, addObjective } = useDesigner();
 
     return (
-        <div className={CARD_CLASS}>
-            <CardHeader
-                title={confirmed ? "Research Objectives" : "Here's your research plan"}
-                subtitle={
-                    confirmed
-                        ? "Edit anytime — changes save automatically."
-                        : `${objectives.length} ${objectives.length === 1 ? "objective" : "objectives"}, ${totalQuestions} ${totalQuestions === 1 ? "question" : "questions"} in total.`
-                }
-            />
+        <div className={cn(CARD_CLASS, "px-10 py-9")}>
+            <div className="mb-7 flex items-baseline justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FF8A4C]">
+                    Objectives
+                </span>
+                {confirmed && (
+                    <span className="text-[11px] text-muted-foreground/60">
+                        Edit anytime — changes save automatically.
+                    </span>
+                )}
+            </div>
 
-            <div className="space-y-5">
+            <ol className="space-y-7">
                 {objectives.map((obj, i) => (
                     <ObjectiveEditor
                         key={obj.id}
@@ -445,23 +518,18 @@ function ObjectivesStep({
                         index={i}
                         onUpdate={(field, value) => updateObjective(obj.id, field, value)}
                         onDelete={() => deleteObjective(obj.id)}
-                        onUpdateQuestion={(qid, field, value) =>
-                            updateQuestion(obj.id, qid, field, value)
-                        }
-                        onDeleteQuestion={(qid) => deleteQuestion(obj.id, qid)}
-                        onAddQuestion={() => addQuestion(obj.id)}
                     />
                 ))}
+            </ol>
 
-                <button
-                    type="button"
-                    onClick={addObjective}
-                    className="group flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 py-4 text-[13px] font-medium text-muted-foreground/60 transition-all hover:border-[#FF8A4C]/50 hover:bg-[#FF8A4C]/[0.03] hover:text-foreground dark:border-[#27272A] dark:hover:border-[#FF8A4C]/40"
-                >
-                    <Plus className="h-3.5 w-3.5 transition-colors group-hover:text-[#FF8A4C]" />
-                    Add objective
-                </button>
-            </div>
+            <button
+                type="button"
+                onClick={addObjective}
+                className="group mt-7 flex items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground/50 transition-colors hover:text-[#FF8A4C]"
+            >
+                <Plus className="h-3.5 w-3.5" />
+                Add objective
+            </button>
 
             {!confirmed && (
                 <StepActions
@@ -479,310 +547,48 @@ function ObjectiveEditor({
     index,
     onUpdate,
     onDelete,
-    onUpdateQuestion,
-    onDeleteQuestion,
-    onAddQuestion,
 }: {
     objective: ResearchObjective;
     index: number;
     onUpdate: (field: "title" | "description", value: string) => void;
     onDelete: () => void;
-    onUpdateQuestion: (
-        qid: string,
-        field: keyof Question,
-        value: string | number | string[] | QuestionType | InterviewMode
-    ) => void;
-    onDeleteQuestion: (qid: string) => void;
-    onAddQuestion: () => void;
-}) {
-    const [hovered, setHovered] = useState(false);
-
-    return (
-        <div
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            className="rounded-2xl border border-gray-100 bg-muted/[0.25] p-5 transition-all dark:border-[#27272A] dark:bg-[#1c1c1f]"
-        >
-            <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-[12px] font-semibold text-white shadow-sm shadow-indigo-500/30">
-                    {index + 1}
-                </div>
-
-                <div className="flex-1 space-y-2">
-                    <BorderedInput
-                        value={objective.title}
-                        placeholder="Objective title"
-                        onChange={(v) => onUpdate("title", v)}
-                        className="text-[14px] font-semibold text-foreground"
-                    />
-                    <BorderedTextarea
-                        value={objective.description}
-                        placeholder="What this objective is exploring..."
-                        onChange={(v) => onUpdate("description", v)}
-                        className="text-[12.5px] leading-relaxed text-foreground/70"
-                    />
-                </div>
-
-                <button
-                    type="button"
-                    onClick={onDelete}
-                    className={cn(
-                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/40 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10",
-                        hovered ? "opacity-100" : "opacity-0"
-                    )}
-                    aria-label="Delete objective"
-                >
-                    <Trash2 className="h-3.5 w-3.5" />
-                </button>
-            </div>
-
-            <div className="space-y-2.5 pl-10">
-                {objective.questions.map((q, qi) => (
-                    <QuestionEditor
-                        key={q.id}
-                        question={q}
-                        index={qi}
-                        onUpdate={(field, value) => onUpdateQuestion(q.id, field, value)}
-                        onDelete={() => onDeleteQuestion(q.id)}
-                    />
-                ))}
-
-                <button
-                    type="button"
-                    onClick={onAddQuestion}
-                    className="group flex items-center gap-1.5 rounded-lg border border-dashed border-transparent px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground/40 transition-all hover:border-gray-200 hover:bg-muted/30 hover:text-foreground dark:hover:border-[#27272A]"
-                >
-                    <Plus className="h-3 w-3 transition-colors group-hover:text-[#FF8A4C]" />
-                    Add question
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function QuestionEditor({
-    question,
-    index,
-    onUpdate,
-    onDelete,
-}: {
-    question: Question;
-    index: number;
-    onUpdate: (
-        field: keyof Question,
-        value: string | number | string[] | QuestionType | InterviewMode
-    ) => void;
-    onDelete: () => void;
-}) {
-    const [hovered, setHovered] = useState(false);
-    const [typeOpen, setTypeOpen] = useState(false);
-    const typeRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!typeOpen) return;
-        const handler = (e: MouseEvent) => {
-            if (typeRef.current && !typeRef.current.contains(e.target as Node)) {
-                setTypeOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [typeOpen]);
-
-    const currentType =
-        QUESTION_TYPES.find((t) => t.value === question.type) ?? QUESTION_TYPES[0];
-
-    return (
-        <div
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            className={cn(
-                "rounded-xl border bg-card/50 p-4 transition-all duration-200",
-                hovered
-                    ? "border-gray-200 dark:border-[#3F3F46]"
-                    : "border-gray-100 dark:border-[#27272A]"
-            )}
-        >
-            <div className="mb-3 flex items-center justify-between">
-                <span className="text-[11px] font-semibold tabular-nums text-muted-foreground/40">
-                    Q{index + 1}
-                </span>
-
-                <div className="flex items-center gap-1.5">
-                    <div className="relative" ref={typeRef}>
-                        <button
-                            type="button"
-                            onClick={() => setTypeOpen((o) => !o)}
-                            className="flex items-center gap-1 rounded-md border border-gray-200 bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-gray-300 dark:border-[#27272A] dark:hover:border-[#3F3F46]"
-                        >
-                            {currentType.label}
-                            <ChevronDown
-                                className={cn(
-                                    "h-3 w-3 transition-transform",
-                                    typeOpen && "rotate-180"
-                                )}
-                            />
-                        </button>
-                        {typeOpen && (
-                            <div className="absolute right-0 top-full z-20 mt-1 w-56 animate-in fade-in slide-in-from-top-1 rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-black/10 duration-150 dark:border-[#27272A] dark:bg-[#1C1C1E] dark:shadow-black/30">
-                                {QUESTION_TYPES.map((t) => (
-                                    <button
-                                        key={t.value}
-                                        type="button"
-                                        onClick={() => {
-                                            onUpdate("type", t.value);
-                                            setTypeOpen(false);
-                                        }}
-                                        className={cn(
-                                            "flex w-full items-center justify-between px-3 py-2 text-left transition-colors hover:bg-muted/50",
-                                            t.value === question.type && "bg-muted/30"
-                                        )}
-                                    >
-                                        <div>
-                                            <p className="text-xs font-medium text-foreground">
-                                                {t.label}
-                                            </p>
-                                            <p className="mt-0.5 text-[10px] text-muted-foreground">
-                                                {t.description}
-                                            </p>
-                                        </div>
-                                        {t.value === question.type && (
-                                            <Check className="h-3.5 w-3.5 shrink-0 text-foreground" />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={onDelete}
-                        className={cn(
-                            "flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10",
-                            hovered ? "opacity-100" : "opacity-0"
-                        )}
-                        aria-label="Delete question"
-                    >
-                        <Trash2 className="h-3 w-3" />
-                    </button>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <div>
-                    <MicroLabel>Question</MicroLabel>
-                    <BorderedTextarea
-                        value={question.text}
-                        placeholder="What do you want to ask the participant?"
-                        onChange={(v) => onUpdate("text", v)}
-                        className="text-[13px] leading-relaxed text-foreground/80"
-                    />
-                </div>
-
-                <div>
-                    <MicroLabel>Context</MicroLabel>
-                    <BorderedTextarea
-                        value={question.context}
-                        placeholder="How should the interviewer use this question? What to probe for..."
-                        onChange={(v) => onUpdate("context", v)}
-                        className="text-[12px] leading-relaxed text-foreground/60"
-                    />
-                </div>
-
-                {(question.type === "single-select" ||
-                    question.type === "multiselect") && (
-                    <OptionsEditor
-                        options={question.options ?? []}
-                        onChange={(opts) => onUpdate("options", opts)}
-                    />
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <MicroLabel>Participants</MicroLabel>
-                        <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-background px-3 py-2 transition-all duration-200 hover:border-gray-300 dark:border-[#27272A] dark:hover:border-[#3F3F46]">
-                            <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onUpdate(
-                                        "participantCount",
-                                        Math.max(1, question.participantCount - 1)
-                                    )
-                                }
-                                className="flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/40 transition-all hover:bg-muted/50 hover:text-foreground"
-                            >
-                                <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="min-w-[16px] text-center text-[13px] font-semibold tabular-nums text-foreground">
-                                {question.participantCount}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onUpdate(
-                                        "participantCount",
-                                        question.participantCount + 1
-                                    )
-                                }
-                                className="flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/40 transition-all hover:bg-muted/50 hover:text-foreground"
-                            >
-                                <Plus className="h-3 w-3" />
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <MicroLabel>Mode</MicroLabel>
-                        <InterviewModePicker
-                            value={question.interviewMode}
-                            onChange={(mode) => onUpdate("interviewMode", mode)}
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function MicroLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
-            {children}
-        </label>
-    );
-}
-
-function InterviewModePicker({
-    value,
-    onChange,
-}: {
-    value: InterviewMode;
-    onChange: (mode: InterviewMode) => void;
 }) {
     return (
-        <div className="flex gap-1 rounded-xl border border-gray-200 bg-background p-1 dark:border-[#27272A]">
-            {INTERVIEW_MODES.map((mode) => (
-                <button
-                    key={mode.value}
-                    type="button"
-                    onClick={() => onChange(mode.value)}
-                    className={cn(
-                        "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-medium transition-all duration-200",
-                        value === mode.value
-                            ? "bg-[#FF8A4C] text-white shadow-sm shadow-[#FF8A4C]/20"
-                            : "text-muted-foreground/50 hover:bg-muted/30 hover:text-foreground"
-                    )}
-                >
-                    {mode.icon}
-                    {mode.label}
-                </button>
-            ))}
-        </div>
+        <li className="group relative grid grid-cols-[28px_1fr_24px] items-start gap-3">
+            <span className="pt-[1px] text-[14px] font-semibold tabular-nums text-foreground">
+                {index + 1}.
+            </span>
+
+            <div className="min-w-0 space-y-1">
+                <InlineInput
+                    value={objective.title}
+                    placeholder="Objective title"
+                    onChange={(v) => onUpdate("title", v)}
+                    className="text-[15px] font-semibold leading-snug text-foreground"
+                />
+                <InlineTextarea
+                    value={objective.description}
+                    placeholder="What this objective is exploring..."
+                    onChange={(v) => onUpdate("description", v)}
+                    className="text-[13.5px] leading-relaxed text-muted-foreground"
+                />
+            </div>
+
+            <button
+                type="button"
+                onClick={onDelete}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/30 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
+                aria-label="Delete objective"
+            >
+                <Trash2 className="h-3.5 w-3.5" />
+            </button>
+        </li>
     );
 }
 
-function BorderedInput({
+// ── Inline (borderless) editors — underline on focus ──
+
+function InlineInput({
     value,
     placeholder,
     onChange,
@@ -793,46 +599,31 @@ function BorderedInput({
     onChange: (v: string) => void;
     className?: string;
 }) {
-    const [focused, setFocused] = useState(false);
     return (
-        <div
+        <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
             className={cn(
-                "rounded-xl border px-3.5 py-2.5 transition-all duration-200",
-                focused
-                    ? "border-[#FF8A4C]/40 bg-background shadow-[0_0_0_3px_rgba(255,138,76,0.06)]"
-                    : "border-gray-200 bg-background hover:border-gray-300 dark:border-[#27272A] dark:hover:border-[#3F3F46]"
+                "w-full border-b border-transparent bg-transparent py-0.5 outline-none transition-colors placeholder:text-muted-foreground/25 focus:border-[#FF8A4C]/40",
+                className
             )}
-        >
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                placeholder={placeholder}
-                className={cn(
-                    "w-full bg-transparent outline-none placeholder:text-muted-foreground/25",
-                    className
-                )}
-            />
-        </div>
+        />
     );
 }
 
-function BorderedTextarea({
+function InlineTextarea({
     value,
     placeholder,
     onChange,
     className,
-    minRows = 2,
 }: {
     value: string;
     placeholder: string;
     onChange: (v: string) => void;
     className?: string;
-    minRows?: number;
 }) {
-    const [focused, setFocused] = useState(false);
     const ref = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -843,113 +634,78 @@ function BorderedTextarea({
     }, [value]);
 
     return (
-        <div
+        <textarea
+            ref={ref}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={2}
             className={cn(
-                "rounded-xl border px-3.5 py-2.5 transition-all duration-200",
-                focused
-                    ? "border-[#FF8A4C]/40 bg-background shadow-[0_0_0_3px_rgba(255,138,76,0.06)]"
-                    : "border-gray-200 bg-background hover:border-gray-300 dark:border-[#27272A] dark:hover:border-[#3F3F46]"
+                "w-full resize-none border-b border-transparent bg-transparent py-0.5 outline-none transition-colors placeholder:text-muted-foreground/25 focus:border-[#FF8A4C]/40",
+                className
             )}
-        >
-            <textarea
-                ref={ref}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                placeholder={placeholder}
-                rows={minRows}
-                className={cn(
-                    "w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground/25",
-                    className
-                )}
-            />
-        </div>
+        />
     );
 }
 
-function OptionsEditor({
-    options,
-    onChange,
-}: {
-    options: string[];
-    onChange: (options: string[]) => void;
-}) {
-    const updateOption = (i: number, value: string) => {
-        const next = [...options];
-        next[i] = value;
-        onChange(next);
-    };
-    const removeOption = (i: number) => onChange(options.filter((_, idx) => idx !== i));
-    const addOption = () => onChange([...options, ""]);
+// ════════════════════════════════════════════════════════════
+// Step 4 — Key Research Questions (view-only)
+// ════════════════════════════════════════════════════════════
 
+function ResearchQuestionsStep({
+    items,
+    isBusy,
+    confirmed = false,
+    onLooksGood,
+    onRegenerate,
+}: {
+    items: KeyResearchQuestion[];
+    isBusy: boolean;
+    confirmed?: boolean;
+    onLooksGood: () => void;
+    onRegenerate: () => void;
+}) {
     return (
-        <div>
-            <MicroLabel>Options</MicroLabel>
-            <div className="space-y-1.5">
-                {options.map((opt, i) => (
-                    <OptionRow
-                        key={i}
-                        index={i}
-                        value={opt}
-                        onChange={(v) => updateOption(i, v)}
-                        onRemove={() => removeOption(i)}
-                    />
+        <div className={cn(CARD_CLASS, "px-10 py-9")}>
+            <div className="mb-7 flex items-baseline justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FF8A4C]">
+                    Key Research Questions
+                </span>
+                {confirmed && (
+                    <span className="text-[11px] text-muted-foreground/60">
+                        Locked once accepted.
+                    </span>
+                )}
+            </div>
+
+            <ol className="space-y-6">
+                {items.map((item, i) => (
+                    <li
+                        key={item.id}
+                        className="grid grid-cols-[28px_1fr] items-start gap-3"
+                    >
+                        <span className="pt-[1px] text-[14px] font-semibold tabular-nums text-foreground">
+                            {i + 1}.
+                        </span>
+                        <div className="min-w-0">
+                            <p className="text-[15px] font-semibold leading-snug text-foreground">
+                                {item.title}
+                            </p>
+                            <p className="mt-1 text-[13.5px] leading-relaxed text-muted-foreground">
+                                {item.question}
+                            </p>
+                        </div>
+                    </li>
                 ))}
-            </div>
-            <button
-                type="button"
-                onClick={addOption}
-                className="group mt-1.5 flex items-center gap-1.5 rounded-lg border border-dashed border-transparent px-2.5 py-2 text-[11px] font-medium text-muted-foreground/40 transition-all hover:border-gray-200 hover:bg-muted/30 hover:text-foreground dark:hover:border-[#27272A]"
-            >
-                <Plus className="h-3 w-3 transition-colors group-hover:text-[#FF8A4C]" />
-                Add option
-            </button>
-        </div>
-    );
-}
+            </ol>
 
-function OptionRow({
-    index,
-    value,
-    onChange,
-    onRemove,
-}: {
-    index: number;
-    value: string;
-    onChange: (v: string) => void;
-    onRemove: () => void;
-}) {
-    const [hovered, setHovered] = useState(false);
-
-    return (
-        <div
-            className="flex items-center gap-2"
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-        >
-            <span className="w-5 shrink-0 text-right text-[10px] font-medium tabular-nums text-muted-foreground/35">
-                {index + 1}.
-            </span>
-            <div className="flex-1 rounded-lg border border-gray-200 px-3 py-2 transition-all duration-200 hover:border-gray-300 focus-within:border-[#FF8A4C]/40 focus-within:shadow-[0_0_0_3px_rgba(255,138,76,0.06)] dark:border-[#27272A] dark:hover:border-[#3F3F46]">
-                <input
-                    type="text"
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={`Option ${index + 1}`}
-                    className="w-full bg-transparent text-[13px] text-foreground/80 outline-none placeholder:text-muted-foreground/25"
+            {!confirmed && (
+                <StepActions
+                    isBusy={isBusy}
+                    onLooksGood={onLooksGood}
+                    onRegenerate={onRegenerate}
                 />
-            </div>
-            <button
-                type="button"
-                onClick={onRemove}
-                className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/30 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10",
-                    hovered ? "opacity-100" : "opacity-0"
-                )}
-            >
-                <X className="h-3 w-3" />
-            </button>
+            )}
         </div>
     );
 }

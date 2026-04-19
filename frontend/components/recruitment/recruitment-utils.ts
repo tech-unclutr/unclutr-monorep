@@ -5,6 +5,7 @@ export interface ExtractedLead {
     last_name?: string;
     contact_number: string;
     cohort?: string;
+    cohort_id?: string;
     contact_profile?: Record<string, any>;
     meta_data?: Record<string, any>;
 }

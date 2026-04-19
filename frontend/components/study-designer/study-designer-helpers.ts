@@ -49,6 +49,8 @@ export interface DesignerState {
     isBusy: boolean;
     isSaving: boolean;
     error: string | null;
+    isFinalizingCohorts: boolean;
+    finalizeError: string | null;
 }
 
 // ── Step request table ──

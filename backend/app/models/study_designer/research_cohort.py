@@ -22,6 +22,7 @@ class ResearchCohort(SQLModel, table=True):
 
     name: str = Field(nullable=False)
     description: Optional[str] = Field(default=None)
+    hypothesis: Optional[str] = Field(default=None)
     incentive: Optional[str] = Field(default=None)
 
     meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))

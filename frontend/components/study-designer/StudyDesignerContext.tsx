@@ -37,6 +37,8 @@ interface DesignerContextValue {
     isBusy: boolean;
     isSaving: boolean;
     error: string | null;
+    isFinalizingCohorts: boolean;
+    finalizeError: string | null;
     updateField: (
         path:
             | "title"
@@ -55,6 +57,7 @@ interface DesignerContextValue {
     addObjective: () => void;
     looksGood: () => Promise<void>;
     regenerate: () => Promise<void>;
+    retryFinalize: () => Promise<void>;
 }
 
 const DesignerContext = createContext<DesignerContextValue | null>(null);
@@ -90,6 +93,8 @@ export function StudyDesignerProvider({
         isBusy: false,
         isSaving: false,
         error: null,
+        isFinalizingCohorts: false,
+        finalizeError: null,
     }));
 
     // Refs that always reflect the latest state — used inside async helpers
@@ -241,10 +246,13 @@ export function StudyDesignerProvider({
 
     const saveStudy = useCallback(async (status: "DRAFT" | "READY") => {
         const { study, initialPrompt: prompt } = stateRef.current;
-        if (!study.title) return;
+        // READY must have a title (completed studies must be nameable);
+        // DRAFT saves are allowed from the first approved step (e.g. exec-summary).
+        if (status === "READY" && !study.title) return;
         setState((s) => ({ ...s, isSaving: true }));
         try {
             const res = await api.post("/study-planner/save", {
+                id: study.id,
                 title: study.title,
                 initial_prompt: prompt,
                 briefing: study.briefing,
@@ -351,6 +359,26 @@ export function StudyDesignerProvider({
         ]);
     }, [mapObjectives]);
 
+    const runFinalize = useCallback(async () => {
+        const studyId = stateRef.current.study.id;
+        if (!studyId) return;
+        setState((s) => ({ ...s, isFinalizingCohorts: true, finalizeError: null }));
+        try {
+            await api.post(
+                `/study-planner/studies/${studyId}/cohorts/generate`,
+                {}
+            );
+            setState((s) => ({ ...s, isFinalizingCohorts: false }));
+            onDesignComplete?.();
+        } catch (e: any) {
+            setState((s) => ({
+                ...s,
+                isFinalizingCohorts: false,
+                finalizeError: "Couldn't finish preparing your study.",
+            }));
+        }
+    }, [onDesignComplete]);
+
     const looksGood = useCallback(async () => {
         if (stateRef.current.isBusy) return;
         const phase = stateRef.current.phase;
@@ -374,10 +402,20 @@ export function StudyDesignerProvider({
         } else if (phase === "review_research_questions") {
             setState((s) => ({ ...s, isBusy: true }));
             await saveStudy("READY");
+            // Transition to done immediately — banner inside the done screen
+            // surfaces finalize progress. onDesignComplete fires only after
+            // cohort generation resolves (inside runFinalize), so the
+            // "Continue to Recruitment" button appears only when the study
+            // is truly ready.
             setState((s) => ({ ...s, phase: "done", isBusy: false }));
-            onDesignComplete?.();
+            await runFinalize();
         }
-    }, [saveStudy, runStep, onDesignComplete]);
+    }, [saveStudy, runStep, runFinalize]);
+
+    const retryFinalize = useCallback(async () => {
+        if (stateRef.current.isFinalizingCohorts) return;
+        await runFinalize();
+    }, [runFinalize]);
 
     const regenerate = useCallback(async () => {
         if (stateRef.current.isBusy) return;
@@ -486,12 +524,15 @@ export function StudyDesignerProvider({
                 isBusy: state.isBusy,
                 isSaving: state.isSaving,
                 error: state.error,
+                isFinalizingCohorts: state.isFinalizingCohorts,
+                finalizeError: state.finalizeError,
                 updateField,
                 updateObjective,
                 deleteObjective,
                 addObjective,
                 looksGood,
                 regenerate,
+                retryFinalize,
             }}
         >
             {children}

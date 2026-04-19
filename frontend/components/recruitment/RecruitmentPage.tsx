@@ -16,6 +16,7 @@ export interface ExistingLead {
     first_name: string;
     last_name?: string;
     contact_number: string;
+    cohort_id?: string;
     cohort_name?: string;
     participant_status: string;
     contact_profile?: Record<string, any>;
@@ -75,7 +76,15 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
                 }),
             });
             toast.success(`${res.inserted} leads saved, ${res.skipped} duplicates skipped`);
-            ctx.setExtractedLeads(leads);
+            // Enrich local leads with cohort_id from the upload response so downstream
+            // UI (cohort brief fetch) can key on UUIDs, not names.
+            const cohortIdByPhone = new Map<string, string>();
+            for (const r of res.leads ?? []) {
+                if (r.contact_number && r.cohort_id) cohortIdByPhone.set(r.contact_number, r.cohort_id);
+            }
+            ctx.setExtractedLeads(
+                leads.map((l) => ({ ...l, cohort_id: cohortIdByPhone.get(l.contact_number) ?? l.cohort_id }))
+            );
             // Refresh existing leads list after upload
             if (studyContext?.studyId) {
                 api.get(`/study-planner/studies/${studyContext.studyId}/leads`)
@@ -109,6 +118,7 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
                             last_name: l.last_name,
                             contact_number: l.contact_number,
                             cohort: l.cohort_name,
+                            cohort_id: l.cohort_id,
                             contact_profile: l.contact_profile,
                         }));
                         ctx.setExtractedLeads(extracted);

@@ -10,6 +10,7 @@ import {
     AlertCircle,
     Plus,
     Trash2,
+    Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDesigner, type Phase } from "./StudyDesignerContext";
@@ -27,9 +28,12 @@ export function StudyDesignerPage() {
         isBusy,
         isSaving,
         error,
+        isFinalizingCohorts,
+        finalizeError,
         updateField,
         looksGood,
         regenerate,
+        retryFinalize,
     } = useDesigner();
 
     // First-time generation: full-screen FirstLoadScreen, but only when there
@@ -166,7 +170,61 @@ export function StudyDesignerPage() {
                     <LoadingCard label="Distilling your key research questions..." />
                 ) : null}
 
+                {phase === "done" && (isFinalizingCohorts || finalizeError) && (
+                    <FinalizingBanner
+                        isFinalizing={isFinalizingCohorts}
+                        error={finalizeError}
+                        onRetry={retryFinalize}
+                    />
+                )}
+
                 {error && <ErrorBanner message={error} />}
+            </div>
+        </div>
+    );
+}
+
+function FinalizingBanner({
+    isFinalizing,
+    error,
+    onRetry,
+}: {
+    isFinalizing: boolean;
+    error: string | null;
+    onRetry: () => Promise<void>;
+}) {
+    if (error) {
+        return (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-4 flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-zinc-100">
+                        Couldn&rsquo;t finish preparing your study
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Your research is saved. Try again in a moment.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => { void onRetry(); }}
+                    className="shrink-0 rounded-md h-8 px-3 text-xs font-semibold bg-destructive text-white hover:bg-destructive/90 transition-colors"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+    return (
+        <div className="rounded-xl border border-[#FF8A4C]/30 bg-[#FF8A4C]/5 px-5 py-4 flex items-start gap-3 shadow-[0_0_15px_rgba(255,138,76,0.08)]">
+            <Loader2 className="w-4 h-4 text-[#FF8A4C] shrink-0 mt-0.5 animate-spin" />
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900 dark:text-zinc-100">
+                    Preparing your study
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                    Analyzing cohorts and generating hypotheses…
+                </p>
             </div>
         </div>
     );

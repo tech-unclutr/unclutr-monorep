@@ -49,13 +49,19 @@ export function LeadsCohortConfigurator({
 
     // ── Derive cohorts from leads ───────────────────────────────────────
 
-    const { cohorts, cohortCounts } = useMemo(() => {
+    const { cohorts, cohortCounts, cohortIdByName } = useMemo(() => {
         const counts: Record<string, number> = {};
+        const idByName: Record<string, string> = {};
         leads.forEach((lead) => {
             const c = lead.cohort || "Default";
             counts[c] = (counts[c] || 0) + 1;
+            if (lead.cohort_id && !idByName[c]) idByName[c] = lead.cohort_id;
         });
-        return { cohorts: Object.keys(counts), cohortCounts: counts };
+        return {
+            cohorts: Object.keys(counts),
+            cohortCounts: counts,
+            cohortIdByName: idByName,
+        };
     }, [leads]);
 
     // ── Active tab ──────────────────────────────────────────────────────
@@ -67,6 +73,8 @@ export function LeadsCohortConfigurator({
     useEffect(() => {
         if (!activeTab && cohorts.length > 0) setActiveTab(cohorts[0]);
     }, [cohorts, activeTab]);
+
+    const activeCohortId = activeTab ? cohortIdByName[activeTab] : undefined;
 
     // ── Fetch questions from DB ─────────────────────────────────────────
 
@@ -241,6 +249,8 @@ export function LeadsCohortConfigurator({
                                     <CohortBriefSections
                                         cohort={activeTab}
                                         data={getDummyBrief(activeTab)}
+                                        studyId={studyContext?.studyId}
+                                        cohortId={activeCohortId}
                                     />
 
                                     {/* Divider between reference brief and active workspace */}

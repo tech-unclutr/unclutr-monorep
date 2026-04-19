@@ -28,6 +28,7 @@ _TITLE_BRIEF_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "int
 _OBJECTIVES_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "objectives_prompt.md"
 _RESEARCH_QUESTIONS_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "research_questions_prompt.md"
 _WELCOME_PAGE_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "welcome_page_prompt.md"
+_COHORT_DEFINITIONS_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "cohort_definitions_prompt.md"
 
 
 def _strip_json_fences(raw_text: str) -> str:
@@ -119,85 +120,71 @@ class ProposalEnvelopeResponse(BaseModel):
     follow_up_chips: List[str]
 
 
-def _parse_executive_summary_json(raw_text: str) -> tuple[str, list[dict]]:
-    """Extract the executive summary and cohort candidates from the LLM's JSON output.
-
-    Returns (summary, cohorts) where cohorts is a list of {"name", "description"} dicts.
-    Falls back to treating the whole payload as a plain summary if the JSON is malformed —
-    cohort extraction is best-effort and must never break the summary flow.
-    """
-    text = _strip_json_fences(raw_text)
-
-    try:
-        data = json.loads(text)
-        summary = str(data.get("summary", "")).strip()
-        raw_cohorts = data.get("cohorts") or []
-        cohorts: list[dict] = []
-        if isinstance(raw_cohorts, list):
-            for c in raw_cohorts:
-                if not isinstance(c, dict):
-                    continue
-                name = str(c.get("name", "")).strip()
-                description = str(c.get("description", "")).strip()
-                if name:
-                    cohorts.append({"name": name, "description": description})
-        if summary:
-            return summary, cohorts
-    except (json.JSONDecodeError, Exception):
-        pass
-
-    # Fallback: model returned plain text instead of JSON. Keep the prose as the summary.
-    logger.warning(f"Exec summary JSON parse failed; treating as plain text. Raw: {text[:300]}")
-    return text, []
-
-
 async def _persist_cohort_candidates(
     session: AsyncSession, company_id: uuid.UUID, cohorts: list[dict]
-) -> None:
+) -> tuple[int, int]:
     """Upsert cohort candidates into research_cohorts (company-scoped).
 
-    Uses the name verbatim (no normalization). Duplicates are silently skipped via the
-    uq_research_cohort_company_name unique constraint. Best-effort: any failure is logged
-    and swallowed — cohort extraction must never break the exec-summary response.
+    Names are used verbatim (no normalization). Behavior:
+    - New cohort row → insert with description + hypothesis.
+    - Existing cohort (matched by name within company) → update description and hypothesis
+      only when the incoming payload provides a non-empty value for that field.
+    Returns (created_count, updated_count). Best-effort: any failure is logged and
+    swallowed — cohort persistence must never break the caller.
     """
     if not cohorts:
-        return
+        return 0, 0
     try:
-        existing_stmt = select(ResearchCohort.name).where(
+        existing_stmt = select(ResearchCohort).where(
             ResearchCohort.company_id == company_id
         )
-        existing_names = set((await session.exec(existing_stmt)).all())
+        existing_by_name: dict[str, ResearchCohort] = {
+            c.name: c for c in (await session.exec(existing_stmt)).all()
+        }
 
+        created = 0
+        updated = 0
         for c in cohorts:
-            name = c["name"]
-            if name in existing_names:
+            name = (c.get("name") or "").strip()
+            if not name:
                 continue
-            session.add(
-                ResearchCohort(
-                    company_id=company_id,
-                    name=name,
-                    description=c.get("description") or None,
+            description = (c.get("description") or "").strip()
+            hypothesis = (c.get("hypothesis") or "").strip()
+
+            row = existing_by_name.get(name)
+            if row is None:
+                session.add(
+                    ResearchCohort(
+                        company_id=company_id,
+                        name=name,
+                        description=description or None,
+                        hypothesis=hypothesis or None,
+                    )
                 )
-            )
-            existing_names.add(name)
+                created += 1
+            else:
+                changed = False
+                if description and description != row.description:
+                    row.description = description
+                    changed = True
+                if hypothesis and hypothesis != row.hypothesis:
+                    row.hypothesis = hypothesis
+                    changed = True
+                if changed:
+                    session.add(row)
+                    updated += 1
+
         await session.commit()
+        return created, updated
     except Exception as e:
         logger.warning(f"Failed to persist cohort candidates: {e}")
         await session.rollback()
+        return 0, 0
 
 
 @router.post("/executive-summary", response_model=ProposalEnvelopeResponse)
-async def generate_executive_summary(
-    request: ExecutiveSummaryRequest,
-    session: AsyncSession = Depends(get_session),
-    company_id: uuid.UUID = Depends(_get_company_id),
-):
-    """Generate an executive summary from the raw research brief. Uses a dedicated prompt file.
-
-    Also silently extracts cohort candidates from the brief (when the user named them) and
-    persists them to research_cohorts. The response shape is unchanged from the frontend's
-    perspective — cohort persistence is a side effect.
-    """
+async def generate_executive_summary(request: ExecutiveSummaryRequest):
+    """Generate an executive summary from the raw research brief. Uses a dedicated prompt file."""
     try:
         content = _EXEC_SUMMARY_PROMPT_PATH.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -217,9 +204,7 @@ async def generate_executive_summary(
                 detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
             )
         raw_text = await llm_service._generate(prompt)
-        summary, cohorts = _parse_executive_summary_json(raw_text)
-
-        await _persist_cohort_candidates(session, company_id, cohorts)
+        summary = _strip_json_fences(raw_text)
 
         return ProposalEnvelopeResponse(
             reply="Here's your executive summary.",
@@ -789,7 +774,8 @@ async def prompt_chat(request: PromptChatRequest):
 # ── Persistence schemas ──
 
 class StudySaveRequest(BaseModel):
-    title: str
+    id: Optional[uuid.UUID] = None
+    title: Optional[str] = ""
     initial_prompt: Optional[str] = ""
     briefing: Optional[str] = ""
     executive_summary: Optional[str] = ""
@@ -862,18 +848,25 @@ async def save_study(
     current_user_token: dict = Depends(get_current_user),
     company_id: uuid.UUID = Depends(_get_company_id),
 ):
-    """Create or update a designed study. Upserts by (company_id, title)."""
+    """Create or update a designed study. Upserts by id (preferred) or (company_id, title)."""
     user_id = current_user_token.get("uid")
 
-    # Check if study with same title exists for this company
-    stmt = select(DesignedStudy).where(
-        DesignedStudy.company_id == company_id,
-        DesignedStudy.title == req.title,
-    )
-    existing = (await session.exec(stmt)).first()
+    # Prefer id-based lookup; fall back to (company_id, title) for legacy rows saved
+    # before the frontend started sending id.
+    existing: Optional[DesignedStudy] = None
+    if req.id is not None:
+        candidate = await session.get(DesignedStudy, req.id)
+        if candidate and candidate.company_id == company_id:
+            existing = candidate
+    if existing is None and req.title:
+        stmt = select(DesignedStudy).where(
+            DesignedStudy.company_id == company_id,
+            DesignedStudy.title == req.title,
+        )
+        existing = (await session.exec(stmt)).first()
 
     if existing:
-        # Update
+        existing.title = req.title or existing.title
         existing.briefing = req.briefing
         existing.executive_summary = req.executive_summary
         existing.initial_prompt = req.initial_prompt
@@ -891,29 +884,30 @@ async def save_study(
         await session.commit()
         await session.refresh(existing)
         return {"id": str(existing.id), "status": "updated"}
-    else:
-        # Create
-        study = DesignedStudy(
-            company_id=company_id,
-            user_id=user_id,
-            title=req.title,
-            initial_prompt=req.initial_prompt,
-            briefing=req.briefing,
-            executive_summary=req.executive_summary,
-            emotion_detection=req.emotion_detection,
-            participant_languages=req.participant_languages,
-            reporting_language=req.reporting_language,
-            advanced_settings=req.advanced_settings,
-            welcome_page=req.welcome_page,
-            topic_guide=req.topic_guide,
-            key_research_questions=req.key_research_questions,
-            conversation_history=req.conversation_history,
-            status=req.status or "DRAFT",
-        )
-        session.add(study)
-        await session.commit()
-        await session.refresh(study)
-        return {"id": str(study.id), "status": "created"}
+
+    # Create. Use the client-supplied id when present so subsequent saves stay linked.
+    study = DesignedStudy(
+        **({"id": req.id} if req.id is not None else {}),
+        company_id=company_id,
+        user_id=user_id,
+        title=req.title or "",
+        initial_prompt=req.initial_prompt,
+        briefing=req.briefing,
+        executive_summary=req.executive_summary,
+        emotion_detection=req.emotion_detection,
+        participant_languages=req.participant_languages,
+        reporting_language=req.reporting_language,
+        advanced_settings=req.advanced_settings,
+        welcome_page=req.welcome_page,
+        topic_guide=req.topic_guide,
+        key_research_questions=req.key_research_questions,
+        conversation_history=req.conversation_history,
+        status=req.status or "DRAFT",
+    )
+    session.add(study)
+    await session.commit()
+    await session.refresh(study)
+    return {"id": str(study.id), "status": "created"}
 
 
 @router.get("/studies", response_model=List[StudySummary])
@@ -976,6 +970,193 @@ async def list_cohorts(
     )
     results = await session.exec(stmt)
     return results.all()
+
+
+# ── Cohort Brief (per-tab data for the recruitment Cohort Brief screen) ──
+
+_COHORT_HYPOTHESIS_PLACEHOLDER = (
+    "Hypothesis authoring is coming soon. For now, treat this as a placeholder "
+    "while you validate definition and objectives."
+)
+
+
+class ContextSectionResponse(BaseModel):
+    definition: str
+    hypothesis: str
+    objectives: List[str]
+
+
+class CohortBriefResponse(BaseModel):
+    context_section: ContextSectionResponse
+    # Future sections (screening_section, moderator_section, ...) slot in here.
+
+
+@router.get(
+    "/studies/{study_id}/cohorts/{cohort_id}/brief",
+    response_model=CohortBriefResponse,
+)
+async def get_cohort_brief(
+    study_id: uuid.UUID,
+    cohort_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Return the Cohort Brief payload for one cohort within one study.
+
+    Joins cohort-level data (definition) with study-level data (objectives)
+    so the frontend fetches once per cohort tab.
+    """
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    cohort = await session.get(ResearchCohort, cohort_id)
+    if not cohort or cohort.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Cohort not found")
+
+    objectives = [
+        str(o.get("title", "")).strip()
+        for o in (study.topic_guide or {}).get("objectives", [])
+        if isinstance(o, dict) and o.get("title")
+    ]
+
+    return CohortBriefResponse(
+        context_section=ContextSectionResponse(
+            definition=cohort.description or "",
+            hypothesis=cohort.hypothesis or _COHORT_HYPOTHESIS_PLACEHOLDER,
+            objectives=objectives,
+        ),
+    )
+
+
+# ── Cohort Definition + Hypothesis generation (end-of-flow synthesis) ──
+
+def _parse_cohorts_json(raw_text: str) -> list[dict]:
+    """Extract cohort triples from the LLM's JSON output.
+
+    Expects {"cohorts": [{"name", "description", "hypothesis"}, ...]}.
+    Returns an empty list on parse failure so the caller can continue gracefully.
+    """
+    text = _strip_json_fences(raw_text)
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, Exception):
+        logger.warning(f"Cohort JSON parse failed. Raw: {text[:400]}")
+        return []
+
+    raw_cohorts = data.get("cohorts") if isinstance(data, dict) else None
+    if not isinstance(raw_cohorts, list):
+        return []
+
+    cohorts: list[dict] = []
+    for c in raw_cohorts:
+        if not isinstance(c, dict):
+            continue
+        name = str(c.get("name", "")).strip()
+        if not name:
+            continue
+        cohorts.append({
+            "name": name,
+            "description": str(c.get("description", "")).strip(),
+            "hypothesis": str(c.get("hypothesis", "")).strip(),
+        })
+    return cohorts
+
+
+def _format_objectives_for_prompt(topic_guide: Dict[str, Any]) -> str:
+    objectives = (topic_guide or {}).get("objectives", []) or []
+    lines = []
+    for i, o in enumerate(objectives, start=1):
+        if not isinstance(o, dict):
+            continue
+        title = str(o.get("title", "")).strip()
+        description = str(o.get("description", "")).strip()
+        if title and description:
+            lines.append(f"{i}. {title}: {description}")
+        elif title:
+            lines.append(f"{i}. {title}")
+    return "\n".join(lines) if lines else "(none provided)"
+
+
+def _format_research_questions_for_prompt(questions: List[Dict[str, Any]]) -> str:
+    if not questions:
+        return "(none provided)"
+    lines = []
+    for i, q in enumerate(questions, start=1):
+        if not isinstance(q, dict):
+            continue
+        title = str(q.get("title", "")).strip()
+        question = str(q.get("question", "")).strip()
+        if title and question:
+            lines.append(f"{i}. {title}: {question}")
+        elif question:
+            lines.append(f"{i}. {question}")
+        elif title:
+            lines.append(f"{i}. {title}")
+    return "\n".join(lines) if lines else "(none provided)"
+
+
+class CohortGenerateResponse(BaseModel):
+    created: int
+    updated: int
+
+
+@router.post(
+    "/studies/{study_id}/cohorts/generate",
+    response_model=CohortGenerateResponse,
+)
+async def generate_cohorts(
+    study_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Generate cohort definitions + hypotheses for a fully-defined study.
+
+    Reads brief, executive summary, objectives, and research questions from the
+    designed study, runs a single LLM call, and upserts results into
+    research_cohorts. Idempotent — re-running updates existing rows.
+    """
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    try:
+        content = _COHORT_DEFINITIONS_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Cohort definitions prompt file not found")
+
+    template = _extract_prompt_from_md(content)
+    prompt = (
+        template
+        .replace("{{research_brief}}", study.briefing or "")
+        .replace("{{executive_summary}}", study.executive_summary or "")
+        .replace("{{objectives}}", _format_objectives_for_prompt(study.topic_guide or {}))
+        .replace(
+            "{{research_questions}}",
+            _format_research_questions_for_prompt(study.key_research_questions or []),
+        )
+    )
+
+    try:
+        llm_service._ensure_configured()
+        if not llm_service.model:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. GEMINI_API_KEY may not be configured.",
+            )
+        raw_text = await llm_service._generate(prompt)
+    except HTTPException:
+        raise
+    except TimeoutError:
+        logger.error("Gemini request timed out (cohort generation)")
+        raise HTTPException(status_code=504, detail="AI service timed out.")
+    except Exception as e:
+        logger.error(f"Cohort generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    cohorts = _parse_cohorts_json(raw_text)
+    created, updated = await _persist_cohort_candidates(session, company_id, cohorts)
+    return CohortGenerateResponse(created=created, updated=updated)
 
 
 # ── Questions ──
@@ -1128,6 +1309,7 @@ async def list_study_leads(
             "first_name": lead.first_name,
             "last_name": lead.last_name,
             "contact_number": lead.contact_number,
+            "cohort_id": str(lead.cohort_id) if lead.cohort_id else None,
             "cohort_name": cohort_name,
             "participant_status": participant_status,
             "contact_profile": lead.contact_profile,

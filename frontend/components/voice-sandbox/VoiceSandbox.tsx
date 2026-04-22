@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { X, FileText, Copy, Check } from "lucide-react";
 import { api } from "@/lib/api";
@@ -8,7 +8,6 @@ import { LeadPipeline } from "./LeadPipeline";
 import { ExecutionEngine } from "./ExecutionEngine";
 import { ActivityStream } from "./ActivityStream";
 import { CallDetailsModal } from "./CallDetailsModal";
-import { useRecruitment } from "@/components/recruitment/RecruitmentContext";
 import {
     INTERVIEW_TYPE_LABELS,
     type InterviewTypeKey,
@@ -96,8 +95,6 @@ function mapActivity(raw: any): ActivityEntry {
 // ── Component ──────────────────────────────────────────────────────
 
 export function VoiceSandbox({ className, studyId, initialCohortInterviewMap }: VoiceSandboxProps) {
-    const { selectedCohorts, getCohortCategories } = useRecruitment();
-
     const [leads, setLeads] = useState<Lead[]>([]);
     const [agents, setAgents] = useState<Agent[]>([]);
     const [activity, setActivity] = useState<ActivityEntry[]>([]);
@@ -107,29 +104,10 @@ export function VoiceSandbox({ className, studyId, initialCohortInterviewMap }: 
 
     const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-    // ── Build cohort → interview type mapping ──
-    // Prefer the prop (passed at the moment the user clicks "Start Execution",
-    // before React has flushed the context update) over the context read.
-
-    const cohortInterviewMapFromContext = useMemo(() => {
-        const map: Record<string, number[]> = {};
-        for (const cohort of selectedCohorts) {
-            const cats = getCohortCategories(cohort);
-            const durations: number[] = [];
-            for (const [bucket, duration] of Object.entries(BUCKET_TO_DURATION)) {
-                const questions = cats[bucket as keyof typeof cats] || [];
-                if (questions.some((q: any) => q.selected)) {
-                    durations.push(duration);
-                }
-            }
-            if (durations.length > 0) {
-                map[cohort] = durations;
-            }
-        }
-        return map;
-    }, [selectedCohorts, getCohortCategories]);
-
-    const cohortInterviewMap = initialCohortInterviewMap ?? cohortInterviewMapFromContext;
+    // Per-cohort interview-bucket derivation (formerly read from RecruitmentContext)
+    // was tied to InterviewBuilder. That has been severed; callers must now pass
+    // initialCohortInterviewMap explicitly or the sandbox runs with no cohorts.
+    const cohortInterviewMap = initialCohortInterviewMap ?? {};
 
     // ── Prompt modal state ─────────────────────────────────────────
     // The modal fetches the fully resolved prompt from the backend

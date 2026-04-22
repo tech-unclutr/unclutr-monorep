@@ -2,10 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { type ExtractedLead, type ColumnMapping } from "./recruitment-utils";
-import {
-    type InterviewCategories,
-    type AudioBucket,
-} from "@/app/dashboard/playground/components/InterviewBuilder";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,12 +14,7 @@ export interface ParsedFileState {
     fileName: string;
 }
 
-type CohortInterviewMap = Record<string, InterviewCategories>;
-type CohortIncentivesMap = Record<string, Record<AudioBucket, string>>;
 type CombinationCustomPrompts = Record<string, string>;
-
-const DEFAULT_INCENTIVES: Record<AudioBucket, string> = { audioA: "", audioB: "", audioC: "" };
-const EMPTY_CATEGORIES: InterviewCategories = { chat: [], audioA: [], audioB: [], audioC: [] };
 
 interface RecruitmentState {
     step: Step;
@@ -31,8 +22,6 @@ interface RecruitmentState {
     extractedLeads: ExtractedLead[];
     selectedCohorts: string[];
     activeCohort: string | null;
-    cohortInterviews: CohortInterviewMap;
-    cohortIncentives: CohortIncentivesMap;
     combinationCustomPrompts: CombinationCustomPrompts;
 }
 
@@ -42,10 +31,6 @@ interface RecruitmentContextValue extends RecruitmentState {
     setExtractedLeads: (leads: ExtractedLead[]) => void;
     setSelectedCohorts: React.Dispatch<React.SetStateAction<string[]>>;
     setActiveCohort: (cohort: string | null) => void;
-    getCohortCategories: (cohort: string) => InterviewCategories;
-    setCohortCategories: (cohort: string, categories: InterviewCategories) => void;
-    getCohortIncentives: (cohort: string) => Record<AudioBucket, string>;
-    setCohortIncentives: (cohort: string, incentives: Record<AudioBucket, string>) => void;
     getCombinationCustomPrompt: (key: string) => string | undefined;
     setCombinationCustomPrompt: (key: string, prompt: string | null) => void;
     reset: () => void;
@@ -69,25 +54,7 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
     const [extractedLeads, setExtractedLeads] = useState<ExtractedLead[]>([]);
     const [selectedCohorts, setSelectedCohorts] = useState<string[]>([]);
     const [activeCohort, setActiveCohort] = useState<string | null>(null);
-    const [cohortInterviews, setCohortInterviews] = useState<CohortInterviewMap>({});
-    const [cohortIncentives, setCohortIncentivesMap] = useState<CohortIncentivesMap>({});
     const [combinationCustomPrompts, setCombinationCustomPromptsMap] = useState<CombinationCustomPrompts>({});
-
-    const getCohortCategories = useCallback((cohort: string): InterviewCategories => {
-        return cohortInterviews[cohort] ?? EMPTY_CATEGORIES;
-    }, [cohortInterviews]);
-
-    const setCohortCategories = useCallback((cohort: string, categories: InterviewCategories) => {
-        setCohortInterviews((prev) => ({ ...prev, [cohort]: categories }));
-    }, []);
-
-    const getCohortIncentives = useCallback((cohort: string): Record<AudioBucket, string> => {
-        return cohortIncentives[cohort] ?? { ...DEFAULT_INCENTIVES };
-    }, [cohortIncentives]);
-
-    const setCohortIncentivesForCohort = useCallback((cohort: string, incentives: Record<AudioBucket, string>) => {
-        setCohortIncentivesMap((prev) => ({ ...prev, [cohort]: incentives }));
-    }, []);
 
     const getCombinationCustomPrompt = useCallback((key: string): string | undefined => {
         return combinationCustomPrompts[key];
@@ -110,8 +77,6 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
         setExtractedLeads([]);
         setSelectedCohorts([]);
         setActiveCohort(null);
-        setCohortInterviews({});
-        setCohortIncentivesMap({});
         setCombinationCustomPromptsMap({});
     }, []);
 
@@ -122,12 +87,7 @@ export function RecruitmentProvider({ children }: { children: React.ReactNode })
             extractedLeads, setExtractedLeads,
             selectedCohorts, setSelectedCohorts,
             activeCohort, setActiveCohort,
-            cohortInterviews,
-            cohortIncentives,
             combinationCustomPrompts,
-            getCohortCategories, setCohortCategories,
-            getCohortIncentives,
-            setCohortIncentives: setCohortIncentivesForCohort,
             getCombinationCustomPrompt,
             setCombinationCustomPrompt,
             reset,

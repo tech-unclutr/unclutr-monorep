@@ -83,13 +83,19 @@ export function ExecutionPromptView({
     const {
         extractedLeads: leads,
         selectedCohorts,
-        getCohortCategories,
-        getCohortIncentives,
-        cohortInterviews,
-        cohortIncentives,
         getCombinationCustomPrompt,
         setCombinationCustomPrompt,
     } = useRecruitment();
+
+    // Interview-bucket state (getCohortCategories / getCohortIncentives /
+    // cohortInterviews / cohortIncentives) was removed from RecruitmentContext
+    // along with InterviewBuilder. These empty stubs keep ExecutionPromptView
+    // typechecking while it's out of the main flow; the upcoming per-cohort
+    // script feature will replace this data source.
+    const cohortInterviews = {} as Record<string, { chat: any[]; audioA: any[]; audioB: any[]; audioC: any[] }>;
+    const cohortIncentives = {} as Record<string, Record<string, string>>;
+    const getCohortCategories = (_cohort: string) => ({ chat: [], audioA: [], audioB: [], audioC: [] });
+    const getCohortIncentives = (_cohort: string) => ({ audioA: "", audioB: "", audioC: "" } as Record<string, string | undefined>);
 
     const [copied, setCopied] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");

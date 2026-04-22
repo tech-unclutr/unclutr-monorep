@@ -30,7 +30,10 @@ from app.services.study_execution.outcomes import (
     is_terminal_state,
     should_retry,
 )
-from app.services.study_execution.prompt_builder import build_per_combination_prompts
+# prompt_builder is intentionally not imported here. The legacy prompt-builder
+# sources (ResearchQuestion / ResearchCohortQuestion) have been severed; the
+# per-cohort script feature will rewire this. Queue advancement works without
+# prompt content — runtime uses placeholders.
 
 
 # ── Constants ──────────────────────────────────────────────────────
@@ -78,9 +81,11 @@ class StudyExecutionEngine:
         if not study:
             raise ValueError(f"Study {study_id} not found")
 
-        # Build all per-combination prompts up front (study/cohort/question vars
-        # filled in; runtime placeholders left for prompt_resolver.py at call time)
-        all_prompts = await build_per_combination_prompts(session, study_id)
+        # Prompt building is stubbed: the legacy source tables
+        # (research_questions / research_cohort_questions) have been severed.
+        # The per-cohort script feature will rewire this. Queue advancement
+        # continues to work without prompt content.
+        all_prompts: dict = {}
 
         # Create execution
         execution = StudyExecution(

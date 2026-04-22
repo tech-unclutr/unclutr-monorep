@@ -2,16 +2,31 @@
 
 import React from "react";
 import { Field } from "./shared";
-import { useCohortBrief } from "./useCohortBrief";
+import { useCohortBrief, type ContextSectionData } from "./useCohortBrief";
 
 interface ContextSectionProps {
     studyId?: string;
     cohortId?: string;
+    context?: ContextSectionData | null;
+    loading?: boolean;
+    error?: string | null;
 }
 
-export function ContextSection({ studyId, cohortId }: ContextSectionProps) {
-    const { data, loading, error } = useCohortBrief(studyId, cohortId);
-    const ctx = data?.context_section;
+export function ContextSection({
+    studyId,
+    cohortId,
+    context: contextProp,
+    loading: loadingProp,
+    error: errorProp,
+}: ContextSectionProps) {
+    const hookResult = useCohortBrief(
+        contextProp === undefined ? studyId : undefined,
+        contextProp === undefined ? cohortId : undefined,
+    );
+    const ctx =
+        contextProp !== undefined ? contextProp : hookResult.data?.context_section;
+    const loading = loadingProp ?? hookResult.loading;
+    const error = errorProp ?? hookResult.error;
 
     return (
         <>

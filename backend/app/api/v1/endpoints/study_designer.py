@@ -1,8 +1,14 @@
+import asyncio
 import json
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Global cap on concurrent script-gen LLM calls across all users/requests.
+# Each call takes ~60-120s; 6 keeps a single user's finalize fully parallel
+# while preventing a thundering herd when multiple users hit finalize at once.
+_SCRIPT_GEN_SEMA = asyncio.Semaphore(6)
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -15,10 +21,14 @@ from sqlalchemy import delete
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.designed_study import DesignedStudy
-from app.models.study_designer import ResearchCohort, ResearchCohortQuestion, ResearchLead, ResearchParticipant, ResearchQuestion
+from app.models.study_designer import CohortQuestionScript, ResearchCohort, ResearchLead, ResearchParticipant
 from app.models.user import User
 from app.models.iam import CompanyMembership
 from app.services.intelligence.llm_service import llm_service
+from app.services.intelligence.schemas.cohort_script import (
+    COHORT_SCRIPT_GEMINI_SCHEMA,
+    CohortScriptResponse,
+)
 
 router = APIRouter()
 
@@ -29,6 +39,7 @@ _OBJECTIVES_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "inte
 _RESEARCH_QUESTIONS_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "research_questions_prompt.md"
 _WELCOME_PAGE_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "welcome_page_prompt.md"
 _COHORT_DEFINITIONS_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "cohort_definitions_prompt.md"
+_COHORT_INTERVIEW_SCRIPT_PROMPT_PATH = Path(__file__).parents[4] / "app" / "services" / "intelligence" / "prompts" / "cohort_interview_script_prompt.md"
 
 
 def _strip_json_fences(raw_text: str) -> str:
@@ -150,15 +161,25 @@ async def _persist_cohort_candidates(
                 continue
             description = (c.get("description") or "").strip()
             hypothesis = (c.get("hypothesis") or "").strip()
+            include_criteria = c.get("include_criteria") or []
+            exclude_criteria = c.get("exclude_criteria") or []
+            has_screening = bool(include_criteria) or bool(exclude_criteria)
 
             row = existing_by_name.get(name)
             if row is None:
+                new_meta: Dict[str, Any] = {}
+                if has_screening:
+                    new_meta["screening_criteria"] = {
+                        "include_criteria": include_criteria,
+                        "exclude_criteria": exclude_criteria,
+                    }
                 session.add(
                     ResearchCohort(
                         company_id=company_id,
                         name=name,
                         description=description or None,
                         hypothesis=hypothesis or None,
+                        meta_data=new_meta,
                     )
                 )
                 created += 1
@@ -170,6 +191,15 @@ async def _persist_cohort_candidates(
                 if hypothesis and hypothesis != row.hypothesis:
                     row.hypothesis = hypothesis
                     changed = True
+                if has_screening:
+                    next_meta: Dict[str, Any] = dict(row.meta_data or {})
+                    next_meta["screening_criteria"] = {
+                        "include_criteria": include_criteria,
+                        "exclude_criteria": exclude_criteria,
+                    }
+                    if next_meta != (row.meta_data or {}):
+                        row.meta_data = next_meta
+                        changed = True
                 if changed:
                     session.add(row)
                     updated += 1
@@ -807,40 +837,6 @@ class StudySummary(BaseModel):
 
 # ── CRUD endpoints ──
 
-async def _sync_research_questions(
-    session: AsyncSession, study_id: uuid.UUID, company_id: uuid.UUID, topic_guide: Dict[str, Any]
-):
-    """Delete existing research_questions for this study and re-insert from topic_guide JSON."""
-    # Delete all existing questions for this study
-    await session.exec(
-        delete(ResearchQuestion).where(ResearchQuestion.study_id == study_id)
-    )
-
-    # Extract questions from objectives and insert
-    objectives = topic_guide.get("objectives", [])
-    sort_counter = 0
-    for objective in objectives:
-        for q in objective.get("questions", []):
-            # Map frontend type format ("open-ended") to DB format ("open_ended")
-            q_type = (q.get("type") or "open_ended").replace("-", "_")
-            rq = ResearchQuestion(
-                study_id=study_id,
-                company_id=company_id,
-                text=q.get("text", ""),
-                type=q_type,
-                context=q.get("context"),
-                interview_mode=q.get("interviewMode"),
-                participant_count=q.get("participantCount"),
-                sort_order=sort_counter,
-                options=q.get("options", []),
-                probes=q.get("probes", []),
-                stimulus=q.get("stimulus", []),
-                meta_data={"objective_title": objective.get("title", ""), "objective_id": objective.get("id", "")},
-            )
-            session.add(rq)
-            sort_counter += 1
-
-
 @router.post("/save")
 async def save_study(
     req: StudySaveRequest,
@@ -986,9 +982,42 @@ class ContextSectionResponse(BaseModel):
     objectives: List[str]
 
 
+class ScriptQuestionResponse(BaseModel):
+    id: uuid.UUID
+    question_number: int
+    text: str
+    uncovers: str
+    objective_link: str
+    tag: str
+    depth: int
+    type_descriptor: str
+    probes: List[str]
+    estimated_minutes: float
+    priority: str  # "must_ask" | "if_time_permits"
+
+
+class ScriptKrqGroupResponse(BaseModel):
+    krq_index: int
+    krq_section_text: str
+    questions: List[ScriptQuestionResponse]
+    total_estimated_minutes: float
+
+
+class ScriptSectionResponse(BaseModel):
+    krq_groups: List[ScriptKrqGroupResponse]
+    total_estimated_minutes: float
+
+
+class ScreeningSectionResponse(BaseModel):
+    include_criteria: List[str]
+    exclude_criteria: List[str]
+
+
 class CohortBriefResponse(BaseModel):
     context_section: ContextSectionResponse
-    # Future sections (screening_section, moderator_section, ...) slot in here.
+    script_section: Optional[ScriptSectionResponse] = None
+    screening_section: Optional[ScreeningSectionResponse] = None
+    # Future sections (moderator_section, structure_section) slot in here.
 
 
 @router.get(
@@ -1003,8 +1032,8 @@ async def get_cohort_brief(
 ):
     """Return the Cohort Brief payload for one cohort within one study.
 
-    Joins cohort-level data (definition) with study-level data (objectives)
-    so the frontend fetches once per cohort tab.
+    Joins cohort-level data (definition, hypothesis, script) with study-level
+    data (objectives) so the frontend fetches once per cohort tab.
     """
     study = await session.get(DesignedStudy, study_id)
     if not study or study.company_id != company_id:
@@ -1020,12 +1049,92 @@ async def get_cohort_brief(
         if isinstance(o, dict) and o.get("title")
     ]
 
+    # ── Script section (nullable if generation hasn't run yet) ──
+    script_stmt = (
+        select(CohortQuestionScript)
+        .where(CohortQuestionScript.cohort_id == cohort_id)
+        .order_by(
+            CohortQuestionScript.krq_sort_order,
+            CohortQuestionScript.sort_order,
+        )
+    )
+    script_rows = (await session.exec(script_stmt)).all()
+
+    script_section: Optional[ScriptSectionResponse] = None
+    if script_rows:
+        # Group by krq_index, preserving the order of first appearance
+        # (krq_sort_order drives ordering via the ORDER BY above).
+        groups_by_index: Dict[int, Dict[str, Any]] = {}
+        order_seen: List[int] = []
+        for row in script_rows:
+            if row.krq_index not in groups_by_index:
+                groups_by_index[row.krq_index] = {
+                    "krq_index": row.krq_index,
+                    "krq_section_text": row.krq_section_text,
+                    "questions": [],
+                    "total_estimated_minutes": 0.0,
+                }
+                order_seen.append(row.krq_index)
+            group = groups_by_index[row.krq_index]
+            probes_list = [
+                str(p) for p in (row.probes or []) if isinstance(p, str) or p is not None
+            ]
+            group["questions"].append(
+                ScriptQuestionResponse(
+                    id=row.id,
+                    question_number=row.question_number,
+                    text=row.text,
+                    uncovers=row.uncovers or "",
+                    objective_link=row.objective_link or "",
+                    tag=row.tag or "",
+                    depth=row.depth,
+                    type_descriptor=row.type_descriptor or "",
+                    probes=probes_list,
+                    estimated_minutes=row.estimated_minutes or 0.0,
+                    priority=row.priority or "must_ask",
+                )
+            )
+            group["total_estimated_minutes"] += row.estimated_minutes or 0.0
+
+        krq_groups = [
+            ScriptKrqGroupResponse(
+                krq_index=groups_by_index[i]["krq_index"],
+                krq_section_text=groups_by_index[i]["krq_section_text"],
+                questions=groups_by_index[i]["questions"],
+                total_estimated_minutes=round(
+                    groups_by_index[i]["total_estimated_minutes"], 2
+                ),
+            )
+            for i in order_seen
+        ]
+        total = round(sum(g.total_estimated_minutes for g in krq_groups), 2)
+        script_section = ScriptSectionResponse(
+            krq_groups=krq_groups,
+            total_estimated_minutes=total,
+        )
+
+    screening_meta = (cohort.meta_data or {}).get("screening_criteria") or {}
+    screening_section = ScreeningSectionResponse(
+        include_criteria=[
+            str(x).strip()
+            for x in (screening_meta.get("include_criteria") or [])
+            if str(x).strip()
+        ],
+        exclude_criteria=[
+            str(x).strip()
+            for x in (screening_meta.get("exclude_criteria") or [])
+            if str(x).strip()
+        ],
+    )
+
     return CohortBriefResponse(
         context_section=ContextSectionResponse(
             definition=cohort.description or "",
             hypothesis=cohort.hypothesis or _COHORT_HYPOTHESIS_PLACEHOLDER,
             objectives=objectives,
         ),
+        script_section=script_section,
+        screening_section=screening_section,
     )
 
 
@@ -1048,6 +1157,18 @@ def _parse_cohorts_json(raw_text: str) -> list[dict]:
     if not isinstance(raw_cohorts, list):
         return []
 
+    def _clean_bullets(raw: Any) -> list[str]:
+        if not isinstance(raw, list):
+            return []
+        out: list[str] = []
+        for item in raw:
+            if item is None:
+                continue
+            s = str(item).strip()
+            if s:
+                out.append(s)
+        return out
+
     cohorts: list[dict] = []
     for c in raw_cohorts:
         if not isinstance(c, dict):
@@ -1059,6 +1180,8 @@ def _parse_cohorts_json(raw_text: str) -> list[dict]:
             "name": name,
             "description": str(c.get("description", "")).strip(),
             "hypothesis": str(c.get("hypothesis", "")).strip(),
+            "include_criteria": _clean_bullets(c.get("include_criteria")),
+            "exclude_criteria": _clean_bullets(c.get("exclude_criteria")),
         })
     return cohorts
 
@@ -1096,9 +1219,148 @@ def _format_research_questions_for_prompt(questions: List[Dict[str, Any]]) -> st
     return "\n".join(lines) if lines else "(none provided)"
 
 
+# ── Interview script helpers ──
+
+def _krq_section_text(known_krq: Dict[str, Any]) -> str:
+    title = str(known_krq.get("title", "")).strip()
+    question = str(known_krq.get("question", "")).strip()
+    if title and question:
+        return f"{title}: {question}"
+    return title or question
+
+
+def _parse_structured_cohort_script(
+    raw_text: str, known_krqs: List[Dict[str, Any]]
+) -> list[dict]:
+    """Parse Gemini's structured-output JSON into persist-ready question dicts.
+
+    The LLM is constrained by CohortScriptResponse, so malformed JSON is rare.
+    krq_index is authoritative — no fuzzy header matching.
+    """
+    text = _strip_json_fences(raw_text)
+    if not text:
+        return []
+
+    try:
+        payload = json.loads(text)
+        parsed = CohortScriptResponse.model_validate(payload)
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning(f"Cohort script JSON parse failed: {e}. Raw preview: {text[:300]!r}")
+        return []
+
+    krq_count = len(known_krqs)
+    results: list[dict] = []
+    krq_first_seen: dict[int, int] = {}
+    krq_running_sort: dict[int, int] = {}
+
+    for q in parsed.questions:
+        if q.krq_index < 1 or q.krq_index > krq_count:
+            logger.warning(
+                f"Dropping question with out-of-range krq_index={q.krq_index} "
+                f"(known_krq_count={krq_count}). text={q.text[:80]!r}"
+            )
+            continue
+
+        if q.krq_index not in krq_first_seen:
+            krq_first_seen[q.krq_index] = len(krq_first_seen)
+            krq_running_sort[q.krq_index] = 0
+
+        results.append({
+            "krq_index": q.krq_index,
+            "krq_section_text": _krq_section_text(known_krqs[q.krq_index - 1]),
+            "krq_sort_order": krq_first_seen[q.krq_index],
+            "question_number": q.question_number,
+            "sort_order": krq_running_sort[q.krq_index],
+            "text": q.text,
+            "uncovers": q.uncovers,
+            "objective_link": q.objective_link,
+            "tag": q.tag,
+            "depth": q.depth,
+            "type_descriptor": q.type_descriptor,
+            "probes": q.probes,
+            "estimated_minutes": q.estimated_minutes,
+            "priority": q.priority,
+        })
+        krq_running_sort[q.krq_index] += 1
+
+    return results
+
+
+async def _persist_cohort_script(
+    session: AsyncSession,
+    cohort: ResearchCohort,
+    study_id: uuid.UUID,
+    company_id: uuid.UUID,
+    parsed_questions: list[dict],
+) -> int:
+    """
+    Idempotent replace for a cohort's script rows.
+    Deletes all existing rows for this cohort, inserts the fresh set.
+    Returns the number of rows inserted.
+    """
+    from sqlalchemy import delete as sa_delete
+
+    await session.exec(
+        sa_delete(CohortQuestionScript).where(
+            CohortQuestionScript.cohort_id == cohort.id
+        )
+    )
+    inserted = 0
+    for row_dict in parsed_questions:
+        session.add(
+            CohortQuestionScript(
+                cohort_id=cohort.id,
+                study_id=study_id,
+                company_id=company_id,
+                krq_index=row_dict["krq_index"],
+                krq_section_text=row_dict["krq_section_text"],
+                krq_sort_order=row_dict["krq_sort_order"],
+                question_number=row_dict["question_number"],
+                sort_order=row_dict["sort_order"],
+                text=row_dict["text"],
+                uncovers=row_dict.get("uncovers", ""),
+                objective_link=row_dict.get("objective_link", ""),
+                tag=row_dict.get("tag", ""),
+                depth=row_dict.get("depth", 1),
+                type_descriptor=row_dict.get("type_descriptor", ""),
+                probes=row_dict.get("probes", []),
+                estimated_minutes=row_dict.get("estimated_minutes", 0.0),
+                priority=row_dict.get("priority", "must_ask"),
+            )
+        )
+        inserted += 1
+    await session.commit()
+    return inserted
+
+
+def _build_cohort_script_prompt(
+    study: DesignedStudy, cohort: ResearchCohort
+) -> str:
+    """Load the script prompt template and substitute all INPUTS variables."""
+    content = _COHORT_INTERVIEW_SCRIPT_PROMPT_PATH.read_text(encoding="utf-8")
+    template = _extract_prompt_from_md(content)
+    return (
+        template
+        .replace("{{cohort_name}}", cohort.name or "")
+        .replace("{{cohort_definition}}", cohort.description or "")
+        .replace("{{cohort_hypothesis}}", cohort.hypothesis or "")
+        .replace(
+            "{{key_research_questions}}",
+            _format_research_questions_for_prompt(study.key_research_questions or []),
+        )
+        .replace(
+            "{{key_research_objectives}}",
+            _format_objectives_for_prompt(study.topic_guide or {}),
+        )
+        .replace("{{research_brief}}", study.briefing or "")
+        .replace("{{executive_summary}}", study.executive_summary or "")
+    )
+
+
 class CohortGenerateResponse(BaseModel):
     created: int
     updated: int
+    scripts_generated: int = 0
 
 
 @router.post(
@@ -1156,129 +1418,59 @@ async def generate_cohorts(
 
     cohorts = _parse_cohorts_json(raw_text)
     created, updated = await _persist_cohort_candidates(session, company_id, cohorts)
-    return CohortGenerateResponse(created=created, updated=updated)
 
-
-# ── Questions ──
-
-@router.get("/studies/{study_id}/questions")
-async def list_study_questions(
-    study_id: uuid.UUID,
-    session: AsyncSession = Depends(get_session),
-    company_id: uuid.UUID = Depends(_get_company_id),
-):
-    """List all research questions for a given study, scoped by company."""
-    study = await session.get(DesignedStudy, study_id)
-    if not study or study.company_id != company_id:
-        raise HTTPException(status_code=404, detail="Study not found")
-
-    stmt = (
-        select(ResearchQuestion)
-        .where(ResearchQuestion.study_id == study_id, ResearchQuestion.company_id == company_id)
-        .order_by(ResearchQuestion.sort_order)
-    )
-    results = await session.exec(stmt)
-    return results.all()
-
-
-# ── Cohort × Question Assignments ──
-
-class CohortBucketAssignment(BaseModel):
-    """Question IDs assigned to each interview type bucket for one cohort."""
-    chat: List[str] = []
-    audioA: List[str] = []
-    audioB: List[str] = []
-    audioC: List[str] = []
-
-
-class SaveCohortQuestionsRequest(BaseModel):
-    """Map of cohort name → bucket → list of question IDs."""
-    assignments: Dict[str, CohortBucketAssignment]
-
-
-@router.post("/studies/{study_id}/cohort-questions")
-async def save_cohort_questions(
-    study_id: uuid.UUID,
-    req: SaveCohortQuestionsRequest,
-    session: AsyncSession = Depends(get_session),
-    company_id: uuid.UUID = Depends(_get_company_id),
-):
-    """
-    Persist the user's question → cohort → bucket assignments from the
-    LeadsCohortConfigurator into research_cohort_questions.
-
-    Replaces all existing rows for this study's cohorts (idempotent).
-    """
-    study = await session.get(DesignedStudy, study_id)
-    if not study or study.company_id != company_id:
-        raise HTTPException(status_code=404, detail="Study not found")
-
-    # Resolve cohort name → cohort_id for this company
-    cohort_stmt = select(ResearchCohort).where(
-        ResearchCohort.company_id == company_id
-    )
-    cohorts = (await session.exec(cohort_stmt)).all()
-    cohort_id_by_name: Dict[str, uuid.UUID] = {c.name: c.id for c in cohorts}
-
-    # Validate all referenced cohorts exist
-    unknown_cohorts = [name for name in req.assignments if name not in cohort_id_by_name]
-    if unknown_cohorts:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown cohorts for this company: {unknown_cohorts}",
-        )
-
-    referenced_cohort_ids = [cohort_id_by_name[name] for name in req.assignments]
-
-    # Validate all referenced questions belong to this study
-    all_question_ids: set[str] = set()
-    for assignment in req.assignments.values():
-        all_question_ids.update(assignment.chat)
-        all_question_ids.update(assignment.audioA)
-        all_question_ids.update(assignment.audioB)
-        all_question_ids.update(assignment.audioC)
-
-    if all_question_ids:
-        q_uuids = [uuid.UUID(qid) for qid in all_question_ids]
-        valid_q_stmt = select(ResearchQuestion.id).where(
-            ResearchQuestion.id.in_(q_uuids),
-            ResearchQuestion.study_id == study_id,
-        )
-        valid_q_ids = {row for row in (await session.exec(valid_q_stmt)).all()}
-        invalid = [str(qid) for qid in q_uuids if qid not in valid_q_ids]
-        if invalid:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Question IDs do not belong to this study: {invalid}",
+    # ── Per-cohort interview script generation ──
+    # Re-query cohort rows to get their persisted IDs (names are verbatim, so
+    # filter by the names we just extracted from the LLM output).
+    scripts_generated = 0
+    if cohorts:
+        cohort_names = [c["name"] for c in cohorts if c.get("name")]
+        if cohort_names:
+            persisted_stmt = select(ResearchCohort).where(
+                ResearchCohort.company_id == company_id,
+                ResearchCohort.name.in_(cohort_names),
             )
+            persisted_cohorts = (await session.exec(persisted_stmt)).all()
 
-    # Wipe existing rows for the referenced cohorts (idempotent replace)
-    await session.exec(
-        delete(ResearchCohortQuestion).where(
-            ResearchCohortQuestion.cohort_id.in_(referenced_cohort_ids)
-        )
+            known_krqs = study.key_research_questions or []
+            db_lock = asyncio.Lock()
+
+            async def _one(cohort_row: ResearchCohort) -> int:
+                try:
+                    script_prompt = _build_cohort_script_prompt(study, cohort_row)
+                    async with _SCRIPT_GEN_SEMA:
+                        script_raw = await llm_service._generate(
+                            script_prompt,
+                            response_schema=COHORT_SCRIPT_GEMINI_SCHEMA,
+                            timeout_override=120.0,
+                        )
+                    parsed_questions = _parse_structured_cohort_script(script_raw, known_krqs)
+                    if not parsed_questions:
+                        logger.warning(
+                            f"Script parser produced no questions for cohort "
+                            f"'{cohort_row.name}' (study {study_id}); skipping persist. "
+                            f"raw_len={len(script_raw or '')} "
+                            f"preview={(script_raw or '')[:800]!r}"
+                        )
+                        return 0
+                    async with db_lock:
+                        await _persist_cohort_script(
+                            session, cohort_row, study_id, company_id, parsed_questions
+                        )
+                    return 1
+                except Exception as e:
+                    logger.warning(
+                        f"Script generation failed for cohort '{cohort_row.name}' "
+                        f"(study {study_id}): {e}"
+                    )
+                    return 0
+
+            results = await asyncio.gather(*[_one(c) for c in persisted_cohorts])
+            scripts_generated = sum(results)
+
+    return CohortGenerateResponse(
+        created=created, updated=updated, scripts_generated=scripts_generated
     )
-
-    # Insert new rows
-    inserted = 0
-    for cohort_name, assignment in req.assignments.items():
-        cohort_id = cohort_id_by_name[cohort_name]
-        for bucket_name in ("chat", "audioA", "audioB", "audioC"):
-            question_ids: List[str] = getattr(assignment, bucket_name)
-            for sort_order, qid in enumerate(question_ids):
-                session.add(ResearchCohortQuestion(
-                    cohort_id=cohort_id,
-                    question_id=uuid.UUID(qid),
-                    interview_type=bucket_name,
-                    sort_order=sort_order,
-                ))
-                inserted += 1
-
-    await session.commit()
-    logger.info(
-        f"[StudyDesigner] Saved {inserted} cohort-question assignments for study {study_id}"
-    )
-    return {"inserted": inserted, "cohorts": list(req.assignments.keys())}
 
 
 # ── Leads & Participants ──

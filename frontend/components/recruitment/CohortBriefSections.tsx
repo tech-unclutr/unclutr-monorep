@@ -16,9 +16,11 @@ import {
     ModeratorSection,
     StructureSection,
     ScriptSection,
+    CohortBriefProvider,
     type SectionId,
     type Accent,
 } from "./cohort-brief";
+import { useCohortBrief } from "./cohort-brief/useCohortBrief";
 
 interface SectionMeta {
     id: SectionId;
@@ -88,6 +90,8 @@ export function CohortBriefSections({
     cohortId,
 }: CohortBriefSectionsProps) {
     const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+    const brief = useCohortBrief(studyId, cohortId);
+    const briefData = brief.data;
 
     const keyFor = (section: SectionId) => `${cohort}:${section}`;
     const isOpen = (section: SectionId) =>
@@ -97,38 +101,60 @@ export function CohortBriefSections({
     const toggle = (section: SectionId) => (open: boolean) =>
         setOpenMap((prev) => ({ ...prev, [keyFor(section)]: open }));
 
-    // Section 1 is wired to the DB; sections 2-5 still render dummy data.
+    // Sections 1 (context), 2 (script), 3 (screening criteria) are wired to
+    // the DB. Section 3's metrics (count, duration) are derived from Section
+    // 2's live selection via CohortBriefProvider. Moderator and Structure
+    // sections still render dummy data until their backends land.
     const renderSection = (id: SectionId) => {
         switch (id) {
             case "context":
-                return <ContextSection studyId={studyId} cohortId={cohortId} />;
+                return (
+                    <ContextSection
+                        context={briefData?.context_section}
+                        loading={brief.loading}
+                        error={brief.error}
+                    />
+                );
+            case "script":
+                return (
+                    <ScriptSection
+                        script={briefData?.script_section}
+                        loading={brief.loading}
+                        error={brief.error}
+                    />
+                );
             case "screening":
-                return <ScreeningSection data={data.screening} />;
+                return (
+                    <ScreeningSection
+                        data={data.screening}
+                        screening={briefData?.screening_section}
+                    />
+                );
             case "moderator":
                 return <ModeratorSection data={data.moderator} />;
             case "structure":
                 return <StructureSection data={data.structure} />;
-            case "script":
-                return <ScriptSection data={data.script} />;
         }
     };
 
     return (
-        <div className="space-y-3 mb-6">
-            {SECTION_META.map((s) => (
-                <SectionCard
-                    key={s.id}
-                    number={s.number}
-                    title={s.title}
-                    subtitle={s.subtitle}
-                    icon={s.icon}
-                    accent={s.accent}
-                    open={isOpen(s.id)}
-                    onOpenChange={toggle(s.id)}
-                >
-                    {renderSection(s.id)}
-                </SectionCard>
-            ))}
-        </div>
+        <CohortBriefProvider script={briefData?.script_section}>
+            <div className="space-y-3 mb-6">
+                {SECTION_META.map((s) => (
+                    <SectionCard
+                        key={s.id}
+                        number={s.number}
+                        title={s.title}
+                        subtitle={s.subtitle}
+                        icon={s.icon}
+                        accent={s.accent}
+                        open={isOpen(s.id)}
+                        onOpenChange={toggle(s.id)}
+                    >
+                        {renderSection(s.id)}
+                    </SectionCard>
+                ))}
+            </div>
+        </CohortBriefProvider>
     );
 }

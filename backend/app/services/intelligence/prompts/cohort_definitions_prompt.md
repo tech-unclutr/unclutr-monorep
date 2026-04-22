@@ -1,6 +1,6 @@
-# Cohort Definitions + Hypothesis Prompt
+# Cohort Definitions + Hypothesis + Screening Criteria Prompt
 
-This prompt extracts cohorts from the research brief and generates a behavioral definition AND a causal hypothesis for each. It is called by `POST /study-planner/studies/{study_id}/cohorts/generate` after the study has been fully defined (exec summary + objectives + research questions all approved).
+This prompt extracts cohorts from the research brief and generates a behavioral definition, a causal hypothesis, and recruitment screening criteria (include + exclude) for each. It is called by `POST /study-planner/studies/{study_id}/cohorts/generate` after the study has been fully defined (exec summary + objectives + research questions all approved).
 
 ## Variables
 
@@ -19,7 +19,9 @@ Strict JSON with exactly one key: `cohorts` (array). No markdown fences, no comm
     {
       "name": "<cohort name exactly as written in the brief>",
       "description": "<2-4 sentence behavioral definition>",
-      "hypothesis": "<3-5 sentence paragraph, each sentence = one hypothesis>"
+      "hypothesis": "<3-5 sentence paragraph, each sentence = one hypothesis>",
+      "include_criteria": ["<3-6 short recruitment qualifiers>"],
+      "exclude_criteria": ["<2-4 short disqualifiers, including at least one bias/hygiene filter>"]
     }
   ]
 }
@@ -35,6 +37,7 @@ Your task is to:
 1. Extract cohorts from the research brief
 2. Generate a behavioral **Cohort Definition**
 3. Generate a causal **Hypothesis** explaining WHY each cohort behaves this way
+4. Generate **Include Criteria** (who should be recruited) and **Exclude Criteria** (who must be screened out) for each cohort
 
 ---
 
@@ -136,6 +139,34 @@ For each cohort:
 
 ---
 
+## === SCREENING CRITERIA RULES ===
+
+For each cohort, produce two short lists used by a recruiter to decide who qualifies for an interview.
+
+### Include Criteria (3–6 bullets):
+
+* Each bullet is a **short phrase** (not a full sentence), written as a falsifiable qualifier a recruiter can verify.
+* Blend these bullet types, grounded in the brief and cohort definition:
+
+  * **Behavioral** — what they DO at a concrete frequency ("Reads nutrition labels weekly or more")
+  * **Role / decision power** — their position in the purchase/decision flow ("Primary grocery shopper in the household")
+  * **Context** — lived situation relevant to the cohort ("Has a child under 12")
+  * **Economic / demographic** — only when the brief explicitly justifies it ("Household income $75k+")
+* Written in the same voice and specificity as the cohort definition.
+* Do NOT repeat the cohort name. Do NOT write aspirational or vague qualifiers ("is tech-savvy", "cares about quality").
+
+### Exclude Criteria (2–4 bullets):
+
+* Each bullet is a **short phrase**, written as a disqualifier.
+* Always include **at least one of each** flavor:
+
+  * **Conflict of interest / insider bias** — roles that would bias answers ("Works in food, CPG, or nutrition marketing")
+  * **Methodology hygiene** — research contamination guards ("Participated in a similar study in the last 90 days")
+* Optionally add a cohort-specific disqualifier when the brief justifies it.
+* Do NOT invent exclusions the brief doesn't support.
+
+---
+
 ## === INPUTS ===
 
 Research Brief / Executive Summary:
@@ -160,7 +191,9 @@ Return JSON:
 {
 "name": "<exact cohort name>",
 "description": "<2–4 sentence behavioral cohort definition>",
-"hypothesis": "<3–5 sentence paragraph, each sentence = one hypothesis>"
+"hypothesis": "<3–5 sentence paragraph, each sentence = one hypothesis>",
+"include_criteria": ["<short qualifier>", "<short qualifier>", "<short qualifier>"],
+"exclude_criteria": ["<short disqualifier>", "<short disqualifier>"]
 }
 ]
 }
@@ -173,6 +206,9 @@ Return JSON:
 * Names are verbatim
 * Definitions are behavioral, not descriptive
 * Hypotheses explain causes (not restate behavior)
+* Include criteria are concrete qualifiers (behavioral / role / context / justified demographics)
+* Exclude criteria contain at least one insider-bias filter AND one methodology-hygiene filter
+* All bullets are short phrases, not full sentences
 * No fluff, no repetition
 * Output is concise, sharp, and insight-driven
 

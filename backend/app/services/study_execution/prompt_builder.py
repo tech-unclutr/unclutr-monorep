@@ -17,7 +17,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.designed_study import DesignedStudy
 from app.models.study_designer.research_cohort import ResearchCohort
 from app.models.study_designer.research_cohort_question import ResearchCohortQuestion
-from app.models.study_designer.research_question import ResearchQuestion
+# NOTE: Frozen reference code. The old `research_questions` table/model was
+# replaced by `research_question_scripts` / `CohortQuestionScript` during the
+# per-cohort interview-script feature (Phase K). This import is updated to
+# keep the module parseable, but this file is not imported by any active code
+# path — it stays on disk as reference for when the Execute phase is rebuilt.
+from app.models.study_designer.cohort_question_script import CohortQuestionScript as ResearchQuestion
 
 
 _TEMPLATE_PATH = (

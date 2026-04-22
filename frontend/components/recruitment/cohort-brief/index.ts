@@ -4,3 +4,4 @@ export { ScreeningSection } from "./ScreeningSection";
 export { ModeratorSection } from "./ModeratorSection";
 export { StructureSection } from "./StructureSection";
 export { ScriptSection } from "./ScriptSection";
+export { CohortBriefProvider, useCohortBriefContext } from "./CohortBriefContext";

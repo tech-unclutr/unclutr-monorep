@@ -5,10 +5,6 @@ export interface CohortBriefData {
         objectives: string[];
     };
     screening: {
-        interviewCount: number;
-        duration: string;
-        include: string[];
-        exclude: string[];
         idealProfile: string;
     };
     moderator: {
@@ -39,18 +35,6 @@ const HEALTH_MOMS: CohortBriefData = {
         ],
     },
     screening: {
-        interviewCount: 12,
-        duration: "10–15 minutes",
-        include: [
-            "Primary grocery shopper in the household",
-            "Has a child under 12",
-            "Reads nutrition labels weekly or more",
-            "Household income $75k+",
-        ],
-        exclude: [
-            "Works in food, CPG, or nutrition marketing",
-            "Participated in a similar study in the last 90 days",
-        ],
         idealProfile:
             "A 32-year-old working mom of two who shops Whole Foods weekly, uses Instacart for staples, and follows two nutrition-focused accounts on Instagram.",
     },
@@ -147,17 +131,6 @@ function buildFallbackBrief(cohort: string): CohortBriefData {
             ],
         },
         screening: {
-            interviewCount: 10,
-            duration: "10–15 minutes",
-            include: [
-                `Self-identifies within the ${name} segment`,
-                "Made a relevant purchase in the last 60 days",
-                "Comfortable with a recorded voice interview",
-            ],
-            exclude: [
-                "Works in a directly competitive product or marketing role",
-                "Participated in a similar study in the last 90 days",
-            ],
             idealProfile: `A representative ${name} participant who can speak in concrete detail about a recent decision, including what almost changed their mind.`,
         },
         moderator: {

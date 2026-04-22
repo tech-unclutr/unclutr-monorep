@@ -1,4 +1,4 @@
-from .research_question import ResearchQuestion as ResearchQuestion
+from .cohort_question_script import CohortQuestionScript as CohortQuestionScript
 from .research_cohort import ResearchCohort as ResearchCohort
 from .research_cohort_question import ResearchCohortQuestion as ResearchCohortQuestion
 from .research_lead import ResearchLead as ResearchLead

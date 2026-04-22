@@ -398,27 +398,46 @@ class LLMService:
             logger.error(f"LLM Self-Healing failed (Attempt {attempt}): {e}")
             return text
 
-    async def _generate(self, prompt: str, model_type: str = "flash") -> str:
+    async def _generate(
+        self,
+        prompt: str,
+        model_type: str = "flash",
+        response_schema: Any = None,
+        response_mime_type: str | None = None,
+        timeout_override: float | None = None,
+    ) -> str:
         """
         Internal wrapper for Gemini generation with timeout.
+
+        When response_schema is provided (a Pydantic BaseModel class or a
+        JSON-schema dict), enforces structured output. Mime type defaults to
+        application/json whenever a schema is set. Structured calls are slower;
+        pass timeout_override to extend the default.
         """
         try:
             model = self.pro_model if model_type == "pro" else self.model
-            
-            # Set timeout based on model type
-            timeout = 90.0 if model_type == "pro" else 60.0
-            
-            logger.info(f"LLM Generation starting (model: {model_type}, timeout: {timeout}s)")
+
+            timeout = timeout_override if timeout_override is not None else (90.0 if model_type == "pro" else 60.0)
+
+            generation_config = None
+            if response_schema is not None or response_mime_type is not None:
+                from google.generativeai.types import GenerationConfig
+                generation_config = GenerationConfig(
+                    response_mime_type=response_mime_type or "application/json",
+                    response_schema=response_schema,
+                )
+
+            logger.info(f"LLM Generation starting (model: {model_type}, timeout: {timeout}s, structured={response_schema is not None})")
             start_time = time.time()
-            
+
             response = await asyncio.wait_for(
-                model.generate_content_async(prompt),
-                timeout=timeout
+                model.generate_content_async(prompt, generation_config=generation_config),
+                timeout=timeout,
             )
-            
+
             duration = time.time() - start_time
             logger.info(f"LLM Generation completed in {duration:.2f}s")
-            
+
             return response.text.strip()
         except asyncio.TimeoutError:
             logger.error(f"LLM Generation timed out after {timeout}s ({model_type})")

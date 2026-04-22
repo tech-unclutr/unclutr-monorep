@@ -7,7 +7,7 @@ import { useRecruitment } from "./RecruitmentContext";
 import { LeadsFileUpload } from "./LeadsFileUpload";
 import { LeadsColumnMapper } from "./LeadsColumnMapper";
 import { LeadsCohortConfigurator } from "./LeadsCohortConfigurator";
-import { ExecutionPromptView, type StudyContext } from "./ExecutionPromptView";
+import { type StudyContext } from "./ExecutionPromptView";
 import { api } from "@/lib/api";
 import type { ExtractedLead } from "./recruitment-utils";
 
@@ -142,16 +142,6 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
             {ctx.step === "cohorts" && ctx.extractedLeads.length > 0 && (
                 <LeadsCohortConfigurator
                     onBack={() => ctx.setStep("mapping")}
-                    onComplete={(map) => onStartExecution ? onStartExecution(map) : ctx.setStep("execution")}
-                    className="min-h-[400px] shadow-sm border-gray-200/80 dark:border-white/[0.08]"
-                    studyContext={studyContext}
-                />
-            )}
-
-            {ctx.step === "execution" && (
-                <ExecutionPromptView
-                    onBack={() => ctx.setStep("cohorts")}
-                    onExecute={() => ctx.setStep("done")}
                     className="min-h-[400px] shadow-sm border-gray-200/80 dark:border-white/[0.08]"
                     studyContext={studyContext}
                 />

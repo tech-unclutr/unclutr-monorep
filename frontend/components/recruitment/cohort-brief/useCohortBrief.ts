@@ -9,8 +9,41 @@ export interface ContextSectionData {
     objectives: string[];
 }
 
+export interface ScriptQuestion {
+    id: string;
+    question_number: number;
+    text: string;
+    uncovers: string;
+    objective_link: string;
+    tag: string;
+    depth: number;
+    type_descriptor: string;
+    probes: string[];
+    estimated_minutes: number;
+    priority: "must_ask" | "if_time_permits" | string;
+}
+
+export interface ScriptKrqGroup {
+    krq_index: number;
+    krq_section_text: string;
+    questions: ScriptQuestion[];
+    total_estimated_minutes: number;
+}
+
+export interface ScriptSectionData {
+    krq_groups: ScriptKrqGroup[];
+    total_estimated_minutes: number;
+}
+
+export interface ScreeningSectionData {
+    include_criteria: string[];
+    exclude_criteria: string[];
+}
+
 export interface CohortBriefData {
     context_section: ContextSectionData;
+    script_section?: ScriptSectionData | null;
+    screening_section?: ScreeningSectionData | null;
 }
 
 interface UseCohortBriefResult {

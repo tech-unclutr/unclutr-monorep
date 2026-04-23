@@ -9,14 +9,14 @@ import { getStorage } from "firebase/storage";
 // Dynamic authDomain: Use current hostname for custom domains to prevent cross-domain auth state loss
 const getAuthDomain = () => {
     if (typeof window === 'undefined') {
-        return "unclutr-monorep.firebaseapp.com";
+        return "squareup-492617.firebaseapp.com";
     }
 
     const hostname = window.location.hostname;
 
     // For localhost, use the default Firebase authDomain
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return "unclutr-monorep.firebaseapp.com";
+        return "squareup-492617.firebaseapp.com";
     }
 
     // For custom domains (almost.joinsquareup.com, etc.), use the current hostname
@@ -25,13 +25,13 @@ const getAuthDomain = () => {
 };
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBV4-x1knQDLxrUw0A5gJCqpDkGYWtxiQ0",
+    apiKey: "AIzaSyDmAZXtiLydryLeKSEBobCGKrBw4NcangM",
     authDomain: getAuthDomain(),
-    projectId: "unclutr-monorep",
-    storageBucket: "unclutr-monorep.firebasestorage.app",
-    messagingSenderId: "527397315020",
-    appId: "1:527397315020:web:fb9ccca0b949751fa5bd69",
-    measurementId: "G-Y6S6ESHRFN"
+    projectId: "squareup-492617",
+    storageBucket: "squareup-492617.firebasestorage.app",
+    messagingSenderId: "223432117369",
+    appId: "1:223432117369:web:dd06fefdbf13766e3e18a8",
+    measurementId: "G-D3CWNFB1G7"
 };
 
 console.log("Firebase Config Loaded (Hardcoded Backup)");

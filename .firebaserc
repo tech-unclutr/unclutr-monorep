@@ -1,18 +1,18 @@
 {
   "projects": {
-    "default": "unclutr-monorep"
+    "default": "squareup-492617"
   },
   "targets": {
-    "unclutr-monorep": {
+    "squareup-492617": {
       "hosting": {
         "production": [
-          "squareup-production"
+          "squareup-prod"
         ],
         "staging": [
-          "squareup-staging"
+          "squareup-stage"
         ],
         "development": [
-          "unclutr-monorep"
+          "squareup-dev"
         ]
       }
     }

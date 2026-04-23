@@ -77,4 +77,13 @@ from .study import (
     StudyCadence as StudyCadence,
 )
 from .user import User as User
+from .study_designer import (
+    CohortQuestionScript as CohortQuestionScript,
+    ResearchCohort as ResearchCohort,
+    ResearchLead as ResearchLead,
+    ResearchParticipant as ResearchParticipant,
+    StudyCallLog as StudyCallLog,
+    StudyCallQueue as StudyCallQueue,
+    StudyExecution as StudyExecution,
+)
 

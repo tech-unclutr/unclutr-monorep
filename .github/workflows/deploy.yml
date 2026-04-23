@@ -107,7 +107,7 @@ jobs:
           elif [[ "${{ steps.env_setup.outputs.ENV_NAME }}" == "staging" ]]; then
             export BASE_URL="https://almost.joinsquareup.com"
           else
-            export BASE_URL="https://squareup-dev-india.web.app" # Default for dev branch
+            export BASE_URL="https://squareup-dev.web.app" # Default for dev branch
           fi
 
           # Use Python to safely generate the env file without shell expansion issues

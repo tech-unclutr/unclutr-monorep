@@ -37,7 +37,9 @@ if "postgresql+asyncpg" in db_url:
     new_query = urlencode(query_params, doseq=True)
     db_url = urlunparse(parsed_url._replace(query=new_query))
 
-config.set_main_option("sqlalchemy.url", db_url)
+# Escape % for configparser — asyncpg URLs with URL-encoded chars (%2F, %3A)
+# collide with configparser's %-interpolation syntax. Doubling escapes it.
+config.set_main_option("sqlalchemy.url", db_url.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:

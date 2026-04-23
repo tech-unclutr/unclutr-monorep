@@ -77,16 +77,23 @@ jobs:
           # Use the same Python environment/deps as the app
           pip install alembic psycopg2-binary sqlalchemy sqlmodel pydantic-settings asyncpg
           
-          # Rewrite the host to go through the Cloud SQL Auth Proxy on localhost
+          # Rewrite the URL to go through the Cloud SQL Auth Proxy on localhost:
+          #   1. Replace netloc with 127.0.0.1:5432 (TCP proxy)
+          #   2. Strip the ?host=/cloudsql/... query param — that's the Unix socket
+          #      path used on Cloud Run. It doesn't exist on the runner and
+          #      asyncpg prefers it over the netloc, causing FileNotFoundError.
           export DATABASE_URL=$(python3 -c "
           import os
-          from urllib.parse import urlparse, urlunparse
+          from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
           url = urlparse(os.environ['DB_URL_SECRET'])
           user_info = url.username or ''
           if url.password:
               user_info += ':' + url.password
           new_netloc = (user_info + '@' if user_info else '') + '127.0.0.1:5432'
-          print(urlunparse(url._replace(netloc=new_netloc)))
+          query = parse_qs(url.query)
+          query.pop('host', None)
+          new_query = urlencode(query, doseq=True)
+          print(urlunparse(url._replace(netloc=new_netloc, query=new_query)))
           ")
           
           # Execute migration

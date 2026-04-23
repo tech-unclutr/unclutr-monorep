@@ -10,6 +10,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,7 +43,8 @@ jobs:
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -55,7 +59,7 @@ jobs:
           chmod +x cloud-sql-proxy
           
           # Start proxy in background
-          ./cloud-sql-proxy --port 5432 unclutr-monorep:asia-south1:unclutr-db-india &
+          ./cloud-sql-proxy --port 5432 squareup-492617:asia-south1:unclutr-db-india &
           
           # Wait for proxy to be ready
           for i in $(seq 1 30); do
@@ -103,7 +107,7 @@ jobs:
           elif [[ "${{ steps.env_setup.outputs.ENV_NAME }}" == "staging" ]]; then
             export BASE_URL="https://almost.joinsquareup.com"
           else
-            export BASE_URL="https://unclutr-monorep.web.app" # Default for dev branch
+            export BASE_URL="https://squareup-dev-india.web.app" # Default for dev branch
           fi
 
           # Use Python to safely generate the env file without shell expansion issues
@@ -139,7 +143,7 @@ jobs:
             --max-instances 10 \
             --cpu-boost \
             --cpu-throttling \
-            --add-cloudsql-instances unclutr-monorep:asia-south1:unclutr-db-india \
+            --add-cloudsql-instances squareup-492617:asia-south1:unclutr-db-india \
             --env-vars-file env.json
 
       - name: Deploy Frontend to Firebase

@@ -11,7 +11,7 @@ def main():
     db_secret = os.environ.get('DATABASE_URL_SECRET', '')
     
     # Cloud SQL Instance Connection Name
-    instance_connection_name = 'unclutr-monorep:asia-south1:unclutr-db-india'
+    instance_connection_name = 'squareup-492617:asia-south1:unclutr-db-india'
     
     print(f"DEBUG: Processing DB Secret (Length: {len(db_secret)})")
     

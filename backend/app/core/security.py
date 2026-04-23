@@ -38,8 +38,11 @@ if not firebase_admin._apps:
         except Exception as e:
             logger.error(f"Failed to initialize Firebase from file: {e}")
     else:
-        # Fallback or initialization without creds (e.g. on GCP)
-        logger.warning(f"Firebase Credentials not found at {settings.FIREBASE_CREDENTIALS_PATH}. Auth will fail.")
+        try:
+            firebase_admin.initialize_app()
+            logger.info("Firebase initialized via Application Default Credentials.")
+        except Exception as e:
+            logger.error(f"Failed to initialize Firebase via ADC: {e}")
 
 security = HTTPBearer(auto_error=False)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)

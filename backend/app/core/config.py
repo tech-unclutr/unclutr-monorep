@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     FIREBASE_API_KEY: Optional[str] = None
     
     # Google Cloud
-    GOOGLE_CLOUD_PROJECT: str = "unclutr-monorep"
+    GOOGLE_CLOUD_PROJECT: str = "squareup-492617"
     GOOGLE_CLOUD_LOCATION: str = "asia-south1"
     
     # Database

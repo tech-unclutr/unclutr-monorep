@@ -1,8 +1,8 @@
-"""initial_schema
+"""initial schema
 
-Revision ID: db16f65b2e80
+Revision ID: b137d3aa4b5d
 Revises: 
-Create Date: 2026-02-10 02:33:37.326293
+Create Date: 2026-04-22 00:12:49.067098
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'db16f65b2e80'
+revision: str = 'b137d3aa4b5d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -158,6 +158,18 @@ def upgrade() -> None:
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('source_file_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('bolna_execution_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('bolna_agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('bolna_call_status', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('bolna_conversation_time', sa.Integer(), nullable=True),
+    sa.Column('bolna_total_cost', sa.Float(), nullable=True),
+    sa.Column('bolna_error_message', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('bolna_transcript', sa.Text(), nullable=True),
+    sa.Column('bolna_extracted_data', sa.JSON(), nullable=True),
+    sa.Column('bolna_telephony_data', sa.JSON(), nullable=True),
+    sa.Column('bolna_raw_data', sa.JSON(), nullable=True),
+    sa.Column('bolna_created_at', sa.DateTime(), nullable=True),
+    sa.Column('bolna_updated_at', sa.DateTime(), nullable=True),
     sa.Column('decision_context', sa.JSON(), nullable=True),
     sa.Column('quality_score', sa.Integer(), nullable=False),
     sa.Column('quality_gap', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -183,6 +195,7 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_campaigns_bolna_execution_id'), 'campaigns', ['bolna_execution_id'], unique=True)
     op.create_index(op.f('ix_campaigns_company_id'), 'campaigns', ['company_id'], unique=False)
     op.create_index(op.f('ix_campaigns_source_file_hash'), 'campaigns', ['source_file_hash'], unique=False)
     op.create_index(op.f('ix_campaigns_user_id'), 'campaigns', ['user_id'], unique=False)
@@ -213,6 +226,31 @@ def upgrade() -> None:
     op.create_index(op.f('ix_company_brand_name'), 'company', ['brand_name'], unique=False)
     op.create_index(op.f('ix_company_created_by'), 'company', ['created_by'], unique=False)
     op.create_index(op.f('ix_company_updated_by'), 'company', ['updated_by'], unique=False)
+    op.create_table('contacts',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('company_id', sa.Uuid(), nullable=False),
+    sa.Column('first_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('last_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('full_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('linkedin_url', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('company_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('industry', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('employee_count', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('primary_phone', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('alt_phone', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('city', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('country', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('custom_fields', sa.JSON(), nullable=True),
+    sa.Column('source', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('company_id', 'primary_phone', name='uq_company_contact_phone')
+    )
+    op.create_index(op.f('ix_contacts_company_id'), 'contacts', ['company_id'], unique=False)
+    op.create_index(op.f('ix_contacts_primary_phone'), 'contacts', ['primary_phone'], unique=False)
     op.create_table('data_source',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -234,6 +272,38 @@ def upgrade() -> None:
     op.create_index(op.f('ix_data_source_category'), 'data_source', ['category'], unique=False)
     op.create_index(op.f('ix_data_source_name'), 'data_source', ['name'], unique=True)
     op.create_index(op.f('ix_data_source_slug'), 'data_source', ['slug'], unique=True)
+    op.create_table('departments',
+    sa.Column('dept_id', sa.Integer(), nullable=False),
+    sa.Column('dept_name', sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
+    sa.Column('display_order', sa.SmallInteger(), nullable=True),
+    sa.PrimaryKeyConstraint('dept_id'),
+    sa.UniqueConstraint('dept_name')
+    )
+    op.create_table('designed_studies',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('company_id', sa.Uuid(), nullable=False),
+    sa.Column('user_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('initial_prompt', sa.Text(), nullable=True),
+    sa.Column('briefing', sa.Text(), nullable=True),
+    sa.Column('executive_summary', sa.Text(), nullable=True),
+    sa.Column('emotion_detection', sa.Boolean(), nullable=False),
+    sa.Column('participant_languages', sa.JSON(), nullable=True),
+    sa.Column('reporting_language', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('advanced_settings', sa.JSON(), nullable=True),
+    sa.Column('welcome_page', sa.JSON(), nullable=True),
+    sa.Column('topic_guide', sa.JSON(), nullable=True),
+    sa.Column('key_research_questions', sa.JSON(), nullable=True),
+    sa.Column('conversation_history', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('company_id', 'title', name='uq_company_study_title')
+    )
+    op.create_index(op.f('ix_designed_studies_company_id'), 'designed_studies', ['company_id'], unique=False)
+    op.create_index(op.f('ix_designed_studies_status'), 'designed_studies', ['status'], unique=False)
+    op.create_index(op.f('ix_designed_studies_user_id'), 'designed_studies', ['user_id'], unique=False)
     op.create_table('feedback_learning',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('brand_id', sa.Uuid(), nullable=False),
@@ -244,6 +314,17 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_feedback_learning_brand_id'), 'feedback_learning', ['brand_id'], unique=False)
+    op.create_table('industries',
+    sa.Column('industry_id', sa.Integer(), nullable=False),
+    sa.Column('industry_name', sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
+    sa.Column('industry_slug', sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
+    sa.Column('illustration_key', sqlmodel.sql.sqltypes.AutoString(length=80), nullable=True),
+    sa.Column('is_popular', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.Column('display_order', sa.SmallInteger(), nullable=True),
+    sa.PrimaryKeyConstraint('industry_id'),
+    sa.UniqueConstraint('industry_name'),
+    sa.UniqueConstraint('industry_slug')
+    )
     op.create_table('insight_feedback',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('insight_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -271,6 +352,13 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_interview_sessions_company_id'), 'interview_sessions', ['company_id'], unique=False)
     op.create_index(op.f('ix_interview_sessions_user_id'), 'interview_sessions', ['user_id'], unique=False)
+    op.create_table('lifecycle_stages',
+    sa.Column('stage_id', sa.Integer(), nullable=False),
+    sa.Column('stage_name', sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
+    sa.Column('display_order', sa.SmallInteger(), nullable=True),
+    sa.PrimaryKeyConstraint('stage_id'),
+    sa.UniqueConstraint('stage_name')
+    )
     op.create_table('module',
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -302,6 +390,49 @@ def upgrade() -> None:
     sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('research_cohorts',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('company_id', sa.Uuid(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('hypothesis', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('incentive', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('meta_data', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('company_id', 'name', name='uq_research_cohort_company_name')
+    )
+    op.create_index(op.f('ix_research_cohorts_company_id'), 'research_cohorts', ['company_id'], unique=False)
+    op.create_table('startup_stages',
+    sa.Column('stage_id', sa.Integer(), nullable=False),
+    sa.Column('stage_name', sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
+    sa.Column('display_order', sa.SmallInteger(), nullable=True),
+    sa.PrimaryKeyConstraint('stage_id'),
+    sa.UniqueConstraint('stage_name')
+    )
+    op.create_table('study_categories',
+    sa.Column('category_id', sa.Integer(), nullable=False),
+    sa.Column('category_name', sqlmodel.sql.sqltypes.AutoString(length=120), nullable=False),
+    sa.Column('category_slug', sqlmodel.sql.sqltypes.AutoString(length=120), nullable=False),
+    sa.PrimaryKeyConstraint('category_id'),
+    sa.UniqueConstraint('category_name'),
+    sa.UniqueConstraint('category_slug')
+    )
+    op.create_table('study_executions',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('study_id', sa.Uuid(), nullable=False),
+    sa.Column('company_id', sa.Uuid(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('bolna_agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('call_duration', sa.Integer(), nullable=False),
+    sa.Column('cohort_interview_map', sa.JSON(), nullable=True),
+    sa.Column('execution_config', sa.JSON(), nullable=True),
+    sa.Column('meta_data', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_executions_study_id'), 'study_executions', ['study_id'], unique=False)
     op.create_table('system_metric',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=False),
@@ -375,12 +506,15 @@ def upgrade() -> None:
     sa.Column('cohort', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('meta_data', sa.JSON(), nullable=True),
+    sa.Column('contact_id', sa.Uuid(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['campaign_id'], ['campaigns.id'], ),
+    sa.ForeignKeyConstraint(['contact_id'], ['contacts.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('campaign_id', 'contact_number', name='unique_campaign_lead_phone')
     )
     op.create_index(op.f('ix_campaign_leads_campaign_id'), 'campaign_leads', ['campaign_id'], unique=False)
+    op.create_index(op.f('ix_campaign_leads_contact_id'), 'campaign_leads', ['contact_id'], unique=False)
     op.create_table('campaigns_goals_details',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('campaign_id', sa.Uuid(), nullable=False),
@@ -494,6 +628,101 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_onboarding_metric_user_id'), 'onboarding_metric', ['user_id'], unique=True)
+    op.create_table('research_leads',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('company_id', sa.Uuid(), nullable=False),
+    sa.Column('cohort_id', sa.Uuid(), nullable=True),
+    sa.Column('first_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('last_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('contact_number', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('contact_profile', sa.JSON(), nullable=True),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('meta_data', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['cohort_id'], ['research_cohorts.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('company_id', 'contact_number', name='uq_research_lead_company_phone')
+    )
+    op.create_index(op.f('ix_research_leads_cohort_id'), 'research_leads', ['cohort_id'], unique=False)
+    op.create_index(op.f('ix_research_leads_company_id'), 'research_leads', ['company_id'], unique=False)
+    op.create_table('research_question_scripts',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('cohort_id', sa.Uuid(), nullable=False),
+    sa.Column('study_id', sa.Uuid(), nullable=False),
+    sa.Column('company_id', sa.Uuid(), nullable=False),
+    sa.Column('krq_index', sa.Integer(), nullable=False),
+    sa.Column('krq_section_text', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('krq_sort_order', sa.Integer(), nullable=False),
+    sa.Column('question_number', sa.Integer(), nullable=False),
+    sa.Column('sort_order', sa.Integer(), nullable=False),
+    sa.Column('text', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('uncovers', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('objective_link', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('tag', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('depth', sa.Integer(), nullable=False),
+    sa.Column('type_descriptor', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('probes', sa.JSON(), nullable=True),
+    sa.Column('estimated_minutes', sa.Float(), nullable=False),
+    sa.Column('priority', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['cohort_id'], ['research_cohorts.id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['designed_studies.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_research_question_scripts_cohort_id'), 'research_question_scripts', ['cohort_id'], unique=False)
+    op.create_index(op.f('ix_research_question_scripts_company_id'), 'research_question_scripts', ['company_id'], unique=False)
+    op.create_index(op.f('ix_research_question_scripts_study_id'), 'research_question_scripts', ['study_id'], unique=False)
+    op.create_table('studies',
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('category_id', sa.Integer(), nullable=True),
+    sa.Column('study_family', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+    sa.Column('study_name', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=False),
+    sa.Column('alternate_names', sa.Text(), nullable=True),
+    sa.Column('tagline', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+    sa.Column('signal_type', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=True),
+    sa.Column('primary_goal', sa.Text(), nullable=True),
+    sa.Column('questions_answered', sa.Text(), nullable=True),
+    sa.Column('decisions_unlocked', sa.Text(), nullable=True),
+    sa.Column('best_timing_trigger', sa.Text(), nullable=True),
+    sa.Column('frequency_cadence', sqlmodel.sql.sqltypes.AutoString(length=120), nullable=True),
+    sa.Column('urgency', sqlmodel.sql.sqltypes.AutoString(length=4), nullable=True),
+    sa.Column('practice_level', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=True),
+    sa.Column('priority_label', sqlmodel.sql.sqltypes.AutoString(length=40), nullable=True),
+    sa.Column('dri_role', sqlmodel.sql.sqltypes.AutoString(length=120), nullable=True),
+    sa.Column('method_type', sqlmodel.sql.sqltypes.AutoString(length=30), nullable=True),
+    sa.Column('typical_sample_type', sa.Text(), nullable=True),
+    sa.Column('typical_sample_size', sqlmodel.sql.sqltypes.AutoString(length=40), nullable=True),
+    sa.Column('best_execution_method', sa.Text(), nullable=True),
+    sa.Column('scrappy_version', sa.Text(), nullable=True),
+    sa.Column('gold_standard_version', sa.Text(), nullable=True),
+    sa.Column('india_execution_notes', sa.Text(), nullable=True),
+    sa.Column('language_regional_notes', sa.Text(), nullable=True),
+    sa.Column('online_vs_offline', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=True),
+    sa.Column('key_success_criteria', sa.Text(), nullable=True),
+    sa.Column('guardrails_validity_checks', sa.Text(), nullable=True),
+    sa.Column('output_artifact', sa.Text(), nullable=True),
+    sa.Column('main_kpis_metrics', sa.Text(), nullable=True),
+    sa.Column('common_mistakes', sa.Text(), nullable=True),
+    sa.Column('time_to_insight', sqlmodel.sql.sqltypes.AutoString(length=40), nullable=True),
+    sa.Column('main_cost_drivers', sa.Text(), nullable=True),
+    sa.Column('roi_conditions', sa.Text(), nullable=True),
+    sa.Column('priority_score', sa.SmallInteger(), nullable=True),
+    sa.Column('roi_score', sqlmodel.sql.sqltypes.AutoString(length=10), nullable=True),
+    sa.Column('notes_nuances', sa.Text(), nullable=True),
+    sa.Column('requires_direct_touchpoint', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.Column('is_featured', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.Column('is_prioritization_pack', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.Column('priority_rank', sa.SmallInteger(), nullable=True),
+    sa.Column('why_it_matters_short', sa.Text(), nullable=True),
+    sa.Column('canonical_industry_buckets', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+    sa.Column('is_locked', sa.Boolean(), nullable=False, server_default=sa.text('true')),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['category_id'], ['study_categories.category_id'], ),
+    sa.PrimaryKeyConstraint('study_id'),
+    sa.UniqueConstraint('study_name')
+    )
     op.create_table('user_metric',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -545,6 +774,18 @@ def upgrade() -> None:
     op.create_index(op.f('ix_campaign_events_created_at'), 'campaign_events', ['created_at'], unique=False)
     op.create_index(op.f('ix_campaign_events_event_type'), 'campaign_events', ['event_type'], unique=False)
     op.create_index(op.f('ix_campaign_events_lead_id'), 'campaign_events', ['lead_id'], unique=False)
+    op.create_table('industry_recommendations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('industry_id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('recommendation_tier', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('unique_notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['industry_id'], ['industries.industry_id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_industry_recommendations_industry_id'), 'industry_recommendations', ['industry_id'], unique=False)
+    op.create_index(op.f('ix_industry_recommendations_study_id'), 'industry_recommendations', ['study_id'], unique=False)
     op.create_table('insight_generation_log',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('brand_id', sa.Uuid(), nullable=False),
@@ -609,6 +850,81 @@ def upgrade() -> None:
     op.create_index(op.f('ix_queue_items_lead_id'), 'queue_items', ['lead_id'], unique=False)
     op.create_index(op.f('ix_queue_items_scheduled_for'), 'queue_items', ['scheduled_for'], unique=False)
     op.create_index(op.f('ix_queue_items_status'), 'queue_items', ['status'], unique=False)
+    op.create_table('research_participants',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('lead_id', sa.Uuid(), nullable=False),
+    sa.Column('study_id', sa.Uuid(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('meta_data', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['lead_id'], ['research_leads.id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['designed_studies.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('lead_id', 'study_id', name='uq_research_participant_lead_study')
+    )
+    op.create_index(op.f('ix_research_participants_lead_id'), 'research_participants', ['lead_id'], unique=False)
+    op.create_index(op.f('ix_research_participants_study_id'), 'research_participants', ['study_id'], unique=False)
+    op.create_table('study_cadence',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('cadence_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_cadence_study_id'), 'study_cadence', ['study_id'], unique=False)
+    op.create_table('study_costs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('cost_tier', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('cost_min_inr', sa.Integer(), nullable=False, server_default=sa.text('0')),
+    sa.Column('cost_max_inr', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_costs_study_id'), 'study_costs', ['study_id'], unique=False)
+    op.create_table('study_departments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('dept_id', sa.Integer(), nullable=False),
+    sa.Column('ownership_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=sa.text("'owned'")),
+    sa.ForeignKeyConstraint(['dept_id'], ['departments.dept_id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_departments_dept_id'), 'study_departments', ['dept_id'], unique=False)
+    op.create_index(op.f('ix_study_departments_study_id'), 'study_departments', ['study_id'], unique=False)
+    op.create_table('study_industries',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('industry_id', sa.Integer(), nullable=False),
+    sa.Column('must_do', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.Column('can_skip', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+    sa.ForeignKeyConstraint(['industry_id'], ['industries.industry_id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_industries_industry_id'), 'study_industries', ['industry_id'], unique=False)
+    op.create_index(op.f('ix_study_industries_study_id'), 'study_industries', ['study_id'], unique=False)
+    op.create_table('study_lifecycle_stages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('stage_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['stage_id'], ['lifecycle_stages.stage_id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_lifecycle_stages_stage_id'), 'study_lifecycle_stages', ['stage_id'], unique=False)
+    op.create_index(op.f('ix_study_lifecycle_stages_study_id'), 'study_lifecycle_stages', ['study_id'], unique=False)
+    op.create_table('study_startup_stages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('study_id', sa.Integer(), nullable=False),
+    sa.Column('stage_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['stage_id'], ['startup_stages.stage_id'], ),
+    sa.ForeignKeyConstraint(['study_id'], ['studies.study_id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_startup_stages_stage_id'), 'study_startup_stages', ['stage_id'], unique=False)
+    op.create_index(op.f('ix_study_startup_stages_study_id'), 'study_startup_stages', ['study_id'], unique=False)
     op.create_table('workspace',
     sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('updated_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -707,6 +1023,29 @@ def upgrade() -> None:
     op.create_index(op.f('ix_integration_company_id'), 'integration', ['company_id'], unique=False)
     op.create_index(op.f('ix_integration_datasource_id'), 'integration', ['datasource_id'], unique=False)
     op.create_index(op.f('ix_integration_workspace_id'), 'integration', ['workspace_id'], unique=False)
+    op.create_table('study_call_queue',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('execution_id', sa.Uuid(), nullable=False),
+    sa.Column('participant_id', sa.Uuid(), nullable=False),
+    sa.Column('lead_id', sa.Uuid(), nullable=False),
+    sa.Column('interview_type', sa.Integer(), nullable=False),
+    sa.Column('cohort_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('prompt_text', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('execution_count', sa.Integer(), nullable=False),
+    sa.Column('priority_score', sa.Integer(), nullable=False),
+    sa.Column('outcome', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('scheduled_for', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['execution_id'], ['study_executions.id'], ),
+    sa.ForeignKeyConstraint(['lead_id'], ['research_leads.id'], ),
+    sa.ForeignKeyConstraint(['participant_id'], ['research_participants.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_call_queue_execution_id'), 'study_call_queue', ['execution_id'], unique=False)
+    op.create_index(op.f('ix_study_call_queue_lead_id'), 'study_call_queue', ['lead_id'], unique=False)
+    op.create_index(op.f('ix_study_call_queue_status'), 'study_call_queue', ['status'], unique=False)
     op.create_table('user_queue_items',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('campaign_id', sa.Uuid(), nullable=False),
@@ -714,6 +1053,7 @@ def upgrade() -> None:
     sa.Column('original_queue_item_id', sa.Uuid(), nullable=False),
     sa.Column('call_history', sa.JSON(), nullable=True),
     sa.Column('ai_summary', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('structured_context', sa.JSON(), nullable=True),
     sa.Column('intent_strength', sa.Float(), nullable=False),
     sa.Column('confirmation_slot', sa.DateTime(), nullable=True),
     sa.Column('detected_at', sa.DateTime(), nullable=False),
@@ -1212,6 +1552,34 @@ def upgrade() -> None:
     op.create_index(op.f('ix_shopify_report_shopify_report_id'), 'shopify_report', ['shopify_report_id'], unique=False)
     op.create_index(op.f('ix_shopify_report_shopify_updated_at'), 'shopify_report', ['shopify_updated_at'], unique=False)
     op.create_index(op.f('ix_shopify_report_updated_by'), 'shopify_report', ['updated_by'], unique=False)
+    op.create_table('study_call_logs',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('queue_item_id', sa.Uuid(), nullable=False),
+    sa.Column('execution_id', sa.Uuid(), nullable=False),
+    sa.Column('lead_id', sa.Uuid(), nullable=False),
+    sa.Column('bolna_call_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('bolna_agent_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('call_status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('call_outcome', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('call_duration', sa.Integer(), nullable=False),
+    sa.Column('total_cost', sa.Float(), nullable=False),
+    sa.Column('currency', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('transcript_summary', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('full_transcript', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('extracted_data', sa.JSON(), nullable=True),
+    sa.Column('termination_reason', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('recording_url', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('webhook_payload', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['execution_id'], ['study_executions.id'], ),
+    sa.ForeignKeyConstraint(['lead_id'], ['research_leads.id'], ),
+    sa.ForeignKeyConstraint(['queue_item_id'], ['study_call_queue.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_study_call_logs_bolna_call_id'), 'study_call_logs', ['bolna_call_id'], unique=True)
+    op.create_index(op.f('ix_study_call_logs_execution_id'), 'study_call_logs', ['execution_id'], unique=False)
+    op.create_index(op.f('ix_study_call_logs_queue_item_id'), 'study_call_logs', ['queue_item_id'], unique=False)
     op.create_table('user_call_logs',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_queue_item_id', sa.Uuid(), nullable=False),
@@ -1772,6 +2140,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_call_logs_created_at'), table_name='user_call_logs')
     op.drop_index(op.f('ix_user_call_logs_campaign_id'), table_name='user_call_logs')
     op.drop_table('user_call_logs')
+    op.drop_index(op.f('ix_study_call_logs_queue_item_id'), table_name='study_call_logs')
+    op.drop_index(op.f('ix_study_call_logs_execution_id'), table_name='study_call_logs')
+    op.drop_index(op.f('ix_study_call_logs_bolna_call_id'), table_name='study_call_logs')
+    op.drop_table('study_call_logs')
     op.drop_index(op.f('ix_shopify_report_updated_by'), table_name='shopify_report')
     op.drop_index(op.f('ix_shopify_report_shopify_updated_at'), table_name='shopify_report')
     op.drop_index(op.f('ix_shopify_report_shopify_report_id'), table_name='shopify_report')
@@ -1918,6 +2290,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_queue_items_lead_id'), table_name='user_queue_items')
     op.drop_index(op.f('ix_user_queue_items_campaign_id'), table_name='user_queue_items')
     op.drop_table('user_queue_items')
+    op.drop_index(op.f('ix_study_call_queue_status'), table_name='study_call_queue')
+    op.drop_index(op.f('ix_study_call_queue_lead_id'), table_name='study_call_queue')
+    op.drop_index(op.f('ix_study_call_queue_execution_id'), table_name='study_call_queue')
+    op.drop_table('study_call_queue')
     op.drop_index(op.f('ix_integration_workspace_id'), table_name='integration')
     op.drop_index(op.f('ix_integration_datasource_id'), table_name='integration')
     op.drop_index(op.f('ix_integration_company_id'), table_name='integration')
@@ -1937,6 +2313,25 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_workspace_company_id'), table_name='workspace')
     op.drop_index(op.f('ix_workspace_brand_id'), table_name='workspace')
     op.drop_table('workspace')
+    op.drop_index(op.f('ix_study_startup_stages_study_id'), table_name='study_startup_stages')
+    op.drop_index(op.f('ix_study_startup_stages_stage_id'), table_name='study_startup_stages')
+    op.drop_table('study_startup_stages')
+    op.drop_index(op.f('ix_study_lifecycle_stages_study_id'), table_name='study_lifecycle_stages')
+    op.drop_index(op.f('ix_study_lifecycle_stages_stage_id'), table_name='study_lifecycle_stages')
+    op.drop_table('study_lifecycle_stages')
+    op.drop_index(op.f('ix_study_industries_study_id'), table_name='study_industries')
+    op.drop_index(op.f('ix_study_industries_industry_id'), table_name='study_industries')
+    op.drop_table('study_industries')
+    op.drop_index(op.f('ix_study_departments_study_id'), table_name='study_departments')
+    op.drop_index(op.f('ix_study_departments_dept_id'), table_name='study_departments')
+    op.drop_table('study_departments')
+    op.drop_index(op.f('ix_study_costs_study_id'), table_name='study_costs')
+    op.drop_table('study_costs')
+    op.drop_index(op.f('ix_study_cadence_study_id'), table_name='study_cadence')
+    op.drop_table('study_cadence')
+    op.drop_index(op.f('ix_research_participants_study_id'), table_name='research_participants')
+    op.drop_index(op.f('ix_research_participants_lead_id'), table_name='research_participants')
+    op.drop_table('research_participants')
     op.drop_index(op.f('ix_queue_items_status'), table_name='queue_items')
     op.drop_index(op.f('ix_queue_items_scheduled_for'), table_name='queue_items')
     op.drop_index(op.f('ix_queue_items_lead_id'), table_name='queue_items')
@@ -1951,6 +2346,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_insight_generation_log_generated_at'), table_name='insight_generation_log')
     op.drop_index(op.f('ix_insight_generation_log_brand_id'), table_name='insight_generation_log')
     op.drop_table('insight_generation_log')
+    op.drop_index(op.f('ix_industry_recommendations_study_id'), table_name='industry_recommendations')
+    op.drop_index(op.f('ix_industry_recommendations_industry_id'), table_name='industry_recommendations')
+    op.drop_table('industry_recommendations')
     op.drop_index(op.f('ix_campaign_events_lead_id'), table_name='campaign_events')
     op.drop_index(op.f('ix_campaign_events_event_type'), table_name='campaign_events')
     op.drop_index(op.f('ix_campaign_events_created_at'), table_name='campaign_events')
@@ -1962,6 +2360,14 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_metric_user_id'), table_name='user_metric')
     op.drop_index(op.f('ix_user_metric_metric_date'), table_name='user_metric')
     op.drop_table('user_metric')
+    op.drop_table('studies')
+    op.drop_index(op.f('ix_research_question_scripts_study_id'), table_name='research_question_scripts')
+    op.drop_index(op.f('ix_research_question_scripts_company_id'), table_name='research_question_scripts')
+    op.drop_index(op.f('ix_research_question_scripts_cohort_id'), table_name='research_question_scripts')
+    op.drop_table('research_question_scripts')
+    op.drop_index(op.f('ix_research_leads_company_id'), table_name='research_leads')
+    op.drop_index(op.f('ix_research_leads_cohort_id'), table_name='research_leads')
+    op.drop_table('research_leads')
     op.drop_index(op.f('ix_onboarding_metric_user_id'), table_name='onboarding_metric')
     op.drop_table('onboarding_metric')
     op.drop_index(op.f('ix_company_membership_user_id'), table_name='company_membership')
@@ -1976,6 +2382,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_campaigns_goals_details_bolna_execution_id'), table_name='campaigns_goals_details')
     op.drop_index(op.f('ix_campaigns_goals_details_agent_id'), table_name='campaigns_goals_details')
     op.drop_table('campaigns_goals_details')
+    op.drop_index(op.f('ix_campaign_leads_contact_id'), table_name='campaign_leads')
     op.drop_index(op.f('ix_campaign_leads_campaign_id'), table_name='campaign_leads')
     op.drop_table('campaign_leads')
     op.drop_index(op.f('ix_call_raw_data_campaign_id'), table_name='call_raw_data')
@@ -1990,24 +2397,40 @@ def downgrade() -> None:
     op.drop_table('user')
     op.drop_index(op.f('ix_system_metric_timestamp'), table_name='system_metric')
     op.drop_table('system_metric')
+    op.drop_index(op.f('ix_study_executions_study_id'), table_name='study_executions')
+    op.drop_table('study_executions')
+    op.drop_table('study_categories')
+    op.drop_table('startup_stages')
+    op.drop_index(op.f('ix_research_cohorts_company_id'), table_name='research_cohorts')
+    op.drop_table('research_cohorts')
     op.drop_table('permission')
     op.drop_index(op.f('ix_onboarding_state_user_id'), table_name='onboarding_state')
     op.drop_index(op.f('ix_onboarding_state_updated_by'), table_name='onboarding_state')
     op.drop_index(op.f('ix_onboarding_state_created_by'), table_name='onboarding_state')
     op.drop_table('onboarding_state')
     op.drop_table('module')
+    op.drop_table('lifecycle_stages')
     op.drop_index(op.f('ix_interview_sessions_user_id'), table_name='interview_sessions')
     op.drop_index(op.f('ix_interview_sessions_company_id'), table_name='interview_sessions')
     op.drop_table('interview_sessions')
     op.drop_index(op.f('ix_insight_feedback_insight_id'), table_name='insight_feedback')
     op.drop_index(op.f('ix_insight_feedback_brand_id'), table_name='insight_feedback')
     op.drop_table('insight_feedback')
+    op.drop_table('industries')
     op.drop_index(op.f('ix_feedback_learning_brand_id'), table_name='feedback_learning')
     op.drop_table('feedback_learning')
+    op.drop_index(op.f('ix_designed_studies_user_id'), table_name='designed_studies')
+    op.drop_index(op.f('ix_designed_studies_status'), table_name='designed_studies')
+    op.drop_index(op.f('ix_designed_studies_company_id'), table_name='designed_studies')
+    op.drop_table('designed_studies')
+    op.drop_table('departments')
     op.drop_index(op.f('ix_data_source_slug'), table_name='data_source')
     op.drop_index(op.f('ix_data_source_name'), table_name='data_source')
     op.drop_index(op.f('ix_data_source_category'), table_name='data_source')
     op.drop_table('data_source')
+    op.drop_index(op.f('ix_contacts_primary_phone'), table_name='contacts')
+    op.drop_index(op.f('ix_contacts_company_id'), table_name='contacts')
+    op.drop_table('contacts')
     op.drop_index(op.f('ix_company_updated_by'), table_name='company')
     op.drop_index(op.f('ix_company_created_by'), table_name='company')
     op.drop_index(op.f('ix_company_brand_name'), table_name='company')
@@ -2015,6 +2438,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_campaigns_user_id'), table_name='campaigns')
     op.drop_index(op.f('ix_campaigns_source_file_hash'), table_name='campaigns')
     op.drop_index(op.f('ix_campaigns_company_id'), table_name='campaigns')
+    op.drop_index(op.f('ix_campaigns_bolna_execution_id'), table_name='campaigns')
     op.drop_table('campaigns')
     op.drop_index(op.f('ix_calendar_connection_user_id'), table_name='calendar_connection')
     op.drop_index(op.f('ix_calendar_connection_company_id'), table_name='calendar_connection')

@@ -20,10 +20,15 @@ from app.api.v1.endpoints import (
     metrics,
     monitoring,
     onboarding,
+
     settings,
     studies,
+    study_designer,
     user_queue,
     users,
+    persist_leads,
+    voice_sandbox,
+    study_webhook,
 )
 
 api_router = APIRouter()
@@ -50,6 +55,10 @@ api_router.include_router(bolna_webhook.router, tags=["Bolna Webhook"])
 api_router.include_router(user_queue.router, prefix="/user-queue", tags=["User Queue"])
 api_router.include_router(calendar_booking.router, prefix="/execution", tags=["Calendar Booking"])
 api_router.include_router(studies.router, prefix="/studies", tags=["Studies"])
+api_router.include_router(study_designer.router, prefix="/study-planner", tags=["Study Planner"])
+api_router.include_router(voice_sandbox.router, prefix="/voice-sandbox", tags=["Voice Sandbox"])
+api_router.include_router(persist_leads.router, prefix="/leads", tags=["Leads"])
+api_router.include_router(study_webhook.router, tags=["Study Webhook"])
 
 
 

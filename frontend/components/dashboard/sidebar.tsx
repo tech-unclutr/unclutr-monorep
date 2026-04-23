@@ -10,6 +10,7 @@ import {
     BookOpen,
     DollarSign,
     Compass,
+    FlaskConical,
     GitCompare,
     Plug,
     RotateCw,
@@ -195,6 +196,21 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
                         >
                             <BookOpen className="w-4 h-4 shrink-0" />
                             {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Studies</span>}
+                        </Link>
+
+                        <Link
+                            href="/dashboard/playground"
+                            className={cn(
+                                "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all group relative",
+                                isActive("/dashboard/playground")
+                                    ? "bg-[#FF8A4C] text-white shadow-[0_0_15px_rgba(255,138,76,0.25)]"
+                                    : "text-gray-400 dark:text-[#71717A] hover:text-gray-900 dark:hover:text-[#E4E4E7] hover:bg-gray-50/50 dark:hover:bg-[#27272A]/50",
+                                isCollapsed ? "justify-center" : ""
+                            )}
+                            title={isCollapsed ? "Playground" : ""}
+                        >
+                            <FlaskConical className="w-4 h-4 shrink-0" />
+                            {!isCollapsed && <span className="font-medium text-[13.5px] whitespace-nowrap transition-opacity duration-200">Playground</span>}
                         </Link>
 
                     </div>

@@ -154,24 +154,9 @@ jobs:
             --env-vars-file env.json
 
       - name: Deploy Frontend to Firebase
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa-key.json
-          SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: |
-          # Write the SA key AND inject quota_project_id so firebase-tools /
-          # google-auth-library sets X-Goog-User-Project on API calls.
-          # Without this, Firebase API returns SERVICE_DISABLED → firebase-tools
-          # reports "Failed to get Firebase project".
-          python3 -c "
-          import json, os
-          key = json.loads(os.environ['SA_KEY'])
-          key['quota_project_id'] = 'squareup-492617'
-          with open(os.environ['GOOGLE_APPLICATION_CREDENTIALS'], 'w') as f:
-              json.dump(key, f)
-          "
           firebase experiments:enable webframeworks
-          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --force --project squareup-492617 --non-interactive
-          rm -f $GOOGLE_APPLICATION_CREDENTIALS
+          firebase deploy --only hosting:${{ steps.env_setup.outputs.FIREBASE_TARGET }} --force --token ${{ secrets.FIREBASE_TOKEN }} --project squareup-492617 --non-interactive
 
       - name: Ensure Frontend Public Access (Staging)
         if: steps.env_setup.outputs.ENV_NAME == 'staging'

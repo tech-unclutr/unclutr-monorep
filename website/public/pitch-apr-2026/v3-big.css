@@ -1,0 +1,256 @@
+/* SquareUp v3 — Variant A: BIG (Cinema) */
+/* Theatrical, fullbleed, single-idea-per-slide. Built for stage projection. */
+
+/* ─────────── Reset & Type ─────────── */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #060606;
+  color: #F5F2ED;
+  font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─────────── Tokens ─────────── */
+:root {
+  --ink: #0A0A0A;
+  --cream: #F5F2ED;
+  --cream-dim: rgba(245, 242, 237, 0.55);
+  --cream-faint: rgba(245, 242, 237, 0.18);
+  --accent: #FF5A1F;
+  --accent-dim: rgba(255, 90, 31, 0.5);
+}
+
+/* ─────────── Slide bases ─────────── */
+deck-stage > section {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  font-family: 'Manrope', sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+  letter-spacing: -0.012em;
+}
+
+.b-ink   { background: var(--ink); color: var(--cream); }
+.b-cream { background: var(--cream); color: var(--ink); }
+.b-cream .accent, .b-ink .accent { color: var(--accent); }
+
+/* ─────────── The film-leader rule ─────────── */
+.lead-rule {
+  position: absolute;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+}
+
+/* ─────────── Type styles ─────────── */
+.eye {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.b-cream .eye { color: var(--accent); }
+.b-ink .eye-dim { color: var(--cream-dim); }
+.b-cream .eye-dim { color: rgba(10,10,10,0.45); }
+
+.h-mega {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 200;
+  font-size: 280px;
+  line-height: 0.88;
+  letter-spacing: -0.05em;
+  margin: 0;
+}
+.h-huge {
+  font-weight: 300;
+  font-size: 180px;
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+.h-big {
+  font-weight: 400;
+  font-size: 120px;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+.h-mid {
+  font-weight: 500;
+  font-size: 72px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.h-sub {
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  margin: 0;
+  color: var(--cream-dim);
+}
+.b-cream .h-sub { color: rgba(10,10,10,0.55); }
+
+.body-lg {
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  color: var(--cream-dim);
+  max-width: 36ch;
+}
+.b-cream .body-lg { color: rgba(10,10,10,0.65); }
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+em.acc {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+/* ─────────── Reveal animations ─────────── */
+[data-r] { opacity: 0; }
+
+@keyframes rUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.is-active [data-r] { animation: rUp 0.85s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.is-active [data-r="2"] { animation-delay: 0.18s; }
+.is-active [data-r="3"] { animation-delay: 0.36s; }
+.is-active [data-r="4"] { animation-delay: 0.54s; }
+.is-active [data-r="5"] { animation-delay: 0.72s; }
+.is-active [data-r="6"] { animation-delay: 0.90s; }
+.is-active [data-r="7"] { animation-delay: 1.08s; }
+.is-active [data-r="8"] { animation-delay: 1.26s; }
+
+@keyframes rRule {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.is-active .lead-rule[data-r] { animation: rRule 1.1s cubic-bezier(0.7, 0, 0.2, 1) both; }
+
+/* ─────────── Slide-counter pip ─────────── */
+.pip {
+  position: absolute;
+  left: 64px;
+  bottom: 56px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--cream-faint);
+}
+.b-cream .pip { color: rgba(10,10,10,0.25); }
+
+/* Wordmark on bottom-right */
+.wm {
+  position: absolute;
+  right: 64px;
+  bottom: 56px;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  color: var(--cream-faint);
+}
+.b-cream .wm { color: rgba(10,10,10,0.25); }
+.wm em { font-style: italic; font-weight: 400; color: var(--accent); }
+
+/* ─────────── Image holders ─────────── */
+.frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.imgwrap {
+  position: relative;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+/* Big number variant */
+.h-num {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 200;
+  font-size: 540px;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* Numbered list rows */
+.nrow {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 32px;
+  align-items: baseline;
+  padding: 24px 0;
+  border-top: 1px solid var(--cream-faint);
+}
+.b-cream .nrow { border-top: 1px solid rgba(10,10,10,0.1); }
+.nrow:last-child { border-bottom: 1px solid var(--cream-faint); }
+.b-cream .nrow:last-child { border-bottom: 1px solid rgba(10,10,10,0.1); }
+.nrow-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.nrow-body {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 400;
+  font-size: 44px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+/* Pull-quote */
+.pull {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 200;
+  font-style: italic;
+  font-size: 88px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+/* Verdict stripe */
+.verdict-stripe {
+  background: var(--accent);
+  color: var(--ink);
+  padding: 36px 72px;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+}
+
+/* utility flex/grid */
+.col { display: flex; flex-direction: column; }
+.row { display: flex; flex-direction: row; }
+
+/* hairline */
+.hr-thin {
+  height: 1px;
+  background: var(--cream-faint);
+  width: 100%;
+}
+.b-cream .hr-thin { background: rgba(10,10,10,0.12); }

@@ -19,11 +19,12 @@ const nextConfig = {
       },
     ],
   },
-  // Serve pitch deck SPA from public/investors/ in dev mode
+  // Serve pitch deck SPAs from public/ in dev mode
   // (In production static export, Firebase handles this natively)
   async rewrites() {
     return {
       beforeFiles: [
+        // Existing — Vite-built investor deck
         {
           source: '/investors',
           destination: '/investors/index.html',
@@ -31,6 +32,15 @@ const nextConfig = {
         {
           source: '/investors/',
           destination: '/investors/index.html',
+        },
+        // New — Apr 2026 standalone HTML deck
+        {
+          source: '/pitch-apr-2026',
+          destination: '/pitch-apr-2026/index.html',
+        },
+        {
+          source: '/pitch-apr-2026/',
+          destination: '/pitch-apr-2026/index.html',
         },
       ],
     };

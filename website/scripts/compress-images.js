@@ -1,9 +1,13 @@
 /**
  * compress-images.js — Losslessly re-compress raster images using sharp
- * 
+ *
  * Usage: node compress-images.js <publicDir>
- * 
+ *
  * Outputs: count|savedKB to stdout
+ *
+ * Excluded paths: /investors/ and /pitch-apr-2026/ — these folders contain
+ * pre-optimized standalone deck assets (animations, transparency-critical
+ * GIFs) that the compressor must not touch.
  */
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -11,6 +15,12 @@ const path = require('path');
 
 const publicDir = process.argv[2];
 if (!publicDir) { console.error('Usage: node compress-images.js <publicDir>'); process.exit(1); }
+
+// Paths to skip — pre-optimized standalone deck folders
+const EXCLUDED_PATHS = [
+    '/investors/',
+    '/pitch-apr-2026/',
+];
 
 // Find all raster images
 let images;
@@ -22,6 +32,9 @@ try {
 } catch (e) {
     process.exit(0);
 }
+
+// Filter out excluded paths
+images = images.filter(img => !EXCLUDED_PATHS.some(excluded => img.includes(excluded)));
 
 if (images.length === 0) {  process.exit(0); }
 
@@ -62,3 +75,4 @@ for (const img of images) {
     }
 }
 
+process.stdout.write(`${count}|${Math.round(totalSaved / 1024)}`);

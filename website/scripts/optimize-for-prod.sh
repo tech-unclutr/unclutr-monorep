@@ -64,21 +64,32 @@ fi
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 2. OPTIMIZE SVGs
+#    — Excludes pre-optimized standalone deck folders (investors, pitch-apr-2026)
 # ══════════════════════════════════════════════════════════════════════════════
 
 header "2/7  Optimizing SVGs"
 
-SVG_COUNT=$(find "$PUBLIC_DIR" -name "*.svg" -not -path "*/investors/*" 2>/dev/null | wc -l | tr -d ' ')
+SVG_COUNT=$(find "$PUBLIC_DIR" -name "*.svg" \
+  -not -path "*/investors/*" \
+  -not -path "*/pitch-apr-2026/*" \
+  2>/dev/null | wc -l | tr -d ' ')
 
 if [ "$SVG_COUNT" -gt 0 ]; then
-  SVG_SIZE_BEFORE=$(find "$PUBLIC_DIR" -name "*.svg" -not -path "*/investors/*" -exec du -ck {} + 2>/dev/null | tail -1 | cut -f1)
+  SVG_SIZE_BEFORE=$(find "$PUBLIC_DIR" -name "*.svg" \
+    -not -path "*/investors/*" \
+    -not -path "*/pitch-apr-2026/*" \
+    -exec du -ck {} + 2>/dev/null | tail -1 | cut -f1)
 
   npx --yes svgo@latest --multipass --quiet \
     --folder "$PUBLIC_DIR" \
     --exclude "**/investors/**" \
+    --exclude "**/pitch-apr-2026/**" \
     2>/dev/null || warn "svgo had warnings (non-fatal)"
 
-  SVG_SIZE_AFTER=$(find "$PUBLIC_DIR" -name "*.svg" -not -path "*/investors/*" -exec du -ck {} + 2>/dev/null | tail -1 | cut -f1)
+  SVG_SIZE_AFTER=$(find "$PUBLIC_DIR" -name "*.svg" \
+    -not -path "*/investors/*" \
+    -not -path "*/pitch-apr-2026/*" \
+    -exec du -ck {} + 2>/dev/null | tail -1 | cut -f1)
   SAVED=$((SVG_SIZE_BEFORE - SVG_SIZE_AFTER))
   ok "Optimized $SVG_COUNT SVG(s), saved ${SAVED}KB"
 else
@@ -87,6 +98,7 @@ fi
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 3. COMPRESS RASTER IMAGES (WebP, PNG, JPG)
+#    — compress-images.js excludes investors/ and pitch-apr-2026/ internally
 # ══════════════════════════════════════════════════════════════════════════════
 
 header "3/7  Compressing raster images"
@@ -172,6 +184,7 @@ cat > "$PUBLIC_DIR/sitemap.xml" <<SITEMAP_EOF
 SITEMAP_EOF
 
 ok "Sitemap updated with date $TODAY"
+# Note: /pitch-apr-2026 deliberately omitted from sitemap (investor-only, noindex)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 7. VALIDATE BUILD

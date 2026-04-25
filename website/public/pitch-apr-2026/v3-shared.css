@@ -1,0 +1,25 @@
+/* SquareUp v3 — shared across all variants */
+
+/* deck-stage chrome */
+deck-stage {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+deck-stage > section {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+}
+
+/* Print: one slide per page */
+@media print {
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { background: #000; }
+}
+
+/* Selection — keep clean */
+::selection { background: rgba(255, 107, 53, 0.3); color: inherit; }
+
+/* No animation by default; each variant ships its own */

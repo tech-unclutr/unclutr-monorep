@@ -23,7 +23,7 @@ class ResearchCohort(SQLModel, table=True):
     name: str = Field(nullable=False)
     description: Optional[str] = Field(default=None)
     hypothesis: Optional[str] = Field(default=None)
-    incentive: Optional[str] = Field(default=None)
+    incentive: str = Field(default="No Incentive", nullable=False)
 
     agent_configuration_id: Optional[UUID] = Field(
         default=None,

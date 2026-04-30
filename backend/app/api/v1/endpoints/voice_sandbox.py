@@ -18,6 +18,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.db import get_session
 from app.models.company import Company
 from app.models.designed_study import DesignedStudy
+from app.models.study_designer.research_cohort import ResearchCohort
 from app.models.study_designer.research_lead import ResearchLead
 from app.models.study_designer.study_call_log import StudyCallLog
 from app.models.study_designer.study_call_queue import StudyCallQueue
@@ -178,6 +179,12 @@ async def get_resolved_prompt(
         else None
     )
 
+    cohort = (
+        await session.get(ResearchCohort, lead.cohort_id)
+        if lead.cohort_id
+        else None
+    )
+
     resolved = resolve_runtime_vars(
         queue_item.prompt_text or "",
         lead=lead,
@@ -185,6 +192,7 @@ async def get_resolved_prompt(
         company=company,
         user=user,
         agent=agent,
+        incentive=cohort.incentive if cohort else "No Incentive",
     )
     return {"prompt": resolved}
 

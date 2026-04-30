@@ -28,11 +28,14 @@ RUNTIME_VAR_NAMES = [
     "disclosure_line",
     "consent_line",
     "recording_line",
+    "incentive_line",
     "calendar_link",
     "whatsapp_followup_link",
     "email_followup_address",
     "support_contact",
 ]
+
+
 
 _LEFTOVER_PLACEHOLDER_RE = re.compile(
     r"\{(" + "|".join(RUNTIME_VAR_NAMES) + r")\}"
@@ -45,12 +48,16 @@ def build_runtime_replacements(
     company: Optional[Company],
     user: Optional[User],
     agent: Optional[ResolvedAgent] = None,
+    incentive: str = "No Incentive",
 ) -> dict[str, str]:
     """Build the {placeholder_name: real_value} dict for a specific call.
 
     `agent` is the resolved AgentConfiguration identity for the lead's
     cohort (see agent_resolver.resolve_for_cohort_id). When provided, its
     name and language override the per-user fallbacks.
+
+    `incentive` is the cohort's stored incentive selection (always a value;
+    "No Incentive" is the column default).
     """
     lead_first_name = (
         (lead.first_name or "there").split()[0]
@@ -94,6 +101,7 @@ def build_runtime_replacements(
         "disclosure_line": "This call is part of a research study. I'm an AI assistant.",
         "consent_line": "Do you consent to participate in this research study?",
         "recording_line": "This call may be recorded for research purposes.",
+        "incentive_line": incentive,
         "calendar_link": "",
         "whatsapp_followup_link": "",
         "email_followup_address": email_followup,
@@ -108,6 +116,7 @@ def resolve_runtime_vars(
     company: Optional[Company],
     user: Optional[User],
     agent: Optional[ResolvedAgent] = None,
+    incentive: str = "No Incentive",
 ) -> str:
     """
     Substitute every runtime placeholder in `prompt_text` with real values.
@@ -119,7 +128,9 @@ def resolve_runtime_vars(
     if not prompt_text:
         return ""
 
-    replacements = build_runtime_replacements(lead, study, company, user, agent)
+    replacements = build_runtime_replacements(
+        lead, study, company, user, agent, incentive
+    )
 
     result = prompt_text
     for key, value in replacements.items():

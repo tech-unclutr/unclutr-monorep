@@ -24,6 +24,7 @@ from app.models.study_designer.study_call_log import StudyCallLog
 from app.models.study_designer.study_call_queue import StudyCallQueue
 from app.models.study_designer.study_execution import StudyExecution
 from app.models.user import User
+from app.services.agent_resolver import resolve_for_cohort_id
 from app.services.study_execution.prompt_resolver import resolve_runtime_vars
 
 
@@ -206,6 +207,14 @@ async def initiate_call(
     # Incentive (not stored on study yet — leave blank)
     incentive_val = ""
 
+    # Resolve the execution agent identity for this lead's cohort
+    # (cohort.agent_configuration_id -> company default -> hardcoded fallback).
+    resolved_agent = await resolve_for_cohort_id(
+        session,
+        cohort_id=lead.cohort_id,
+        company_id=study.company_id,
+    )
+
     # Resolve all {runtime_var} placeholders in the execution prompt so Bolna
     # receives the final text with lead/company/user context already filled in.
     resolved_prompt = resolve_runtime_vars(
@@ -214,6 +223,7 @@ async def initiate_call(
         study=study,
         company=company,
         user=user,
+        agent=resolved_agent,
     )
 
     # 4. Build user_data (same shape as existing bolna_caller.py)
@@ -223,7 +233,9 @@ async def initiate_call(
         # Aliases used by the Bolna dashboard's Agent Welcome Message template,
         # which references {participant_name} and {agent_name} directly.
         "participant_name": customer_first_name,
-        "agent_name": team_first_name,
+        "agent_name": resolved_agent.name,
+        "language_preference": resolved_agent.language,
+        "voice_id": resolved_agent.voice_id,
         "brand_name": brand_name,
         "brand_context": f"Research study: {study.title}" if study.title else "Research Study",
         "customer_context": "Research Participant",

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlmodel import Column, Field, SQLModel
 
 
@@ -24,6 +24,15 @@ class ResearchCohort(SQLModel, table=True):
     description: Optional[str] = Field(default=None)
     hypothesis: Optional[str] = Field(default=None)
     incentive: Optional[str] = Field(default=None)
+
+    agent_configuration_id: Optional[UUID] = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("agent_configurations.id", ondelete="SET NULL"),
+            nullable=True,
+            index=True,
+        ),
+    )
 
     meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)

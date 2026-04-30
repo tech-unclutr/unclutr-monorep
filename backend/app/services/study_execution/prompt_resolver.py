@@ -15,6 +15,7 @@ from app.models.company import Company
 from app.models.designed_study import DesignedStudy
 from app.models.study_designer.research_lead import ResearchLead
 from app.models.user import User
+from app.services.agent_resolver import ResolvedAgent
 
 
 # The complete set of runtime placeholders the template may contain.
@@ -43,17 +44,26 @@ def build_runtime_replacements(
     study: Optional[DesignedStudy],
     company: Optional[Company],
     user: Optional[User],
+    agent: Optional[ResolvedAgent] = None,
 ) -> dict[str, str]:
-    """Build the {placeholder_name: real_value} dict for a specific call."""
+    """Build the {placeholder_name: real_value} dict for a specific call.
+
+    `agent` is the resolved AgentConfiguration identity for the lead's
+    cohort (see agent_resolver.resolve_for_cohort_id). When provided, its
+    name and language override the per-user fallbacks.
+    """
     lead_first_name = (
         (lead.first_name or "there").split()[0]
         if lead and lead.first_name
         else "there"
     )
 
-    agent_name = "Research Assistant"
-    if user and user.full_name:
-        agent_name = user.full_name.split()[0]
+    if agent is not None:
+        agent_name = agent.name
+    else:
+        agent_name = "Research Assistant"
+        if user and user.full_name:
+            agent_name = user.full_name.split()[0]
 
     company_name = (
         (company.brand_name if company else None)
@@ -61,11 +71,14 @@ def build_runtime_replacements(
         or "our team"
     )
 
-    language = "English"
-    if study and getattr(study, "participant_languages", None):
-        langs = study.participant_languages or []
-        if langs:
-            language = langs[0]
+    if agent is not None:
+        language = agent.language
+    else:
+        language = "English"
+        if study and getattr(study, "participant_languages", None):
+            langs = study.participant_languages or []
+            if langs:
+                language = langs[0]
 
     support_contact = ""
     email_followup = ""
@@ -94,6 +107,7 @@ def resolve_runtime_vars(
     study: Optional[DesignedStudy],
     company: Optional[Company],
     user: Optional[User],
+    agent: Optional[ResolvedAgent] = None,
 ) -> str:
     """
     Substitute every runtime placeholder in `prompt_text` with real values.
@@ -105,7 +119,7 @@ def resolve_runtime_vars(
     if not prompt_text:
         return ""
 
-    replacements = build_runtime_replacements(lead, study, company, user)
+    replacements = build_runtime_replacements(lead, study, company, user, agent)
 
     result = prompt_text
     for key, value in replacements.items():

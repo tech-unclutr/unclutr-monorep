@@ -237,11 +237,11 @@ function CohortBlock({
             {/* Section 3 */}
             <div className="space-y-4">
                 <SectionHeader number={3} label="Screening & Logistics" />
-                {brief?.incentive ? (
-                    <Field label="Incentive">
-                        <p className="font-semibold">{brief.incentive}</p>
-                    </Field>
-                ) : null}
+                <Field label="Incentive">
+                    <p className="font-semibold">
+                        {brief?.incentive ?? "No Incentive"}
+                    </p>
+                </Field>
                 <MetricsRow
                     interviewCount={scriptQuestionCount(script)}
                     durationMinutes={script?.total_estimated_minutes ?? 0}
@@ -649,7 +649,7 @@ function renderPrintableBrief({ model }: PrintArgs) {
             const script = brief?.script_section;
             const screening = brief?.screening_section;
             const structure = brief?.structure_section;
-            const incentive = brief?.incentive;
+            const incentive = brief?.incentive ?? "No Incentive";
             const interviewCount = scriptQuestionCount(script);
             const duration = script?.total_estimated_minutes ?? 0;
 
@@ -756,7 +756,7 @@ function renderPrintableBrief({ model }: PrintArgs) {
 
                     <div class="section">
                         <h4 class="section-title"><span>Section 3</span> Screening & Logistics</h4>
-                        ${incentive ? `<div class="field"><p class="field-label">Incentive</p><p class="field-body strong">${escapeHtml(incentive)}</p></div>` : ""}
+                        <div class="field"><p class="field-label">Incentive</p><p class="field-body strong">${escapeHtml(incentive)}</p></div>
                         <div class="metrics">
                             <div class="field"><p class="field-label">Number of Interviews</p><p class="field-body strong">${interviewCount}</p></div>
                             <div class="field"><p class="field-label">Interview Duration</p><p class="field-body strong">~${formatMinutes(duration)} min</p></div>

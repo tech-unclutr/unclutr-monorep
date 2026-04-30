@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import debug_diagnostics
 from app.api.v1.endpoints import (
+    agent_configurations,
     analytics,
     auth,
     bolna_webhook,
@@ -56,6 +57,7 @@ api_router.include_router(user_queue.router, prefix="/user-queue", tags=["User Q
 api_router.include_router(calendar_booking.router, prefix="/execution", tags=["Calendar Booking"])
 api_router.include_router(studies.router, prefix="/studies", tags=["Studies"])
 api_router.include_router(study_designer.router, prefix="/study-planner", tags=["Study Planner"])
+api_router.include_router(agent_configurations.router, prefix="/agents", tags=["Agent Configurations"])
 api_router.include_router(voice_sandbox.router, prefix="/voice-sandbox", tags=["Voice Sandbox"])
 api_router.include_router(persist_leads.router, prefix="/leads", tags=["Leads"])
 api_router.include_router(study_webhook.router, tags=["Study Webhook"])

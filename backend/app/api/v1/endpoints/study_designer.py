@@ -1116,11 +1116,11 @@ class CohortBriefResponse(BaseModel):
     screening_section: Optional[ScreeningSectionResponse] = None
     moderator_section: ModeratorSectionResponse
     structure_section: StructureSectionResponse
-    incentive: Optional[str] = None
+    incentive: str
 
 
 class CohortIncentiveUpdateRequest(BaseModel):
-    incentive: Optional[str] = None
+    incentive: str
 
 
 # ── Agent Prompt (per-cohort, server-rendered) ──
@@ -1185,7 +1185,7 @@ def _build_agent_prompt(
         "interview_type": "audio interview",
         "question_set": _format_cohort_question_set(script_rows),
         "qualification_criteria": _format_cohort_screening(cohort),
-        "incentive_line": "[no incentive configured]",
+        "incentive_line": cohort.incentive,
         "agent_name": agent.name,
         "language_preference": agent.language,
     }
@@ -1402,7 +1402,7 @@ async def update_cohort_incentive(
     if not cohort or cohort.company_id != company_id:
         raise HTTPException(status_code=404, detail="Cohort not found")
 
-    cohort.incentive = (payload.incentive or "").strip() or None
+    cohort.incentive = payload.incentive.strip() or "No Incentive"
     session.add(cohort)
     await session.commit()
     await session.refresh(cohort)

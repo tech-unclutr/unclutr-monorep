@@ -15,6 +15,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import update as sql_update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -99,18 +100,21 @@ async def _demote_other_defaults(
     company_id: uuid.UUID,
     keep_id: Optional[uuid.UUID],
 ) -> None:
-    """Set is_default=false on every agent in the company except `keep_id`."""
-    stmt = select(AgentConfiguration).where(
+    """Set is_default=false on every default agent in the company except `keep_id`.
+
+    Issued as a single Core UPDATE so the demotion lands on the DB *before*
+    the promotion write. This dodges `uq_agent_configuration_company_default`,
+    which would otherwise see two rows with `is_default=true` if the ORM
+    flushed the new/promoted row first. Callers must invoke this before
+    dirtying or inserting the row being promoted.
+    """
+    stmt = sql_update(AgentConfiguration).where(
         AgentConfiguration.company_id == company_id,
         AgentConfiguration.is_default == True,  # noqa: E712
-    )
-    rows = (await session.exec(stmt)).all()
-    for row in rows:
-        if keep_id is not None and row.id == keep_id:
-            continue
-        row.is_default = False
-        row.updated_at = datetime.utcnow()
-        session.add(row)
+    ).values(is_default=False, updated_at=datetime.utcnow())
+    if keep_id is not None:
+        stmt = stmt.where(AgentConfiguration.id != keep_id)
+    await session.execute(stmt)
 
 
 # ── Endpoints ──
@@ -205,12 +209,14 @@ async def update_agent_configuration(
 
     promoting_to_default = updates.get("is_default") is True and not agent.is_default
 
+    # Demote others FIRST (before dirtying `agent`), so the partial unique
+    # index sees only one `is_default=true` row at every statement boundary.
+    if promoting_to_default:
+        await _demote_other_defaults(session, company_id, keep_id=agent.id)
+
     for key, value in updates.items():
         setattr(agent, key, value)
     agent.updated_at = datetime.utcnow()
-
-    if promoting_to_default:
-        await _demote_other_defaults(session, company_id, keep_id=agent.id)
 
     session.add(agent)
     await session.commit()

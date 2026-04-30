@@ -65,7 +65,7 @@ export interface CohortBriefData {
     screening_section?: ScreeningSectionData | null;
     moderator_section: ModeratorSectionData;
     structure_section: StructureSectionData;
-    incentive?: string | null;
+    incentive: string;
 }
 
 interface UseCohortBriefResult {

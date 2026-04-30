@@ -19,8 +19,8 @@ interface ScreeningSectionProps {
     screening?: ScreeningSectionData | null;
     studyId?: string;
     cohortId?: string;
-    /** Seed value from the brief payload — `null`/missing falls back to default. */
-    initialIncentive?: string | null;
+    /** Seed value from the brief payload. Always present (column default is "No Incentive"). */
+    initialIncentive?: string;
 }
 
 export function ScreeningSection({
@@ -32,11 +32,11 @@ export function ScreeningSection({
     const { selectedCount, selectedMinutes } = useCohortBriefContext();
 
     const [incentive, setIncentive] = useState<string>(
-        initialIncentive || DEFAULT_INCENTIVE,
+        initialIncentive ?? DEFAULT_INCENTIVE,
     );
 
     useEffect(() => {
-        setIncentive(initialIncentive || DEFAULT_INCENTIVE);
+        if (initialIncentive !== undefined) setIncentive(initialIncentive);
     }, [initialIncentive]);
 
     const handleIncentiveChange = (value: string) => {

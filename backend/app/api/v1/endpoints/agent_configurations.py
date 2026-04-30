@@ -22,7 +22,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.iam import CompanyMembership
-from app.models.study_designer import AgentConfiguration, VoiceProvider
+from app.models.study_designer import AgentConfiguration, Gender, VoiceProvider
 from app.models.user import User
 
 router = APIRouter()
@@ -53,6 +53,7 @@ class AgentConfigurationCreate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=500)
     voice_id: str = Field(..., min_length=1)
     voice_provider: VoiceProvider = Field(default=VoiceProvider.BOLNA)
+    gender: Gender = Field(default=Gender.FEMALE)
     language: str = Field(default="en-IN")
     is_default: bool = Field(default=False)
 
@@ -63,6 +64,7 @@ class AgentConfigurationUpdate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=500)
     voice_id: Optional[str] = Field(default=None, min_length=1)
     voice_provider: Optional[VoiceProvider] = None
+    gender: Optional[Gender] = None
     language: Optional[str] = None
     is_default: Optional[bool] = None
 
@@ -75,6 +77,7 @@ class AgentConfigurationResponse(BaseModel):
     description: Optional[str]
     voice_id: str
     voice_provider: VoiceProvider
+    gender: Gender
     language: str
     is_default: bool
     created_at: datetime
@@ -162,6 +165,7 @@ async def create_agent_configuration(
         description=payload.description,
         voice_id=payload.voice_id,
         voice_provider=payload.voice_provider,
+        gender=payload.gender,
         language=payload.language,
         is_default=payload.is_default,
         created_by=current_user_token.get("uid"),

@@ -11,6 +11,12 @@ class VoiceProvider(str, Enum):
     BOLNA = "bolna"
 
 
+class Gender(str, Enum):
+    FEMALE = "female"
+    MALE = "male"
+    NEUTRAL = "neutral"
+
+
 class AgentConfiguration(SQLModel, table=True):
     """
     Reusable execution-agent identity (name, voice, language), company-scoped.
@@ -52,6 +58,18 @@ class AgentConfiguration(SQLModel, table=True):
                 values_callable=lambda enum_cls: [e.value for e in enum_cls],
             ),
             nullable=False,
+        ),
+    )
+    gender: Gender = Field(
+        default=Gender.FEMALE,
+        sa_column=Column(
+            SAEnum(
+                Gender,
+                name="agentgender",
+                values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            ),
+            nullable=False,
+            server_default="female",
         ),
     )
     language: str = Field(default="en-IN")

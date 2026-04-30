@@ -78,6 +78,7 @@ from .study import (
 )
 from .user import User as User
 from .study_designer import (
+    AgentConfiguration as AgentConfiguration,
     CohortQuestionScript as CohortQuestionScript,
     ResearchCohort as ResearchCohort,
     ResearchLead as ResearchLead,
@@ -85,5 +86,6 @@ from .study_designer import (
     StudyCallLog as StudyCallLog,
     StudyCallQueue as StudyCallQueue,
     StudyExecution as StudyExecution,
+    VoiceProvider as VoiceProvider,
 )
 

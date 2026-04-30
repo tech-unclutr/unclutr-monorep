@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { BookOpenIcon, UsersIcon, CheckIcon, XIcon, DownloadIcon } from "lucide-react";
+import React from "react";
+import { BookOpenIcon, CheckIcon, XIcon, DownloadIcon } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -9,104 +9,30 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { cn, capitalizeCohortName } from "@/lib/utils";
-import { api } from "@/lib/api";
-import { type StudyContext } from "./ExecutionPromptView";
-import { getDummyBrief, type CohortBriefData as DummyBrief } from "./cohortBriefDummyData";
 import type {
     CohortBriefData,
     ScriptKrqGroup,
     ScriptQuestion,
 } from "./cohort-brief/useCohortBrief";
+import type { PreviewBrief, PreviewBriefStudy } from "./preview-brief-model";
 
 interface BriefPreviewModalProps {
     open: boolean;
     onClose: () => void;
-    studyContext?: StudyContext;
-    cohorts: string[];
-    cohortIdByName: Record<string, string>;
+    model: PreviewBrief | null;
 }
-
-interface StudyDetail {
-    title?: string;
-    briefing?: string;
-    executive_summary?: string;
-    topic_guide?: {
-        objectives?: Array<{ title?: string; description?: string }>;
-    };
-    key_research_questions?: Array<{ title?: string; question?: string }>;
-}
-
-type CohortBriefRecord = Record<string, CohortBriefData>;
 
 export function BriefPreviewModal({
     open,
     onClose,
-    studyContext,
-    cohorts,
-    cohortIdByName,
+    model,
 }: BriefPreviewModalProps) {
-    const studyId = studyContext?.studyId;
-
-    const [study, setStudy] = useState<StudyDetail | null>(null);
-    const [briefs, setBriefs] = useState<CohortBriefRecord>({});
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const orderedCohorts = useMemo(
-        () => cohorts.filter((c) => cohortIdByName[c]),
-        [cohorts, cohortIdByName],
-    );
-
-    useEffect(() => {
-        if (!open || !studyId) return;
-        let cancelled = false;
-        setLoading(true);
-        setError(null);
-
-        const studyPromise = api.get(`/study-planner/studies/${studyId}`);
-        const briefPromises = orderedCohorts.map((name) =>
-            api
-                .get(
-                    `/study-planner/studies/${studyId}/cohorts/${cohortIdByName[name]}/brief`,
-                )
-                .then((data: CohortBriefData) => [name, data] as const)
-                .catch(() => [name, null] as const),
-        );
-
-        Promise.all([studyPromise, Promise.all(briefPromises)])
-            .then(([studyRes, briefResList]) => {
-                if (cancelled) return;
-                setStudy(studyRes as StudyDetail);
-                const record: CohortBriefRecord = {};
-                briefResList.forEach(([name, data]) => {
-                    if (data) record[name] = data;
-                });
-                setBriefs(record);
-            })
-            .catch((e: any) => {
-                if (cancelled) return;
-                setError(e?.message || "Failed to load brief");
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [open, studyId, orderedCohorts, cohortIdByName]);
-
     const handleDownloadPdf = () => {
-        renderPrintableBrief({
-            title: study?.title || studyContext?.title || "Research Study",
-            study,
-            studyContext,
-            orderedCohorts,
-            briefs,
-        });
+        if (!model) return;
+        renderPrintableBrief({ model });
     };
 
-    const canDownload = !loading && !error && orderedCohorts.length > 0;
+    const canDownload = !!model && model.cohorts.length > 0;
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -122,7 +48,7 @@ export function BriefPreviewModal({
                                     Study Brief Preview
                                 </DialogTitle>
                                 <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-medium mt-0.5">
-                                    End-to-end research document for {study?.title || studyContext?.title || "this study"}
+                                    End-to-end research document for {model?.title || "this study"}
                                 </p>
                             </div>
                         </div>
@@ -144,23 +70,19 @@ export function BriefPreviewModal({
                 </DialogHeader>
 
                 <div className="overflow-y-auto max-h-[75vh] scrollbar-subtle">
-                    {loading ? (
-                        <LoadingState />
-                    ) : error ? (
-                        <ErrorState message={error} />
-                    ) : (
+                    {model ? (
                         <div className="px-8 py-8 space-y-16">
-                            <ReceivedBrief study={study} studyContext={studyContext} />
-                            {orderedCohorts.map((name, i) => (
+                            <ReceivedBrief study={model.study} />
+                            {model.cohorts.map((cohort, i) => (
                                 <CohortBlock
-                                    key={name}
+                                    key={cohort.cohortId}
                                     index={i + 1}
-                                    name={name}
-                                    brief={briefs[name]}
+                                    name={cohort.name}
+                                    brief={cohort.brief ?? undefined}
                                 />
                             ))}
                         </div>
-                    )}
+                    ) : null}
                 </div>
             </DialogContent>
         </Dialog>
@@ -169,19 +91,13 @@ export function BriefPreviewModal({
 
 // ─── Received Brief (study-level) ──────────────────────────────────────
 
-function ReceivedBrief({
-    study,
-    studyContext,
-}: {
-    study: StudyDetail | null;
-    studyContext?: StudyContext;
-}) {
-    const execSummary = study?.executive_summary || "";
-    const briefing = study?.briefing || studyContext?.briefing || "";
-    const objectives = (study?.topic_guide?.objectives || []).filter(
+function ReceivedBrief({ study }: { study: PreviewBriefStudy }) {
+    const execSummary = study.executive_summary || "";
+    const briefing = study.briefing || "";
+    const objectives = (study.topic_guide?.objectives || []).filter(
         (o) => o?.title,
     );
-    const krqs = (study?.key_research_questions || []).filter(
+    const krqs = (study.key_research_questions || []).filter(
         (q) => q?.question || q?.title,
     );
 
@@ -260,10 +176,10 @@ function CohortBlock({
     name: string;
     brief: CohortBriefData | undefined;
 }) {
-    const dummy = getDummyBrief(name);
     const context = brief?.context_section;
     const script = brief?.script_section;
     const screening = brief?.screening_section;
+    const structure = brief?.structure_section;
 
     return (
         <section className="space-y-10 pt-8 border-t-2 border-gray-200 dark:border-white/[0.08]">
@@ -321,6 +237,11 @@ function CohortBlock({
             {/* Section 3 */}
             <div className="space-y-4">
                 <SectionHeader number={3} label="Screening & Logistics" />
+                {brief?.incentive ? (
+                    <Field label="Incentive">
+                        <p className="font-semibold">{brief.incentive}</p>
+                    </Field>
+                ) : null}
                 <MetricsRow
                     interviewCount={scriptQuestionCount(script)}
                     durationMinutes={script?.total_estimated_minutes ?? 0}
@@ -339,21 +260,31 @@ function CohortBlock({
                         />
                     </div>
                 </Field>
-                <Field label="Ideal Respondent Profile">
-                    <p>{dummy.screening.idealProfile}</p>
-                </Field>
+                {screening?.ideal_respondent_profile ? (
+                    <Field label="Ideal Respondent Profile">
+                        <p>{screening.ideal_respondent_profile}</p>
+                    </Field>
+                ) : null}
             </div>
 
             {/* Section 4 */}
             <div className="space-y-4">
                 <SectionHeader number={4} label="Moderator Instructions" />
-                <ModeratorBlock data={dummy.moderator} />
+                {brief?.moderator_section ? (
+                    <ModeratorBlock moderator={brief.moderator_section} />
+                ) : (
+                    <Muted>Moderator instructions not available.</Muted>
+                )}
             </div>
 
             {/* Section 5 */}
             <div className="space-y-4">
                 <SectionHeader number={5} label="Interview Structure" />
-                <StructureBlock phases={dummy.structure.phases} />
+                {structure && structure.phases.length > 0 ? (
+                    <StructureBlock phases={structure.phases} />
+                ) : (
+                    <Muted>Interview structure not available.</Muted>
+                )}
             </div>
         </section>
     );
@@ -482,22 +413,22 @@ function CriteriaBlock({
 
 // ─── Section 4 Moderator ────────────────────────────────────────────────
 
-function ModeratorBlock({ data }: { data: DummyBrief["moderator"] }) {
+function ModeratorBlock({ moderator }: { moderator: CohortBriefData["moderator_section"] }) {
     return (
         <div className="space-y-4">
             <Field label="Introduction Script">
-                <p className="whitespace-pre-wrap">{data.introScript}</p>
+                <p className="whitespace-pre-wrap">{moderator.intro_script}</p>
             </Field>
             <Field label="Consent & Recording">
-                <p>{data.consent}</p>
+                <p>{moderator.consent}</p>
             </Field>
             <Field label="Tone Guidance">
-                <p>{data.tone}</p>
+                <p>{moderator.tone}</p>
             </Field>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Do's">
                     <ul className="space-y-1">
-                        {data.dos.map((d, i) => (
+                        {moderator.dos.map((d, i) => (
                             <li key={i} className="flex gap-2">
                                 <CheckIcon className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
                                 <span>{d}</span>
@@ -507,7 +438,7 @@ function ModeratorBlock({ data }: { data: DummyBrief["moderator"] }) {
                 </Field>
                 <Field label="Don'ts">
                     <ul className="space-y-1">
-                        {data.donts.map((d, i) => (
+                        {moderator.donts.map((d, i) => (
                             <li key={i} className="flex gap-2">
                                 <XIcon className="w-3.5 h-3.5 text-rose-500 mt-0.5 shrink-0" />
                                 <span>{d}</span>
@@ -522,7 +453,7 @@ function ModeratorBlock({ data }: { data: DummyBrief["moderator"] }) {
 
 // ─── Section 5 Structure ────────────────────────────────────────────────
 
-function StructureBlock({ phases }: { phases: DummyBrief["structure"]["phases"] }) {
+function StructureBlock({ phases }: { phases: NonNullable<CohortBriefData["structure_section"]>["phases"] }) {
     return (
         <ol className="space-y-3">
             {phases.map((phase, i) => (
@@ -615,30 +546,6 @@ function Muted({ children }: { children: React.ReactNode }) {
     return <span className="text-muted-foreground italic text-sm">{children}</span>;
 }
 
-function LoadingState() {
-    return (
-        <div className="px-8 py-12 space-y-4">
-            {[0, 1, 2, 3].map((i) => (
-                <div
-                    key={i}
-                    className="h-4 w-full rounded bg-gray-100 dark:bg-white/5 animate-pulse"
-                />
-            ))}
-        </div>
-    );
-}
-
-function ErrorState({ message }: { message: string }) {
-    return (
-        <div className="px-8 py-12 text-center">
-            <p className="text-sm text-rose-600 dark:text-rose-400 font-semibold">
-                Couldn&rsquo;t load the brief
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">{message}</p>
-        </div>
-    );
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 function scriptQuestionCount(
@@ -657,11 +564,7 @@ function formatMinutes(n: number): string {
 // ─── Print / PDF renderer ──────────────────────────────────────────────
 
 interface PrintArgs {
-    title: string;
-    study: StudyDetail | null;
-    studyContext?: StudyContext;
-    orderedCohorts: string[];
-    briefs: CohortBriefRecord;
+    model: PreviewBrief;
 }
 
 function escapeHtml(s: string): string {
@@ -673,17 +576,12 @@ function escapeHtml(s: string): string {
         .replace(/'/g, "&#39;");
 }
 
-function renderPrintableBrief({
-    title,
-    study,
-    studyContext,
-    orderedCohorts,
-    briefs,
-}: PrintArgs) {
-    const execSummary = study?.executive_summary || "";
-    const briefing = study?.briefing || studyContext?.briefing || "";
-    const objectives = (study?.topic_guide?.objectives || []).filter((o) => o?.title);
-    const krqs = (study?.key_research_questions || []).filter(
+function renderPrintableBrief({ model }: PrintArgs) {
+    const { title, study, cohorts: cohortList } = model;
+    const execSummary = study.executive_summary || "";
+    const briefing = study.briefing || "";
+    const objectives = (study.topic_guide?.objectives || []).filter((o) => o?.title);
+    const krqs = (study.key_research_questions || []).filter(
         (q) => q?.question || q?.title,
     );
 
@@ -745,13 +643,13 @@ function renderPrintableBrief({
             </div>
         </section>`;
 
-    const cohortsHtml = orderedCohorts
-        .map((name, i) => {
-            const brief = briefs[name];
-            const dummy = getDummyBrief(name);
+    const cohortsHtml = cohortList
+        .map(({ name, brief }, i) => {
             const ctx = brief?.context_section;
             const script = brief?.script_section;
             const screening = brief?.screening_section;
+            const structure = brief?.structure_section;
+            const incentive = brief?.incentive;
             const interviewCount = scriptQuestionCount(script);
             const duration = script?.total_estimated_minutes ?? 0;
 
@@ -805,30 +703,35 @@ function renderPrintableBrief({
                     </div>
                 </div>`;
 
-            const moderatorHtml = `
-                <div class="field"><p class="field-label">Introduction Script</p><p class="field-body">${nl2br(dummy.moderator.introScript)}</p></div>
-                <div class="field"><p class="field-label">Consent & Recording</p><p class="field-body">${escapeHtml(dummy.moderator.consent)}</p></div>
-                <div class="field"><p class="field-label">Tone Guidance</p><p class="field-body">${escapeHtml(dummy.moderator.tone)}</p></div>
+            const moderator = brief?.moderator_section;
+            const moderatorHtml = moderator
+                ? `
+                <div class="field"><p class="field-label">Introduction Script</p><p class="field-body">${nl2br(moderator.intro_script)}</p></div>
+                <div class="field"><p class="field-label">Consent & Recording</p><p class="field-body">${escapeHtml(moderator.consent)}</p></div>
+                <div class="field"><p class="field-label">Tone Guidance</p><p class="field-body">${escapeHtml(moderator.tone)}</p></div>
                 <div class="criteria-grid">
                     <div>
                         <p class="chip chip-include">Do's</p>
-                        <ul class="bullets">${dummy.moderator.dos.map((d) => `<li>✓ ${escapeHtml(d)}</li>`).join("")}</ul>
+                        <ul class="bullets">${moderator.dos.map((d) => `<li>✓ ${escapeHtml(d)}</li>`).join("")}</ul>
                     </div>
                     <div>
                         <p class="chip chip-exclude">Don'ts</p>
-                        <ul class="bullets">${dummy.moderator.donts.map((d) => `<li>✗ ${escapeHtml(d)}</li>`).join("")}</ul>
+                        <ul class="bullets">${moderator.donts.map((d) => `<li>✗ ${escapeHtml(d)}</li>`).join("")}</ul>
                     </div>
-                </div>`;
+                </div>`
+                : `<p class="muted">Moderator instructions not available.</p>`;
 
-            const structureHtml = `<ol class="phases">${dummy.structure.phases
-                .map(
-                    (p, pi) => `
+            const structureHtml = structure && structure.phases.length > 0
+                ? `<ol class="phases">${structure.phases
+                      .map(
+                          (p, pi) => `
                     <li>
                         <div class="phase-head"><span class="phase-num">${pi + 1}</span><span class="phase-name">${escapeHtml(p.name)}</span><span class="phase-duration">${escapeHtml(p.duration)}</span></div>
                         <p class="phase-desc">${escapeHtml(p.description)}</p>
                     </li>`,
-                )
-                .join("")}</ol>`;
+                      )
+                      .join("")}</ol>`
+                : `<p class="muted">Interview structure not available.</p>`;
 
             return `
                 <section class="cohort">
@@ -853,12 +756,13 @@ function renderPrintableBrief({
 
                     <div class="section">
                         <h4 class="section-title"><span>Section 3</span> Screening & Logistics</h4>
+                        ${incentive ? `<div class="field"><p class="field-label">Incentive</p><p class="field-body strong">${escapeHtml(incentive)}</p></div>` : ""}
                         <div class="metrics">
                             <div class="field"><p class="field-label">Number of Interviews</p><p class="field-body strong">${interviewCount}</p></div>
                             <div class="field"><p class="field-label">Interview Duration</p><p class="field-body strong">~${formatMinutes(duration)} min</p></div>
                         </div>
                         <div class="field"><p class="field-label">Screening Criteria</p>${criteriaHtml}</div>
-                        <div class="field"><p class="field-label">Ideal Respondent Profile</p><p class="field-body">${escapeHtml(dummy.screening.idealProfile)}</p></div>
+                        ${screening?.ideal_respondent_profile ? `<div class="field"><p class="field-label">Ideal Respondent Profile</p><p class="field-body">${escapeHtml(screening.ideal_respondent_profile)}</p></div>` : ""}
                     </div>
 
                     <div class="section">

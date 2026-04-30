@@ -1,20 +1,54 @@
 "use client";
 
-import React from "react";
-import type { CohortBriefData } from "../cohortBriefDummyData";
+import React, { useEffect, useState } from "react";
 import type { ScreeningSectionData } from "./useCohortBrief";
 import { useCohortBriefContext } from "./CohortBriefContext";
 import { Field, CriteriaList } from "./shared";
+import { INCENTIVE_OPTIONS, DEFAULT_INCENTIVE } from "./incentive-options";
+import { api } from "@/lib/api";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface ScreeningSectionProps {
-    /** Hardcoded dummy retained only for `idealProfile`. Other fields are unused. */
-    data: CohortBriefData["screening"];
-    /** Live screening criteria from the brief payload. */
+    /** Live screening data from the brief payload. */
     screening?: ScreeningSectionData | null;
+    studyId?: string;
+    cohortId?: string;
+    /** Seed value from the brief payload — `null`/missing falls back to default. */
+    initialIncentive?: string | null;
 }
 
-export function ScreeningSection({ data, screening }: ScreeningSectionProps) {
+export function ScreeningSection({
+    screening,
+    studyId,
+    cohortId,
+    initialIncentive,
+}: ScreeningSectionProps) {
     const { selectedCount, selectedMinutes } = useCohortBriefContext();
+
+    const [incentive, setIncentive] = useState<string>(
+        initialIncentive || DEFAULT_INCENTIVE,
+    );
+
+    useEffect(() => {
+        setIncentive(initialIncentive || DEFAULT_INCENTIVE);
+    }, [initialIncentive]);
+
+    const handleIncentiveChange = (value: string) => {
+        setIncentive(value);
+        if (!studyId || !cohortId) return;
+        api.patch(
+            `/study-planner/studies/${studyId}/cohorts/${cohortId}/incentive`,
+            { incentive: value },
+        ).catch(() => {
+            // Best-effort save. Toasts/error handling can be layered later.
+        });
+    };
 
     const include = screening?.include_criteria ?? [];
     const exclude = screening?.exclude_criteria ?? [];
@@ -22,6 +56,21 @@ export function ScreeningSection({ data, screening }: ScreeningSectionProps) {
 
     return (
         <>
+            <Field label="Incentive">
+                <Select value={incentive} onValueChange={handleIncentiveChange}>
+                    <SelectTrigger className="h-9 text-sm w-full md:w-72">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {INCENTIVE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                                {opt}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </Field>
+
             <div className="grid grid-cols-2 gap-4">
                 <Field label="Number of Interviews">
                     <p className="font-semibold tabular-nums">{selectedCount}</p>
@@ -45,9 +94,11 @@ export function ScreeningSection({ data, screening }: ScreeningSectionProps) {
                 </p>
             )}
 
-            <Field label="Ideal Respondent Profile">
-                <p>{data.idealProfile}</p>
-            </Field>
+            {screening?.ideal_respondent_profile ? (
+                <Field label="Ideal Respondent Profile">
+                    <p>{screening.ideal_respondent_profile}</p>
+                </Field>
+            ) : null}
         </>
     );
 }

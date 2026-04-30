@@ -38,12 +38,34 @@ export interface ScriptSectionData {
 export interface ScreeningSectionData {
     include_criteria: string[];
     exclude_criteria: string[];
+    ideal_respondent_profile: string;
+}
+
+export interface ModeratorSectionData {
+    intro_script: string;
+    consent: string;
+    tone: string;
+    dos: string[];
+    donts: string[];
+}
+
+export interface StructurePhaseData {
+    name: string;
+    duration: string;
+    description: string;
+}
+
+export interface StructureSectionData {
+    phases: StructurePhaseData[];
 }
 
 export interface CohortBriefData {
     context_section: ContextSectionData;
     script_section?: ScriptSectionData | null;
     screening_section?: ScreeningSectionData | null;
+    moderator_section: ModeratorSectionData;
+    structure_section: StructureSectionData;
+    incentive?: string | null;
 }
 
 interface UseCohortBriefResult {

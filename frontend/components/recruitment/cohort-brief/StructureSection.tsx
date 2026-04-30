@@ -1,12 +1,28 @@
 "use client";
 
 import React from "react";
-import type { CohortBriefData } from "../cohortBriefDummyData";
+import type { StructureSectionData } from "./useCohortBrief";
 
-export function StructureSection({ data }: { data: CohortBriefData["structure"] }) {
+interface StructureSectionProps {
+    structure?: StructureSectionData | null;
+    loading?: boolean;
+    error?: string | null;
+}
+
+export function StructureSection({ structure, loading, error }: StructureSectionProps) {
+    if (loading) {
+        return <p className="text-sm text-muted-foreground italic">Loading interview structure…</p>;
+    }
+    if (error) {
+        return <p className="text-sm text-destructive">Failed to load interview structure.</p>;
+    }
+    if (!structure || structure.phases.length === 0) {
+        return <p className="text-sm text-muted-foreground italic">Interview structure unavailable.</p>;
+    }
+
     return (
         <div className="space-y-2">
-            {data.phases.map((phase, i) => (
+            {structure.phases.map((phase, i) => (
                 <div
                     key={i}
                     className="flex items-start gap-3 rounded-lg border border-gray-100 dark:border-[#27272A] bg-gray-50/60 dark:bg-white/[0.02] px-3.5 py-3"

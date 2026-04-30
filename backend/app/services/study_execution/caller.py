@@ -19,6 +19,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.models.company import Company
 from app.models.designed_study import DesignedStudy
+from app.models.study_designer.research_cohort import ResearchCohort
 from app.models.study_designer.research_lead import ResearchLead
 from app.models.study_designer.study_call_log import StudyCallLog
 from app.models.study_designer.study_call_queue import StudyCallQueue
@@ -204,9 +205,6 @@ async def initiate_call(
     # Questions extracted from the prompt (best-effort)
     questions_list = _extract_questions_from_prompt(queue_item.prompt_text or "")
 
-    # Incentive (not stored on study yet — leave blank)
-    incentive_val = ""
-
     # Resolve the execution agent identity for this lead's cohort
     # (cohort.agent_configuration_id -> company default -> hardcoded fallback).
     resolved_agent = await resolve_for_cohort_id(
@@ -214,6 +212,15 @@ async def initiate_call(
         cohort_id=lead.cohort_id,
         company_id=study.company_id,
     )
+
+    # Cohort drives the incentive line. The column is NOT NULL with a
+    # "No Incentive" server default, so this is always a usable string.
+    cohort = (
+        await session.get(ResearchCohort, lead.cohort_id)
+        if lead.cohort_id
+        else None
+    )
+    incentive_val = cohort.incentive if cohort else "No Incentive"
 
     # Resolve all {runtime_var} placeholders in the execution prompt so Bolna
     # receives the final text with lead/company/user context already filled in.
@@ -224,6 +231,7 @@ async def initiate_call(
         company=company,
         user=user,
         agent=resolved_agent,
+        incentive=incentive_val,
     )
 
     # 4. Build user_data (same shape as existing bolna_caller.py)

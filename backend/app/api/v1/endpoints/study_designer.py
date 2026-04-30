@@ -975,6 +975,66 @@ _COHORT_HYPOTHESIS_PLACEHOLDER = (
     "while you validate definition and objectives."
 )
 
+# Hardcoded for now — same content for every cohort. Lifted into config /
+# per-cohort overrides when the moderator section becomes user-editable.
+_DEFAULT_MODERATOR_INTRO_SCRIPT = (
+    "Hi {participant_name}, thanks for making the time. This is a short "
+    "research conversation — no sales, no pitches. There are no right or "
+    "wrong answers; we're just here to learn from your experience."
+)
+_DEFAULT_MODERATOR_CONSENT = (
+    "We'll record audio for note-taking only. Your name won't appear in any "
+    "report, and you can stop any time."
+)
+_DEFAULT_MODERATOR_TONE = (
+    "Warm, curious, non-judgmental. Let silences breathe. Probe tangents when "
+    "emotion surfaces. Stay neutral — never validate answers with 'that's "
+    "great' or 'amazing.'"
+)
+_DEFAULT_MODERATOR_DOS: List[str] = [
+    "Mirror the participant's exact vocabulary",
+    "Pause 3 seconds after each answer before probing",
+    "Ask for one concrete example whenever they generalize",
+    "Anchor every probe to a real past moment",
+]
+_DEFAULT_MODERATOR_DONTS: List[str] = [
+    "Don't lead with brand names — let the participant name them first",
+    "Don't validate answers with 'that's great' or 'amazing'",
+    "Don't skip probes to stay on schedule",
+    "Don't ask 'would you' or future-hypothetical questions",
+]
+
+_DEFAULT_IDEAL_RESPONDENT_PROFILE = (
+    "A participant who can speak in concrete detail about a recent decision, "
+    "including the trade-offs they weighed and what almost changed their mind. "
+    "They're comfortable telling stories about their actual behavior, not "
+    "hypotheticals, and willing to share specifics about brands, prices, and "
+    "moments of friction."
+)
+
+_DEFAULT_STRUCTURE_PHASES: List[Dict[str, str]] = [
+    {
+        "name": "Warm-up",
+        "duration": "2 min",
+        "description": "Build rapport and surface context. No leading questions.",
+    },
+    {
+        "name": "Core Exploration",
+        "duration": "9 min",
+        "description": "Walk through a recent, concrete decision in detail. Probe for the trade-offs and break-points.",
+    },
+    {
+        "name": "Trade-off Probe",
+        "duration": "2 min",
+        "description": "Test stated vs revealed preferences. Anchor every probe to a real past moment.",
+    },
+    {
+        "name": "Wrap-up",
+        "duration": "1 min",
+        "description": "Recap the 2–3 things they said, capture one-word associations, and close warmly.",
+    },
+]
+
 
 class ContextSectionResponse(BaseModel):
     definition: str
@@ -1011,13 +1071,161 @@ class ScriptSectionResponse(BaseModel):
 class ScreeningSectionResponse(BaseModel):
     include_criteria: List[str]
     exclude_criteria: List[str]
+    ideal_respondent_profile: str
+
+
+class ModeratorSectionResponse(BaseModel):
+    intro_script: str
+    consent: str
+    tone: str
+    dos: List[str]
+    donts: List[str]
+
+
+class StructurePhaseResponse(BaseModel):
+    name: str
+    duration: str
+    description: str
+
+
+class StructureSectionResponse(BaseModel):
+    phases: List[StructurePhaseResponse]
 
 
 class CohortBriefResponse(BaseModel):
     context_section: ContextSectionResponse
     script_section: Optional[ScriptSectionResponse] = None
     screening_section: Optional[ScreeningSectionResponse] = None
-    # Future sections (moderator_section, structure_section) slot in here.
+    moderator_section: ModeratorSectionResponse
+    structure_section: StructureSectionResponse
+    incentive: Optional[str] = None
+
+
+class CohortIncentiveUpdateRequest(BaseModel):
+    incentive: Optional[str] = None
+
+
+# ── Agent Prompt (per-cohort, server-rendered) ──
+
+class AgentPromptResponse(BaseModel):
+    prompt: str
+
+
+def _format_cohort_question_set(script_rows: List[CohortQuestionScript]) -> str:
+    """Render a cohort's interview script rows as a readable question_set block.
+
+    Groups by KRQ section so the agent sees the research-question framing
+    alongside the actual questions to ask.
+    """
+    if not script_rows:
+        return "[no questions defined for this cohort]"
+
+    sorted_rows = sorted(
+        script_rows,
+        key=lambda r: (r.krq_sort_order, r.sort_order),
+    )
+
+    lines: List[str] = []
+    current_krq: Optional[int] = None
+    for row in sorted_rows:
+        if row.krq_index != current_krq:
+            current_krq = row.krq_index
+            section = (row.krq_section_text or "").strip()
+            if section:
+                lines.append("")
+                lines.append(f"KRQ {row.krq_index}: {section}")
+        priority_tag = "[must-ask]" if (row.priority or "must_ask") == "must_ask" else "[if time]"
+        lines.append(f"  {row.question_number}. {row.text} {priority_tag}")
+        for probe in (row.probes or []):
+            probe_str = str(probe).strip()
+            if probe_str:
+                lines.append(f"     ↳ probe: {probe_str}")
+
+    return "\n".join(line for line in lines if line is not None).strip()
+
+
+def _build_agent_prompt(
+    template: str,
+    study: DesignedStudy,
+    cohort: ResearchCohort,
+    script_rows: List[CohortQuestionScript],
+) -> str:
+    """Substitute study + cohort variables into the execution prompt template.
+
+    Runtime variables (agent_name, participant_name, etc.) are intentionally
+    left as `{...}` placeholders — they're filled at call time by the voice
+    agent runtime, not at prompt-generation time.
+    """
+    variables: Dict[str, str] = {
+        "study_title": study.title or "[study title not set]",
+        "research_brief": study.briefing or "[research brief not provided]",
+        "research_objectives": _format_objectives_for_prompt(study.topic_guide or {}),
+        "cohort_name": cohort.name or "[cohort not set]",
+        "interview_type": "audio interview",
+        "question_set": _format_cohort_question_set(script_rows),
+        "qualification_criteria": _format_cohort_screening(cohort),
+        "incentive_line": "[no incentive configured]",
+    }
+    out = template
+    for key, value in variables.items():
+        out = out.replace(f"{{{key}}}", value)
+    return out
+
+
+def _format_cohort_screening(cohort: ResearchCohort) -> str:
+    screening = (cohort.meta_data or {}).get("screening_criteria") or {}
+    include = [str(x).strip() for x in (screening.get("include_criteria") or []) if str(x).strip()]
+    exclude = [str(x).strip() for x in (screening.get("exclude_criteria") or []) if str(x).strip()]
+    if not include and not exclude:
+        return "[no screening criteria defined]"
+    parts: List[str] = []
+    if include:
+        parts.append("Include:")
+        parts.extend(f"  - {c}" for c in include)
+    if exclude:
+        parts.append("Exclude:")
+        parts.extend(f"  - {c}" for c in exclude)
+    return "\n".join(parts)
+
+
+@router.get(
+    "/studies/{study_id}/cohorts/{cohort_id}/agent-prompt",
+    response_model=AgentPromptResponse,
+)
+async def get_cohort_agent_prompt(
+    study_id: uuid.UUID,
+    cohort_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Render the execution prompt for one cohort, with study + cohort context filled in."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    cohort = await session.get(ResearchCohort, cohort_id)
+    if not cohort or cohort.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Cohort not found")
+
+    try:
+        content = _PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Prompt template file not found")
+
+    template = _extract_prompt_from_md(content)
+
+    script_stmt = (
+        select(CohortQuestionScript)
+        .where(CohortQuestionScript.cohort_id == cohort_id)
+        .order_by(
+            CohortQuestionScript.krq_sort_order,
+            CohortQuestionScript.sort_order,
+        )
+    )
+    script_rows = list((await session.exec(script_stmt)).all())
+
+    prompt = _build_agent_prompt(template, study, cohort, script_rows)
+    return AgentPromptResponse(prompt=prompt)
 
 
 @router.get(
@@ -1125,6 +1333,7 @@ async def get_cohort_brief(
             for x in (screening_meta.get("exclude_criteria") or [])
             if str(x).strip()
         ],
+        ideal_respondent_profile=_DEFAULT_IDEAL_RESPONDENT_PROFILE,
     )
 
     return CohortBriefResponse(
@@ -1135,6 +1344,50 @@ async def get_cohort_brief(
         ),
         script_section=script_section,
         screening_section=screening_section,
+        moderator_section=ModeratorSectionResponse(
+            intro_script=_DEFAULT_MODERATOR_INTRO_SCRIPT,
+            consent=_DEFAULT_MODERATOR_CONSENT,
+            tone=_DEFAULT_MODERATOR_TONE,
+            dos=list(_DEFAULT_MODERATOR_DOS),
+            donts=list(_DEFAULT_MODERATOR_DONTS),
+        ),
+        structure_section=StructureSectionResponse(
+            phases=[StructurePhaseResponse(**p) for p in _DEFAULT_STRUCTURE_PHASES],
+        ),
+        incentive=cohort.incentive,
+    )
+
+
+@router.patch(
+    "/studies/{study_id}/cohorts/{cohort_id}/incentive",
+    response_model=CohortBriefResponse,
+)
+async def update_cohort_incentive(
+    study_id: uuid.UUID,
+    cohort_id: uuid.UUID,
+    payload: CohortIncentiveUpdateRequest,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Persist the incentive selected on the cohort brief screen."""
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    cohort = await session.get(ResearchCohort, cohort_id)
+    if not cohort or cohort.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Cohort not found")
+
+    cohort.incentive = (payload.incentive or "").strip() or None
+    session.add(cohort)
+    await session.commit()
+    await session.refresh(cohort)
+
+    return await get_cohort_brief(
+        study_id=study_id,
+        cohort_id=cohort_id,
+        session=session,
+        company_id=company_id,
     )
 
 

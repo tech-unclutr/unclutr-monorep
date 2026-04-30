@@ -47,6 +47,16 @@ export async function fetchPromptTemplate(): Promise<string> {
     return data.template as string;
 }
 
+export async function fetchCohortAgentPrompt(
+    studyId: string,
+    cohortId: string,
+): Promise<string> {
+    const data = await api.request(
+        `/study-planner/studies/${studyId}/cohorts/${cohortId}/agent-prompt`,
+    );
+    return data.prompt as string;
+}
+
 // ── Variable formatters ────────────────────────────────────────────────────
 
 function formatObjectives(studyContext?: StudyContext): string {

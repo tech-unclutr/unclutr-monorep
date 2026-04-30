@@ -8,7 +8,6 @@ import {
     GitBranchIcon,
     ListChecksIcon,
 } from "lucide-react";
-import type { CohortBriefData } from "./cohortBriefDummyData";
 import {
     SectionCard,
     ContextSection,
@@ -78,14 +77,12 @@ const DEFAULT_OPEN_SECTION: SectionId = "context";
 
 interface CohortBriefSectionsProps {
     cohort: string;
-    data: CohortBriefData;
     studyId?: string;
     cohortId?: string;
 }
 
 export function CohortBriefSections({
     cohort,
-    data,
     studyId,
     cohortId,
 }: CohortBriefSectionsProps) {
@@ -126,14 +123,28 @@ export function CohortBriefSections({
             case "screening":
                 return (
                     <ScreeningSection
-                        data={data.screening}
                         screening={briefData?.screening_section}
+                        studyId={studyId}
+                        cohortId={cohortId}
+                        initialIncentive={briefData?.incentive}
                     />
                 );
             case "moderator":
-                return <ModeratorSection data={data.moderator} />;
+                return (
+                    <ModeratorSection
+                        moderator={briefData?.moderator_section}
+                        loading={brief.loading}
+                        error={brief.error}
+                    />
+                );
             case "structure":
-                return <StructureSection data={data.structure} />;
+                return (
+                    <StructureSection
+                        structure={briefData?.structure_section}
+                        loading={brief.loading}
+                        error={brief.error}
+                    />
+                );
         }
     };
 

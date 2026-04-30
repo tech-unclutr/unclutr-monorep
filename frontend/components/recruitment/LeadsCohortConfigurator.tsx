@@ -1,16 +1,23 @@
 "use client";
 
 import React, { useMemo, useEffect, useState } from "react";
-import { UsersIcon, BookOpenIcon } from "lucide-react";
+import { UsersIcon, BookOpenIcon, SparklesIcon, Loader2 } from "lucide-react";
 import { cn, capitalizeCohortName } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { api } from "@/lib/api";
 import { type StudyContext } from "./ExecutionPromptView";
 import { useRecruitment } from "./RecruitmentContext";
 import { CohortBriefSections } from "./CohortBriefSections";
-import { getDummyBrief } from "./cohortBriefDummyData";
 import { BriefPreviewModal } from "./BriefPreviewModal";
+import { AgentPromptModal } from "./AgentPromptModal";
+import type { CohortBriefData } from "./cohort-brief/useCohortBrief";
+import type {
+    PreviewBrief,
+    PreviewBriefCohort,
+    PreviewBriefStudy,
+} from "./preview-brief-model";
 
 interface LeadsCohortConfiguratorProps {
     onBack: () => void;
@@ -46,6 +53,62 @@ export function LeadsCohortConfigurator({
 
     const [activeTab, setActiveTab] = useState<string | null>(null);
     const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewModel, setPreviewModel] = useState<PreviewBrief | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [agentPromptOpen, setAgentPromptOpen] = useState(false);
+
+    // ── Preview brief: fetch on click, then open modal ──────────────────
+
+    const handleOpenPreview = async () => {
+        const studyId = studyContext?.studyId;
+        if (!studyId || cohorts.length === 0 || previewLoading) return;
+
+        setPreviewLoading(true);
+        try {
+            const cohortsWithIds = cohorts
+                .filter((name) => cohortIdByName[name])
+                .map((name) => ({ name, cohortId: cohortIdByName[name] }));
+
+            const studyPromise = api
+                .get(`/study-planner/studies/${studyId}`)
+                .catch(() => null) as Promise<PreviewBriefStudy | null>;
+
+            const briefPromises = cohortsWithIds.map(({ name, cohortId }) =>
+                api
+                    .get(
+                        `/study-planner/studies/${studyId}/cohorts/${cohortId}/brief`,
+                    )
+                    .then((data: CohortBriefData) => ({ name, cohortId, brief: data }))
+                    .catch(() => ({ name, cohortId, brief: null })),
+            );
+
+            const [study, cohortsList] = await Promise.all([
+                studyPromise,
+                Promise.all(briefPromises),
+            ]);
+
+            const resolvedTitle =
+                study?.title || studyContext?.title || "Research Study";
+
+            const model: PreviewBrief = {
+                studyId,
+                title: resolvedTitle,
+                study: study ?? {
+                    title: studyContext?.title,
+                    briefing: studyContext?.briefing,
+                    topic_guide: studyContext?.objectives
+                        ? { objectives: studyContext.objectives }
+                        : undefined,
+                },
+                cohorts: cohortsList satisfies PreviewBriefCohort[],
+            };
+
+            setPreviewModel(model);
+            setPreviewOpen(true);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (!activeTab && cohorts.length > 0) setActiveTab(cohorts[0]);
@@ -133,7 +196,6 @@ export function LeadsCohortConfigurator({
                                 </div>
                                 <CohortBriefSections
                                     cohort={activeTab}
-                                    data={getDummyBrief(activeTab)}
                                     studyId={studyContext?.studyId}
                                     cohortId={activeCohortId}
                                 />
@@ -150,22 +212,46 @@ export function LeadsCohortConfigurator({
                         >
                             Back
                         </Button>
-                        <Button
-                            onClick={() => setPreviewOpen(true)}
-                            disabled={!studyContext?.studyId || cohorts.length === 0}
-                            className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-gray-900 font-semibold text-xs uppercase tracking-wide px-5 rounded-xl shadow-sm active:scale-[0.98] transition-all inline-flex items-center gap-2"
-                        >
-                            <BookOpenIcon className="w-3.5 h-3.5" />
-                            Preview Brief
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={handleOpenPreview}
+                                disabled={
+                                    previewLoading ||
+                                    !studyContext?.studyId ||
+                                    cohorts.length === 0
+                                }
+                                className="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-gray-900 font-semibold text-xs uppercase tracking-wide px-5 rounded-xl shadow-sm active:scale-[0.98] transition-all inline-flex items-center gap-2"
+                            >
+                                {previewLoading ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <BookOpenIcon className="w-3.5 h-3.5" />
+                                )}
+                                Preview Brief
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => setAgentPromptOpen(true)}
+                                disabled={!studyContext?.studyId || cohorts.length === 0}
+                                className="font-semibold text-xs uppercase tracking-wide px-5 rounded-xl shadow-sm active:scale-[0.98] transition-all inline-flex items-center gap-2"
+                            >
+                                <SparklesIcon className="w-3.5 h-3.5" />
+                                Get Agent Prompt
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </CardContent>
             <BriefPreviewModal
                 open={previewOpen}
                 onClose={() => setPreviewOpen(false)}
-                studyContext={studyContext}
+                model={previewModel}
+            />
+            <AgentPromptModal
+                open={agentPromptOpen}
+                onClose={() => setAgentPromptOpen(false)}
                 cohorts={cohorts}
+                studyId={studyContext?.studyId}
                 cohortIdByName={cohortIdByName}
             />
         </Card>

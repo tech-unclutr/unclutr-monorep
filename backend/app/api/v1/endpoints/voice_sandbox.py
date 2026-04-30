@@ -24,6 +24,7 @@ from app.models.study_designer.study_call_queue import StudyCallQueue
 from app.models.study_designer.study_execution import StudyExecution
 from app.models.user import User
 from app.services.study_execution.engine import StudyExecutionEngine
+from app.services.agent_resolver import resolve_for_cohort_id
 from app.services.study_execution.prompt_resolver import resolve_runtime_vars
 
 router = APIRouter()
@@ -171,12 +172,19 @@ async def get_resolved_prompt(
     company = await session.get(Company, study.company_id) if study else None
     user = await session.get(User, study.user_id) if study and study.user_id else None
 
+    agent = (
+        await resolve_for_cohort_id(session, lead.cohort_id, study.company_id)
+        if study
+        else None
+    )
+
     resolved = resolve_runtime_vars(
         queue_item.prompt_text or "",
         lead=lead,
         study=study,
         company=company,
         user=user,
+        agent=agent,
     )
     return {"prompt": resolved}
 

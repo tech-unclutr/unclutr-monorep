@@ -15,6 +15,7 @@ from app.core.db import get_session
 from app.models.study_designer.research_cohort import ResearchCohort
 from app.models.study_designer.research_lead import ResearchLead
 from app.models.study_designer.research_participant import ResearchParticipant
+from app.services.agent_resolver import get_company_default
 
 router = APIRouter()
 
@@ -80,12 +81,20 @@ async def upload_leads(
         for c in existing.all():
             cohort_map[c.name] = c.id
 
-        for name in cohort_names - set(cohort_map.keys()):
-            new_cohort = ResearchCohort(company_id=company_id, name=name)
-            session.add(new_cohort)
-            await session.flush()
-            cohort_map[name] = new_cohort.id
-            logger.info(f"[PersistLeads] Created cohort '{name}' → {new_cohort.id}")
+        missing_names = cohort_names - set(cohort_map.keys())
+        if missing_names:
+            default_agent = await get_company_default(session, company_id)
+            default_agent_id = default_agent.id if default_agent else None
+            for name in missing_names:
+                new_cohort = ResearchCohort(
+                    company_id=company_id,
+                    name=name,
+                    agent_configuration_id=default_agent_id,
+                )
+                session.add(new_cohort)
+                await session.flush()
+                cohort_map[name] = new_cohort.id
+                logger.info(f"[PersistLeads] Created cohort '{name}' → {new_cohort.id}")
 
     # 3. Fetch existing leads for this company (phone → lead) to handle duplicates
     existing_leads_result = await session.exec(

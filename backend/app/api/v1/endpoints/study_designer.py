@@ -21,9 +21,20 @@ from sqlalchemy import delete
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.designed_study import DesignedStudy
-from app.models.study_designer import CohortQuestionScript, ResearchCohort, ResearchLead, ResearchParticipant
+from app.models.study_designer import (
+    AgentConfiguration,
+    CohortQuestionScript,
+    ResearchCohort,
+    ResearchLead,
+    ResearchParticipant,
+)
 from app.models.user import User
 from app.models.iam import CompanyMembership
+from app.services.agent_resolver import (
+    ResolvedAgent,
+    get_company_default,
+    resolve_for_cohort,
+)
 from app.services.intelligence.llm_service import llm_service
 from app.services.intelligence.schemas.cohort_script import (
     COHORT_SCRIPT_GEMINI_SCHEMA,
@@ -153,6 +164,12 @@ async def _persist_cohort_candidates(
             c.name: c for c in (await session.exec(existing_stmt)).all()
         }
 
+        # Look up the company's default agent once. New cohorts get linked to
+        # it on insert so the FK is concrete from creation; existing cohorts
+        # are left alone (they were already backfilled by migration).
+        default_agent = await get_company_default(session, company_id)
+        default_agent_id = default_agent.id if default_agent else None
+
         created = 0
         updated = 0
         for c in cohorts:
@@ -180,6 +197,7 @@ async def _persist_cohort_candidates(
                         description=description or None,
                         hypothesis=hypothesis or None,
                         meta_data=new_meta,
+                        agent_configuration_id=default_agent_id,
                     )
                 )
                 created += 1
@@ -1149,12 +1167,15 @@ def _build_agent_prompt(
     study: DesignedStudy,
     cohort: ResearchCohort,
     script_rows: List[CohortQuestionScript],
+    agent: ResolvedAgent,
 ) -> str:
     """Substitute study + cohort variables into the execution prompt template.
 
-    Runtime variables (agent_name, participant_name, etc.) are intentionally
-    left as `{...}` placeholders — they're filled at call time by the voice
-    agent runtime, not at prompt-generation time.
+    Identity placeholders (agent_name, language_preference) are filled from
+    the resolved AgentConfiguration so the preview matches what runs at call
+    time. Other runtime variables (participant_name, calendar_link, etc.)
+    stay as `{...}` placeholders — they're filled per-call by the voice
+    agent runtime.
     """
     variables: Dict[str, str] = {
         "study_title": study.title or "[study title not set]",
@@ -1165,6 +1186,8 @@ def _build_agent_prompt(
         "question_set": _format_cohort_question_set(script_rows),
         "qualification_criteria": _format_cohort_screening(cohort),
         "incentive_line": "[no incentive configured]",
+        "agent_name": agent.name,
+        "language_preference": agent.language,
     }
     out = template
     for key, value in variables.items():
@@ -1224,7 +1247,8 @@ async def get_cohort_agent_prompt(
     )
     script_rows = list((await session.exec(script_stmt)).all())
 
-    prompt = _build_agent_prompt(template, study, cohort, script_rows)
+    agent = await resolve_for_cohort(session, cohort)
+    prompt = _build_agent_prompt(template, study, cohort, script_rows, agent)
     return AgentPromptResponse(prompt=prompt)
 
 

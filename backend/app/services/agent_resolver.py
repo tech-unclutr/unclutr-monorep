@@ -7,9 +7,9 @@ Resolution chain:
 2. company default (is_default=true within the cohort's company)
 3. hardcoded fallback (preserves pre-agent_configurations behavior)
 
-Used by both the prompt-preview path (study_designer.py:_build_agent_prompt)
+Used by the meta-prompt input builder (agent_prompt_generator/input_builder.py)
 and the runtime call path (study_execution/caller.py + prompt_resolver.py)
-so the brief preview and the actual call always show the same identity.
+so the generated agent prompt and the actual call always share one identity.
 """
 
 from dataclasses import dataclass
@@ -23,6 +23,7 @@ from app.models.study_designer import AgentConfiguration, ResearchCohort
 
 
 HARDCODED_FALLBACK_NAME = "Aditi"
+HARDCODED_FALLBACK_GENDER = "female"
 HARDCODED_FALLBACK_LANGUAGE = "en-IN"
 HARDCODED_FALLBACK_VOICE_ID = "default"
 
@@ -30,6 +31,7 @@ HARDCODED_FALLBACK_VOICE_ID = "default"
 @dataclass(frozen=True)
 class ResolvedAgent:
     name: str
+    gender: str
     language: str
     voice_id: str
     source: str  # "cohort" | "company_default" | "fallback"
@@ -37,6 +39,7 @@ class ResolvedAgent:
 
 _FALLBACK = ResolvedAgent(
     name=HARDCODED_FALLBACK_NAME,
+    gender=HARDCODED_FALLBACK_GENDER,
     language=HARDCODED_FALLBACK_LANGUAGE,
     voice_id=HARDCODED_FALLBACK_VOICE_ID,
     source="fallback",
@@ -44,8 +47,10 @@ _FALLBACK = ResolvedAgent(
 
 
 def _to_resolved(agent: AgentConfiguration, source: str) -> ResolvedAgent:
+    gender_value = getattr(agent.gender, "value", agent.gender) or HARDCODED_FALLBACK_GENDER
     return ResolvedAgent(
         name=agent.name,
+        gender=gender_value,
         language=agent.language,
         voice_id=agent.voice_id,
         source=source,

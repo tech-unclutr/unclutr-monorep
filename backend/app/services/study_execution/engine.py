@@ -81,22 +81,6 @@ class StudyExecutionEngine:
         if not study:
             raise ValueError(f"Study {study_id} not found")
 
-        # Prompt building is stubbed: the legacy source tables
-        # (research_questions / research_cohort_questions) have been severed.
-        # The per-cohort script feature will rewire this. Queue advancement
-        # continues to work without prompt content.
-        all_prompts: dict = {}
-
-        # Create execution
-        execution = StudyExecution(
-            study_id=study_id,
-            company_id=company_id,
-            status="LOADING",
-            cohort_interview_map=cohort_interview_map,
-        )
-        session.add(execution)
-        await session.flush()  # get execution.id
-
         # Fetch participants with lead + cohort data
         stmt = (
             select(ResearchLead, ResearchParticipant, ResearchCohort)
@@ -111,30 +95,62 @@ class StudyExecutionEngine:
         rows = (await session.exec(stmt)).all()
 
         if not rows:
-            execution.status = "READY"
+            execution = StudyExecution(
+                study_id=study_id,
+                company_id=company_id,
+                status="READY",
+                cohort_interview_map=cohort_interview_map,
+            )
             session.add(execution)
             await session.commit()
             logger.warning(f"[StudyEngine] No participants found for study {study_id}")
             return execution
 
-        # Duration → InterviewTypeKey mapping for prompt lookup
-        duration_to_bucket = {15: "audioA", 30: "audioB", 60: "audioC"}
+        # Validate every cohort that will be dialed has a stored agent prompt.
+        # Empty prompt_text would mean dialing real participants with blank
+        # Bolna scripts — fail loudly before creating any execution state.
+        referenced_cohorts: Dict[UUID, ResearchCohort] = {}
+        for _, _, cohort in rows:
+            if cohort is None:
+                continue
+            if not cohort_interview_map.get(cohort.name):
+                continue
+            referenced_cohorts.setdefault(cohort.id, cohort)
 
-        # Expand leads into queue items
+        missing_prompts = [
+            c.name for c in referenced_cohorts.values() if not c.voice_agent_prompt
+        ]
+        if missing_prompts:
+            raise ValueError(
+                f"Cohort(s) {missing_prompts} have no agent prompt — "
+                "generate one before launching execution"
+            )
+
+        prompts_by_cohort_id: Dict[UUID, str] = {
+            c.id: c.voice_agent_prompt for c in referenced_cohorts.values()
+        }
+
+        # Create execution after validation passes
+        execution = StudyExecution(
+            study_id=study_id,
+            company_id=company_id,
+            status="LOADING",
+            cohort_interview_map=cohort_interview_map,
+        )
+        session.add(execution)
+        await session.flush()  # get execution.id
+
+        # Expand leads into queue items. One prompt per cohort regardless of
+        # interview duration — duration only drives scheduling, not script.
         created_count = 0
         for lead, participant, cohort in rows:
             cohort_name = cohort.name if cohort else "Unassigned"
             durations = cohort_interview_map.get(cohort_name, [])
+            prompt_text = (
+                prompts_by_cohort_id.get(cohort.id, "") if cohort else ""
+            )
 
             for duration in durations:
-                bucket = duration_to_bucket.get(duration)
-                prompt_key = f"{cohort_name}::{bucket}" if bucket else None
-                prompt_text = (
-                    all_prompts.get(prompt_key, {}).get("prompt", "")
-                    if prompt_key
-                    else ""
-                )
-
                 queue_item = StudyCallQueue(
                     execution_id=execution.id,
                     participant_id=participant.id,

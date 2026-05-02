@@ -22,6 +22,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.designed_study import DesignedStudy
 from app.models.study_designer.cohort_question_script import CohortQuestionScript
 from app.models.study_designer.research_cohort import ResearchCohort
+from app.services.agent_resolver import resolve_for_cohort
 
 
 # ── Hardcoded defaults ─────────────────────────────────────────────────────
@@ -138,6 +139,7 @@ class ModeratorSection(BaseModel):
     tone: str
     dos: List[str]
     donts: List[str]
+    conversation_language: str
 
 
 class StructurePhase(BaseModel):
@@ -189,6 +191,7 @@ async def build_cohort_brief(
 
     script_section = await _build_script_section(session, cohort.id)
     screening_section = _build_screening_section(cohort)
+    agent = await resolve_for_cohort(session, cohort)
 
     return CohortBrief(
         context_section=context_section,
@@ -200,6 +203,7 @@ async def build_cohort_brief(
             tone=_DEFAULT_MODERATOR_TONE,
             dos=list(_DEFAULT_MODERATOR_DOS),
             donts=list(_DEFAULT_MODERATOR_DONTS),
+            conversation_language=agent.conversation_language,
         ),
         structure_section=StructureSection(
             phases=[StructurePhase(**p) for p in _DEFAULT_STRUCTURE_PHASES],

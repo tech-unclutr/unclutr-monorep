@@ -17,6 +17,13 @@ class Gender(str, Enum):
     NEUTRAL = "neutral"
 
 
+class ConversationLanguage(str, Enum):
+    ENGLISH_ONLY = "english_only"
+    ENGLISH_DEFAULT_SWITCH_ON_REQUEST = "english_default_switch_on_request"
+    MIRROR_USER = "mirror_user"
+    BILINGUAL_PRE_WRITTEN = "bilingual_pre_written"
+
+
 class AgentConfiguration(SQLModel, table=True):
     """
     Reusable execution-agent identity (name, voice, language), company-scoped.
@@ -70,6 +77,18 @@ class AgentConfiguration(SQLModel, table=True):
             ),
             nullable=False,
             server_default="female",
+        ),
+    )
+    conversation_language: ConversationLanguage = Field(
+        default=ConversationLanguage.ENGLISH_ONLY,
+        sa_column=Column(
+            SAEnum(
+                ConversationLanguage,
+                name="conversationlanguage",
+                values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            ),
+            nullable=False,
+            server_default="english_only",
         ),
     )
     language: str = Field(default="en-IN")

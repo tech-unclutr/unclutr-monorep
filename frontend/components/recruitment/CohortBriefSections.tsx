@@ -135,6 +135,8 @@ export function CohortBriefSections({
                         moderator={briefData?.moderator_section}
                         loading={brief.loading}
                         error={brief.error}
+                        studyId={studyId}
+                        cohortId={cohortId}
                     />
                 );
             case "structure":

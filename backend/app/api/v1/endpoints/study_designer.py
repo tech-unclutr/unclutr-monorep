@@ -24,6 +24,7 @@ from app.models.designed_study import DesignedStudy
 from app.models.study_designer import (
     AgentConfiguration,
     CohortQuestionScript,
+    ConversationLanguage,
     ResearchCohort,
     ResearchLead,
     ResearchParticipant,
@@ -994,10 +995,15 @@ class CohortIncentiveUpdateRequest(BaseModel):
     incentive: str
 
 
+class CohortModeratorLanguageUpdateRequest(BaseModel):
+    conversation_language: ConversationLanguage
+
+
 # ── Agent Prompt (per-cohort, server-rendered) ──
 
 class AgentPromptResponse(BaseModel):
     prompt: str
+    generated_at: Optional[datetime] = None
 
 
 @router.get(
@@ -1007,12 +1013,15 @@ class AgentPromptResponse(BaseModel):
 async def get_cohort_agent_prompt(
     study_id: uuid.UUID,
     cohort_id: uuid.UUID,
+    regenerate: bool = False,
     session: AsyncSession = Depends(get_session),
     company_id: uuid.UUID = Depends(_get_company_id),
 ):
-    """Generate the Bolna voice agent prompt for one cohort via the meta-prompt LLM call.
+    """Return the Bolna voice agent prompt for one cohort.
 
-    Latency is 20-40s; the frontend shows a skeleton in the meantime.
+    Cached on `research_cohorts.voice_agent_prompt`. First read (or
+    `?regenerate=true`) runs the meta-prompt LLM call (20-90s) and persists
+    the result; subsequent reads return the stored prompt instantly.
     """
     study = await session.get(DesignedStudy, study_id)
     if not study or study.company_id != company_id:
@@ -1022,8 +1031,14 @@ async def get_cohort_agent_prompt(
     if not cohort or cohort.company_id != company_id:
         raise HTTPException(status_code=404, detail="Cohort not found")
 
+    if cohort.voice_agent_prompt and not regenerate:
+        return AgentPromptResponse(
+            prompt=cohort.voice_agent_prompt,
+            generated_at=cohort.voice_agent_prompt_generated_at,
+        )
+
     try:
-        prompt = await generate_agent_prompt(session, study, cohort)
+        result = await generate_agent_prompt(session, study, cohort)
     except TimeoutError:
         logger.error("Gemini request timed out (agent prompt generation)")
         raise HTTPException(status_code=504, detail="Agent prompt generation timed out")
@@ -1033,7 +1048,16 @@ async def get_cohort_agent_prompt(
         logger.error(f"Agent prompt generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-    return AgentPromptResponse(prompt=prompt)
+    cohort.voice_agent_prompt = result.prompt
+    cohort.voice_agent_prompt_generated_at = datetime.utcnow()
+    session.add(cohort)
+    await session.commit()
+    await session.refresh(cohort)
+
+    return AgentPromptResponse(
+        prompt=cohort.voice_agent_prompt,
+        generated_at=cohort.voice_agent_prompt_generated_at,
+    )
 
 
 @router.get(
@@ -1087,6 +1111,61 @@ async def update_cohort_incentive(
     session.add(cohort)
     await session.commit()
     await session.refresh(cohort)
+
+    return await get_cohort_brief(
+        study_id=study_id,
+        cohort_id=cohort_id,
+        session=session,
+        company_id=company_id,
+    )
+
+
+@router.patch(
+    "/studies/{study_id}/cohorts/{cohort_id}/moderator-language",
+    response_model=CohortBrief,
+)
+async def update_cohort_moderator_language(
+    study_id: uuid.UUID,
+    cohort_id: uuid.UUID,
+    payload: CohortModeratorLanguageUpdateRequest,
+    session: AsyncSession = Depends(get_session),
+    company_id: uuid.UUID = Depends(_get_company_id),
+):
+    """Persist the moderator conversation language selected on the cohort brief.
+
+    Writes to the agent_configuration row resolved for the cohort (cohort's
+    bound agent → company default). If multiple cohorts share that agent
+    (e.g. the company default), they all see the change — language is a
+    property of the agent identity, not the cohort. Returns 400 when no
+    DB-backed agent exists yet (the runtime fallback is read-only).
+    """
+    study = await session.get(DesignedStudy, study_id)
+    if not study or study.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    cohort = await session.get(ResearchCohort, cohort_id)
+    if not cohort or cohort.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Cohort not found")
+
+    agent: Optional[AgentConfiguration] = None
+    if cohort.agent_configuration_id is not None:
+        candidate = await session.get(
+            AgentConfiguration, cohort.agent_configuration_id
+        )
+        if candidate is not None and candidate.company_id == company_id:
+            agent = candidate
+    if agent is None:
+        agent = await get_company_default(session, company_id)
+    if agent is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No agent configuration available — create one first.",
+        )
+
+    agent.conversation_language = payload.conversation_language
+    agent.updated_at = datetime.utcnow()
+    session.add(agent)
+    await session.commit()
 
     return await get_cohort_brief(
         study_id=study_id,

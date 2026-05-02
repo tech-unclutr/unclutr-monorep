@@ -47,6 +47,11 @@ export interface ModeratorSectionData {
     tone: string;
     dos: string[];
     donts: string[];
+    conversation_language:
+        | "english_only"
+        | "english_default_switch_on_request"
+        | "mirror_user"
+        | "bilingual_pre_written";
 }
 
 export interface StructurePhaseData {

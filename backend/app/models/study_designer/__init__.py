@@ -1,4 +1,5 @@
 from .agent_configuration import AgentConfiguration as AgentConfiguration
+from .agent_configuration import ConversationLanguage as ConversationLanguage
 from .agent_configuration import Gender as Gender
 from .agent_configuration import VoiceProvider as VoiceProvider
 from .cohort_question_script import CohortQuestionScript as CohortQuestionScript

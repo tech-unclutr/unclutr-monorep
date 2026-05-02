@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlmodel import Column, Field, SQLModel
 
 
@@ -35,4 +35,12 @@ class ResearchCohort(SQLModel, table=True):
     )
 
     meta_data: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
+
+    voice_agent_prompt: Optional[str] = Field(
+        default=None, sa_column=Column(Text, nullable=True)
+    )
+    voice_agent_prompt_generated_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime, nullable=True)
+    )
+
     created_at: datetime = Field(default_factory=datetime.utcnow)

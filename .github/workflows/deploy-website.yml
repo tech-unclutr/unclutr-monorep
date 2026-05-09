@@ -61,6 +61,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         run: |
+          firebase experiments:enable webframeworks
           firebase deploy --project squareup-website --only hosting:website-production --force --token ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Post-deploy verification

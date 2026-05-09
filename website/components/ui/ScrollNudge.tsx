@@ -10,13 +10,9 @@ export default function ScrollNudge() {
 
   useEffect(() => {
     // Check if already dismissed this session
-    try {
-      if (typeof window !== "undefined" && sessionStorage.getItem("scroll-nudge-dismissed")) {
-        setDismissed(true);
-        return;
-      }
-    } catch {
-      // Ignore sessionStorage access errors in restrictive incognito modes
+    if (typeof window !== "undefined" && sessionStorage.getItem("scroll-nudge-dismissed")) {
+      setDismissed(true);
+      return;
     }
 
     const IDLE_THRESHOLD = 4000; // 4 seconds
@@ -38,9 +34,7 @@ export default function ScrollNudge() {
         // First scroll after nudge = dismiss forever
         setShowNudge(false);
         setDismissed(true);
-        try {
-          sessionStorage.setItem("scroll-nudge-dismissed", "1");
-        } catch {}
+        sessionStorage.setItem("scroll-nudge-dismissed", "1");
         return;
       }
       startIdleTimer();

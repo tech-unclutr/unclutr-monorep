@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: `${siteUrl}/og-image.png?v=4`,
+        url: "/og-image.png?v=4",
         width: 1200,
         height: 630,
         alt: "SquareUp — Customer Understanding for Consumer Companies",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: [`${siteUrl}/og-image.png?v=4`],
+    images: ["/og-image.png?v=4"],
   },
   icons: {
     icon: "/favicon.ico",
@@ -104,7 +104,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
-        <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" />
+        <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

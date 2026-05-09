@@ -118,7 +118,7 @@ function BlackBoxMetaphor({ mousePos }: { mousePos: { x: number, y: number } }) 
 // 2. Starting From Scratch (Amnesia) - 15/10 Network Collapse
 function AmnesiaMetaphor() {
     return (
-        <div className="relative w-full h-full min-h-[300px] flex items-center justify-center overflow-hidden group">
+        <div className="relative w-full h-full min-h-[300px] flex items-center justify-center overflow-visible group">
             <div className="relative w-56 h-56 flex items-center justify-center">
                 {/* The single surviving core node */}
                 <div className="absolute w-4 h-4 bg-gradient-to-br from-[#FF8B36] to-[#FF5A36] rounded-full shadow-[0_0_20px_#FF5A36] z-20" />
@@ -167,7 +167,7 @@ function AmnesiaMetaphor() {
                 />
             </div>
             {/* Ambient Background Glow */}
-            <div className="absolute w-[300px] h-[300px] bg-[#FF5A36]/5 blur-[60px] rounded-full pointer-events-none -z-10" />
+            <div className="absolute w-[200px] h-[200px] sm:w-[260px] sm:h-[260px] lg:w-[300px] lg:h-[300px] bg-[#FF5A36]/5 blur-[40px] sm:blur-[50px] lg:blur-[60px] rounded-full pointer-events-none -z-10" />
         </div>
     );
 }
@@ -217,7 +217,7 @@ function SiloMetaphor() {
             </div>
             
             {/* Ambient Aura proving energy is radiating but contained */}
-            <div className="absolute w-[450px] h-[450px] bg-[#6366F1]/10 blur-[80px] -z-10 rounded-full" />
+            <div className="absolute w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] lg:w-[450px] lg:h-[450px] bg-[#6366F1]/10 blur-[55px] sm:blur-[70px] lg:blur-[80px] -z-10 rounded-full" />
         </div>
     );
 }
@@ -229,13 +229,13 @@ function HallucinationMetaphor({ mousePos }: { mousePos: { x: number, y: number 
     const lensY = (mousePos.y - 0.5) * 60;
     
     return (
-        <div className="relative w-full h-full min-h-[300px] flex items-center justify-center overflow-hidden pointer-events-none">
+        <div className="relative w-full h-full min-h-[300px] flex items-center justify-center overflow-visible pointer-events-none">
             {/* Absolute crisp data structure underneath (The raw truth) */}
-            <div className="absolute inset-0 flex flex-col justify-center gap-3 p-8 opacity-40">
+            <div className="absolute inset-0 flex flex-col justify-center gap-3 px-10 sm:px-14 lg:px-16 opacity-40 overflow-hidden">
                 {[...Array(8)].map((_, i) => (
                     <div key={i} className="w-full flex gap-3">
-                        <div className={`h-1.5 rounded-full bg-[#1d1d1f] ${i % 2 === 0 ? 'w-full' : 'w-[80%]'}`} />
-                        <div className={`h-1.5 rounded-full bg-[#1d1d1f] ${i % 3 === 0 ? 'w-[40%]' : 'w-[20%]'}`} />
+                        <div className={`h-1.5 rounded-full bg-[#1d1d1f] ${i % 2 === 0 ? 'w-[62%]' : 'w-[48%]'}`} />
+                        <div className={`h-1.5 rounded-full bg-[#1d1d1f] ${i % 3 === 0 ? 'w-[22%]' : 'w-[14%]'}`} />
                     </div>
                 ))}
             </div>
@@ -262,7 +262,7 @@ function HallucinationMetaphor({ mousePos }: { mousePos: { x: number, y: number 
                 <div className="w-[150%] h-[150%] absolute top-[-25%] left-[-25%] opacity-30" style={{ backgroundImage: "repeating-radial-gradient(circle at 0 0, transparent 0, #F43F5E 1px, transparent 1px, transparent 100%)", backgroundSize: "14px 14px" }} />
             </motion.div>
             
-            <div className="absolute w-[400px] h-[400px] bg-[#F43F5E]/10 blur-[80px] -z-10 rounded-full" />
+            <div className="absolute w-[240px] h-[240px] sm:w-[320px] sm:h-[320px] lg:w-[400px] lg:h-[400px] bg-[#F43F5E]/10 blur-[50px] sm:blur-[65px] lg:blur-[80px] -z-10 rounded-full" />
         </div>
     );
 }
@@ -416,11 +416,17 @@ export default function ProblemSectionSticky() {
 
             {/* Ambient Background Texture / Lighting */}
             <div className="fixed inset-0 pointer-events-none z-0 mix-blend-multiply opacity-30">
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150" />
+                <div
+                    className="absolute inset-0 opacity-20 brightness-100 contrast-150"
+                    style={{
+                        backgroundImage:
+                            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
+                    }}
+                />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] rounded-full bg-gradient-to-tr from-[#FF5A36]/5 to-[#6366F1]/5 blur-[120px]" />
             </div>
 
-            <div className="sticky top-0 left-0 w-full h-screen flex flex-col items-center justify-center overflow-hidden px-6">
+            <div className="sticky top-0 left-0 w-full h-screen flex flex-col items-center justify-center overflow-x-clip px-6">
                 
                 {/* ─── Hero Text Group ─── */}
                 <motion.div 
@@ -437,22 +443,21 @@ export default function ProblemSectionSticky() {
                         The Broken Status Quo
                     </motion.p>
                     
-                    <motion.h2 
-                        className="font-display text-[clamp(36px,5vw,72px)] font-bold text-[#1d1d1f] tracking-tight leading-[1.05] max-w-[1100px] mx-auto drop-shadow-sm"
+                    <motion.h2
+                        className="font-display text-[clamp(22px,5.5vw,72px)] font-bold text-[#1d1d1f] tracking-tight leading-[1.15] sm:leading-[1.05] max-w-[1100px] mx-auto drop-shadow-sm text-balance px-2"
                         initial={{ opacity: 0, filter: "blur(12px)", y: 20 }}
                         animate={isTextInView ? { opacity: 1, filter: "blur(0px)", y: 0 } : {}}
                         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
                     >
-                        <ParticleHighlight>Customer Insights</ParticleHighlight> should<br/> 
-                        unlock the decisions for you.<br/>
-                        <span className="text-[#86868b] font-medium tracking-tight mt-2 block opacity-90">
+                        <ParticleHighlight>Customer Insights</ParticleHighlight> should unlock<br className="hidden sm:inline"/> the decisions for you.
+                        <span className="text-[#86868b] font-medium tracking-tight mt-2 sm:mt-3 block opacity-90">
                             Instead, it's built on 4 fundamental flaws.
                         </span>
                     </motion.h2>
                 </motion.div>
 
                 {/* ─── Card Stack (Starts appearing after 0.15) ─── */}
-                <div className="relative w-full max-w-[1100px] h-[65vh] flex items-center justify-center pointer-events-none z-20 mt-[5vh]">
+                <div className="relative w-full max-w-[1100px] h-[78vh] sm:h-[72vh] md:h-[70vh] lg:h-[68vh] xl:h-[65vh] flex items-center justify-center pointer-events-none z-20 mt-[2vh] sm:mt-[5vh]">
                     {FLAWS.map((flaw, index) => {
                         // Math for choreography — cards start immediately after header fades
                         const start = 0.08 + (index * 0.22);
@@ -502,8 +507,8 @@ export default function ProblemSectionSticky() {
                         return (
                             <motion.div
                                 key={index}
-                                className={`absolute inset-0 flex flex-col md:flex-row rounded-[48px] overflow-hidden 
-                                           bg-white/40 backdrop-blur-[60px] 
+                                className={`absolute inset-0 flex flex-col md:flex-row rounded-[28px] sm:rounded-[40px] md:rounded-[48px] overflow-hidden
+                                           bg-white/40 backdrop-blur-[60px]
                                            border border-white/60 shadow-[0_40px_100px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.02),inset_0_2px_10px_rgba(255,255,255,0.4)]
                                            pointer-events-auto ${flaw.shadowGlow}`}
                                 style={{
@@ -517,25 +522,25 @@ export default function ProblemSectionSticky() {
                                 }}
                             >
                                 {/* Left Side: Copy */}
-                                <motion.div className="flex-[1.2] p-12 sm:p-20 flex flex-col justify-center relative translate-z-[30px]" style={{ transform: "translateZ(40px)", opacity: contentOpacity }}>
-                                    
+                                <motion.div className="flex-[1.4] md:flex-[1.5] lg:flex-[1.4] p-6 sm:p-8 md:p-10 lg:p-12 xl:p-20 flex flex-col justify-center relative translate-z-[30px]" style={{ transform: "translateZ(40px)", opacity: contentOpacity }}>
+
                                     {/* Number Watermark (Apple style precise typography) */}
-                                    <div className="font-display text-[220px] font-black absolute top-[-60px] left-[0px] pointer-events-none select-none tracking-tighter opacity-5" style={{ color: flaw.iconColor, mixBlendMode: 'multiply' }}>
+                                    <div className="font-display text-[120px] sm:text-[150px] md:text-[170px] lg:text-[180px] xl:text-[220px] font-black absolute top-[-30px] sm:top-[-40px] md:top-[-45px] lg:top-[-50px] xl:top-[-60px] left-[0px] pointer-events-none select-none tracking-tighter opacity-5" style={{ color: flaw.iconColor, mixBlendMode: 'multiply' }}>
                                         0{index + 1}
                                     </div>
 
                                     <div className="relative z-10">
-                                        <h3 className={`text-4xl sm:text-5xl font-black tracking-tight mb-6 text-transparent bg-clip-text bg-gradient-to-r ${flaw.accent}`}>
+                                        <h3 className={`text-2xl sm:text-[28px] md:text-[32px] lg:text-[38px] xl:text-5xl font-black tracking-tight mb-3 sm:mb-4 lg:mb-5 xl:mb-6 text-transparent bg-clip-text bg-gradient-to-r ${flaw.accent} leading-[1.05]`}>
                                             {flaw.title}
                                         </h3>
-                                        <p className="text-[19px] sm:text-[22px] font-medium text-[#1d1d1f]/80 leading-[1.6] text-balance">
+                                        <p className="text-[15px] sm:text-[16px] md:text-[16px] lg:text-[18px] xl:text-[22px] font-medium text-[#1d1d1f]/80 leading-[1.5] sm:leading-[1.55] xl:leading-[1.6] text-balance">
                                             {flaw.desc}
                                         </p>
                                     </div>
                                 </motion.div>
 
                                 {/* Right Side: Visual Metaphor */}
-                                <motion.div className="flex-1 relative border-t md:border-t-0 md:border-l border-black/[0.04] bg-gradient-to-br from-black/[0.01] to-transparent flex items-center justify-center p-8 translate-z-[20px]" style={{ transform: "translateZ(20px)", opacity: contentOpacity }}>
+                                <motion.div className="flex-1 md:flex-[0.8] lg:flex-[0.85] relative border-t md:border-t-0 md:border-l border-black/[0.04] bg-gradient-to-br from-black/[0.01] to-transparent flex items-center justify-center p-4 sm:p-6 lg:p-8 translate-z-[20px]" style={{ transform: "translateZ(20px)", opacity: contentOpacity }}>
                                     {index === 0 && <BlackBoxMetaphor mousePos={mousePos} />}
                                     {index === 1 && <AmnesiaMetaphor />}
                                     {index === 2 && <SiloMetaphor />}

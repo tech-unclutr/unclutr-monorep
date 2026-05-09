@@ -46,7 +46,13 @@ export default function HeroSection() {
   const [subheadlineIndex, setSubheadlineIndex] = useState(0);
   const [snapOverlayVisible, setSnapOverlayVisible] = useState(false);
 
-  const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
+  // Lazy-initialize from actual window so the first render-loop pass projects particles
+  // around the real canvas center (was hardcoded {1000, 800}, which offset particles
+  // sideways on viewports that didn't happen to be exactly 1000px wide).
+  const [dimensions, setDimensions] = useState(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1000,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
+  }));
   const [isHoveringGlobe, setIsHoveringGlobe] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeTextIndex, setActiveTextIndex] = useState(0);
@@ -153,6 +159,8 @@ export default function HeroSection() {
   });
 
   const timeRef = useRef(0);
+  // Responsive globe radius — set when particles build, read by render loop (separate useEffect).
+  const globeRadiusRef = useRef(GLOBE_RADIUS);
 
   // 2. Initialize Particles
   useEffect(() => {
@@ -176,6 +184,11 @@ export default function HeroSection() {
     canvas.height = height * dpr;
     setDimensions({ width, height });
 
+    // Responsive globe radius — scale to fit viewport with breathing room for header text.
+    // Cap at GLOBE_RADIUS (320) on desktop; mobile/tablet shrinks proportionally.
+    const globeRadius = Math.min(width * 0.4, height * 0.3, GLOBE_RADIUS);
+    globeRadiusRef.current = globeRadius;
+
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
@@ -192,6 +205,7 @@ export default function HeroSection() {
 
     // Draw "STOP GUESSING" and "Start Listening"
     const isMobileSize = width < 768;
+    const isCompactSize = width < 1024; // mobile + tablet: denser sampling so text reads at smaller scales
     const font1 = isMobileSize ? width * 0.1 : Math.min(width * 0.08, 120);
     const font2 = isMobileSize ? width * 0.12 : Math.min(width * 0.1, 150);
 
@@ -205,9 +219,11 @@ export default function HeroSection() {
     const newParticles: Particle[] = [];
     const colors = ["#ffffff", "#cccccc", "#ff6b00", "#ff9f43"];
 
-    // Scan pixels - use higher density for smaller text but less jitter
+    // Scan pixels - tiered density: mobile step=2, tablet step=3, desktop step=4.
+    // Tablet sits between mobile (too tight at step=2 with reduced explosion) and
+    // desktop (too sparse at step=4 — letters dissolve mid-transition).
     const effectiveDensity = isMobileSize ? PARTICLE_DENSITY * 1.5 : PARTICLE_DENSITY;
-    const step = Math.max(1, Math.floor(1 / effectiveDensity));
+    const step = isCompactSize && !isMobileSize ? 3 : Math.max(1, Math.floor(1 / effectiveDensity));
     for (let y = 0; y < height; y += step) {
       for (let x = 0; x < width; x += step) {
         const index = (y * width + x) * 4;
@@ -266,9 +282,9 @@ export default function HeroSection() {
       const noiseZ = (Math.random() - 0.5) * noiseScale;
 
       newParticles[i].globePos = {
-        x: x * GLOBE_RADIUS + noiseX,
-        y: y * GLOBE_RADIUS + noiseY,
-        z: z * GLOBE_RADIUS + noiseZ
+        x: x * globeRadius + noiseX,
+        y: y * globeRadius + noiseY,
+        z: z * globeRadius + noiseZ
       };
     }
 
@@ -347,6 +363,12 @@ export default function HeroSection() {
       // Easing for the disintegration (Start slow, explode, settle)
       const ease = rawProgress < 0.5 ? 4 * rawProgress * rawProgress * rawProgress : 1 - Math.pow(-2 * rawProgress + 2, 3) / 2;
 
+      // Mobile/tablet use tamer explosion noise — text is smaller relative to noise magnitude,
+      // so full desktop force scatters letters past recognition mid-transition.
+      const isMobileSize = width < 768;
+      const isCompactSize = width < 1024;
+      const explosionMagnitude = isMobileSize ? 90 : isCompactSize ? 130 : 200;
+
       let hitCountThisFrame = 0;
 
       for (let i = 0; i < particlesRef.current.length; i++) {
@@ -360,7 +382,7 @@ export default function HeroSection() {
         gz = p.globePos.y * sinX + gz * cosX;
 
         // Disintegration explosion force — use sin-based continuous noise to avoid per-frame jitter
-        const explosionForce = Math.sin(ease * Math.PI) * 200;
+        const explosionForce = Math.sin(ease * Math.PI) * explosionMagnitude;
         const noiseX = Math.sin(timeRef.current * 2 + p.noisePhase.x) * explosionForce * 0.5;
         const noiseY = Math.sin(timeRef.current * 2.3 + p.noisePhase.y) * explosionForce * 0.5;
         const noiseZ = Math.sin(timeRef.current * 1.7 + p.noisePhase.z) * explosionForce * 0.5;
@@ -413,8 +435,8 @@ export default function HeroSection() {
         // Illumination and Depth (Fade back of globe)
         let alpha = 1;
         if (rawProgress > 0.5) {
-          const minZ = -GLOBE_RADIUS;
-          const maxZ = GLOBE_RADIUS;
+          const minZ = -globeRadiusRef.current;
+          const maxZ = globeRadiusRef.current;
           const normalizedZ = Math.max(0, Math.min(1, (currentZ - minZ) / (maxZ - minZ)));
           alpha = 0.4 + normalizedZ * 0.6; // More solid 3D feel
         }
@@ -597,12 +619,12 @@ export default function HeroSection() {
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute inset-0 flex items-center justify-center"
                 >
-                  <div className="relative p-6 xs:p-8 md:p-16 rounded-[40px] overflow-hidden">
+                  <div className="relative p-5 xs:p-6 sm:p-8 md:p-16 rounded-[28px] sm:rounded-[40px] overflow-hidden mx-3 sm:mx-0">
                     {/* Glass Layer - Darkened and increased blur for maximum readability against particles */}
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-[40px] border border-white/10 shadow-[0_12px_64px_0_rgba(0,0,0,0.8)]" />
 
                     {/* Inner Content */}
-                    <p className="relative text-xl md:text-3xl font-display font-medium text-white leading-tight md:leading-snug max-w-2xl text-balance tracking-tight">
+                    <p className="relative text-[14px] xs:text-[15px] sm:text-base md:text-2xl lg:text-3xl font-display font-medium text-white leading-snug max-w-[280px] xs:max-w-sm sm:max-w-md md:max-w-2xl text-balance tracking-tight">
                       {MISSION_TEXT}
                     </p>
 

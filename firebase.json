@@ -86,13 +86,15 @@
     },
     {
       "target": "website-production",
-      "public": "website/out",
-      "cleanUrls": true,
+      "source": "website",
       "ignore": [
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
-      ]
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      }
     }
   ],
   "emulators": {

@@ -25,12 +25,8 @@ function isDoNotTrack(): boolean {
 }
 
 function hasConsentBlocked(): boolean {
-  try {
-    if (typeof localStorage === "undefined") return false;
-    return localStorage.getItem("sq_analytics_consent") === "denied";
-  } catch {
-    return false;
-  }
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem("sq_analytics_consent") === "denied";
 }
 
 export function isTrackingEnabled(): boolean {
@@ -43,12 +39,8 @@ export function isTrackingEnabled(): boolean {
 // ── Debug Mode ───────────────────────────────────────────────────────────────
 
 function isDebugMode(): boolean {
-  try {
-    if (typeof localStorage === "undefined") return false;
-    return localStorage.getItem("sq_analytics_debug") === "true";
-  } catch {
-    return false;
-  }
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem("sq_analytics_debug") === "true";
 }
 
 function isDev(): boolean {

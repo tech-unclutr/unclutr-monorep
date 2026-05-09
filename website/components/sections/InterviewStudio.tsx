@@ -9,6 +9,7 @@ import {
     useInView,
 } from "framer-motion";
 import { useSectionVisibility, useCarouselTracking, useVideoTracking } from "@/lib/analytics";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 
 /* ─────────────────────────────────────────────────────────────
    EASING & PHYSICS
@@ -141,7 +142,7 @@ function StudioCard({
 
     return (
         <motion.div
-            className="absolute cursor-pointer touch-none"
+            className="absolute cursor-pointer touch-pan-y"
             style={{
                 zIndex,
                 transformOrigin: "center center",
@@ -385,6 +386,7 @@ function ProgressDots({
 export default function InterviewStudio() {
     const sectionRef = useRef<HTMLDivElement>(null);
     useSectionVisibility("interview_studio", sectionRef);
+    const haptic = useHaptic();
     const [activeIndex, setActiveIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const { trackTransition: trackCarousel, trackAutoplay: trackAutoplayState } = useCarouselTracking(
@@ -442,12 +444,13 @@ export default function InterviewStudio() {
     trackCarouselRef.current = trackCarousel;
 
     const handleSelect = useCallback((idx: number, method: "click" | "swipe" | "keyboard" | "dot" = "click") => {
+        haptic(method === "swipe" ? "light" : "selection");
         trackCarouselRef.current(idx, method);
         activeIndexRef.current = idx;
         setActiveIndex(idx);
         setIsPaused(true);
         setTimeout(() => setIsPaused(false), 12000);
-    }, []);
+    }, [haptic]);
 
     const handleHover = useCallback(() => {
         setIsPaused(true);
@@ -520,7 +523,7 @@ export default function InterviewStudio() {
             tabIndex={0}
             onKeyDown={handleKeyDown}
             onClick={() => sectionRef.current?.focus()}
-            className="relative overflow-hidden bg-transparent outline-none min-h-[580px] sm:min-h-[700px] lg:min-h-[800px] h-[100svh] max-h-[1000px]"
+            className="relative overflow-hidden bg-transparent outline-none min-h-[820px] sm:min-h-[820px] md:min-h-[860px] lg:min-h-[900px] h-[100svh] max-h-[1100px]"
             style={{ overscrollBehaviorX: "none" }}
         >
             {/* Subtle grain texture */}
@@ -560,16 +563,16 @@ export default function InterviewStudio() {
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             />
 
-            {/* Content Container */}
-            <div className="relative z-10 h-full flex flex-col justify-center max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12">
+            {/* Content Container — pb leaves room for the fixed bottom floating nav so dots/counter aren't clipped */}
+            <div className="relative z-10 h-full flex flex-col justify-center max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12 pb-24 sm:pb-28 lg:pb-20">
                 {/* Header */}
                 <motion.div
-                    className="mb-3 sm:mb-10 lg:mb-12"
+                    className="mb-3 sm:mb-6 lg:mb-8"
                     style={{ y: smoothY, opacity: headlineOpacity }}
                 >
                     {/* Badge */}
                     <motion.div
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
+                        className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full mb-5 whitespace-nowrap max-w-full"
                         style={{
                             background: "linear-gradient(135deg, rgba(255,107,0,0.12) 0%, rgba(255,90,54,0.08) 100%)",
                             border: "1px solid rgba(255,107,0,0.2)",
@@ -578,11 +581,11 @@ export default function InterviewStudio() {
                         animate={isInView ? { opacity: 1, y: 0 } : {}}
                         transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
                     >
-                        <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#FF6B00]">
+                        <span className="text-[10px] sm:text-[12px] font-semibold uppercase tracking-[0.08em] sm:tracking-[0.1em] text-[#FF6B00] whitespace-nowrap">
                             Intelligence Platform
                         </span>
-                        <span className="text-[12px] text-[#FF6B00]/60">|</span>
-                        <span className="text-[12px] font-medium text-[#FF6B00]/80">
+                        <span className="text-[10px] sm:text-[12px] text-[#FF6B00]/60">|</span>
+                        <span className="text-[10px] sm:text-[12px] font-medium text-[#FF6B00]/80 whitespace-nowrap">
                             Interview Studio
                         </span>
                     </motion.div>
@@ -619,7 +622,7 @@ export default function InterviewStudio() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                     </button>
 
-                    <div className="relative w-full h-[420px] xs:h-[440px] sm:h-[520px] lg:h-[540px] flex items-center justify-center">
+                    <div className="relative w-full h-[490px] xs:h-[510px] sm:h-[540px] lg:h-[560px] flex items-center justify-center">
                         {STUDIO_TEAM.map((agent, idx) => (
                             <StudioCard
                                 key={agent.name}

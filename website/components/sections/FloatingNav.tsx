@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Zap, ChevronUp, Sparkles } from "lucide-react";
 import { trackEvent, EventName } from "@/lib/analytics";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 
 const SOLUTIONS = [
     {
@@ -32,6 +33,7 @@ export default function FloatingNav() {
     const [hidden, setHidden] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const haptic = useHaptic();
 
     useEffect(() => {
         setMounted(true);
@@ -119,11 +121,13 @@ export default function FloatingNav() {
     const handleToggle = () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         const newState = activeTab === "solutions" ? null : "solutions";
+        haptic("selection");
         trackEvent(EventName.NAV_DROPDOWN_TOGGLE, { state: newState ? "open" : "close", method: "click" });
         setActiveTab(newState);
     };
 
     const scrollToTop = () => {
+        haptic("light");
         trackEvent(EventName.NAV_SCROLL_TO_TOP);
         window.scrollTo({ top: 0, behavior: "smooth" });
         setActiveTab(null);
@@ -170,6 +174,7 @@ export default function FloatingNav() {
                                                 <button
                                                     key={item.label}
                                                     onClick={() => {
+                                                        haptic("selection");
                                                         trackEvent(EventName.NAV_CLICK, { nav_item: item.label, nav_type: "solution", target_section: item.href });
                                                         const el = document.querySelector(item.href);
                                                         if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -247,7 +252,10 @@ export default function FloatingNav() {
                                 </div>
                                 <a
                                     href="/pilot"
-                                    onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Book Pilot", cta_href: "/pilot", source_section: "floating_nav", cta_position: "nav_bar" })}
+                                    onClick={() => {
+                                        haptic("medium");
+                                        trackEvent(EventName.CTA_CLICK, { cta_text: "Book Pilot", cta_href: "/pilot", source_section: "floating_nav", cta_position: "nav_bar" });
+                                    }}
                                     className="relative bg-white w-full h-full rounded-[18px] font-bold text-[13px] flex items-center justify-center gap-2 z-10"
                                 >
                                     <Zap size={14} className="fill-current text-brand-orange" />

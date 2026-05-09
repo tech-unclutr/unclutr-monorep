@@ -10,6 +10,7 @@ import {
 } from "framer-motion";
 import { useSectionVisibility, useCarouselTracking, useVideoTracking } from "@/lib/analytics";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useIsMobile } from "@/components/ui/useIsMobile";
 
 /* ─────────────────────────────────────────────────────────────
    EASING & PHYSICS
@@ -79,6 +80,7 @@ function StudioCard({
     totalCards,
     isRevealed,
     cardSpacing,
+    isMobile,
     onHover,
     onLeave,
     onClick,
@@ -90,6 +92,7 @@ function StudioCard({
     totalCards: number;
     isRevealed: boolean;
     cardSpacing: number;
+    isMobile: boolean;
     onHover: () => void;
     onLeave: () => void;
     onClick: () => void;
@@ -150,24 +153,29 @@ function StudioCard({
                 backfaceVisibility: "hidden",
             }}
             initial={{
-                x: 500,
-                y: 40,
+                x: isMobile ? 200 : 500,
+                y: isMobile ? 20 : 40,
                 opacity: 0,
-                scale: 0.7,
-                rotateY: -20,
+                scale: isMobile ? 0.85 : 0.7,
+                rotateY: isMobile ? 0 : -20,
             }}
             animate={{
                 x: xOffset,
                 y: yOffset,
-                opacity: isFuture && !isRevealed ? 0 : 1,
+                opacity: isFuture && !isRevealed ? 0 : (isMobile && !isActive ? Math.max(0.55, brightness) : 1),
                 scale: Math.max(0.82, scale),
-                rotateY,
-                filter: `brightness(${Math.max(0.5, brightness)})`,
+                // Skip rotateY (3D transform) and brightness filter on mobile — both are
+                // composited per-frame and tank the scrolling/swiping framerate. Use opacity
+                // for the depth fade instead, which the GPU handles natively.
+                rotateY: isMobile ? 0 : rotateY,
+                ...(isMobile ? {} : { filter: `brightness(${Math.max(0.5, brightness)})` }),
             }}
             transition={{
                 type: "spring",
-                ...SPRING_CONFIG,
-                delay: isRevealed ? 0 : index * 0.12,
+                ...(isMobile
+                    ? { stiffness: 380, damping: 34, mass: 0.6 }
+                    : SPRING_CONFIG),
+                delay: isRevealed ? 0 : index * (isMobile ? 0.06 : 0.12),
             }}
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
@@ -177,19 +185,31 @@ function StudioCard({
             <motion.div
                 className="relative w-[280px] xs:w-[327px] sm:w-[400px] lg:w-[440px] rounded-[28px] overflow-hidden"
                 style={{
-                    background: isActive
-                        ? "linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.95) 100%)"
-                        : "linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%)",
-                    backdropFilter: "blur(48px) saturate(2.0)",
-                    WebkitBackdropFilter: "blur(48px) saturate(2.0)",
+                    // Solid white on mobile (no backdrop-blur — GPU killer); glass on desktop.
+                    background: isMobile
+                        ? "#ffffff"
+                        : isActive
+                            ? "linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.95) 100%)"
+                            : "linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%)",
+                    ...(isMobile
+                        ? {}
+                        : {
+                            backdropFilter: "blur(48px) saturate(2.0)",
+                            WebkitBackdropFilter: "blur(48px) saturate(2.0)",
+                        }),
                     border: isActive
                         ? `2px solid ${agent.color}50`
                         : "1px solid rgba(255,255,255,0.65)",
-                    boxShadow: isActive
-                        ? `0 40px 80px -20px ${agent.color}35, 0 24px 48px -12px rgba(0,0,0,0.12), inset 0 2px 0 rgba(255,255,255,1)`
-                        : "0 20px 50px -15px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.85)",
+                    // Lighter shadow on mobile so paint stays cheap
+                    boxShadow: isMobile
+                        ? (isActive
+                            ? `0 12px 28px -8px ${agent.color}30, 0 4px 12px rgba(0,0,0,0.08)`
+                            : "0 6px 18px -6px rgba(0,0,0,0.10)")
+                        : isActive
+                            ? `0 40px 80px -20px ${agent.color}35, 0 24px 48px -12px rgba(0,0,0,0.12), inset 0 2px 0 rgba(255,255,255,1)`
+                            : "0 20px 50px -15px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.85)",
                 }}
-                whileHover={isActive ? {
+                whileHover={!isMobile && isActive ? {
                     scale: 1.015,
                     y: -3,
                 } : {}}
@@ -197,7 +217,9 @@ function StudioCard({
             >
                 {/* Video Container */}
                 <div className="relative w-full aspect-[16/9] overflow-hidden bg-gradient-to-b from-gray-100 to-gray-50">
-                    {/* Video */}
+                    {/* Video — on mobile, never preload non-active videos. On desktop the
+                        adjacent metadata pre-fetch is fine; on phones it stalls the network
+                        and the swipe gesture lags while requests fly. */}
                     <video
                         ref={videoRef}
                         src={agent.video}
@@ -205,7 +227,7 @@ function StudioCard({
                         muted
                         playsInline
                         loop
-                        preload={isActive ? "auto" : isAdjacent ? "metadata" : "none"}
+                        preload={isActive ? "auto" : isMobile ? "none" : isAdjacent ? "metadata" : "none"}
                         className="absolute inset-0 w-full h-full object-cover"
                     />
 
@@ -387,6 +409,7 @@ export default function InterviewStudio() {
     const sectionRef = useRef<HTMLDivElement>(null);
     useSectionVisibility("interview_studio", sectionRef);
     const haptic = useHaptic();
+    const isMobile = useIsMobile(768);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const { trackTransition: trackCarousel, trackAutoplay: trackAutoplayState } = useCarouselTracking(
@@ -427,18 +450,20 @@ export default function InterviewStudio() {
             return;
         }
 
+        // Slower auto-advance on mobile — cards take longer to settle and the user
+        // needs more time to read each one between swipes.
         autoPlayRef.current = setInterval(() => {
             setActiveIndex((prev) => {
                 const next = (prev + 1) % STUDIO_TEAM.length;
                 trackCarousel(next, "autoplay");
                 return next;
             });
-        }, AUTO_ADVANCE_INTERVAL);
+        }, isMobile ? AUTO_ADVANCE_INTERVAL * 1.6 : AUTO_ADVANCE_INTERVAL);
 
         return () => {
             if (autoPlayRef.current) clearInterval(autoPlayRef.current);
         };
-    }, [isInView, hasRevealed, isPaused]);
+    }, [isInView, hasRevealed, isPaused, isMobile]);
 
     const trackCarouselRef = useRef(trackCarousel);
     trackCarouselRef.current = trackCarousel;
@@ -632,6 +657,7 @@ export default function InterviewStudio() {
                                 totalCards={STUDIO_TEAM.length}
                                 isRevealed={hasRevealed}
                                 cardSpacing={cardSpacing}
+                                isMobile={isMobile}
                                 onHover={handleHover}
                                 onLeave={handleLeave}
                                 onClick={() => handleSelect(idx, "click")}

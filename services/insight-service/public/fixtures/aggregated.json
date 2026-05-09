@@ -1,0 +1,450 @@
+{
+  "metadata": {
+    "transcripts_processed": 1,
+    "transcript_ids": [
+      "T1"
+    ],
+    "total_themes_found": 10,
+    "themes_after_clustering": 10,
+    "similarity_threshold": 0.45,
+    "generated_at": "2026-05-09T14:23:35+00:00"
+  },
+  "aggregated_insights": [
+    {
+      "insight_id": "ins_product_quality_cap_plastic_properly",
+      "theme_name": "Cap doesn't click shut properly, feels cheap and plastic-y, has leaked in gym bag",
+      "category": "product_quality",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 3,
+      "emotional_valence_majority": "negative",
+      "severity_distribution": [
+        8
+      ],
+      "avg_severity": 8.0,
+      "max_severity": 8,
+      "min_severity": 8,
+      "modal_urgency": "high",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 1068,
+          "end_char": 1184,
+          "verbatim": "First thing, packaging. The cap doesn't click shut properly yaar. I've had it open in my gym bag and leak twice now.",
+          "source_theme_id": "packaging_cap_mechanism_fails",
+          "source_theme_confidence": 0.95
+        },
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 1191,
+          "end_char": 1392,
+          "verbatim": "Like, I bought a new can three weeks ago and within two weeks the cap was already loose. Feels cheap, very plastic-y. When I see Nivea or Adidas cans, those feel solid. Wildstone ka cap weak lagta hai.",
+          "source_theme_id": "packaging_cap_mechanism_fails",
+          "source_theme_confidence": 0.95
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "packaging_cap_mechanism_fails",
+          "theme_name": "Cap doesn't click shut properly, feels cheap and plastic-y, has leaked in gym bag"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 8.0
+    },
+    {
+      "insight_id": "ins_product_quality_claimed_requires_post",
+      "theme_name": "Scent fades in 6-7 hours, not the claimed 48 hours, requires reapplication especially post-gym",
+      "category": "product_quality",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 3,
+      "emotional_valence_majority": "negative",
+      "severity_distribution": [
+        8
+      ],
+      "avg_severity": 8.0,
+      "max_severity": 8,
+      "min_severity": 8,
+      "modal_urgency": "high",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 1726,
+          "end_char": 1785,
+          "verbatim": "48 hour is just a marketing line, koi nahi karta itna last.",
+          "source_theme_id": "scent_longevity_below_48hr_claim",
+          "source_theme_confidence": 0.95
+        },
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 3554,
+          "end_char": 3661,
+          "verbatim": "But I would warn them about the cap issue and longevity. Like \"smell badhiya hai but reapply karna padega.\"",
+          "source_theme_id": "scent_longevity_below_48hr_claim",
+          "source_theme_confidence": 0.95
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "scent_longevity_below_48hr_claim",
+          "theme_name": "Scent fades in 6-7 hours, not the claimed 48 hours, requires reapplication especially post-gym"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 8.0
+    },
+    {
+      "insight_id": "ins_usage_context_vibe_college_office",
+      "theme_name": "Strong scent feels inappropriate for office/professional settings, perceived as 'college boy vibe'",
+      "category": "usage_context",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 1,
+      "emotional_valence_majority": "negative",
+      "severity_distribution": [
+        7
+      ],
+      "avg_severity": 7.0,
+      "max_severity": 7,
+      "min_severity": 7,
+      "modal_urgency": "medium",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 2149,
+          "end_char": 2369,
+          "verbatim": "Bilkul. Office mein Wildstone strong scent thoda awkward lagta hai. Imagine kar, meeting mein 5 log baithe hain and Bombshell Bombshell smell aa rahi hai - it's like college boy vibe. Office mein Nivea zyada appropriate.",
+          "source_theme_id": "scent_too_strong_for_office",
+          "source_theme_confidence": 0.9
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "scent_too_strong_for_office",
+          "theme_name": "Strong scent feels inappropriate for office/professional settings, perceived as 'college boy vibe'"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 7.0
+    },
+    {
+      "insight_id": "ins_brand_perception_wildstone_school_reels",
+      "theme_name": "Wildstone absent from Instagram, feels 'old school' vs Beardo/Bombay Shaving Company who dominate with reels and influencers",
+      "category": "brand_perception",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 2,
+      "emotional_valence_majority": "negative",
+      "severity_distribution": [
+        7
+      ],
+      "avg_severity": 7.0,
+      "max_severity": 7,
+      "min_severity": 7,
+      "modal_urgency": "high",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 3934,
+          "end_char": 4142,
+          "verbatim": "TV pe bahut purane ads dekha hai, like the \"Ultimate seduction\" type. Lekin Instagram pe nahi dikhte. Beardo aur Bombay Shaving Company are everywhere on Insta. Wildstone is like... old school brand presence.",
+          "source_theme_id": "weak_digital_presence_vs_competitors",
+          "source_theme_confidence": 0.9
+        },
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 4149,
+          "end_char": 4254,
+          "verbatim": "Younger guys are discovering Beardo from reels and influencers. Wildstone needs to up their digital game.",
+          "source_theme_id": "weak_digital_presence_vs_competitors",
+          "source_theme_confidence": 0.9
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "weak_digital_presence_vs_competitors",
+          "theme_name": "Wildstone absent from Instagram, feels 'old school' vs Beardo/Bombay Shaving Company who dominate with reels and influencers"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 7.0
+    },
+    {
+      "insight_id": "ins_feature_gap_400_wildstone_sku",
+      "theme_name": "Would buy a subtle 'Wildstone Office' SKU with premium packaging at ₹400-500",
+      "category": "feature_gap",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 1,
+      "emotional_valence_majority": "positive",
+      "severity_distribution": [
+        6
+      ],
+      "avg_severity": 6.0,
+      "max_severity": 6,
+      "min_severity": 6,
+      "modal_urgency": "medium",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 2454,
+          "end_char": 2623,
+          "verbatim": "Definitely. Agar same brand mein \"Wildstone Office\" type SKU launch karein, subtle scent, premium packaging - I would buy. ₹400-500 mein bhi okay hai if quality matches.",
+          "source_theme_id": "demand_for_subtle_office_variant",
+          "source_theme_confidence": 0.9
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "demand_for_subtle_office_variant",
+          "theme_name": "Would buy a subtle 'Wildstone Office' SKU with premium packaging at ₹400-500"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 6.0
+    },
+    {
+      "insight_id": "ins_brand_perception_cap_caveats_rates",
+      "theme_name": "Would recommend for scent but with caveats about cap and longevity, rates it '70% recommend'",
+      "category": "brand_perception",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 1,
+      "emotional_valence_majority": "mixed",
+      "severity_distribution": [
+        6
+      ],
+      "avg_severity": 6.0,
+      "max_severity": 6,
+      "min_severity": 6,
+      "modal_urgency": "medium",
+      "evidence_pool": [],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "conditional_recommendation_70_percent",
+          "theme_name": "Would recommend for scent but with caveats about cap and longevity, rates it '70% recommend'"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 6.0
+    },
+    {
+      "insight_id": "ins_pricing_budget_400_250",
+      "theme_name": "Regular deodorant budget is ₹250 max, but willing to pay ₹400-500 for office/premium variant",
+      "category": "pricing",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 2,
+      "emotional_valence_majority": "neutral",
+      "severity_distribution": [
+        5
+      ],
+      "avg_severity": 5.0,
+      "max_severity": 5,
+      "min_severity": 5,
+      "modal_urgency": "low",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 2735,
+          "end_char": 2788,
+          "verbatim": "Dekho normally I say budget-conscious hoon. ₹250 max.",
+          "source_theme_id": "price_ceiling_context_dependent",
+          "source_theme_confidence": 0.9
+        },
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 2849,
+          "end_char": 3032,
+          "verbatim": "Haan because that's different category na. Like cologne almost. For regular casual deo ₹250 ceiling hai. But office context mein I'm comparing against Nivea ₹400, so ₹400-500 is fine.",
+          "source_theme_id": "price_ceiling_context_dependent",
+          "source_theme_confidence": 0.9
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "price_ceiling_context_dependent",
+          "theme_name": "Regular deodorant budget is ₹250 max, but willing to pay ₹400-500 for office/premium variant"
+        }
+      ],
+      "contradictions_referenced": [
+        {
+          "transcript_id": "T1",
+          "type": "stated_vs_revealed",
+          "summary": "Self-describes as budget-conscious with ₹250 max, but reveals spending ₹4500 on cologne and willingness to pay ₹400-500 for office deodorant",
+          "rationale": "The 'budget-conscious' identity is a category-specific framing, not an absolute trait. Customer compartmentalizes: deodorant = commodity (₹250), cologne = aspirational (₹4500), office deo = professional tool (₹400-500). The stated price sensitivity is conditional on perceived product category, not inherent frugality. This suggests price ceiling is repositionable through category reframing.",
+          "confidence": "high",
+          "actionability_hint": "Premium SKU positioned closer to 'cologne' or 'professional fragrance' category could unlock ₹400-500+ price acceptance in same customer segment",
+          "claim_a_verbatim": "Dekho normally I say budget-conscious hoon. ₹250 max.",
+          "claim_b_verbatim": "Cologne hai mere paas. Hugo Boss Bottled, that was ₹4500. But that's for special occasions, dates, parties. Duty free se liya tha when I went to Dubai."
+        }
+      ],
+      "impact_score": 5.0
+    },
+    {
+      "insight_id": "ins_purchase_behavior_casual_wildstone_deodorants",
+      "theme_name": "Maintains different deodorants for office (Nivea) vs casual/gym (Wildstone)",
+      "category": "purchase_behavior",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 1,
+      "emotional_valence_majority": "neutral",
+      "severity_distribution": [
+        4
+      ],
+      "avg_severity": 4.0,
+      "max_severity": 4,
+      "min_severity": 4,
+      "modal_urgency": "low",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 1852,
+          "end_char": 2060,
+          "verbatim": "Yeah recently I bought Nivea Men Cool Kick for office use. That one I keep on my office desk. It's lighter, more subtle, more professional smell. Wildstone weekend pe use karta hoon, gym mein, casual outings.",
+          "source_theme_id": "uses_multiple_deos_for_occasions",
+          "source_theme_confidence": 0.85
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "uses_multiple_deos_for_occasions",
+          "theme_name": "Maintains different deodorants for office (Nivea) vs casual/gym (Wildstone)"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 4.0
+    },
+    {
+      "insight_id": "ins_brand_perception_masculine_which_wildstone",
+      "theme_name": "Wildstone scents have 'character', feel more masculine and grown-up vs Axe which felt teenage",
+      "category": "brand_perception",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 2,
+      "emotional_valence_majority": "positive",
+      "severity_distribution": [
+        3
+      ],
+      "avg_severity": 3.0,
+      "max_severity": 3,
+      "min_severity": 3,
+      "modal_urgency": "low",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 736,
+          "end_char": 919,
+          "verbatim": "Honestly the smell I liked. Ultra Sensual, Bombshell, those scents are like... they have character. Axe felt very teenage, you know? But Wildstone feels more grown up, more masculine.",
+          "source_theme_id": "scent_character_is_key_differentiator",
+          "source_theme_confidence": 0.9
+        },
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 3477,
+          "end_char": 3553,
+          "verbatim": "I would recommend the scent definitely. Bombshell or Ultra Sensual are good.",
+          "source_theme_id": "scent_character_is_key_differentiator",
+          "source_theme_confidence": 0.9
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "scent_character_is_key_differentiator",
+          "theme_name": "Wildstone scents have 'character', feel more masculine and grown-up vs Axe which felt teenage"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 3.0
+    },
+    {
+      "insight_id": "ins_discovery_wildstone_switched_friend",
+      "theme_name": "Switched from Axe to Wildstone based on friend recommendations",
+      "category": "discovery",
+      "transcripts_mentioning": [
+        "T1"
+      ],
+      "transcripts_total": 1,
+      "frequency_pct": 1.0,
+      "total_mentions": 1,
+      "emotional_valence_majority": "neutral",
+      "severity_distribution": [
+        2
+      ],
+      "avg_severity": 2.0,
+      "max_severity": 2,
+      "min_severity": 2,
+      "modal_urgency": "low",
+      "evidence_pool": [
+        {
+          "transcript_id": "T1",
+          "speaker": "user",
+          "start_char": 558,
+          "end_char": 689,
+          "verbatim": "hmm... I think 2 years ho gaye honge. Pehle Axe use karta tha college mein, then switched to Wildstone because friends recommended.",
+          "source_theme_id": "word_of_mouth_discovery",
+          "source_theme_confidence": 0.8
+        }
+      ],
+      "source_themes": [
+        {
+          "transcript_id": "T1",
+          "theme_id": "word_of_mouth_discovery",
+          "theme_name": "Switched from Axe to Wildstone based on friend recommendations"
+        }
+      ],
+      "contradictions_referenced": [],
+      "impact_score": 2.0
+    }
+  ]
+}

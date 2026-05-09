@@ -1,0 +1,219 @@
+{
+  "transcript_id": "T1",
+  "language_mix": "hinglish",
+  "themes": [
+    {
+      "theme_id": "packaging_cap_mechanism_fails",
+      "theme_name": "Cap doesn't click shut properly, feels cheap and plastic-y, has leaked in gym bag",
+      "category": "product_quality",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 1068,
+          "end_char": 1184,
+          "verbatim": "First thing, packaging. The cap doesn't click shut properly yaar. I've had it open in my gym bag and leak twice now."
+        },
+        {
+          "speaker": "user",
+          "start_char": 1191,
+          "end_char": 1392,
+          "verbatim": "Like, I bought a new can three weeks ago and within two weeks the cap was already loose. Feels cheap, very plastic-y. When I see Nivea or Adidas cans, those feel solid. Wildstone ka cap weak lagta hai."
+        },
+        {
+          "speaker": "user",
+          "start_char": 3668,
+          "end_char": 3796,
+          "verbatim": "Honestly agar packaging fix kar dein and slightly better longevity, then full recommendation. Right now it's like 70% recommend."
+        }
+      ],
+      "mention_count": 3,
+      "emotional_valence": "negative",
+      "confidence": 0.95,
+      "first_mention_pos": 944
+    },
+    {
+      "theme_id": "scent_longevity_below_48hr_claim",
+      "theme_name": "Scent fades in 6-7 hours, not the claimed 48 hours, requires reapplication especially post-gym",
+      "category": "product_quality",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 1440,
+          "end_char": 1719,
+          "verbatim": "Yeah, scent ka issue bhi hai. Box pe likha hai 48 hour protection, but realistically by evening I'm reapplying. Especially gym ke baad to definitely. Mein mostly office for 9 hours, gym 1 hour, total 10-11 hours coverage chahiye, but Wildstone 6-7 hours mein fade hone lagta hai."
+        },
+        {
+          "speaker": "user",
+          "start_char": 1726,
+          "end_char": 1785,
+          "verbatim": "48 hour is just a marketing line, koi nahi karta itna last."
+        },
+        {
+          "speaker": "user",
+          "start_char": 3554,
+          "end_char": 3661,
+          "verbatim": "But I would warn them about the cap issue and longevity. Like \"smell badhiya hai but reapply karna padega.\""
+        }
+      ],
+      "mention_count": 3,
+      "emotional_valence": "negative",
+      "confidence": 0.95,
+      "first_mention_pos": 1292
+    },
+    {
+      "theme_id": "scent_too_strong_for_office",
+      "theme_name": "Strong scent feels inappropriate for office/professional settings, perceived as 'college boy vibe'",
+      "category": "usage_context",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 2149,
+          "end_char": 2369,
+          "verbatim": "Bilkul. Office mein Wildstone strong scent thoda awkward lagta hai. Imagine kar, meeting mein 5 log baithe hain and Bombshell Bombshell smell aa rahi hai - it's like college boy vibe. Office mein Nivea zyada appropriate."
+        }
+      ],
+      "mention_count": 1,
+      "emotional_valence": "negative",
+      "confidence": 0.9,
+      "first_mention_pos": 1825
+    },
+    {
+      "theme_id": "demand_for_subtle_office_variant",
+      "theme_name": "Would buy a subtle 'Wildstone Office' SKU with premium packaging at ₹400-500",
+      "category": "feature_gap",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 2454,
+          "end_char": 2623,
+          "verbatim": "Definitely. Agar same brand mein \"Wildstone Office\" type SKU launch karein, subtle scent, premium packaging - I would buy. ₹400-500 mein bhi okay hai if quality matches."
+        }
+      ],
+      "mention_count": 1,
+      "emotional_valence": "positive",
+      "confidence": 0.9,
+      "first_mention_pos": 2095
+    },
+    {
+      "theme_id": "price_ceiling_context_dependent",
+      "theme_name": "Regular deodorant budget is ₹250 max, but willing to pay ₹400-500 for office/premium variant",
+      "category": "pricing",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 2735,
+          "end_char": 2788,
+          "verbatim": "Dekho normally I say budget-conscious hoon. ₹250 max."
+        },
+        {
+          "speaker": "user",
+          "start_char": 2849,
+          "end_char": 3032,
+          "verbatim": "Haan because that's different category na. Like cologne almost. For regular casual deo ₹250 ceiling hai. But office context mein I'm comparing against Nivea ₹400, so ₹400-500 is fine."
+        }
+      ],
+      "mention_count": 2,
+      "emotional_valence": "neutral",
+      "confidence": 0.9,
+      "first_mention_pos": 2331
+    },
+    {
+      "theme_id": "scent_character_is_key_differentiator",
+      "theme_name": "Wildstone scents have 'character', feel more masculine and grown-up vs Axe which felt teenage",
+      "category": "brand_perception",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 736,
+          "end_char": 919,
+          "verbatim": "Honestly the smell I liked. Ultra Sensual, Bombshell, those scents are like... they have character. Axe felt very teenage, you know? But Wildstone feels more grown up, more masculine."
+        },
+        {
+          "speaker": "user",
+          "start_char": 3477,
+          "end_char": 3553,
+          "verbatim": "I would recommend the scent definitely. Bombshell or Ultra Sensual are good."
+        }
+      ],
+      "mention_count": 2,
+      "emotional_valence": "positive",
+      "confidence": 0.9,
+      "first_mention_pos": 666
+    },
+    {
+      "theme_id": "uses_multiple_deos_for_occasions",
+      "theme_name": "Maintains different deodorants for office (Nivea) vs casual/gym (Wildstone)",
+      "category": "purchase_behavior",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 1852,
+          "end_char": 2060,
+          "verbatim": "Yeah recently I bought Nivea Men Cool Kick for office use. That one I keep on my office desk. It's lighter, more subtle, more professional smell. Wildstone weekend pe use karta hoon, gym mein, casual outings."
+        }
+      ],
+      "mention_count": 1,
+      "emotional_valence": "neutral",
+      "confidence": 0.85,
+      "first_mention_pos": 1627
+    },
+    {
+      "theme_id": "weak_digital_presence_vs_competitors",
+      "theme_name": "Wildstone absent from Instagram, feels 'old school' vs Beardo/Bombay Shaving Company who dominate with reels and influencers",
+      "category": "brand_perception",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 3934,
+          "end_char": 4142,
+          "verbatim": "TV pe bahut purane ads dekha hai, like the \"Ultimate seduction\" type. Lekin Instagram pe nahi dikhte. Beardo aur Bombay Shaving Company are everywhere on Insta. Wildstone is like... old school brand presence."
+        },
+        {
+          "speaker": "user",
+          "start_char": 4149,
+          "end_char": 4254,
+          "verbatim": "Younger guys are discovering Beardo from reels and influencers. Wildstone needs to up their digital game."
+        }
+      ],
+      "mention_count": 2,
+      "emotional_valence": "negative",
+      "confidence": 0.9,
+      "first_mention_pos": 2997
+    },
+    {
+      "theme_id": "word_of_mouth_discovery",
+      "theme_name": "Switched from Axe to Wildstone based on friend recommendations",
+      "category": "discovery",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 558,
+          "end_char": 689,
+          "verbatim": "hmm... I think 2 years ho gaye honge. Pehle Axe use karta tha college mein, then switched to Wildstone because friends recommended."
+        }
+      ],
+      "mention_count": 1,
+      "emotional_valence": "neutral",
+      "confidence": 0.8,
+      "first_mention_pos": 489
+    },
+    {
+      "theme_id": "conditional_recommendation_70_percent",
+      "theme_name": "Would recommend for scent but with caveats about cap and longevity, rates it '70% recommend'",
+      "category": "brand_perception",
+      "evidence_spans": [
+        {
+          "speaker": "user",
+          "start_char": 2557,
+          "end_char": 2851,
+          "verbatim": "I would recommend the scent definitely. Bombshell or Ultra Sensual are good. But I would warn them about the cap issue and longevity. Like \"smell badhiya hai but reapply karna padega.\"\nHonestly agar packaging fix kar dein and slightly better longevity, then full recommendation. Right now it's like 70% recommend."
+        }
+      ],
+      "mention_count": 1,
+      "emotional_valence": "mixed",
+      "confidence": 0.9,
+      "first_mention_pos": 2557
+    }
+  ],
+  "extraction_notes": "Customer is a 2-year Wildstone user with strong positive sentiment on scent but clear pain points on packaging (cap leaks, feels cheap vs Nivea/Adidas) and longevity (6-7 hours vs 48-hour claim). Key insight: willing to pay premium (₹400-500) for a subtle office variant, currently using Nivea as workaround. Price perception is context-dependent — ₹250 max for casual deo but ₹400-500 acceptable for 'office' category. Brand presence concern: perceives Wildstone as digitally absent vs competitors like Beardo. The '70% recommend' quote is a concrete NPS-style marker."
+}

@@ -1,0 +1,175 @@
+{
+  "transcript_id": "T1",
+  "scores": [
+    {
+      "theme_id": "packaging_cap_mechanism_fails",
+      "severity": 8,
+      "urgency": "high",
+      "factors": {
+        "frequency_signal": 0.7,
+        "emotional_intensity": 0.75,
+        "actionability": 0.9,
+        "business_impact": 0.8
+      },
+      "justification_span": {
+        "start_char": 1068,
+        "end_char": 1184,
+        "verbatim": "First thing, packaging. The cap doesn't click shut properly yaar. I've had it open in my gym bag and leak twice now."
+      },
+      "rationale": "Concrete product failure causing waste and frustration, explicitly compared unfavorably to competitors, blocks full recommendation."
+    },
+    {
+      "theme_id": "scent_longevity_below_48hr_claim",
+      "severity": 8,
+      "urgency": "high",
+      "factors": {
+        "frequency_signal": 0.7,
+        "emotional_intensity": 0.8,
+        "actionability": 0.85,
+        "business_impact": 0.9
+      },
+      "justification_span": {
+        "start_char": 1726,
+        "end_char": 1785,
+        "verbatim": "48 hour is just a marketing line, koi nahi karta itna last."
+      },
+      "rationale": "Customer explicitly calls out the brand's core claim as false marketing — direct trust violation that blocks full recommendation."
+    },
+    {
+      "theme_id": "scent_too_strong_for_office",
+      "severity": 7,
+      "urgency": "medium",
+      "factors": {
+        "frequency_signal": 0.4,
+        "emotional_intensity": 0.7,
+        "actionability": 0.85,
+        "business_impact": 0.85
+      },
+      "justification_span": {
+        "start_char": 2149,
+        "end_char": 2369,
+        "verbatim": "Bilkul. Office mein Wildstone strong scent thoda awkward lagta hai. Imagine kar, meeting mein 5 log baithe hain and Bombshell Bombshell smell aa rahi hai - it's like college boy vibe. Office mein Nivea zyada appropriate."
+      },
+      "rationale": "Blocks entire office use case (major occasion), customer already switched to competitor (Nivea) for this segment."
+    },
+    {
+      "theme_id": "demand_for_subtle_office_variant",
+      "severity": 6,
+      "urgency": "medium",
+      "factors": {
+        "frequency_signal": 0.4,
+        "emotional_intensity": 0.5,
+        "actionability": 0.95,
+        "business_impact": 0.8
+      },
+      "justification_span": {
+        "start_char": 2454,
+        "end_char": 2623,
+        "verbatim": "Definitely. Agar same brand mein \"Wildstone Office\" type SKU launch karein, subtle scent, premium packaging - I would buy. ₹400-500 mein bhi okay hai if quality matches."
+      },
+      "rationale": "Concrete revenue opportunity with explicit willingness to pay premium (₹400-500), addresses office use-case blocker."
+    },
+    {
+      "theme_id": "price_ceiling_context_dependent",
+      "severity": 5,
+      "urgency": "low",
+      "factors": {
+        "frequency_signal": 0.5,
+        "emotional_intensity": 0.3,
+        "actionability": 0.7,
+        "business_impact": 0.65
+      },
+      "justification_span": {
+        "start_char": 2849,
+        "end_char": 3032,
+        "verbatim": "Haan because that's different category na. Like cologne almost. For regular casual deo ₹250 ceiling hai. But office context mein I'm comparing against Nivea ₹400, so ₹400-500 is fine."
+      },
+      "rationale": "Reveals pricing elasticity for premium variants — insight for segmentation strategy, not a blocker."
+    },
+    {
+      "theme_id": "scent_character_is_key_differentiator",
+      "severity": 3,
+      "urgency": "low",
+      "factors": {
+        "frequency_signal": 0.5,
+        "emotional_intensity": 0.6,
+        "actionability": 0.4,
+        "business_impact": 0.5
+      },
+      "justification_span": {
+        "start_char": 736,
+        "end_char": 919,
+        "verbatim": "Honestly the smell I liked. Ultra Sensual, Bombshell, those scents are like... they have character. Axe felt very teenage, you know? But Wildstone feels more grown up, more masculine."
+      },
+      "rationale": "Positive brand strength, reinforces existing positioning — maintain, not fix."
+    },
+    {
+      "theme_id": "uses_multiple_deos_for_occasions",
+      "severity": 4,
+      "urgency": "low",
+      "factors": {
+        "frequency_signal": 0.4,
+        "emotional_intensity": 0.3,
+        "actionability": 0.6,
+        "business_impact": 0.6
+      },
+      "justification_span": {
+        "start_char": 1852,
+        "end_char": 2060,
+        "verbatim": "Yeah recently I bought Nivea Men Cool Kick for office use. That one I keep on my office desk. It's lighter, more subtle, more professional smell. Wildstone weekend pe use karta hoon, gym mein, casual outings."
+      },
+      "rationale": "Behavioral insight showing portfolio opportunity, but customer already adapted with competitor — moderate opportunity cost."
+    },
+    {
+      "theme_id": "weak_digital_presence_vs_competitors",
+      "severity": 7,
+      "urgency": "high",
+      "factors": {
+        "frequency_signal": 0.5,
+        "emotional_intensity": 0.65,
+        "actionability": 0.85,
+        "business_impact": 0.85
+      },
+      "justification_span": {
+        "start_char": 4149,
+        "end_char": 4254,
+        "verbatim": "Younger guys are discovering Beardo from reels and influencers. Wildstone needs to up their digital game."
+      },
+      "rationale": "Competitors capturing discovery and younger segments via digital channels where Wildstone is absent — acquisition risk."
+    },
+    {
+      "theme_id": "word_of_mouth_discovery",
+      "severity": 2,
+      "urgency": "low",
+      "factors": {
+        "frequency_signal": 0.2,
+        "emotional_intensity": 0.2,
+        "actionability": 0.5,
+        "business_impact": 0.3
+      },
+      "justification_span": {
+        "start_char": 558,
+        "end_char": 689,
+        "verbatim": "hmm... I think 2 years ho gaye honge. Pehle Axe use karta tha college mein, then switched to Wildstone because friends recommended."
+      },
+      "rationale": "Positive historical acquisition signal, no current pain point or action needed."
+    },
+    {
+      "theme_id": "conditional_recommendation_70_percent",
+      "severity": 6,
+      "urgency": "medium",
+      "factors": {
+        "frequency_signal": 0.4,
+        "emotional_intensity": 0.7,
+        "actionability": 0.75,
+        "business_impact": 0.75
+      },
+      "justification_span": {
+        "start_char": 3668,
+        "end_char": 3796,
+        "verbatim": "Honestly agar packaging fix kar dein and slightly better longevity, then full recommendation. Right now it's like 70% recommend."
+      },
+      "rationale": "Explicit NPS-style qualifier tied to packaging and longevity fixes — quantified advocacy blocker."
+    }
+  ]
+}

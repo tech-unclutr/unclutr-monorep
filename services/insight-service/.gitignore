@@ -1,0 +1,28 @@
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# env / secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# python validator artifacts
+sample-run/extractor/
+sample-run/contradiction/
+sample-run/severity/
+sample-run/aggregated/
+sample-run/actions/
+sample-run/final/
+__pycache__/
+
+.vercel

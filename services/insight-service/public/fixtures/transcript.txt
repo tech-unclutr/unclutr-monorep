@@ -1,0 +1,41 @@
+assistant: Hi, am I speaking with Rohit?
+user: Haan, Rohit here.
+assistant: Hi Rohit, I'm Anjali from a research team working with men's grooming brands. This is just a quick research call about your deodorant habits, no selling. Couple of minutes okay?
+user: yeah okay
+assistant: Thanks. Aap English, Hindi, ya Hinglish mein baat karna pasand karenge?
+user: hinglish chalega
+assistant: Got it. So Rohit, currently which deodorant are you using?
+user: Wildstone use karta hoon, Ultra Sensual variant.
+assistant: How long have you been using Wildstone?
+user: hmm... I think 2 years ho gaye honge. Pehle Axe use karta tha college mein, then switched to Wildstone because friends recommended.
+assistant: What made you stick with it?
+user: Honestly the smell I liked. Ultra Sensual, Bombshell, those scents are like... they have character. Axe felt very teenage, you know? But Wildstone feels more grown up, more masculine.
+assistant: Got it. And how would you describe your experience overall?
+user: Overall achha hai but kuch issues hain.
+assistant: Tell me more.
+user: First thing, packaging. The cap doesn't click shut properly yaar. I've had it open in my gym bag and leak twice now.
+user: Like, I bought a new can three weeks ago and within two weeks the cap was already loose. Feels cheap, very plastic-y. When I see Nivea or Adidas cans, those feel solid. Wildstone ka cap weak lagta hai.
+assistant: That's useful. Anything else?
+user: Yeah, scent ka issue bhi hai. Box pe likha hai 48 hour protection, but realistically by evening I'm reapplying. Especially gym ke baad to definitely. Mein mostly office for 9 hours, gym 1 hour, total 10-11 hours coverage chahiye, but Wildstone 6-7 hours mein fade hone lagta hai.
+user: 48 hour is just a marketing line, koi nahi karta itna last.
+assistant: Have you tried other brands recently to compare?
+user: Yeah recently I bought Nivea Men Cool Kick for office use. That one I keep on my office desk. It's lighter, more subtle, more professional smell. Wildstone weekend pe use karta hoon, gym mein, casual outings.
+assistant: Interesting. So you have different deodorants for different occasions?
+user: Bilkul. Office mein Wildstone strong scent thoda awkward lagta hai. Imagine kar, meeting mein 5 log baithe hain and Bombshell Bombshell smell aa rahi hai - it's like college boy vibe. Office mein Nivea zyada appropriate.
+assistant: Would Wildstone work for office if they had a more subtle variant?
+user: Definitely. Agar same brand mein "Wildstone Office" type SKU launch karein, subtle scent, premium packaging - I would buy. ₹400-500 mein bhi okay hai if quality matches.
+assistant: Got it. About price, you mentioned ₹400-500 just now. What's your usual budget for deodorant?
+user: Dekho normally I say budget-conscious hoon. ₹250 max.
+assistant: But you'd pay ₹400-500 for office variant?
+user: Haan because that's different category na. Like cologne almost. For regular casual deo ₹250 ceiling hai. But office context mein I'm comparing against Nivea ₹400, so ₹400-500 is fine.
+assistant: Have you ever spent more on a fragrance product?
+user: Cologne hai mere paas. Hugo Boss Bottled, that was ₹4500. But that's for special occasions, dates, parties. Duty free se liya tha when I went to Dubai.
+user: So basically deodorant ₹250, cologne ₹4500. Different worlds. But office variant ₹400-500 would fit in between.
+assistant: Got it. Last question - if you had to recommend Wildstone to a friend, what would you say?
+user: I would recommend the scent definitely. Bombshell or Ultra Sensual are good. But I would warn them about the cap issue and longevity. Like "smell badhiya hai but reapply karna padega."
+user: Honestly agar packaging fix kar dein and slightly better longevity, then full recommendation. Right now it's like 70% recommend.
+assistant: That's super helpful Rohit. Last thing - have you seen Wildstone advertisements recently? On social media or otherwise?
+user: TV pe bahut purane ads dekha hai, like the "Ultimate seduction" type. Lekin Instagram pe nahi dikhte. Beardo aur Bombay Shaving Company are everywhere on Insta. Wildstone is like... old school brand presence.
+user: Younger guys are discovering Beardo from reels and influencers. Wildstone needs to up their digital game.
+assistant: That's fantastic feedback Rohit. Thanks so much for your time, this was super useful.
+user: No problem, all the best.

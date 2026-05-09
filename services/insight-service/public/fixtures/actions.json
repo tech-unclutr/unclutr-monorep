@@ -1,0 +1,76 @@
+{
+  "actions": [
+    {
+      "action_id": "act_001",
+      "owner_team": "product",
+      "supporting_insights": [
+        "ins_product_quality_cap_plastic_properly"
+      ],
+      "action_text": "Initiate cap mechanism engineering review with packaging supplier; spec requirements: click-shut closure, leak-proof seal, tactile quality matching Nivea/Adidas benchmark. Request 3 prototype options by end of review period.",
+      "deadline": "2026-06-20",
+      "context_for_team": "Customer explicitly compared cap unfavorably to Nivea and Adidas ('Wildstone ka cap weak lagta hai'). Has experienced actual leakage in gym bag twice within 3 weeks of purchase. This is a functional failure, not just perception — directly impacts portable use case which is core to the product.",
+      "expected_impact": "Eliminates primary product quality complaint; removes 'cheap' perception anchor that blocks premium positioning and undermines word-of-mouth recommendations.",
+      "priority": "P1",
+      "confidence": "high"
+    },
+    {
+      "action_id": "act_002",
+      "owner_team": "marketing",
+      "supporting_insights": [
+        "ins_product_quality_claimed_requires_post"
+      ],
+      "action_text": "Audit all packaging and advertising claims for '48 hour' longevity; brief legal/regulatory on claim substantiation requirements. Propose revised messaging framework: shift from duration claim to benefit framing (e.g., 'stays with you through your workout').",
+      "deadline": "2026-06-30",
+      "context_for_team": "Customer explicitly called out '48 hour is just a marketing line, koi nahi karta itna last' — actual experience is 6-7 hours. This creates trust erosion and becomes a caveat in recommendations ('smell badhiya hai but reapply karna padega'). Unsubstantiated claims are both a brand risk and regulatory exposure.",
+      "expected_impact": "Reduces expectation-reality gap that drives disappointment; protects against potential regulatory/advertising standards issues; rebuilds credibility in product claims.",
+      "priority": "P1",
+      "confidence": "high"
+    },
+    {
+      "action_id": "act_003",
+      "owner_team": "product",
+      "supporting_insights": [
+        "ins_usage_context_vibe_college_office",
+        "ins_feature_gap_400_wildstone_sku",
+        "ins_pricing_budget_400_250"
+      ],
+      "action_text": "Add 'Wildstone Office' subtle-scent SKU to Q4 2026 product roadmap discussion. Brief: professional/office context, lighter scent projection, premium packaging, ₹400-500 price point. Request fragrance house to develop 2-3 scent directions.",
+      "deadline": "2026-07-15",
+      "context_for_team": "Customer explicitly segments usage: Wildstone for casual/gym, Nivea for office. Described current scent as 'college boy vibe' inappropriate for meetings. Unprompted willingness to pay ₹400-500 for office variant — this is 60-100% price uplift vs current ₹250 ceiling. Contradiction analysis confirms: 'budget-conscious' framing is category-specific, not absolute.",
+      "expected_impact": "Opens new premium segment currently lost to Nivea; captures professional use-case revenue; validates premiumization pathway for broader portfolio.",
+      "priority": "P1",
+      "confidence": "high"
+    },
+    {
+      "action_id": "act_004",
+      "owner_team": "marketing",
+      "supporting_insights": [
+        "ins_brand_perception_wildstone_school_reels"
+      ],
+      "action_text": "Conduct competitive audit of Beardo and Bombay Shaving Company Instagram presence; document content formats, posting frequency, influencer partnerships. Present findings + proposed Instagram content strategy to leadership by deadline.",
+      "deadline": "2026-06-30",
+      "context_for_team": "Customer perceives Wildstone as 'old school brand presence' vs competitors who are 'everywhere on Insta'. Direct quote: 'Younger guys are discovering Beardo from reels and influencers. Wildstone needs to up their digital game.' This is a discovery/acquisition gap, not just awareness.",
+      "expected_impact": "Identifies specific tactical gaps in digital presence; provides foundation for social-first content strategy targeting younger male demographic; reduces competitor advantage in discovery channel.",
+      "priority": "P2",
+      "confidence": "medium"
+    }
+  ],
+  "skipped_insights": [
+    {
+      "insight_id": "ins_brand_perception_cap_caveats_rates",
+      "reason": "This insight describes recommendation behavior that is downstream of other issues (cap, longevity). Addressing act_001 and act_002 will resolve this; no separate action needed."
+    },
+    {
+      "insight_id": "ins_purchase_behavior_casual_wildstone_deodorants",
+      "reason": "Descriptive insight about current behavior, not an actionable gap. The behavior itself informs act_003 (office SKU) but requires no separate action."
+    },
+    {
+      "insight_id": "ins_brand_perception_masculine_which_wildstone",
+      "reason": "Positive brand equity signal (severity 3, positive valence). This is a strength to preserve/leverage in marketing, not a problem to fix. Note for marketing: 'masculine, grown-up, character' positioning resonates — maintain in all creative."
+    },
+    {
+      "insight_id": "ins_discovery_wildstone_switched_friend",
+      "reason": "Low severity (2), neutral valence, describes past behavior. Word-of-mouth is working; no intervention required. If anything, this suggests referral program opportunity but insufficient signal strength from single transcript."
+    }
+  ]
+}

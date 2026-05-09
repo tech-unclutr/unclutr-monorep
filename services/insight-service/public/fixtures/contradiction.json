@@ -1,0 +1,74 @@
+{
+  "transcript_id": "T1",
+  "contradictions": [
+    {
+      "type": "stated_vs_revealed",
+      "summary": "Self-describes as budget-conscious with ₹250 max, but reveals spending ₹4500 on cologne and willingness to pay ₹400-500 for office deodorant",
+      "claim_a": {
+        "label": "stated",
+        "speaker": "user",
+        "start_char": 2735,
+        "end_char": 2788,
+        "verbatim": "Dekho normally I say budget-conscious hoon. ₹250 max.",
+        "summary_role": "claims budget-conscious identity with ₹250 ceiling"
+      },
+      "claim_b": {
+        "label": "revealed",
+        "speaker": "user",
+        "start_char": 3099,
+        "end_char": 3250,
+        "verbatim": "Cologne hai mere paas. Hugo Boss Bottled, that was ₹4500. But that's for special occasions, dates, parties. Duty free se liya tha when I went to Dubai.",
+        "summary_role": "reveals 18x spend on fragrance in different context"
+      },
+      "rationale": "The 'budget-conscious' identity is a category-specific framing, not an absolute trait. Customer compartmentalizes: deodorant = commodity (₹250), cologne = aspirational (₹4500), office deo = professional tool (₹400-500). The stated price sensitivity is conditional on perceived product category, not inherent frugality. This suggests price ceiling is repositionable through category reframing.",
+      "confidence": "high",
+      "actionability_hint": "Premium SKU positioned closer to 'cologne' or 'professional fragrance' category could unlock ₹400-500+ price acceptance in same customer segment"
+    },
+    {
+      "type": "stated_vs_revealed",
+      "summary": "Describes Wildstone experience as 'overall achha hai' but immediately lists significant functional failures",
+      "claim_a": {
+        "label": "stated",
+        "speaker": "user",
+        "start_char": 997,
+        "end_char": 1036,
+        "verbatim": "Overall achha hai but kuch issues hain.",
+        "summary_role": "frames experience as generally positive with minor issues"
+      },
+      "claim_b": {
+        "label": "revealed",
+        "speaker": "user",
+        "start_char": 1068,
+        "end_char": 1184,
+        "verbatim": "First thing, packaging. The cap doesn't click shut properly yaar. I've had it open in my gym bag and leak twice now.",
+        "summary_role": "reveals product failure causing functional damage"
+      },
+      "rationale": "Politeness framing ('overall achha hai') immediately collapses into concrete product failures (leaking, cap malfunction). The customer's 'kuch issues' minimizes what are actually significant functional problems — a cap that doesn't seal is not a minor issue for a gym-bag product. Social desirability bias leads with positive framing before truth emerges.",
+      "confidence": "medium",
+      "actionability_hint": "Customer satisfaction surveys likely understate packaging complaints due to politeness bias; qualitative probing reveals severity"
+    },
+    {
+      "type": "feature_importance",
+      "summary": "Cites scent as primary reason for loyalty, but has already switched to competitor for primary use case (office)",
+      "claim_a": {
+        "label": "stated",
+        "speaker": "user",
+        "start_char": 736,
+        "end_char": 919,
+        "verbatim": "Honestly the smell I liked. Ultra Sensual, Bombshell, those scents are like... they have character. Axe felt very teenage, you know? But Wildstone feels more grown up, more masculine.",
+        "summary_role": "positions scent as key differentiator and loyalty driver"
+      },
+      "claim_b": {
+        "label": "revealed",
+        "speaker": "user",
+        "start_char": 1852,
+        "end_char": 2060,
+        "verbatim": "Yeah recently I bought Nivea Men Cool Kick for office use. That one I keep on my office desk. It's lighter, more subtle, more professional smell. Wildstone weekend pe use karta hoon, gym mein, casual outings.",
+        "summary_role": "reveals Nivea is now primary weekday product, Wildstone relegated to weekends"
+      },
+      "rationale": "Scent is praised as the differentiator, but the same strong scent is why customer has switched to Nivea for office (likely 5 days/week). The feature that drives stated loyalty is also the feature causing behavioral defection. Wildstone is being relegated to secondary/weekend use while Nivea captures the high-frequency office occasion.",
+      "confidence": "high",
+      "actionability_hint": "Strong scent is a double-edged sword — drives differentiation but limits use occasions. Subtle variant captures the weekday volume customer is already giving to Nivea"
+    }
+  ]
+}

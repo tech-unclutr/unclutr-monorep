@@ -56,13 +56,22 @@ jobs:
           find out -name "*.js" -o -name "*.css" | head -20
 
 
+      # Permanent auth: service account JSON key (the deprecated --token expires
+      # every ~30 days and breaks the deploy). The google-auth action writes the
+      # key to a temp file and sets GOOGLE_APPLICATION_CREDENTIALS so firebase-tools
+      # picks it up automatically — no token to rotate.
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.SQUAREUP_WEBSITE_SA_KEY }}
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Deploy to Firebase Hosting
         run: |
           firebase experiments:enable webframeworks
-          firebase deploy --project squareup-website --only hosting:website-production --force --token ${{ secrets.FIREBASE_TOKEN }}
+          firebase deploy --project squareup-website --only hosting:website-production --force
 
       - name: Post-deploy verification
         run: |

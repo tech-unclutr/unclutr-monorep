@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 export default function LogoNotch() {
   const { scrollY } = useScroll();
   const [isHero, setIsHero] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(1200);
+  const [windowWidth, setWindowWidth] = useState(0);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
@@ -71,14 +71,17 @@ export default function LogoNotch() {
     setUseWhiteLogo(inHeroZone || inDarkSection);
   });
 
-  // Calculate positions in pixels for smooth interpolation
-  const heroWidth = 320;
-  const scrolledWidth = 200;
+  // Calculate positions in pixels for smooth interpolation (responsive to viewport)
+  const isMobile = windowWidth < 640;
+  const heroWidth = isMobile ? 200 : 320;
+  const scrolledWidth = isMobile ? 140 : 200;
+  const heroHeight = isMobile ? 44 : 64;
+  const scrolledHeight = isMobile ? 32 : 40;
   const heroLeft = windowWidth / 2 - heroWidth / 2; // Centered
-  const scrolledLeft = windowWidth - 40 - scrolledWidth; // 40px from right edge
+  const scrolledLeft = windowWidth - (isMobile ? 16 : 40) - scrolledWidth; // edge gutter
 
-  // Hide when study modal is open
-  if (hidden) return null;
+  // Hide when study modal is open or before window dimensions are known (prevents desktop flash on mobile)
+  if (hidden || windowWidth === 0) return null;
 
   return (
     <motion.div
@@ -100,11 +103,11 @@ export default function LogoNotch() {
         initial={false}
         style={{
           width: isHero ? heroWidth : scrolledWidth,
-          height: isHero ? 64 : 40,
+          height: isHero ? heroHeight : scrolledHeight,
         }}
         animate={{
           width: isHero ? heroWidth : scrolledWidth,
-          height: isHero ? 64 : 40,
+          height: isHero ? heroHeight : scrolledHeight,
         }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       >

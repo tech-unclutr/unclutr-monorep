@@ -10,6 +10,7 @@ import HeroSection from "@/components/sections/HeroSection";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useScrollDepth, useExitIntent, useEngagementScore, useRageClick } from "@/lib/analytics";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
+import { useSectionSwipe } from "@/lib/hooks/useSectionSwipe";
 import KeyboardShortcutsOverlay from "@/components/ui/KeyboardShortcutsOverlay";
 import { PerformanceProvider, usePerformance } from "@/lib/context/PerformanceContext";
 
@@ -34,6 +35,10 @@ const ScrollProgressBar = dynamic(() => import("@/components/ui/ScrollProgressBa
 const SectionNav = dynamic(() => import("@/components/ui/SectionNav"), { ssr: false });
 const ScrollNudge = dynamic(() => import("@/components/ui/ScrollNudge"), { ssr: false });
 
+// Mobile-native UX
+const MobileSectionDrawer = dynamic(() => import("@/components/ui/MobileSectionDrawer"), { ssr: false });
+const PWAInstallPrompt = dynamic(() => import("@/components/ui/PWAInstallPrompt"), { ssr: false });
+
 function HomeContent() {
   const mainRef = useRef<HTMLDivElement>(null);
   const tier = usePerformance();
@@ -46,6 +51,8 @@ function HomeContent() {
 
   // Keyboard navigation: all keys handled via useKeyboardNav (Lenis-native)
   const { showShortcuts, setShowShortcuts } = useKeyboardNav();
+  // Right-edge vertical swipe → jump between sections on touch devices
+  useSectionSwipe();
 
   return (
     <LenisProvider>
@@ -76,6 +83,10 @@ function HomeContent() {
       <ScrollProgressBar />
       <SectionNav />
       <ScrollNudge />
+
+      {/* Mobile-native UX */}
+      <MobileSectionDrawer />
+      <PWAInstallPrompt />
 
       {/* Cursor effects — cursor particles only on high tier */}
       {tier === "high" && <CursorParticles />}

@@ -728,7 +728,7 @@ export default function StudiesSection() {
         {/* ── Section Header ───────────────────────── */}
         <div className="mb-14">
           <motion.div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full mb-5 whitespace-nowrap max-w-full"
             style={{
                 background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)",
                 border: "1px solid rgba(0,0,0,0.06)",
@@ -737,11 +737,11 @@ export default function StudiesSection() {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
-              <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-maze-black">
+              <span className="text-[10px] sm:text-[12px] font-semibold uppercase tracking-[0.08em] sm:tracking-[0.1em] text-maze-black whitespace-nowrap">
                   Intelligence Platform
               </span>
-              <span className="text-[12px] text-maze-black/30">|</span>
-              <span className="text-[12px] font-medium text-maze-black/60">
+              <span className="text-[10px] sm:text-[12px] text-maze-black/30">|</span>
+              <span className="text-[10px] sm:text-[12px] font-medium text-maze-black/60 whitespace-nowrap">
                   Continuous Studies
               </span>
           </motion.div>
@@ -863,7 +863,7 @@ export default function StudiesSection() {
 
         {/* ── Custom Study Hero Banner ──────────────── */}
         <div className="mt-8 particle-target-research">
-          <div className="relative bg-[#0F0F0F] rounded-[32px] overflow-hidden group hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-500 p-8 lg:p-12 flex flex-col md:flex-row items-center justify-between gap-10">
+          <div className="relative bg-[#0F0F0F] rounded-[24px] sm:rounded-[32px] overflow-hidden group hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-500 p-6 sm:p-8 lg:p-12 flex flex-col items-center text-center gap-6 sm:gap-8 lg:flex-row lg:items-center lg:text-left lg:justify-between lg:gap-10">
             {/* Glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#FF5A36]/15 via-transparent to-transparent pointer-events-none" />
             <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-[#FF5A36] blur-[150px] opacity-15 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
@@ -881,10 +881,10 @@ export default function StudiesSection() {
               </p>
             </div>
 
-            <div className="relative z-10 shrink-0">
-              <button className="px-8 py-4 bg-white text-maze-black rounded-full font-semibold flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg">
+            <div className="relative z-10 shrink-0 max-w-full">
+              <button className="px-4 sm:px-8 py-2.5 sm:py-4 bg-white text-maze-black rounded-full font-semibold text-xs sm:text-base flex items-center gap-1.5 sm:gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg whitespace-nowrap">
                 Launch Custom Study
-                <span className="ml-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-orange-100 text-[#FF5A36] rounded-full">Coming Soon</span>
+                <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-orange-100 text-[#FF5A36] rounded-full whitespace-nowrap sm:ml-1">Coming Soon</span>
               </button>
             </div>
           </div>

@@ -104,7 +104,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
-        <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" />
+        <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

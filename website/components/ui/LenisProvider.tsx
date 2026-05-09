@@ -18,7 +18,14 @@ export default function LenisProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
-    if (isMobile || tier === "low") return;
+    // Skip Lenis on touch devices entirely. With syncTouch:true Lenis intercepts
+    // every touch-scroll and re-animates it — on iPad this causes a multi-second
+    // "frame change lag" that the user reported. Native momentum scrolling is
+    // already smooth on iPadOS/iOS/Android — let the OS handle it.
+    const isTouchOnly =
+      ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
+      !window.matchMedia("(hover: hover)").matches;
+    if (isMobile || isTouchOnly || tier === "low") return;
 
     let instance: LenisInstance | null = null;
 
@@ -27,7 +34,8 @@ export default function LenisProvider({ children }: { children: ReactNode }) {
       instance = new Lenis({
         lerp: tier === "medium" ? 0.6 : 0.4,
         wheelMultiplier: 0.7,
-        syncTouch: true,
+        // Only sync wheel events — never touch (browsers handle touch better).
+        syncTouch: false,
         smoothWheel: true,
       });
 

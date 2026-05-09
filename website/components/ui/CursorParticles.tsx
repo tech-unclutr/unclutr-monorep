@@ -43,6 +43,12 @@ export default function CursorParticles() {
     // Skip on mobile, reduced motion, or non-high performance tier
     if (window.innerWidth < 768) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Skip on touch-only devices — the canvas + RAF loop adds cost for nothing
+    // since mouse events never fire (covers iPad / Android tablets too).
+    const isTouchOnly =
+      ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
+      !window.matchMedia("(hover: hover)").matches;
+    if (isTouchOnly) return;
     if (tier !== "high") return;
 
     const canvas = canvasRef.current;

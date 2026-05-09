@@ -319,7 +319,9 @@ export default function ProblemSectionSticky() {
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLDivElement>(null);
     const isTextInView = useInView(textRef, { once: true, margin: "-10%" });
-    const isMobile = useIsMobile(768);
+    // 1024 (not 768) — iPads fall in 768-1024 and were getting the desktop snap
+    // threshold + tight fade window, making the header unreadable on tablet too.
+    const isMobile = useIsMobile(1024);
 
     // ─── Particle Impact Glow on Top Border ───
     const topGlowRef = useRef<HTMLDivElement>(null);

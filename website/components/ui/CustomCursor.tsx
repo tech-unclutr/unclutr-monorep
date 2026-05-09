@@ -9,6 +9,7 @@ export default function CustomCursor() {
   const triangleRef = useRef<SVGSVGElement>(null);
   const squareRef = useRef<SVGSVGElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const positionRef = useRef({ x: 0, y: 0 });
   const targetRef = useRef({ x: 0, y: 0 });
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -16,6 +17,15 @@ export default function CustomCursor() {
   const stateRef = useRef<"default" | "scrolling" | "hover">("default");
 
   useEffect(() => {
+    // Skip the entire custom cursor on touch devices — it's mouse-only and the
+    // event listeners + RAF loop add idle paint cost on tablets/phones.
+    const touchOnly =
+      ("ontouchstart" in window || navigator.maxTouchPoints > 0) &&
+      !window.matchMedia("(hover: hover)").matches;
+    if (touchOnly) {
+      setIsTouchDevice(true);
+      return;
+    }
     setMounted(true);
     document.body.classList.add("custom-cursor-active");
     return () => {
@@ -131,11 +141,7 @@ export default function CustomCursor() {
     };
   }, [mounted, updateCursorPosition, applyVisualState]);
 
-  if (!mounted) return null;
-
-  if (typeof window !== "undefined" && (window.innerWidth < 768 || "ontouchstart" in window)) {
-    return null;
-  }
+  if (isTouchDevice || !mounted) return null;
 
   return (
     <div

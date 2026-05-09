@@ -409,7 +409,10 @@ export default function InterviewStudio() {
     const sectionRef = useRef<HTMLDivElement>(null);
     useSectionVisibility("interview_studio", sectionRef);
     const haptic = useHaptic();
-    const isMobile = useIsMobile(768);
+    // 1024 (not 768) — iPads fall in the 768-1024 window and were getting the full
+    // desktop effects (backdrop-blur, brightness filter, 3D rotateY) which tank
+    // their GPU during swipe + auto-advance. Treat tablets as "compact" too.
+    const isMobile = useIsMobile(1024);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const { trackTransition: trackCarousel, trackAutoplay: trackAutoplayState } = useCarouselTracking(

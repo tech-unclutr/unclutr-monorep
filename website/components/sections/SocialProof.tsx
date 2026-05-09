@@ -1,100 +1,26 @@
 "use client";
 
-import { useRef, useState, MouseEvent } from "react";
-import { motion, useInView, useMotionTemplate, useMotionValue, useSpring } from "framer-motion";
+import { useRef, MouseEvent, ReactNode } from "react";
+import { motion, useInView, useMotionTemplate, useMotionValue } from "framer-motion";
 import { useSectionVisibility } from "@/lib/analytics";
 
-const logos = [
-  "Zepto",
-  "Wild Stone",
-  "Fastrack",
-  "Skinn",
-  "14U Capital",
-  "Mumbai Pav Co.",
-  "Mesa School",
-];
-
-function MagneticTag({
-  name,
-  isHovered,
-  anyHovered,
-  onHoverStart,
-  onHoverEnd,
+function Wordmark({
+  children,
   inView,
   index,
 }: {
-  name: string;
-  isHovered: boolean;
-  anyHovered: boolean;
-  onHoverStart: () => void;
-  onHoverEnd: () => void;
+  children: ReactNode;
   inView: boolean;
   index: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [randomDelay] = useState(() => (index * 0.2) % 2);
-  
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  
-  const springX = useSpring(x, { stiffness: 150, damping: 15, mass: 0.1 });
-  const springY = useSpring(y, { stiffness: 150, damping: 15, mass: 0.1 });
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = ref.current?.getBoundingClientRect();
-    if (rect) {
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      x.set((e.clientX - centerX) * 0.25);
-      y.set((e.clientY - centerY) * 0.25);
-    }
-  }
-
-  function handleMouseLeave() {
-    x.set(0);
-    y.set(0);
-    onHoverEnd();
-  }
-
   return (
     <motion.div
-      ref={ref}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={onHoverStart}
-      onMouseLeave={handleMouseLeave}
-      initial={{ opacity: 0, scale: 0.8, filter: "blur(10px)", y: 20 }}
-      animate={inView ? { opacity: 1, scale: 1, filter: "blur(0px)", y: 0 } : {}}
-      transition={{ duration: 0.8, delay: 0.1 * index, ease: [0.16, 1, 0.3, 1] }}
-      style={{
-        x: springX,
-        y: springY,
-        zIndex: isHovered ? 10 : 1,
-      }}
-      className="relative"
+      initial={{ opacity: 0, y: 20, filter: "blur(12px)" }}
+      animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+      transition={{ duration: 1.2, delay: 0.3 + index * 0.18, ease: [0.16, 1, 0.3, 1] }}
+      className="select-none"
     >
-      <motion.div
-        animate={{
-          opacity: inView ? (anyHovered ? (isHovered ? 1 : 0.3) : 1) : 0,
-          scale: isHovered ? 1.05 : 1,
-          y: isHovered ? 0 : [-3, 3, -3],
-        }}
-        transition={{
-          y: { repeat: Infinity, duration: 4, ease: "easeInOut", delay: randomDelay },
-          scale: { type: "spring", stiffness: 300, damping: 20 },
-          opacity: { duration: 0.4 },
-        }}
-        className={`relative px-6 py-3 sm:px-8 sm:py-4 rounded-full border cursor-default select-none transition-colors duration-500
-          ${isHovered 
-            ? "bg-white/90 border-orange-300 shadow-[0_8px_30px_rgba(255,90,54,0.2)] backdrop-blur-md" 
-            : "bg-white/50 border-white/50 shadow-[0_4px_20px_rgba(0,0,0,0.02)] backdrop-blur-sm"}
-        `}
-      >
-        <span 
-          className={`block font-display text-xl sm:text-2xl font-medium tracking-tight transition-colors duration-500 ${isHovered ? "text-[#FF5A36]" : "text-[#5A637A]"}`}
-        >
-          {name}
-        </span>
-      </motion.div>
+      {children}
     </motion.div>
   );
 }
@@ -115,8 +41,6 @@ export default function SocialProof() {
 
   const spotlightColor = "rgba(255, 140, 100, 0.12)";
   const spotlightStyle = useMotionTemplate`radial-gradient(800px circle at ${mouseX}px ${mouseY}px, ${spotlightColor}, transparent 80%)`;
-
-  const [hoveredTag, setHoveredTag] = useState<string | null>(null);
 
   const headlineLines = [
     "The world's sharpest consumer teams don't guess.",
@@ -162,7 +86,7 @@ export default function SocialProof() {
              className="relative group overflow-hidden inline-block py-2 px-6 rounded-full border border-orange-200/50 bg-white/40 backdrop-blur-md shadow-[0_2px_20px_rgba(0,0,0,0.03)]"
           >
             <span className="relative z-10 text-[10px] sm:text-xs font-bold tracking-[0.15em] uppercase text-orange-600">
-              Validated by leaders from 50+ customer-centric teams
+              Validated by leaders from 120+ customer-centric teams
             </span>
             <motion.div 
                animate={{ x: ["-100%", "200%"] }}
@@ -226,36 +150,30 @@ export default function SocialProof() {
           </h2>
         </div>
 
-        {/* Magnetic Logo Grid */}
-        <div className="max-w-[1100px] mx-auto flex flex-col items-center gap-y-5 sm:gap-y-6 lg:gap-y-8 relative z-20">
-          <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-5 sm:gap-y-6 lg:gap-y-8">
-            {logos.slice(0, 4).map((name, i) => (
-              <MagneticTag
-                key={name}
-                name={name}
-                index={i}
-                inView={inView}
-                isHovered={hoveredTag === name}
-                anyHovered={hoveredTag !== null}
-                onHoverStart={() => setHoveredTag(name)}
-                onHoverEnd={() => setHoveredTag(null)}
-              />
-            ))}
-          </div>
-          <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-5 sm:gap-y-6 lg:gap-y-8">
-            {logos.slice(4).map((name, i) => (
-              <MagneticTag
-                key={name}
-                name={name}
-                index={i + 4}
-                inView={inView}
-                isHovered={hoveredTag === name}
-                anyHovered={hoveredTag !== null}
-                onHoverStart={() => setHoveredTag(name)}
-                onHoverEnd={() => setHoveredTag(null)}
-              />
-            ))}
-          </div>
+        {/* Wordmarks */}
+        <div className="max-w-[1100px] mx-auto flex flex-wrap justify-center items-center gap-x-8 sm:gap-x-12 lg:gap-x-16 gap-y-10 relative z-20">
+          {/* Mesa School of Business */}
+          <Wordmark inView={inView} index={0}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/mesa-school-logo.svg"
+              alt="Mesa School of Business"
+              className="h-12 sm:h-14 w-auto"
+            />
+          </Wordmark>
+
+          {/* Entrepreneurs First */}
+          <Wordmark inView={inView} index={1}>
+            <div className="flex flex-col leading-none">
+              <span className="font-display text-2xl sm:text-[28px] font-black tracking-[-0.02em] leading-none whitespace-nowrap">
+                <span className="text-[#6A1FE5]">Entrepreneurs</span>{" "}
+                <span className="text-[#F26D1F]">First</span>
+              </span>
+              <span className="text-[11px] sm:text-xs italic font-medium text-[#6B6B6B] mt-1 self-end">
+                Spring 2026 Cohort
+              </span>
+            </div>
+          </Wordmark>
         </div>
       </div>
     </section>

@@ -444,14 +444,19 @@ export default function ProblemSectionSticky() {
                     </motion.p>
                     
                     <motion.h2
-                        className="font-display text-[clamp(22px,5.5vw,72px)] font-bold text-[#1d1d1f] tracking-tight leading-[1.15] sm:leading-[1.05] max-w-[1100px] mx-auto drop-shadow-sm text-balance px-2"
+                        className="font-display text-[clamp(22px,5.5vw,72px)] font-bold text-[#1d1d1f] tracking-tight leading-[1.15] sm:leading-[1.05] max-w-[1100px] mx-auto drop-shadow-sm px-2"
                         initial={{ opacity: 0, filter: "blur(12px)", y: 20 }}
                         animate={isTextInView ? { opacity: 1, filter: "blur(0px)", y: 0 } : {}}
                         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
                     >
-                        <ParticleHighlight>Customer Insights</ParticleHighlight> should unlock<br className="hidden sm:inline"/> the decisions for you.
-                        <span className="text-[#86868b] font-medium tracking-tight mt-2 sm:mt-3 block opacity-90">
-                            Instead, it's built on 4 fundamental flaws.
+                        {/* Forced 4-line layout: text-balance was wrapping every word at desktop widths. */}
+                        <span className="block"><ParticleHighlight>Customer Insights</ParticleHighlight> should</span>
+                        <span className="block">unlock the decisions for you.</span>
+                        <span className="text-[#86868b] font-medium tracking-tight block opacity-90 mt-2 sm:mt-3">
+                            Instead, it's built on
+                        </span>
+                        <span className="text-[#86868b] font-medium tracking-tight block opacity-90">
+                            4 fundamental flaws.
                         </span>
                     </motion.h2>
                 </motion.div>

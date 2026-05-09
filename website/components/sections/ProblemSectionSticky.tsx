@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useMotionTemplate, useSpring, useInView } from "framer-motion";
 import { useScrollSnap } from "@/lib/hooks/useScrollSnap";
+import { useIsMobile } from "@/components/ui/useIsMobile";
 
 const FLAWS = [
     {
@@ -318,6 +319,7 @@ export default function ProblemSectionSticky() {
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLDivElement>(null);
     const isTextInView = useInView(textRef, { once: true, margin: "-10%" });
+    const isMobile = useIsMobile(768);
 
     // ─── Particle Impact Glow on Top Border ───
     const topGlowRef = useRef<HTMLDivElement>(null);
@@ -384,19 +386,23 @@ export default function ProblemSectionSticky() {
     });
 
     // ─── Phase 0: Auto-Snap to Complete Transitions ───
-    // These points represent the "fully visible" states of each card/header
+    // Mobile: tighter threshold so the snap doesn't yank the user past the header
+    // before they can read it. Desktop keeps the original "magnetic" feel.
     useScrollSnap(rawScrollProgress, containerRef, [0, 0.16, 0.38, 0.60, 0.82, 1.0], {
-        threshold: 0.12, // Snap if we are within roughly half a card's distance
-        delay: 450,
-        duration: 1.2
+        threshold: isMobile ? 0.05 : 0.12,
+        delay: isMobile ? 700 : 450,
+        duration: 1.2,
     });
 
-    // ─── Phase 1: Header (0 to 0.15) ───
-    // Fades out and scales down perfectly BEFORE the first card begins to enter
-    const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
-    const headerScale = useTransform(scrollYProgress, [0, 0.1], [1, 0.95]);
-    const headerY = useTransform(scrollYProgress, [0, 0.1], ["0vh", "-10vh"]);
-    const headerBlurNum = useTransform(scrollYProgress, [0, 0.1], [0, 20]);
+    // ─── Phase 1: Header ───
+    // Mobile: header lingers visible until 0.14 (overlaps card-1 entry at 0.08-0.16),
+    // so users have time to read it. Desktop fades fast (0 → 0.1) for the cinematic feel.
+    const fadeStart = isMobile ? 0.04 : 0;
+    const fadeEnd = isMobile ? 0.14 : 0.1;
+    const headerOpacity = useTransform(scrollYProgress, [fadeStart, fadeEnd], [1, 0]);
+    const headerScale = useTransform(scrollYProgress, [fadeStart, fadeEnd], [1, 0.95]);
+    const headerY = useTransform(scrollYProgress, [fadeStart, fadeEnd], ["0vh", "-10vh"]);
+    const headerBlurNum = useTransform(scrollYProgress, [fadeStart, fadeEnd], [0, 20]);
     const headerFilter = useMotionTemplate`blur(${headerBlurNum}px)`;
 
     return (

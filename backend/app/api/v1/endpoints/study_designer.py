@@ -24,7 +24,6 @@ from app.models.designed_study import DesignedStudy
 from app.models.study_designer import (
     AgentConfiguration,
     CohortQuestionScript,
-    ConversationLanguage,
     ResearchCohort,
     ResearchLead,
     ResearchParticipant,
@@ -33,7 +32,6 @@ from app.models.user import User
 from app.models.iam import CompanyMembership
 from app.services.agent_resolver import get_company_default
 from app.services.cohort_brief import CohortBrief, build_cohort_brief
-from app.services.intelligence.agent_prompt_generator import generate_agent_prompt
 from app.services.intelligence.llm_service import llm_service
 from app.services.intelligence.schemas.cohort_script import (
     COHORT_SCRIPT_GEMINI_SCHEMA,
@@ -218,6 +216,11 @@ async def _persist_cohort_candidates(
                         row.meta_data = next_meta
                         changed = True
                 if changed:
+                    # Brief/hypothesis/screening changed → invalidate cached
+                    # voice-agent prompt so the next execution-page entry
+                    # regenerates against the new inputs.
+                    row.voice_agent_prompt = None
+                    row.voice_agent_prompt_generated_at = None
                     session.add(row)
                     updated += 1
 
@@ -995,69 +998,8 @@ class CohortIncentiveUpdateRequest(BaseModel):
     incentive: str
 
 
-class CohortModeratorLanguageUpdateRequest(BaseModel):
-    conversation_language: ConversationLanguage
-
-
-# ── Agent Prompt (per-cohort, server-rendered) ──
-
-class AgentPromptResponse(BaseModel):
-    prompt: str
-    generated_at: Optional[datetime] = None
-
-
-@router.get(
-    "/studies/{study_id}/cohorts/{cohort_id}/agent-prompt",
-    response_model=AgentPromptResponse,
-)
-async def get_cohort_agent_prompt(
-    study_id: uuid.UUID,
-    cohort_id: uuid.UUID,
-    regenerate: bool = False,
-    session: AsyncSession = Depends(get_session),
-    company_id: uuid.UUID = Depends(_get_company_id),
-):
-    """Return the Bolna voice agent prompt for one cohort.
-
-    Cached on `research_cohorts.voice_agent_prompt`. First read (or
-    `?regenerate=true`) runs the meta-prompt LLM call (20-90s) and persists
-    the result; subsequent reads return the stored prompt instantly.
-    """
-    study = await session.get(DesignedStudy, study_id)
-    if not study or study.company_id != company_id:
-        raise HTTPException(status_code=404, detail="Study not found")
-
-    cohort = await session.get(ResearchCohort, cohort_id)
-    if not cohort or cohort.company_id != company_id:
-        raise HTTPException(status_code=404, detail="Cohort not found")
-
-    if cohort.voice_agent_prompt and not regenerate:
-        return AgentPromptResponse(
-            prompt=cohort.voice_agent_prompt,
-            generated_at=cohort.voice_agent_prompt_generated_at,
-        )
-
-    try:
-        result = await generate_agent_prompt(session, study, cohort)
-    except TimeoutError:
-        logger.error("Gemini request timed out (agent prompt generation)")
-        raise HTTPException(status_code=504, detail="Agent prompt generation timed out")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Agent prompt generation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    cohort.voice_agent_prompt = result.prompt
-    cohort.voice_agent_prompt_generated_at = datetime.utcnow()
-    session.add(cohort)
-    await session.commit()
-    await session.refresh(cohort)
-
-    return AgentPromptResponse(
-        prompt=cohort.voice_agent_prompt,
-        generated_at=cohort.voice_agent_prompt_generated_at,
-    )
+class CohortSelectedQuestionsRequest(BaseModel):
+    selected_question_ids: List[uuid.UUID]
 
 
 @router.get(
@@ -1108,6 +1050,10 @@ async def update_cohort_incentive(
         raise HTTPException(status_code=404, detail="Cohort not found")
 
     cohort.incentive = payload.incentive.strip() or "No Incentive"
+    # Cohort brief changed → invalidate the cached voice-agent prompt so the
+    # next Continue-to-Execution regenerates against the new incentive.
+    cohort.voice_agent_prompt = None
+    cohort.voice_agent_prompt_generated_at = None
     session.add(cohort)
     await session.commit()
     await session.refresh(cohort)
@@ -1121,23 +1067,22 @@ async def update_cohort_incentive(
 
 
 @router.patch(
-    "/studies/{study_id}/cohorts/{cohort_id}/moderator-language",
+    "/studies/{study_id}/cohorts/{cohort_id}/selected-questions",
     response_model=CohortBrief,
 )
-async def update_cohort_moderator_language(
+async def update_cohort_selected_questions(
     study_id: uuid.UUID,
     cohort_id: uuid.UUID,
-    payload: CohortModeratorLanguageUpdateRequest,
+    payload: CohortSelectedQuestionsRequest,
     session: AsyncSession = Depends(get_session),
     company_id: uuid.UUID = Depends(_get_company_id),
 ):
-    """Persist the moderator conversation language selected on the cohort brief.
+    """Persist which questions are opted-in for the voice-agent prompt.
 
-    Writes to the agent_configuration row resolved for the cohort (cohort's
-    bound agent → company default). If multiple cohorts share that agent
-    (e.g. the company default), they all see the change — language is a
-    property of the agent identity, not the cohort. Returns 400 when no
-    DB-backed agent exists yet (the runtime fallback is read-only).
+    Saved on `cohort.meta_data.selected_question_ids`. The set the user passes
+    here is taken verbatim (no merging) — frontend sends the complete list every
+    time. Invalidates the cached voice-agent prompt so the next entry to the
+    execution page regenerates against the new selection.
     """
     study = await session.get(DesignedStudy, study_id)
     if not study or study.company_id != company_id:
@@ -1147,25 +1092,17 @@ async def update_cohort_moderator_language(
     if not cohort or cohort.company_id != company_id:
         raise HTTPException(status_code=404, detail="Cohort not found")
 
-    agent: Optional[AgentConfiguration] = None
-    if cohort.agent_configuration_id is not None:
-        candidate = await session.get(
-            AgentConfiguration, cohort.agent_configuration_id
-        )
-        if candidate is not None and candidate.company_id == company_id:
-            agent = candidate
-    if agent is None:
-        agent = await get_company_default(session, company_id)
-    if agent is None:
-        raise HTTPException(
-            status_code=400,
-            detail="No agent configuration available — create one first.",
-        )
+    next_meta: Dict[str, Any] = dict(cohort.meta_data or {})
+    next_meta["selected_question_ids"] = [str(qid) for qid in payload.selected_question_ids]
+    cohort.meta_data = next_meta
 
-    agent.conversation_language = payload.conversation_language
-    agent.updated_at = datetime.utcnow()
-    session.add(agent)
+    # Selection drives which KRQ questions land in the prompt → invalidate cache.
+    cohort.voice_agent_prompt = None
+    cohort.voice_agent_prompt_generated_at = None
+
+    session.add(cohort)
     await session.commit()
+    await session.refresh(cohort)
 
     return await get_cohort_brief(
         study_id=study_id,
@@ -1342,6 +1279,11 @@ async def _persist_cohort_script(
             CohortQuestionScript.cohort_id == cohort.id
         )
     )
+    # Questions drive the KRQ blocks in the prompt → invalidate cache so the
+    # next Continue-to-Execution regenerates against the new script.
+    cohort.voice_agent_prompt = None
+    cohort.voice_agent_prompt_generated_at = None
+    session.add(cohort)
     inserted = 0
     for row_dict in parsed_questions:
         session.add(
@@ -1524,7 +1466,12 @@ async def list_study_leads(
         raise HTTPException(status_code=404, detail="Study not found")
 
     stmt = (
-        select(ResearchLead, ResearchParticipant.status, ResearchCohort.name)
+        select(
+            ResearchLead,
+            ResearchParticipant.status,
+            ResearchCohort.name,
+            ResearchCohort.agent_configuration_id,
+        )
         .join(ResearchParticipant, ResearchParticipant.lead_id == ResearchLead.id)
         .outerjoin(ResearchCohort, ResearchCohort.id == ResearchLead.cohort_id)
         .where(ResearchParticipant.study_id == study_id)
@@ -1538,12 +1485,19 @@ async def list_study_leads(
             "first_name": lead.first_name,
             "last_name": lead.last_name,
             "contact_number": lead.contact_number,
+            "language": lead.language,
             "cohort_id": str(lead.cohort_id) if lead.cohort_id else None,
             "cohort_name": cohort_name,
             "participant_status": participant_status,
             "contact_profile": lead.contact_profile,
+            # Concurrency-runner needs this so it can route each lead to the
+            # right agent's slot bucket on the frontend. Null = hardcoded
+            # fallback persona; bucketed under a synthetic slot key.
+            "agent_id": str(agent_configuration_id)
+            if agent_configuration_id
+            else None,
         }
-        for lead, participant_status, cohort_name in rows
+        for lead, participant_status, cohort_name, agent_configuration_id in rows
     ]
 
 

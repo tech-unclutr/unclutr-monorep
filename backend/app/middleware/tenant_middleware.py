@@ -87,7 +87,6 @@ class TenantMiddleware:
             "/webhook/study-bolna",
             "/debug/queue-status",
             "/research",
-            "/voice-sandbox",
             "/leads"
         ]
         

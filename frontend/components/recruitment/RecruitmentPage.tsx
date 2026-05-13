@@ -7,7 +7,7 @@ import { useRecruitment } from "./RecruitmentContext";
 import { LeadsFileUpload } from "./LeadsFileUpload";
 import { LeadsColumnMapper } from "./LeadsColumnMapper";
 import { LeadsCohortConfigurator } from "./LeadsCohortConfigurator";
-import { type StudyContext } from "./ExecutionPromptView";
+import { type StudyContext } from "./study-context";
 import { api } from "@/lib/api";
 import type { ExtractedLead } from "./recruitment-utils";
 
@@ -22,7 +22,7 @@ export interface ExistingLead {
     contact_profile?: Record<string, any>;
 }
 
-function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: StudyContext; onStartExecution?: (cohortInterviewMap: Record<string, number[]>) => void }) {
+function RecruitmentFlow({ studyContext }: { studyContext?: StudyContext }) {
     const ctx = useRecruitment();
     const [saving, setSaving] = useState(false);
     const [existingLeads, setExistingLeads] = useState<ExistingLead[]>([]);
@@ -69,6 +69,7 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
                         first_name: l.first_name,
                         last_name: l.last_name || null,
                         contact_number: l.contact_number,
+                        language: l.language || null,
                         cohort: l.cohort || null,
                         contact_profile: l.contact_profile || null,
                         meta_data: l.meta_data || null,
@@ -167,7 +168,7 @@ function RecruitmentFlow({ studyContext, onStartExecution }: { studyContext?: St
     );
 }
 
-export function RecruitmentPage({ studyContext, onStartExecution }: { studyContext?: StudyContext; onStartExecution?: (cohortInterviewMap: Record<string, number[]>) => void }) {
+export function RecruitmentPage({ studyContext }: { studyContext?: StudyContext }) {
     return (
         <div className="h-full overflow-y-auto scrollbar-subtle">
             <div className="max-w-5xl mx-auto px-6 py-10">
@@ -186,7 +187,7 @@ export function RecruitmentPage({ studyContext, onStartExecution }: { studyConte
                         Screen, schedule, and engage participants—automatically.
                     </p>
                 </div>
-                <RecruitmentFlow studyContext={studyContext} onStartExecution={onStartExecution} />
+                <RecruitmentFlow studyContext={studyContext} />
             </div>
         </div>
     );

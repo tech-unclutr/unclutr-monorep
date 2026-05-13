@@ -84,8 +84,6 @@ from .study_designer import (
     ResearchLead as ResearchLead,
     ResearchParticipant as ResearchParticipant,
     StudyCallLog as StudyCallLog,
-    StudyCallQueue as StudyCallQueue,
-    StudyExecution as StudyExecution,
     VoiceProvider as VoiceProvider,
 )
 

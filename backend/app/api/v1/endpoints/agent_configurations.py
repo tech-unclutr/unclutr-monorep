@@ -24,7 +24,6 @@ from app.core.security import get_current_user
 from app.models.iam import CompanyMembership
 from app.models.study_designer import (
     AgentConfiguration,
-    ConversationLanguage,
     Gender,
     VoiceProvider,
 )
@@ -59,9 +58,6 @@ class AgentConfigurationCreate(BaseModel):
     voice_id: str = Field(..., min_length=1)
     voice_provider: VoiceProvider = Field(default=VoiceProvider.BOLNA)
     gender: Gender = Field(default=Gender.FEMALE)
-    conversation_language: ConversationLanguage = Field(
-        default=ConversationLanguage.ENGLISH_ONLY
-    )
     language: str = Field(default="en-IN")
     is_default: bool = Field(default=False)
 
@@ -73,7 +69,6 @@ class AgentConfigurationUpdate(BaseModel):
     voice_id: Optional[str] = Field(default=None, min_length=1)
     voice_provider: Optional[VoiceProvider] = None
     gender: Optional[Gender] = None
-    conversation_language: Optional[ConversationLanguage] = None
     language: Optional[str] = None
     is_default: Optional[bool] = None
 
@@ -87,7 +82,6 @@ class AgentConfigurationResponse(BaseModel):
     voice_id: str
     voice_provider: VoiceProvider
     gender: Gender
-    conversation_language: ConversationLanguage
     language: str
     is_default: bool
     created_at: datetime
@@ -176,7 +170,6 @@ async def create_agent_configuration(
         voice_id=payload.voice_id,
         voice_provider=payload.voice_provider,
         gender=payload.gender,
-        conversation_language=payload.conversation_language,
         language=payload.language,
         is_default=payload.is_default,
         created_by=current_user_token.get("uid"),

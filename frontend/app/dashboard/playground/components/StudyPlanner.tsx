@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { BookOpen, Users, CheckCircle2, Radio } from "lucide-react";
 import { StudyHomePage } from "@/components/study-designer/StudyHomePage";
 import { RecruitmentPage } from "@/components/recruitment/RecruitmentPage";
 import { RecruitmentProvider } from "@/components/recruitment/RecruitmentContext";
-import { type StudyContext } from "@/components/recruitment/ExecutionPromptView";
+import { type StudyContext } from "@/components/recruitment/study-context";
 import { type StudyState } from "@/components/study-designer/types";
-import { VoiceSandbox } from "@/components/voice-sandbox/VoiceSandbox";
 
 type Phase = "design" | "recruit" | "execute";
 
@@ -19,11 +19,11 @@ const PHASES = [
 ];
 
 export function StudyPlanner() {
+    const router = useRouter();
     const [phase, setPhase] = useState<Phase>("design");
     const [completedPhases, setCompletedPhases] = useState<Set<Phase>>(new Set());
     const [studyContext, setStudyContext] = useState<StudyContext | undefined>(undefined);
     const [designComplete, setDesignComplete] = useState(false);
-    const [cohortInterviewMap, setCohortInterviewMap] = useState<Record<string, number[]>>({});
 
     const markComplete = (p: Phase) => {
         setCompletedPhases((prev) => new Set(prev).add(p));
@@ -78,7 +78,14 @@ export function StudyPlanner() {
                                             )} />
                                         )}
                                         <button
-                                            onClick={() => setPhase(p.key)}
+                                            onClick={() => {
+                                                if (p.key === "execute") {
+                                                    if (!studyContext?.studyId) return;
+                                                    router.push(`/dashboard/study/${studyContext.studyId}/execution`);
+                                                    return;
+                                                }
+                                                setPhase(p.key);
+                                            }}
                                             className={cn(
                                                 "flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-200",
                                                 isActive
@@ -132,22 +139,7 @@ export function StudyPlanner() {
 
                 <RecruitmentProvider>
                     {phase === "recruit" && (
-                        <RecruitmentPage
-                            studyContext={studyContext}
-                            onStartExecution={(map) => {
-                                setCohortInterviewMap(map);
-                                markComplete("recruit");
-                                setPhase("execute");
-                            }}
-                        />
-                    )}
-
-                    {phase === "execute" && (
-                        <VoiceSandbox
-                            className="h-full"
-                            studyId={studyContext?.studyId}
-                            initialCohortInterviewMap={cohortInterviewMap}
-                        />
+                        <RecruitmentPage studyContext={studyContext} />
                     )}
                 </RecruitmentProvider>
             </div>

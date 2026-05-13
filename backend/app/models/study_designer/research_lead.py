@@ -24,6 +24,7 @@ class ResearchLead(SQLModel, table=True):
     first_name: str = Field(nullable=False)
     last_name: Optional[str] = Field(default=None)
     contact_number: str = Field(nullable=False)
+    language: Optional[str] = Field(default=None)
     contact_profile: Optional[Dict[str, Any]] = Field(default={}, sa_column=Column(JSON))
     # ^ first_name, email, company_name, linkedin_url, job_title, etc.
 

@@ -1,47 +1,20 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import type { ModeratorSectionData } from "./useCohortBrief";
 import { Field, CriteriaList } from "./shared";
-import {
-    CONVERSATION_LANGUAGE_OPTIONS,
-    DEFAULT_CONVERSATION_LANGUAGE,
-    type ConversationLanguage,
-} from "./conversation-language-options";
-import { api } from "@/lib/api";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 
 interface ModeratorSectionProps {
     moderator?: ModeratorSectionData | null;
     loading?: boolean;
     error?: string | null;
-    studyId?: string;
-    cohortId?: string;
 }
 
 export function ModeratorSection({
     moderator,
     loading,
     error,
-    studyId,
-    cohortId,
 }: ModeratorSectionProps) {
-    const [language, setLanguage] = useState<ConversationLanguage>(
-        moderator?.conversation_language ?? DEFAULT_CONVERSATION_LANGUAGE,
-    );
-
-    useEffect(() => {
-        if (moderator?.conversation_language) {
-            setLanguage(moderator.conversation_language);
-        }
-    }, [moderator?.conversation_language]);
-
     if (loading) {
         return <p className="text-sm text-muted-foreground italic">Loading moderator instructions…</p>;
     }
@@ -52,34 +25,8 @@ export function ModeratorSection({
         return <p className="text-sm text-muted-foreground italic">Moderator instructions unavailable.</p>;
     }
 
-    const handleLanguageChange = (value: string) => {
-        const next = value as ConversationLanguage;
-        setLanguage(next);
-        if (!studyId || !cohortId) return;
-        api.patch(
-            `/study-planner/studies/${studyId}/cohorts/${cohortId}/moderator-language`,
-            { conversation_language: next },
-        ).catch(() => {
-            // Best-effort save. Toasts/error handling can be layered later.
-        });
-    };
-
     return (
         <>
-            <Field label="Language">
-                <Select value={language} onValueChange={handleLanguageChange}>
-                    <SelectTrigger className="h-9 text-sm w-full md:w-72">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {CONVERSATION_LANGUAGE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </Field>
             <Field label="Introduction Script">
                 <p className="italic">&ldquo;{moderator.intro_script}&rdquo;</p>
             </Field>

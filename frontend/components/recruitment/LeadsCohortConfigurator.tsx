@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useMemo, useEffect, useState } from "react";
-import { UsersIcon, BookOpenIcon, SparklesIcon, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { UsersIcon, BookOpenIcon, SparklesIcon, Loader2, Wrench } from "lucide-react";
 import { cn, capitalizeCohortName } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
-import { type StudyContext } from "./ExecutionPromptView";
+import { type StudyContext } from "./study-context";
 import { useRecruitment } from "./RecruitmentContext";
 import { CohortBriefSections } from "./CohortBriefSections";
 import { BriefPreviewModal } from "./BriefPreviewModal";
-import { AgentPromptModal } from "./AgentPromptModal";
 import type { CohortBriefData } from "./cohort-brief/useCohortBrief";
 import type {
     PreviewBrief,
@@ -31,6 +31,7 @@ export function LeadsCohortConfigurator({
     studyContext,
 }: LeadsCohortConfiguratorProps) {
     const { extractedLeads: leads } = useRecruitment();
+    const router = useRouter();
 
     // ── Derive cohorts from leads ───────────────────────────────────────
 
@@ -55,7 +56,6 @@ export function LeadsCohortConfigurator({
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewModel, setPreviewModel] = useState<PreviewBrief | null>(null);
     const [previewLoading, setPreviewLoading] = useState(false);
-    const [agentPromptOpen, setAgentPromptOpen] = useState(false);
 
     // ── Preview brief: fetch on click, then open modal ──────────────────
 
@@ -231,12 +231,23 @@ export function LeadsCohortConfigurator({
                             </Button>
                             <Button
                                 variant="outline"
-                                onClick={() => setAgentPromptOpen(true)}
+                                onClick={() => {
+                                    if (!studyContext?.studyId) return;
+                                    router.push(`/dashboard/study/${studyContext.studyId}/execution`);
+                                }}
                                 disabled={!studyContext?.studyId || cohorts.length === 0}
                                 className="font-semibold text-xs uppercase tracking-wide px-5 rounded-xl shadow-sm active:scale-[0.98] transition-all inline-flex items-center gap-2"
                             >
                                 <SparklesIcon className="w-3.5 h-3.5" />
-                                Get Agent Prompt
+                                Continue to Execution
+                            </Button>
+                            <Button
+                                disabled
+                                title="The execution flow is being rebuilt."
+                                className="font-semibold text-xs uppercase tracking-wide px-5 rounded-xl shadow-sm inline-flex items-center gap-2 opacity-60 cursor-not-allowed"
+                            >
+                                <Wrench className="w-3.5 h-3.5" />
+                                Execution (rebuilding)
                             </Button>
                         </div>
                     </div>
@@ -246,13 +257,6 @@ export function LeadsCohortConfigurator({
                 open={previewOpen}
                 onClose={() => setPreviewOpen(false)}
                 model={previewModel}
-            />
-            <AgentPromptModal
-                open={agentPromptOpen}
-                onClose={() => setAgentPromptOpen(false)}
-                cohorts={cohorts}
-                studyId={studyContext?.studyId}
-                cohortIdByName={cohortIdByName}
             />
         </Card>
     );

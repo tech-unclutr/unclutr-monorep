@@ -3,6 +3,8 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import debug_diagnostics
 from app.api.v1.endpoints import (
     agent_configurations,
+    agent_execution,
+    agent_execution_webhook,
     analytics,
     auth,
     bolna_webhook,
@@ -28,8 +30,6 @@ from app.api.v1.endpoints import (
     user_queue,
     users,
     persist_leads,
-    voice_sandbox,
-    study_webhook,
 )
 
 api_router = APIRouter()
@@ -52,15 +52,15 @@ api_router.include_router(monitoring.router, tags=["Monitoring"])  # Prometheus 
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(execution.router, prefix="/execution", tags=["Execution Layer"])
 api_router.include_router(bolna_webhook.router, tags=["Bolna Webhook"])
+api_router.include_router(agent_execution_webhook.router, tags=["Study Bolna Webhook"])
 
 api_router.include_router(user_queue.router, prefix="/user-queue", tags=["User Queue"])
 api_router.include_router(calendar_booking.router, prefix="/execution", tags=["Calendar Booking"])
 api_router.include_router(studies.router, prefix="/studies", tags=["Studies"])
 api_router.include_router(study_designer.router, prefix="/study-planner", tags=["Study Planner"])
+api_router.include_router(agent_execution.router, prefix="/agent-execution", tags=["Agent Execution"])
 api_router.include_router(agent_configurations.router, prefix="/agents", tags=["Agent Configurations"])
-api_router.include_router(voice_sandbox.router, prefix="/voice-sandbox", tags=["Voice Sandbox"])
 api_router.include_router(persist_leads.router, prefix="/leads", tags=["Leads"])
-api_router.include_router(study_webhook.router, tags=["Study Webhook"])
 
 
 

@@ -105,6 +105,33 @@ async def generate_agent_prompt(
     krq_groups = (
         brief.script_section.krq_groups if brief.script_section else []
     )
+    # Filter each KRQ group's questions to only those the user has selected
+    # (cohort.meta_data.selected_question_ids). Empty list = no opt-in = no KRQs.
+    # Groups that end up with zero selected questions are dropped entirely so
+    # the prompt doesn't render an empty phase block.
+    selected_ids = set(brief.selected_question_ids or [])
+    filtered_groups = []
+    for g in krq_groups:
+        kept = [q for q in g.questions if q.id in selected_ids]
+        if not kept:
+            continue
+        filtered_groups.append(
+            g.__class__(
+                krq_index=g.krq_index,
+                krq_section_text=g.krq_section_text,
+                questions=kept,
+                total_estimated_minutes=round(
+                    sum(q.estimated_minutes or 0.0 for q in kept), 2
+                ),
+            )
+        )
+    krq_groups = filtered_groups
+    if brief.script_section is not None:
+        brief.script_section.krq_groups = filtered_groups
+        brief.script_section.total_estimated_minutes = round(
+            sum(g.total_estimated_minutes for g in filtered_groups), 2
+        )
+
     step_offsets = _compute_step_offsets(krq_groups)
 
     touchpoints_task = _generate_section(

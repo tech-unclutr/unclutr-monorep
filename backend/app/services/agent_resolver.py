@@ -8,8 +8,9 @@ Resolution chain:
 3. hardcoded fallback (preserves pre-agent_configurations behavior)
 
 Used by the meta-prompt input builder (agent_prompt_generator/input_builder.py)
-and the runtime call path (study_execution/caller.py + prompt_resolver.py)
-so the generated agent prompt and the actual call always share one identity.
+and the cohort-brief moderator section. The runtime call path that previously
+consumed this resolver (study_execution/caller.py + prompt_resolver.py) has been
+removed; will reconnect when the execution flow is rebuilt.
 """
 
 from dataclasses import dataclass
@@ -26,7 +27,6 @@ HARDCODED_FALLBACK_NAME = "Aditi"
 HARDCODED_FALLBACK_GENDER = "female"
 HARDCODED_FALLBACK_LANGUAGE = "en-IN"
 HARDCODED_FALLBACK_VOICE_ID = "default"
-HARDCODED_FALLBACK_CONVERSATION_LANGUAGE = "english"
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,6 @@ class ResolvedAgent:
     gender: str
     language: str
     voice_id: str
-    conversation_language: str
     source: str  # "cohort" | "company_default" | "fallback"
 
 
@@ -44,23 +43,17 @@ _FALLBACK = ResolvedAgent(
     gender=HARDCODED_FALLBACK_GENDER,
     language=HARDCODED_FALLBACK_LANGUAGE,
     voice_id=HARDCODED_FALLBACK_VOICE_ID,
-    conversation_language=HARDCODED_FALLBACK_CONVERSATION_LANGUAGE,
     source="fallback",
 )
 
 
 def _to_resolved(agent: AgentConfiguration, source: str) -> ResolvedAgent:
     gender_value = getattr(agent.gender, "value", agent.gender) or HARDCODED_FALLBACK_GENDER
-    conv_lang_value = (
-        getattr(agent.conversation_language, "value", agent.conversation_language)
-        or HARDCODED_FALLBACK_CONVERSATION_LANGUAGE
-    )
     return ResolvedAgent(
         name=agent.name,
         gender=gender_value,
         language=agent.language,
         voice_id=agent.voice_id,
-        conversation_language=conv_lang_value,
         source=source,
     )
 

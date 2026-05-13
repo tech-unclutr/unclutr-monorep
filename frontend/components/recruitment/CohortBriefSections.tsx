@@ -135,8 +135,6 @@ export function CohortBriefSections({
                         moderator={briefData?.moderator_section}
                         loading={brief.loading}
                         error={brief.error}
-                        studyId={studyId}
-                        cohortId={cohortId}
                     />
                 );
             case "structure":
@@ -151,7 +149,12 @@ export function CohortBriefSections({
     };
 
     return (
-        <CohortBriefProvider script={briefData?.script_section}>
+        <CohortBriefProvider
+            script={briefData?.script_section}
+            studyId={studyId}
+            cohortId={cohortId}
+            initialSelectedQuestionIds={briefData?.selected_question_ids}
+        >
             <div className="space-y-3 mb-6">
                 {SECTION_META.map((s) => (
                     <SectionCard

@@ -22,7 +22,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.designed_study import DesignedStudy
 from app.models.study_designer.cohort_question_script import CohortQuestionScript
 from app.models.study_designer.research_cohort import ResearchCohort
-from app.services.agent_resolver import resolve_for_cohort
 
 
 # ── Hardcoded defaults ─────────────────────────────────────────────────────
@@ -139,7 +138,6 @@ class ModeratorSection(BaseModel):
     tone: str
     dos: List[str]
     donts: List[str]
-    conversation_language: str
 
 
 class StructurePhase(BaseModel):
@@ -160,6 +158,10 @@ class CohortBrief(BaseModel):
     moderator_section: ModeratorSection
     structure_section: StructureSection
     incentive: str
+    # IDs of questions the user has explicitly opted in to. Empty list means
+    # no questions are selected — generated prompt will skip KRQ blocks entirely.
+    # Persisted in `cohort.meta_data["selected_question_ids"]`. Absence = empty.
+    selected_question_ids: List[uuid.UUID] = []
 
 
 # ── Builder ────────────────────────────────────────────────────────────────
@@ -191,7 +193,14 @@ async def build_cohort_brief(
 
     script_section = await _build_script_section(session, cohort.id)
     screening_section = _build_screening_section(cohort)
-    agent = await resolve_for_cohort(session, cohort)
+
+    raw_selected = (cohort.meta_data or {}).get("selected_question_ids") or []
+    selected_question_ids: List[uuid.UUID] = []
+    for v in raw_selected:
+        try:
+            selected_question_ids.append(uuid.UUID(str(v)))
+        except (ValueError, TypeError):
+            continue
 
     return CohortBrief(
         context_section=context_section,
@@ -203,12 +212,12 @@ async def build_cohort_brief(
             tone=_DEFAULT_MODERATOR_TONE,
             dos=list(_DEFAULT_MODERATOR_DOS),
             donts=list(_DEFAULT_MODERATOR_DONTS),
-            conversation_language=agent.conversation_language,
         ),
         structure_section=StructureSection(
             phases=[StructurePhase(**p) for p in _DEFAULT_STRUCTURE_PHASES],
         ),
         incentive=cohort.incentive,
+        selected_question_ids=selected_question_ids,
     )
 
 

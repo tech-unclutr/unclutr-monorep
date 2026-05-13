@@ -4,6 +4,7 @@ export interface ExtractedLead {
     first_name: string;
     last_name?: string;
     contact_number: string;
+    language?: string;
     cohort?: string;
     cohort_id?: string;
     contact_profile?: Record<string, any>;
@@ -20,6 +21,7 @@ export interface ColumnMapping {
 export const PROFILE_TARGETS = [
     { value: "first_name", label: "First Name", icon: "person" },
     { value: "last_name", label: "Last Name", icon: "person" },
+    { value: "language", label: "Language", icon: "person" },
     { value: "title", label: "Title", icon: "person" },
     { value: "email", label: "Email", icon: "person" },
     { value: "linkedin_url", label: "LinkedIn URL", icon: "person" },
@@ -58,6 +60,7 @@ export function autoMapHeaders(headers: string[]): ColumnMapping {
         if (low.includes("employee") || low.includes("# employee") || low.includes("company size") || low.includes("team size")) profileFields[h] = "employee_count";
         if (low === "city" || low === "location") profileFields[h] = "city";
         if (low === "country" || low === "region") profileFields[h] = "country";
+        if (low === "language" || low === "lang" || low === "locale") profileFields[h] = "language";
         if ((low === "mobile 2" || low === "mobile2" || low === "alt phone" || low === "alternate phone") && h !== mapping.contact_number) profileFields[h] = "alt_phone";
     });
 
@@ -68,11 +71,13 @@ export function autoMapHeaders(headers: string[]): ColumnMapping {
 export function buildLeads(rows: any[], mapping: ColumnMapping): ExtractedLead[] {
     if (!mapping.customer_name || !mapping.contact_number) return [];
     return rows.map((row) => {
-        const fullName = String(row[mapping.customer_name] || "").trim();
-        const spaceIdx = fullName.indexOf(" ");
+        // Lead names always come from the fixed CSV columns the upload UI
+        // instructs users to provide. No auto-mapping, no fullName splitting.
+        const firstName = String(row.customer_first_name ?? "").trim();
+        const lastName = String(row.customer_last_name ?? "").trim();
         const lead: ExtractedLead = {
-            first_name: spaceIdx > 0 ? fullName.slice(0, spaceIdx) : fullName,
-            last_name: spaceIdx > 0 ? fullName.slice(spaceIdx + 1) : undefined,
+            first_name: firstName,
+            last_name: lastName || undefined,
             contact_number: String(row[mapping.contact_number]).trim(),
             meta_data: row,
         };
@@ -82,9 +87,13 @@ export function buildLeads(rows: any[], mapping: ColumnMapping): ExtractedLead[]
         if (mapping.profile_fields && Object.keys(mapping.profile_fields).length > 0) {
             const profile: Record<string, any> = {};
             for (const [csvCol, targetField] of Object.entries(mapping.profile_fields)) {
-                if (row[csvCol] != null && row[csvCol] !== "") {
-                    profile[targetField] = row[csvCol];
+                const cell = row[csvCol];
+                if (cell == null || cell === "") continue;
+                if (targetField === "language") {
+                    lead.language = String(cell).trim() || undefined;
+                    continue;
                 }
+                profile[targetField] = cell;
             }
             if (Object.keys(profile).length > 0) {
                 lead.contact_profile = profile;

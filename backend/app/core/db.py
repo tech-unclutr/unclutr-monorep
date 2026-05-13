@@ -45,7 +45,10 @@ if "postgresql+asyncpg" in DATABASE_URL:
 
 # Engine configuration
 engine_kwargs = {
-    "echo": not settings.is_production,  # Disable SQL logging in production
+    # SQL echo off. Was previously on in dev which dumped every SELECT/UPDATE
+    # (with all columns) to stdout per request — too noisy. Flip to True here
+    # locally when you need to debug a specific query.
+    "echo": False,
     "future": True,
 }
 

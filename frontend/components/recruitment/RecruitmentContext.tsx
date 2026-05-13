@@ -5,7 +5,7 @@ import { type ExtractedLead, type ColumnMapping } from "./recruitment-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type Step = "upload" | "mapping" | "cohorts" | "execution" | "done";
+export type Step = "upload" | "mapping" | "cohorts" | "done";
 
 export interface ParsedFileState {
     rows: any[];

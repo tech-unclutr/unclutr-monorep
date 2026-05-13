@@ -26,6 +26,7 @@ class LeadPayload(BaseModel):
     first_name: str
     last_name: Optional[str] = None
     contact_number: str
+    language: Optional[str] = None
     cohort: Optional[str] = None
     contact_profile: Optional[Dict[str, Any]] = None
     meta_data: Optional[Dict[str, Any]] = None
@@ -139,6 +140,7 @@ async def upload_leads(
             first_name=lp.first_name,
             last_name=lp.last_name,
             contact_number=phone,
+            language=lp.language,
             contact_profile=lp.contact_profile or {},
             meta_data=lp.meta_data or {},
         )

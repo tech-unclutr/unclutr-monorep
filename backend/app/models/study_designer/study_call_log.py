@@ -8,39 +8,38 @@ from sqlmodel import Column, Field, SQLModel
 
 class StudyCallLog(SQLModel, table=True):
     """
-    One row per Bolna API call attempt. A queue item with 2 attempts
-    produces 2 call log rows. The webhook updates these rows.
+    Bolna call log for a research lead.
+
+    Maps to the existing `study_call_logs` table (created by the initial
+    schema migration). The legacy `execution_id` and `queue_item_id`
+    columns are kept on the table but treated as Optional here — the
+    new agent-execution flow doesn't populate them. DB-level NOT NULL
+    on those columns is handled outside this model (migration pending).
     """
 
     __tablename__ = "study_call_logs"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    queue_item_id: UUID = Field(foreign_key="study_call_queue.id", index=True)
-    execution_id: UUID = Field(foreign_key="study_executions.id", index=True)
-    lead_id: UUID = Field(foreign_key="research_leads.id")
+    queue_item_id: Optional[UUID] = Field(default=None, index=True)
+    execution_id: Optional[UUID] = Field(default=None, index=True)
+    lead_id: UUID = Field(foreign_key="research_leads.id", nullable=False)
 
-    bolna_call_id: str = Field(index=True, sa_column_kwargs={"unique": True})
-    bolna_agent_id: str = Field()
-
-    call_status: str = Field(default="initiated")
-    # initiated → ringing → connected → completed/failed/no-answer/busy/canceled
-
+    bolna_call_id: str = Field(nullable=False, index=True)
+    bolna_agent_id: str = Field(nullable=False)
+    call_status: str = Field(nullable=False)
     call_outcome: Optional[str] = Field(default=None)
-    # Terminal: INTENT_YES, INTENT_NO, VOICEMAIL, NO_ANSWER, etc.
-
-    call_duration: int = Field(default=0)  # seconds
+    call_duration: int = Field(default=0)
     total_cost: float = Field(default=0.0)
     currency: str = Field(default="USD")
-
     transcript_summary: Optional[str] = Field(default=None)
     full_transcript: Optional[str] = Field(default=None)
-    extracted_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    extracted_data: Optional[Dict[str, Any]] = Field(
+        default=None, sa_column=Column(JSON)
+    )
     termination_reason: Optional[str] = Field(default=None)
     recording_url: Optional[str] = Field(default=None)
-
     webhook_payload: Optional[Dict[str, Any]] = Field(
-        default={}, sa_column=Column(JSON)
+        default=None, sa_column=Column(JSON)
     )
-
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

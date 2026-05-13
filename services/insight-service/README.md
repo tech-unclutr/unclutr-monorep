@@ -1,140 +1,438 @@
-# SquareUp Synthesis Demo
+# insight-service
 
-A live, browser-runnable Next.js demo of the SquareUp Stage-1 synthesis pipeline.
-Voice transcripts in → ranked insights with verified verbatim evidence + routed actions out.
+Next.js 15 frontend for the SquareUp synthesis pipeline. Reads transcripts and synthesis results from a GCS bucket, runs cross-transcript synthesis on demand, and renders insight cards with verified verbatim quotes, debate-winning framings, and routed actions.
 
-## What it does
+This is **one half** of a two-component system. The other half — `insights-engine` — is a headless Python service that processes new transcripts the moment they land in GCS. The two communicate exclusively through the GCS bucket. Neither one calls the other directly.
 
-Runs the same 4-agent pipeline as the SquareUp skill, but as a deployable web app:
+---
 
-```
-Transcript → Extractor → Contradiction Detector → Severity Calibrator
-                                                          ↓
-                                         Cross-transcript Aggregator (deterministic)
-                                                          ↓
-                                                  Action Composer
-```
+## What changed in this version
 
-Every quote in the rendered cards is span-verified against the source transcript
-(`transcript[start:end] == verbatim`). The verifier auto-corrects offsets when the
-LLM produces correct text but wrong character positions, and rejects truly hallucinated quotes.
+This branch (`feature/cross-runs-llm-clustering`) adds the LLM-based semantic clusterer to the cross-transcript synthesis path. Previously, cross-runs used Jaccard token-similarity, which couldn't bridge paraphrases like `longevity` ↔ `long-lasting hours` ↔ `5 hours`. Every theme stayed in its own cluster, every cross-run frequency stayed at `1/N`, and the P0/P1 priority gates were effectively unreachable.
 
-## Three modes
+Specifically:
 
-| Mode | API key | Use case |
-|---|---|---|
-| **Playback** | none | Investor demo / live show — uses the pre-recorded Wildstone sample. Instant, free, no setup. |
-| **Live** | yours, browser-stored | Real Anthropic calls. Paste your key once (saved in localStorage). |
-| **Production** | server-side | For deployed brand dashboards. Set `ANTHROPIC_API_KEY` in `.env.local`. |
+- **`/api/transcripts/aggregate`** now calls a new `runClusterer` agent (Sonnet 4.5) before `aggregate()`, passing the LLM's cluster groupings as an override. Falls back to Jaccard with a console warning if the LLM call fails after retries.
+- **`/transcripts/cross/<runId>`** rewritten with a 5-card stats bar (transcripts / mined / multi-transcript / surfaced / est-cost), a clustering-method badge (`LLM clusterer` green vs `Jaccard (legacy)` grey), a span-verification card, and purple-ringed cards for multi-transcript insights.
+- **`/transcripts/cross`** (new) — index page listing all cross-runs in the `cross-runs/` GCS prefix, newest first.
+- **Dead code removed:** the Vercel push webhook (`app/api/ingest/gcs-event/`), its OIDC verifier (`lib/pubsub-auth.ts`), and the legacy Python harness (`sample-run/`). All replaced by the Python `insights-engine`, which pulls from a Pub/Sub subscription instead of receiving pushes.
 
-## Run it
+Estimated cost overhead: **+$0.02 per cross-run** (one Sonnet call with all per-transcript themes).
+
+---
+
+## Quick start (local dev)
+
+Requires Node ≥ 18 and a GCS bucket already populated by `insights-engine` (or by manual upload).
 
 ```bash
-cd synthesis-demo
-npm install              # already done if you ran the build
-npm run dev              # http://localhost:3000
-```
-
-For production mode (server-side key):
-
-```bash
+cd services/insight-service
 cp .env.local.example .env.local
-# Edit .env.local — paste your key
+# Fill in ANTHROPIC_API_KEY and GCP_SERVICE_ACCOUNT_KEY (single-line JSON, single-quoted)
+npm install
 npm run dev
+# → http://localhost:3000
 ```
 
-For Live mode: open the page, switch the mode toggle to "Live", click "Set API key →" and paste.
+The three things to set in `.env.local`:
 
-## Demo flow
+| Var | Format | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | `sk-ant-…` | Used by `/api/transcripts/aggregate` (cross-run trigger) and Live/Production modes on `/` |
+| `GCP_SERVICE_ACCOUNT_KEY` | `'{"type":"service_account",…}'` | **Single-line JSON, wrapped in single quotes.** Single quotes preserve `\n` escapes inside `private_key` through the dotenv → `JSON.parse` round-trip |
+| `GCS_TRANSCRIPTS_BUCKET` | `your-bucket-name` | No `gs://` prefix |
 
-1. Open http://localhost:3000
-2. Mode is "Playback" by default (no key needed) — click "Run synthesis"
-3. Watch the 5-stage pipeline animate (Extract → Contradiction → Severity → Aggregate → Action)
-4. See the SquareUp-branded insight cards render with severity meters, verified quotes, and routed actions
-
-To run on real data: switch to "Live", paste your Anthropic key, paste a transcript (or click "Load sample"), click "Run synthesis."
-
-## Cost
-
-- Playback mode: $0
-- Live mode: ~$0.15-0.20 per transcript (uses Opus 4.5 + Sonnet 4.5)
-- Production mode: same as Live, billed to your server-side key
-
-## Files
-
-```
-synthesis-demo/
-├── app/
-│   ├── page.tsx                   Main demo page
-│   ├── layout.tsx
-│   ├── globals.css
-│   └── api/
-│       ├── health/route.ts        Health + hasServerKey check
-│       └── synthesize/route.ts    Single endpoint, dispatches by stage
-├── components/
-│   ├── ModeSelector.tsx           Three-mode toggle
-│   ├── ApiKeyDialog.tsx           Live-mode key entry (localStorage)
-│   ├── TranscriptInput.tsx        Paste / load-sample
-│   ├── PipelineView.tsx           5-stage animated progress
-│   └── InsightCard.tsx            Decision card (squareup-branded)
-├── lib/
-│   ├── prompts/                   Agent system prompts (same as skill)
-│   ├── prompts.ts                 Loader (server-side fs)
-│   ├── agents.ts                  Anthropic SDK wrapper per agent
-│   ├── verify.ts                  Span verifier with auto-offset-correction
-│   ├── aggregate.ts               Cross-transcript clustering (deterministic)
-│   ├── pipeline.ts                Client-side orchestrator with progress events
-│   ├── anthropic-client.ts        Mode-aware client factory
-│   └── types.ts                   Shared TS types
-├── public/
-│   └── fixtures/                  Pre-computed sample run for playback mode
-│       ├── extractor.json
-│       ├── contradiction.json
-│       ├── severity.json
-│       ├── aggregated.json
-│       ├── actions.json
-│       └── transcript.txt         The original Wildstone transcript
-├── sample-run/                    Python validation runner (gitignored outputs)
-│   ├── run_pipeline.py
-│   └── transcripts/
-│       └── T1.txt
-├── package.json
-└── tailwind.config.ts             SquareUp brand tokens
-```
-
-## How the verifier works
-
-The pipeline can't trust raw LLM output. Every span goes through `verifyAndCorrect()`:
-
-1. **Tier 1 (exact)**: `transcript[start_char:end_char] === verbatim` → pass.
-2. **Tier 2 (offset-corrected)**: verbatim found elsewhere in transcript → rewrite offsets, pass. (This handles the LLM's known weakness at counting characters.)
-3. **Tier 3 (whitespace-tolerant)**: minor whitespace drift between verbatim and transcript → match in normalized form, recover original-text span, pass.
-4. **Tier 4 (reject)**: verbatim is not in transcript at all → true hallucination, drop the span.
-
-Themes/contradictions that lose all their spans get filtered out entirely — defense in depth.
-
-## Adapting the prompts
-
-The 4 agent prompts live in `lib/prompts/*.md`. They are the same files used by the Claude skill at `~/.claude/skills/squareup-synthesis/prompts/`. Edit them in either place and copy across — they should stay in sync.
-
-## Production deployment
-
-For deployment to `joinsquareup.com/synthesis`:
+Sanity check after `npm run dev`:
 
 ```bash
-npm run build
-npm start  # or deploy to Vercel/Modal/Railway
+curl http://localhost:3000/api/health    # → {"ok": true, …}
 ```
 
-Set `ANTHROPIC_API_KEY` as an environment variable in your hosting platform. Default mode for paying brands should be "Production".
+---
 
-## Where this fits in the staged plan
+## URL map
 
-This is **Stage 1** — the synthesis demo surface. Next stages (per the architecture roadmap):
+| Route | Purpose |
+|---|---|
+| `/` | Live/Playback/Production synthesis demo (paste a transcript, run in-browser) |
+| `/transcripts` | List of `inbox/*.txt` with status pills. Trigger cross-run from here |
+| `/transcripts/<id>` | Single-transcript result viewer |
+| `/transcripts/cross` | **Index of all cross-runs** (newest first) |
+| `/transcripts/cross/<runId>` | Single cross-run viewer with the wardrobe-test-style insight cards |
+| `/api/health` | Diagnostic: `hasServerKey` + GCS reachability |
+| `/api/transcripts` (GET) | List inbox/ + status from results/ |
+| `/api/transcripts/<id>` (GET) | One per-transcript result JSON |
+| `/api/transcripts/cross` (GET) | List cross-runs/ |
+| `/api/transcripts/cross/<runId>` (GET) | One cross-run JSON |
+| `/api/transcripts/aggregate` (POST) | Trigger a cross-run (LLM clusterer + debate + action composer) |
+| `/api/synthesize` (POST) | In-browser per-stage pipeline endpoint (used by Live/Production on `/`) |
 
-- **Stage 2**: Bolna webhook + Supabase backend so transcripts auto-flow in
-- **Stage 3**: HITL review UI (`/admin/review`) for approve/edit/reject
-- **Stage 4**: Brand dashboard (`/brand/<id>/dashboard`)
-- **Stage 5**: Specialist fine-tuned models replacing Claude calls one agent at a time
+---
 
-The current `lib/agents.ts` interface is designed so Stage 5 swap-ins are drop-in replacements per agent.
+## Architecture
+
+Two components, glued by one GCS bucket. Neither calls the other directly.
+
+```
+[ Bolna / manual upload ]
+            │
+            ▼
+   gs://<bucket>/inbox/T*.txt
+            │
+            │  (GCS Object-Finalize notification)
+            ▼
+   Pub/Sub topic: transcript-uploaded-dev
+            │
+            ▼
+   Pull subscription: insights-puller
+            │
+            ▼
+┌──────────────────────────────────┐
+│ insights-engine (Python)         │
+│ python -m insights subscribe     │
+│   extractor → contradiction ∥    │
+│   severity → (clusterer) →       │
+│   aggregate → framer×3 + judge   │
+│   → action                       │
+└──────────────────────────────────┘
+            │
+   ┌────────┴──────────┐
+   ▼                   ▼
+results/<id>.json   cross-runs/<run_id>.json
+            │
+            └─── read by ───▶ insight-service (this repo)
+                              localhost:3000 / Vercel
+```
+
+**Per-transcript runs** are triggered automatically by Pub/Sub when a new `inbox/<id>.txt` is uploaded. They land in `results/<id>.json`.
+
+**Cross-runs** are triggered from `/transcripts` in this UI (`POST /api/transcripts/aggregate`). The endpoint:
+1. Reads `results/<id>.json` for each selected transcript (cached per-transcript stages — extractor, contradiction, severity)
+2. Runs `runClusterer` over the union of themes — single Sonnet call, ~$0.02
+3. Runs `aggregate()` with the LLM clusters as override
+4. Filters top-N at P0/P1/P2
+5. Runs 3-agent debate + Opus judge per surfaced insight
+6. Runs action composer
+7. Writes `cross-runs/<run_id>.json`
+
+**Why two components?** The Python engine was designed to run independently of Vercel — it's the canonical batch processor that auto-fires on uploads. The Next.js service is the *view* layer plus on-demand cross-run trigger. Either can run without the other: you can use `insights-engine` headless, you can run the UI against a bucket that nothing's writing to.
+
+---
+
+## GCS bucket layout (the wire contract)
+
+```
+gs://<bucket>/
+├── inbox/                          ← drop transcripts here as <transcript_id>.txt
+│   ├── T1.txt
+│   └── T2.txt
+│
+├── results/                        ← per-transcript pipeline outputs
+│   ├── T1.json                     ← success: full pipeline output
+│   ├── T1.error.json               ← failure: {error, stage, timestamp}
+│   └── T2.json
+│
+└── cross-runs/                     ← cross-transcript synthesis outputs
+    └── cross_<utc-timestamp>_<ids>.json
+```
+
+This layout is the contract. Both components must use the same prefixes and key names, or they'll fail to find each other's writes. The Next.js side defines the canonical names in `lib/gcs.ts`:
+
+```ts
+const INBOX_PREFIX     = "inbox/";
+const RESULTS_PREFIX   = "results/";
+const CROSS_RUNS_PREFIX = "cross-runs/";
+```
+
+The Python `insights/gcs.py` mirrors these exactly.
+
+---
+
+## Setting up a GCS inbox from scratch
+
+If you're integrating a fresh GCP project (or migrating to a new bucket), follow these steps in order. Estimated total time: 10–15 minutes.
+
+### 1. Prerequisites
+
+- A Google Cloud project (call it `$PROJECT`)
+- `gcloud` CLI installed and authenticated with an account that has Owner or Editor on the project
+- Decide on a bucket name and region. Bucket names are globally unique. Pick a region close to your Vercel deployment (or `us-central1` if undecided)
+
+```bash
+export PROJECT="your-gcp-project-id"
+export BUCKET="your-bucket-name"
+export REGION="us-central1"           # or bom1, eu-west1, etc.
+export TOPIC="transcript-uploaded"
+export PULL_SUB="insights-puller"
+export SA="insight-ingest"
+
+gcloud config set project $PROJECT
+```
+
+### 2. Enable required APIs
+
+```bash
+gcloud services enable storage.googleapis.com pubsub.googleapis.com
+```
+
+### 3. Create the bucket
+
+Uniform IAM (not legacy ACLs), public access blocked.
+
+```bash
+gcloud storage buckets create gs://$BUCKET \
+  --location=$REGION \
+  --uniform-bucket-level-access \
+  --public-access-prevention
+```
+
+### 4. Create the Pub/Sub topic
+
+```bash
+gcloud pubsub topics create $TOPIC
+```
+
+### 5. Wire GCS notifications → Pub/Sub
+
+`OBJECT_FINALIZE` fires every time a new object is created (or overwritten). We scope it to the `inbox/` prefix so we don't get duplicate fires when the pipeline writes to `results/`.
+
+```bash
+gcloud storage buckets notifications create gs://$BUCKET \
+  --topic=$TOPIC \
+  --event-types=OBJECT_FINALIZE \
+  --object-prefix=inbox/ \
+  --payload-format=json
+```
+
+You'll also need to grant the GCS service agent permission to publish to the topic — Google's docs cover this but `gcloud` usually does it for you automatically on first use.
+
+### 6. Create the pull subscription
+
+`--ack-deadline=600` (10 minutes) is generous; the Python pipeline runs `120s` per transcript, but `600s` gives margin for retries and large transcripts.
+
+```bash
+gcloud pubsub subscriptions create $PULL_SUB \
+  --topic=$TOPIC \
+  --ack-deadline=600
+```
+
+### 7. Create the service account
+
+Scoped narrowly: read/write the bucket, pull from the subscription. Nothing more.
+
+```bash
+gcloud iam service-accounts create $SA \
+  --display-name="Insight Ingest Service Account"
+
+export SA_EMAIL="${SA}@${PROJECT}.iam.gserviceaccount.com"
+```
+
+### 8. Grant minimum-needed IAM
+
+```bash
+# Bucket: full object admin (read inbox/, write results/ and cross-runs/, list, delete error files)
+gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
+  --member="serviceAccount:$SA_EMAIL" \
+  --role="roles/storage.objectAdmin"
+
+# Pull subscription: subscriber role
+gcloud pubsub subscriptions add-iam-policy-binding $PULL_SUB \
+  --member="serviceAccount:$SA_EMAIL" \
+  --role="roles/pubsub.subscriber"
+```
+
+### 9. Download the SA key JSON
+
+```bash
+mkdir -p ~/.gcp
+gcloud iam service-accounts keys create ~/.gcp/insight-ingest-key.json \
+  --iam-account=$SA_EMAIL
+```
+
+Keep this file secret. Don't commit it. Don't paste it into Slack.
+
+### 10. Configure `insights-engine` (the Python puller)
+
+In the `insights-engine/.env`:
+
+```dotenv
+ANTHROPIC_API_KEY=sk-ant-...
+
+GCP_SERVICE_ACCOUNT_KEY=/path/to/insight-ingest-key.json    # file path OR inline JSON
+GCP_PROJECT_ID=your-gcp-project-id
+GCS_TRANSCRIPTS_BUCKET=your-bucket-name
+PUBSUB_SUBSCRIPTION=projects/your-gcp-project-id/subscriptions/insights-puller
+
+DEFAULT_BRAND_CONTEXT=
+DEFAULT_ONBOARDING_PLAN=
+```
+
+Then:
+
+```bash
+cd insights-engine
+pip install -r requirements.txt
+python -m insights subscribe          # long-running puller
+```
+
+### 11. Configure `insight-service` (this repo)
+
+`.env.local`:
+
+```dotenv
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Single-line JSON, wrapped in single quotes (preserves \n in private_key)
+GCP_SERVICE_ACCOUNT_KEY='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"insight-ingest@...","...":"..."}'
+
+GCP_PROJECT_ID=your-gcp-project-id
+GCS_TRANSCRIPTS_BUCKET=your-bucket-name
+NEXT_PUBLIC_BUCKET_LABEL=your-bucket-name
+```
+
+The trick with the SA key: convert the JSON file to single-line and wrap in single quotes:
+
+```bash
+python -c "import json,sys; print(\"'\" + json.dumps(json.load(open(sys.argv[1])), separators=(',',':')) + \"'\")" ~/.gcp/insight-ingest-key.json
+```
+
+Then paste the output (including outer quotes) as the `GCP_SERVICE_ACCOUNT_KEY=` value.
+
+```bash
+cd services/insight-service
+npm install
+npm run dev
+# → http://localhost:3000
+```
+
+### 12. End-to-end smoke test
+
+```bash
+# Drop a transcript
+gcloud storage cp ./T1.txt gs://$BUCKET/inbox/T1.txt
+
+# In the puller terminal you should see:
+# [ingest] msg=… eventType=OBJECT_FINALIZE bucket=… name=inbox/T1.txt
+# [pipeline] ════ start ════ …
+# [pipeline] ════ DONE ════ …
+# [ingest] T1: N insights, …s, …in/…out
+
+# In the browser, refresh /transcripts — T1 should now show status="Done"
+```
+
+For a cross-run smoke test: upload at least two transcripts, select both on `/transcripts`, click **Run cross-transcript**. You'll get redirected to `/transcripts/cross/cross-<timestamp>`. Look for the green **LLM clusterer** badge in the metadata strip.
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `GCP_SERVICE_ACCOUNT_KEY is not valid JSON` in browser | `.env.local` uses double quotes — the `\n` escapes got eaten. Switch to single quotes |
+| `401 Request had invalid authentication credentials` in Python puller | SA credentials missing scopes. The Python `gcs.py` must pass `scopes=["https://www.googleapis.com/auth/cloud-platform"]` to `from_service_account_info()` |
+| Puller logs identity correctly but never receives messages | Subscription not bound to topic, or SA missing `roles/pubsub.subscriber` on the subscription |
+| `Run cross-transcript` button greyed out | Need ≥1 selected transcript with status `Done` |
+| Cross-run completes but all insights show 25% / 1-of-4 | Old Jaccard clustering. The page should show a yellow warning banner explaining this and pointing to re-run |
+| Cross-run completes but no insights surface | All themes single-transcript, so frequency stays at 1/N and P0/P1 are unreachable. Either widen filter to include P3 or use the LLM clusterer (this branch ships it on by default) |
+| `Task exception was never retrieved: Event loop is closed` in puller | Cosmetic httpx cleanup warning, fixed in `insights/pipeline.py` by calling `await client.close()` before return |
+
+---
+
+## File layout
+
+```
+services/insight-service/
+├── README.md                              ← this file
+├── INSIGHT_SERVICE.md                     ← legacy design doc, kept for history
+├── DEPLOY.md                              ← legacy Vercel deploy notes
+├── .env.local / .env.local.example        ← config (real one gitignored)
+├── package.json / tsconfig.json / next.config.mjs
+├── tailwind.config.ts / postcss.config.mjs
+├── vercel.json                            ← Vercel deploy config (legacy path)
+│
+├── app/
+│   ├── layout.tsx, globals.css, page.tsx  ← root + live-demo page
+│   ├── api/
+│   │   ├── health/route.ts                ← diagnostic
+│   │   ├── synthesize/route.ts            ← in-browser pipeline stages
+│   │   └── transcripts/
+│   │       ├── route.ts                   ← GET list inbox/+results/
+│   │       ├── [id]/route.ts              ← GET one result
+│   │       ├── aggregate/route.ts         ← POST trigger cross-run (LLM clustered)
+│   │       └── cross/
+│   │           ├── route.ts               ← GET list cross-runs/        [NEW]
+│   │           └── [runId]/route.ts       ← GET one cross-run
+│   └── transcripts/
+│       ├── page.tsx                       ← inbox list + cross-run trigger
+│       ├── [id]/page.tsx                  ← single-transcript view
+│       └── cross/
+│           ├── page.tsx                   ← cross-run INDEX            [NEW]
+│           └── [runId]/page.tsx           ← single cross-run view      [REWRITTEN]
+│
+├── components/                            ← React UI primitives
+│   ├── InsightCard.tsx, PipelineView.tsx
+│   ├── ModeSelector.tsx, ApiKeyDialog.tsx
+│   ├── TranscriptInput.tsx, OnboardingInput.tsx
+│   ├── InsightControls.tsx, TrustPanel.tsx
+│   └── FeedbackWidget.tsx
+│
+├── lib/                                   ← server-side logic
+│   ├── agents.ts                          ← Anthropic SDK wrappers (includes runClusterer)  [UPDATED]
+│   ├── aggregate.ts                       ← clustering + cross-transcript aggregation       [UPDATED]
+│   ├── pipeline.ts                        ← in-browser orchestrator (Live/Production modes)
+│   ├── pipeline-server.ts                 ← server-side orchestrator (kept for type exports)
+│   ├── anthropic-client.ts                ← mode-aware client factory
+│   ├── gcs.ts                             ← GCS read/write (listTranscripts, getCrossRun, putCrossRun, …)
+│   ├── verify.ts                          ← 4-tier span verifier
+│   ├── prompts.ts                         ← markdown prompt loader                          [UPDATED]
+│   ├── prompts/
+│   │   ├── extractor.md, contradiction.md, severity.md, action.md
+│   │   ├── framer.md, judge.md
+│   │   └── clusterer.md                                                                     [NEW]
+│   └── types.ts                                                                              [UPDATED]
+│
+└── public/
+    └── fixtures/                          ← pre-computed sample for Playback mode
+```
+
+---
+
+## Cost model
+
+Per cross-run on 4 transcripts (all already cached per-transcript):
+
+| Stage | Calls | Model | Approx cost |
+|---|---|---|---|
+| Clusterer | 1 | Sonnet 4.5 | $0.02 |
+| Debate framers (3 × top-5 insights) | 15 | Sonnet 4.5 | $0.13 |
+| Debate judges (1 × top-5) | 5 | Opus 4.5 | $0.13 |
+| Action composer | 1 | Sonnet 4.5 | $0.02 |
+| **Total** | **22 calls** | | **~$0.30** |
+
+Per-transcript single runs (triggered by the Pub/Sub puller, not this UI) cost ~$0.30 each, on top of which you re-pay nothing for cross-runs (they read cached `results/<id>.json`).
+
+Live-mode demos on `/` cost roughly the same as a single per-transcript run.
+
+---
+
+## Related
+
+- **`insights-engine`** — the Python puller. Lives separately from this monorepo today. Talk to it through `gs://<bucket>/inbox/`
+- **`INSIGHT_SERVICE.md`** in this directory — older design doc; the bits about the Vercel push webhook are now historical
+- **Anthropic API docs** for current model IDs and pricing
+- **`gcloud storage`** / **`gcloud pubsub`** for the infra commands above
+
+---
+
+## Known caveats
+
+- **Live-mode aggregate stage** (`/api/synthesize` with `stage: "aggregate"`) still uses Jaccard. The LLM clusterer is only wired into the GCS-backed cross-run path. Low impact because Live mode is usually 1 transcript; port it if you start using Live for multi-transcript work
+- **`lib/pipeline-server.ts`** has a `runServerPipeline()` function that is no longer called from anywhere (its caller, `app/api/ingest/`, was removed). The file is kept because its `ServerPipelineResult` type is still consumed by two other files. If you resurrect it as an entry point, remember to thread `runClusterer` through — it currently still calls `aggregate()` without an override
+- **All 5 debate winners are usually `balanced`** in practice. The 3-agent debate may be over-engineered; consider whether `conservative` + `aggressive` are earning their ~$0.07 cost or just acting as decoys for the judge
+- **`clustering_method`** is a new field in the aggregated metadata. Old cross-run JSONs (written before this branch) won't have it; the UI defaults to `"jaccard"` for those and shows the legacy badge
+
+---
+
+## License / ownership
+
+Internal to SquareUp. Not for public distribution.

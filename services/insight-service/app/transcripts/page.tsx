@@ -162,7 +162,7 @@ export default function TranscriptsPage() {
                 {allDoneSelected ? "Deselect all done" : `Select all done (${doneIds.length})`}
               </button>
               <span className="text-sm text-ink-700">
-                {selected.size} selected · cross-run reuses cached per-transcript outputs (~$0.30 per run)
+                {selected.size} selected · reuses cached per-transcript outputs + LLM clustering (~$0.30–0.40 per run)
               </span>
             </div>
             <button
@@ -251,6 +251,7 @@ function Header() {
         <nav className="flex items-center gap-4 text-sm">
           <Link href="/" className="text-ink-600 hover:text-ink-900">Synthesis (live)</Link>
           <Link href="/transcripts" className="text-ink-900 font-medium">Transcripts</Link>
+          <Link href="/transcripts/cross" className="text-ink-600 hover:text-ink-900">Cross-runs</Link>
         </nav>
       </div>
     </header>

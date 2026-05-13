@@ -120,6 +120,7 @@ export type AggregatedOutput = {
     total_themes_found: number;
     themes_after_clustering: number;
     similarity_threshold: number;
+    clustering_method?: "llm" | "jaccard";
     generated_at: string;
   };
   aggregated_insights: AggregatedInsight[];

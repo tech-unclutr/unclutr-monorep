@@ -18,6 +18,7 @@ export const PROMPTS = {
   action: loadPrompt("action"),
   framer: loadPrompt("framer"),
   judge: loadPrompt("judge"),
+  clusterer: loadPrompt("clusterer"),
 } as const;
 
 // Style configs for the framer (substituted into framer.md template)

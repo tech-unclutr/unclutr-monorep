@@ -188,6 +188,59 @@ export async function runActionComposer(
   return result;
 }
 
+// ---- Cross-transcript clusterer ----
+
+export type ClustererCluster = { rationale: string; theme_keys: string[] };
+export type ClustererOutput = { clusters: ClustererCluster[] };
+
+/**
+ * Semantic clusterer over themes from all transcripts. Returns clusters of
+ * theme_keys (formatted as `<transcript_id>:<theme_id>`), with one short rationale
+ * per cluster. Skipped (returns null) when there's nothing to cluster across
+ * (< 2 themes total). Falls back to Jaccard clustering on the caller side.
+ */
+export async function runClusterer(
+  client: Anthropic,
+  extractorDocs: Record<string, ExtractorOutput>,
+): Promise<{ data: ClustererOutput; inputKeys: string[]; usage: AgentUsage } | null> {
+  type ThemePayload = {
+    theme_key: string;
+    category: string;
+    theme_name: string;
+    first_evidence: string;
+  };
+  const themes: ThemePayload[] = [];
+  const tids = Object.keys(extractorDocs).sort();
+  for (const tid of tids) {
+    const doc = extractorDocs[tid];
+    for (const theme of doc.themes ?? []) {
+      const themeId = theme.theme_id ?? "";
+      const span = theme.evidence_spans?.[0];
+      themes.push({
+        theme_key: `${tid}:${themeId}`,
+        category: theme.category ?? "unknown",
+        theme_name: theme.theme_name ?? "",
+        first_evidence: (span?.verbatim ?? "").slice(0, 180),
+      });
+    }
+  }
+  if (themes.length < 2) return null;
+
+  const userPrompt =
+    "THEMES TO CLUSTER (every theme_key must appear in exactly one cluster in your output):\n\n" +
+    JSON.stringify(themes, null, 2);
+
+  const result = await callAgent<ClustererOutput>(
+    client, PROMPTS.clusterer, userPrompt, WORKER_MODEL, 4000,
+  );
+  return {
+    data: result.data,
+    inputKeys: themes.map(t => t.theme_key),
+    usage: result.usage,
+  };
+}
+
+
 // ---- Multi-agent debate ----
 
 export async function runFramer(

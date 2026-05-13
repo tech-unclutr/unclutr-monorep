@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { aggregate } from "@/lib/aggregate";
-import { debateOneInsight, runActionComposer } from "@/lib/agents";
+import { debateOneInsight, runActionComposer, runClusterer } from "@/lib/agents";
 import {
   getResult, getTranscriptText, putCrossRun,
 } from "@/lib/gcs";
@@ -81,10 +81,32 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  // 2. Aggregate (deterministic, free)
-  const aggregated = aggregate(extractor, contradiction, severity, transcriptsMap, 0.45);
+  const client = new Anthropic({ apiKey });
+  const ctx = { onboardingPlan: body.onboarding_plan, brandContext: body.brand_context };
+  const usage = { input_tokens: 0, output_tokens: 0 };
 
-  // 3. Filter
+  // 2. Semantic clusterer (LLM). Cheap (~$0.02), but the difference between
+  //    "37 singletons" and "real cross-transcript themes" is the entire reason
+  //    this endpoint exists. Fall back to Jaccard if it fails after retries.
+  let clustersOverride: string[][] | undefined;
+  if (ids.length >= 2) {
+    try {
+      const clusterResult = await runClusterer(client, extractor);
+      if (clusterResult !== null) {
+        usage.input_tokens += clusterResult.usage.input_tokens;
+        usage.output_tokens += clusterResult.usage.output_tokens;
+        clustersOverride = (clusterResult.data.clusters ?? [])
+          .map(c => (c.theme_keys ?? []).filter(k => typeof k === "string"));
+      }
+    } catch (e) {
+      console.warn("[cross-run] clusterer failed, falling back to Jaccard:", e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // 3. Aggregate (deterministic; uses cluster override when present)
+  const aggregated = aggregate(extractor, contradiction, severity, transcriptsMap, 0.45, clustersOverride);
+
+  // 4. Filter
   const filters: InsightFilters = {
     topN: body.top_n ?? 5,
     priorities: ["P0", "P1", "P2"],
@@ -92,11 +114,7 @@ export async function POST(req: NextRequest) {
   const filtered = applyFilters(aggregated.aggregated_insights, filters);
   const filteredIds = filtered.map(i => i.insight_id);
 
-  // 4. Debate (LLM, ~$0.05/insight)
-  const client = new Anthropic({ apiKey });
-  const ctx = { onboardingPlan: body.onboarding_plan, brandContext: body.brand_context };
-
-  const usage = { input_tokens: 0, output_tokens: 0 };
+  // 5. Debate (LLM, ~$0.05/insight)
   const debateResults: DebateResult[] = [];
   const concurrency = 4;
   for (let i = 0; i < filtered.length; i += concurrency) {
@@ -109,12 +127,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 5. Action composer
+  // 6. Action composer
   const actionsOut = await runActionComposer(client, aggregated, ctx, filteredIds);
   usage.input_tokens += actionsOut.usage.input_tokens;
   usage.output_tokens += actionsOut.usage.output_tokens;
 
-  // 6. Write
+  // 7. Write
   const runId = `cross-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   const payload = {
     pipeline_version: "v2-cross",

@@ -195,18 +195,64 @@ function gatherContradictions(cluster: ThemeEntry[], contradictionDocs: Record<s
   return out;
 }
 
+/**
+ * Build the same shape clusterThemes returns, from an external list of
+ * cluster groups expressed as `{tid}:{theme_id}` keys. Defensive: any theme not
+ * covered by the override becomes its own singleton cluster, so downstream
+ * stages can't silently lose insights from a buggy clusterer.
+ */
+function clustersFromOverride(
+  extractorDocs: Record<string, ExtractorOutput>,
+  clusterKeysets: string[][],
+): ThemeEntry[][] {
+  const entriesByKey = new Map<string, ThemeEntry>();
+  for (const [tid, doc] of Object.entries(extractorDocs)) {
+    for (const theme of doc.themes ?? []) {
+      const themeId = theme.theme_id ?? "";
+      const key = `${tid}:${themeId}`;
+      const tokens = new Set([...tokenize(theme.theme_name), ...tokenize(themeId)]);
+      entriesByKey.set(key, { transcript_id: tid, theme, tokens });
+    }
+  }
+
+  const placed = new Set<string>();
+  const clusters: ThemeEntry[][] = [];
+  for (const group of clusterKeysets ?? []) {
+    const cluster: ThemeEntry[] = [];
+    for (const key of group) {
+      if (placed.has(key)) continue;
+      const entry = entriesByKey.get(key);
+      if (!entry) continue;
+      cluster.push(entry);
+      placed.add(key);
+    }
+    if (cluster.length) clusters.push(cluster);
+  }
+  for (const [key, entry] of entriesByKey) {
+    if (!placed.has(key)) {
+      clusters.push([entry]);
+      placed.add(key);
+    }
+  }
+  return clusters;
+}
+
+
 export function aggregate(
   extractorDocs: Record<string, ExtractorOutput>,
   contradictionDocs: Record<string, ContradictionOutput>,
   severityDocs: Record<string, SeverityOutput>,
   transcripts: Record<string, string>,
   similarityThreshold = 0.45,
+  clustersOverride?: string[][],
 ): AggregatedOutput {
   const transcriptIds = Object.keys(extractorDocs).sort();
   const nTranscripts = transcriptIds.length;
   const totalThemes = Object.values(extractorDocs).reduce((sum, doc) => sum + doc.themes.length, 0);
 
-  const clusters = clusterThemes(extractorDocs, similarityThreshold);
+  const clusters = clustersOverride !== undefined
+    ? clustersFromOverride(extractorDocs, clustersOverride)
+    : clusterThemes(extractorDocs, similarityThreshold);
   const insights: AggregatedInsight[] = [];
 
   for (const cluster of clusters) {
@@ -269,6 +315,7 @@ export function aggregate(
       total_themes_found: totalThemes,
       themes_after_clustering: insights.length,
       similarity_threshold: similarityThreshold,
+      clustering_method: clustersOverride !== undefined ? "llm" : "jaccard",
       generated_at: new Date().toISOString(),
     },
     aggregated_insights: insights,

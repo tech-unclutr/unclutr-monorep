@@ -16,6 +16,7 @@ from app.models.call_raw_data import CallRawData
 from app.models.campaign import Campaign
 from app.models.campaign_event import CampaignEvent
 from app.models.queue_item import QueueItem
+from app.services.bolna.constants import TERMINAL_STATES
 from app.services.intelligence.scheduling_service import scheduling_service
 from app.services.user_queue_warmer import UserQueueWarmer
 from app.services.lead_closure import LeadClosure
@@ -136,7 +137,6 @@ async def bolna_webhook(
     # when the call reaches a terminal state. Intermediate states (ringing, speaking)
     # just update the execution map for real-time visibility.
     
-    TERMINAL_STATES = ["completed", "failed", "call-disconnected", "voicemail_detected", "no-answer", "busy", "canceled"]
     current_status = (payload.get("status") or "").lower()
     is_terminal = current_status in TERMINAL_STATES or payload.get("answered_by_voice_mail")
 

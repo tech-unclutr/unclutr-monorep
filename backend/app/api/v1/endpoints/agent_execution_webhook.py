@@ -7,6 +7,12 @@ touches `study_call_logs` and never touches CallLog / BolnaExecutionMap /
 QueueItem / CampaignEvent. Bolna fires this URL when the agent's dashboard
 webhook is pointed at /api/v1/webhook/study-bolna (or when our outbound
 trigger payload sets `webhook_url` to it).
+
+Phase 1 of the insights pipeline: on terminal events (per the shared
+TERMINAL_STATES set), the handler stashes the transcript to GCS in the
+same DB commit. The GCS write is bounded by GCS_UPLOAD_TIMEOUT_SECONDS and
+is fail-soft — a slow or broken GCS leaves `transcript_gcs_path` NULL but
+never breaks the lifecycle update.
 """
 
 import json
@@ -18,8 +24,20 @@ from loguru import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.db import get_session
 from app.models.study_designer import StudyCallLog
+from app.services.bolna.constants import TERMINAL_STATES
+from app.services.cloud_tasks.dispatcher import enqueue_insights_task, is_enabled as insights_dispatch_enabled
+from app.services.gcs.transcript_storage import upload_transcript
+
+
+# TODO(security): This endpoint accepts unauthenticated POSTs. Once Bolna's
+# signing secret is provisioned, add HMAC verification using the pattern at
+# backend/app/services/shopify/oauth_service.py:198-214 — read raw body via
+# `Request`, verify the X-Bolna-Signature (or equivalent) header, then parse
+# JSON. Must land before Phase 3 (insights worker), when this same endpoint
+# becomes a paid-LLM trigger surface.
 
 
 router = APIRouter()
@@ -105,8 +123,65 @@ async def study_bolna_webhook(
     log_row.webhook_payload = payload
     log_row.updated_at = datetime.utcnow()
 
+    # Phase 1 — stash transcript to GCS on terminal events. Gated on
+    # status ∈ TERMINAL_STATES so we don't write on every intermediate event
+    # (ringing/speaking/etc.), plus belt-and-suspenders on the transcript
+    # being non-empty and study_id/company_id being populated on the row.
+    # Anything that goes wrong inside this block is logged and swallowed —
+    # the lifecycle update (DB commit below) must always proceed.
+    current_status = (payload.get("status") or "").lower()
+    is_terminal = current_status in TERMINAL_STATES
+    should_upload = (
+        is_terminal
+        and bool(log_row.full_transcript)
+        and log_row.study_id is not None
+        and log_row.company_id is not None
+        and bool(settings.GCS_TRANSCRIPTS_BUCKET)
+    )
+
+    if should_upload:
+        try:
+            gs_path = await upload_transcript(
+                company_id=log_row.company_id,
+                study_id=log_row.study_id,
+                call_log_id=log_row.id,
+                transcript_text=log_row.full_transcript,
+                metadata={
+                    "recording_url": log_row.recording_url,
+                    "duration_seconds": log_row.call_duration,
+                    "bolna_call_id": log_row.bolna_call_id,
+                },
+                timeout_seconds=settings.GCS_UPLOAD_TIMEOUT_SECONDS,
+            )
+            log_row.transcript_gcs_path = gs_path
+        except Exception as exc:
+            logger.warning(
+                f"[StudyBolnaWebhook] GCS upload failed for "
+                f"bolna_call_id={bolna_call_id}: {exc!r} — continuing without path"
+            )
+
     session.add(log_row)
     await session.commit()
+
+    # Phase 2 — fire-and-forget Cloud Tasks dispatch to insights-service. Only
+    # runs if the GCS upload above succeeded (so transcript_gcs_path is set) and
+    # the dispatcher is configured. Failure to enqueue is logged and swallowed
+    # — same fail-soft posture as the GCS upload, so a broken dispatcher never
+    # turns into a 500 back to Bolna.
+    if log_row.transcript_gcs_path and insights_dispatch_enabled():
+        try:
+            await enqueue_insights_task(
+                call_log_id=log_row.id,
+                company_id=log_row.company_id,
+                study_id=log_row.study_id,
+                transcript_gcs_path=log_row.transcript_gcs_path,
+            )
+        except Exception as exc:
+            logger.warning(
+                f"[StudyBolnaWebhook] Cloud Tasks enqueue failed for "
+                f"bolna_call_id={bolna_call_id}: {exc!r} — transcript stashed, "
+                "insights run skipped"
+            )
 
     logger.info(
         f"[StudyBolnaWebhook] Updated StudyCallLog bolna_call_id={bolna_call_id} "

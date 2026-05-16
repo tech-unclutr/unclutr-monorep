@@ -1,5 +1,8 @@
-// GCS wrapper. Authed via GCP_SERVICE_ACCOUNT_KEY env (parsed JSON) so it works
-// in Vercel's serverless runtime without a credentials file on disk.
+// GCS wrapper. Two auth modes:
+//   1. GCP_SERVICE_ACCOUNT_KEY env (parsed JSON) — used on Vercel and when running
+//      locally with a downloaded key file inlined into the env.
+//   2. Application Default Credentials — used automatically on Cloud Run (via the
+//      metadata server) and locally after `gcloud auth application-default login`.
 
 import { Storage } from "@google-cloud/storage";
 
@@ -8,17 +11,20 @@ let _storage: Storage | null = null;
 function getStorage(): Storage {
   if (_storage) return _storage;
   const raw = process.env.GCP_SERVICE_ACCOUNT_KEY;
-  if (!raw) throw new Error("GCP_SERVICE_ACCOUNT_KEY env var is not set");
-  let credentials;
-  try {
-    credentials = JSON.parse(raw);
-  } catch (e) {
-    throw new Error(`GCP_SERVICE_ACCOUNT_KEY is not valid JSON: ${e instanceof Error ? e.message : e}`);
+  if (raw) {
+    let credentials;
+    try {
+      credentials = JSON.parse(raw);
+    } catch (e) {
+      throw new Error(`GCP_SERVICE_ACCOUNT_KEY is not valid JSON: ${e instanceof Error ? e.message : e}`);
+    }
+    _storage = new Storage({
+      credentials,
+      projectId: process.env.GCP_PROJECT_ID || credentials.project_id,
+    });
+  } else {
+    _storage = new Storage({ projectId: process.env.GCP_PROJECT_ID });
   }
-  _storage = new Storage({
-    credentials,
-    projectId: process.env.GCP_PROJECT_ID || credentials.project_id,
-  });
   return _storage;
 }
 

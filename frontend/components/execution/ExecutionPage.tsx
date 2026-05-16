@@ -11,6 +11,7 @@ import {
     Play,
     Play as PlayIcon,
     Radio,
+    Sparkles,
     Square,
     Users,
     XCircle,
@@ -209,7 +210,7 @@ export function ExecutionPage({ studyId }: ExecutionPageProps) {
         try {
             const res = (await api.post(
                 `/agent-execution/leads/${lead.id}/call`,
-                {},
+                { study_id: studyId },
             )) as TriggerCallResponse;
 
             if (res.status === "success") {
@@ -373,11 +374,9 @@ export function ExecutionPage({ studyId }: ExecutionPageProps) {
     }, [studyId]);
 
     const goBack = () => {
-        if (window.history.length > 1) {
-            router.back();
-        } else {
-            router.push("/dashboard/playground");
-        }
+        // After the URL refactor, the canonical home for studies is /dashboard/study
+        // (the picker). Each study lives at /dashboard/study/<id>/design|recruitment|execution.
+        router.push(`/dashboard/study/${studyId}/recruitment`);
     };
 
     if (status === "ready") {
@@ -414,6 +413,24 @@ export function ExecutionPage({ studyId }: ExecutionPageProps) {
                             >
                                 <ArrowLeft className="w-3.5 h-3.5" />
                                 Back
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    if (typeof window !== "undefined") {
+                                        // Remember where to return to when the user hits "Back"
+                                        // on the insights screen — survives reloads.
+                                        sessionStorage.setItem(
+                                            "insights_return_path",
+                                            window.location.pathname,
+                                        );
+                                    }
+                                    router.push("/dashboard/insights");
+                                }}
+                                className="inline-flex items-center gap-2 rounded-xl border-[#FF8A4C]/30 text-[#FF8A4C] hover:bg-[#FF8A4C]/5 hover:text-[#FF8A4C] hover:border-[#FF8A4C]/50 active:scale-[0.98] transition-all"
+                            >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                View Insights
                             </Button>
                             <Button
                                 onClick={handleStart}

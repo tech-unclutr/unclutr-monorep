@@ -60,6 +60,13 @@ class CohortPromptsResponse(BaseModel):
     cohorts: List[CohortPromptEntry]
 
 
+class TriggerCallRequest(BaseModel):
+    # Optional — when present, gets stamped on the new study_call_logs row so
+    # the Phase 1 webhook handler can resolve the GCS object path without
+    # joining back through research_participants.
+    study_id: Optional[uuid.UUID] = None
+
+
 class TriggerCallResponse(BaseModel):
     status: str
     call_id: Optional[str] = None
@@ -309,6 +316,7 @@ async def get_recent_study_calls(
 )
 async def trigger_call(
     lead_id: uuid.UUID,
+    body: TriggerCallRequest = TriggerCallRequest(),
     session: AsyncSession = Depends(get_session),
     company_id: uuid.UUID = Depends(_get_company_id),
 ):
@@ -319,5 +327,9 @@ async def trigger_call(
     in `study_call_logs`. Returns the payload (for verification), Bolna's
     response, and `agent_id` so the frontend can slot the lead under the
     right agent card.
+
+    The optional `study_id` in the request body is stamped on the new
+    `study_call_logs` row so the insights-pipeline webhook handler can
+    address its GCS object path without re-joining through participants.
     """
-    return await trigger_bolna_call(session, lead_id, company_id)
+    return await trigger_bolna_call(session, lead_id, company_id, body.study_id)

@@ -59,6 +59,29 @@ class Settings(BaseSettings):
     BOLNA_AGENT_ID: Optional[str] = None
     BOLNA_API_BASE_URL: str = "https://api.bolna.ai"
 
+    # GCS — transcript stash (Phase 1 of the insights pipeline). When
+    # GCS_TRANSCRIPTS_BUCKET is unset the webhook handler skips the upload
+    # silently, so local dev without GCP creds still works.
+    GCS_TRANSCRIPTS_BUCKET: Optional[str] = None
+    # Either a filesystem path to a service-account JSON, or the JSON itself
+    # inlined (production reads from Secret Manager and inlines).
+    GCS_SERVICE_ACCOUNT_KEY: Optional[str] = None
+    GCP_PROJECT_ID: Optional[str] = None
+    # Hard ceiling on the GCS upload from inside the webhook handler — must be
+    # short enough that a hung GCS does not blow Bolna's webhook retry budget.
+    GCS_UPLOAD_TIMEOUT_SECONDS: float = 3.0
+
+    # Cloud Tasks dispatch to insights-service. When CLOUD_TASKS_QUEUE_INSIGHTS
+    # or INSIGHTS_SERVICE_URL is unset the webhook handler skips the dispatch
+    # silently, so local dev without GCP creds still works.
+    CLOUD_TASKS_PROJECT: Optional[str] = None
+    CLOUD_TASKS_LOCATION: str = "asia-south1"
+    CLOUD_TASKS_QUEUE_INSIGHTS: Optional[str] = None
+    INSIGHTS_SERVICE_URL: Optional[str] = None
+    # OIDC token signer identity — the SA the backend runs as on Cloud Run.
+    # Cloud Tasks mints tokens with `email=<this SA>` and the receiver verifies.
+    BACKEND_SA_EMAIL: Optional[str] = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"

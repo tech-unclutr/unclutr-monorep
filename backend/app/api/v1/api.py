@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     dev,
     execution,
     health,
+    insights,
     integrations,
     intelligence,
 
@@ -61,6 +62,7 @@ api_router.include_router(study_designer.router, prefix="/study-planner", tags=[
 api_router.include_router(agent_execution.router, prefix="/agent-execution", tags=["Agent Execution"])
 api_router.include_router(agent_configurations.router, prefix="/agents", tags=["Agent Configurations"])
 api_router.include_router(persist_leads.router, prefix="/leads", tags=["Leads"])
+api_router.include_router(insights.router, prefix="/insights", tags=["Insights"])
 
 
 

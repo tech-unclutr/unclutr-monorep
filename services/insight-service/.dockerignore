@@ -1,0 +1,13 @@
+.next
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+.vercel
+README.md
+DEPLOY.md
+INSIGHT_SERVICE.md
+*.log
+.DS_Store

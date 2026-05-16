@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 from uuid import UUID
 
 import httpx
+import phonenumbers
 from fastapi import HTTPException
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
@@ -32,16 +33,39 @@ _PLACEHOLDER_PATTERN = re.compile(r"\{[a-z_]+\}")
 
 
 def _normalize_phone(raw: str) -> str:
-    """E.164 with +91 default. Mirrors bolna_caller.py:226-238 — duplicated
-    intentionally so the campaign caller stays untouched."""
-    clean = "".join(ch for ch in (raw or "") if ch.isdigit() or ch == "+")
-    if len(clean) == 10 and clean.isdigit():
-        return f"+91{clean}"
-    if len(clean) == 11 and clean.startswith("0"):
-        return f"+91{clean[1:]}"
-    if not clean.startswith("+"):
-        return f"+{clean}"
-    return clean
+    """Parse to E.164 via libphonenumber. Requires a country code (either a
+    leading `+` or a digit prefix that libphonenumber recognizes) so US, UK,
+    IN, etc. all route correctly. Defaulting to a single region silently
+    misroutes numbers from every other region."""
+    if not raw or not raw.strip():
+        raise HTTPException(status_code=400, detail="Lead has no contact number")
+
+    candidate = raw.strip()
+    if not candidate.startswith("+"):
+        digits = re.sub(r"\D", "", candidate)
+        candidate = f"+{digits}"
+
+    try:
+        parsed = phonenumbers.parse(candidate, None)
+    except phonenumbers.NumberParseException as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid phone number {raw!r}: include country code "
+                f"(e.g. +1 for US, +91 for India). {exc}"
+            ),
+        ) from exc
+
+    if not phonenumbers.is_valid_number(parsed):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid phone number {raw!r}: include country code "
+                "(e.g. +1 for US, +91 for India)."
+            ),
+        )
+
+    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
 
 def _substitute_runtime_vars(
@@ -64,6 +88,7 @@ async def trigger_bolna_call(
     session: AsyncSession,
     lead_id: UUID,
     company_id: UUID,
+    study_id: Optional[UUID] = None,
 ) -> Dict[str, Any]:
     """
     Triggers a single Bolna /call for the given lead.
@@ -182,6 +207,8 @@ async def trigger_bolna_call(
         lead_id=lead.id,
         bolna_call_id=str(bolna_call_id),
         response_json=response_json,
+        company_id=company_id,
+        study_id=study_id,
     )
 
     agent_id: Optional[UUID] = cohort.agent_configuration_id
@@ -203,16 +230,25 @@ async def _persist_log(
     lead_id: UUID,
     bolna_call_id: str,
     response_json: Dict[str, Any],
+    company_id: Optional[UUID] = None,
+    study_id: Optional[UUID] = None,
 ) -> bool:
     """Insert one row in study_call_logs. Returns False (without raising) when
     the write fails — usually due to the deferred migration that still has
-    NOT NULL on execution_id/queue_item_id, or a duplicate bolna_call_id."""
+    NOT NULL on execution_id/queue_item_id, or a duplicate bolna_call_id.
+
+    `company_id` and `study_id` are stamped on every new row so the Phase 1
+    GCS-stash path in the webhook handler has them available without a join
+    back through research_leads / research_participants.
+    """
     log = StudyCallLog(
         lead_id=lead_id,
         bolna_call_id=bolna_call_id,
         bolna_agent_id=settings.BOLNA_AGENT_ID or "unknown",
         call_status="initiated",
         webhook_payload=response_json,
+        company_id=company_id,
+        study_id=study_id,
     )
     session.add(log)
     try:

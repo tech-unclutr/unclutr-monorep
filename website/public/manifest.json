@@ -1,0 +1,24 @@
+{
+  "name": "SquareUp",
+  "short_name": "SquareUp",
+  "description": "Customer Understanding for Consumer Companies",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF4EC",
+  "theme_color": "#FF6B00",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/su_logo_transparent.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

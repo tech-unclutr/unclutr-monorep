@@ -1,0 +1,99 @@
+# Dependencies
+node_modules/
+backend/venv/
+backend/.venv/
+venv/
+.venv/
+env/
+.env
+.env.local
+.env.*.local
+
+# Next.js
+.next/
+out/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/build/
+backend/develop-eggs/
+backend/dist/
+backend/downloads/
+backend/eggs/
+backend/.libs/
+backend/lib/
+backend/lib64/
+backend/parts/
+backend/sdist/
+backend/var/
+backend/wheels/
+backend/pip-wheel-metadata/
+backend/share/python-wheels/
+backend/*.egg-info/
+backend/.installed.cfg
+backend/*.egg
+backend/MANIFEST
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Project specific
+backend/*.db
+backend/db.sqlite3
+backend/instance/
+backend/htmlcov/
+backend/.tox/
+backend/.nox/
+backend/.coverage
+backend/.cache
+backend/nosetests.xml
+backend/coverage.xml
+backend/*.cover
+backend/*.log
+backend/.hypothesis/
+backend/.pytest_cache/
+backend/cover/
+backend/firebase-credentials.json
+frontend/*.log
+
+
+# Ignore temp venvs and logs
+backend/venv_lite/
+backend/venv_repair/
+backend.log
+backend/env.json
+
+# Firebase build artifacts
+.firebase/
+
+# Debug & log files
+*.log
+debug_sync_error.log
+critical_error.log
+
+# One-off scripts and dev artifacts
+fix_order.py
+fix_parsing.py
+fix_props.py
+debug_deploy_logic.py
+debug_sqlalchemy.py
+debug_sqlalchemy_precedence.py
+test_oauth_config.py
+test_url_logic.py
+console_logs.txt
+backend_prints.txt
+execution_prints.txt
+frontend_logs.txt
+todos.txt
+task.md
+website/pitch-deck/node_modules
+.npm-cache/

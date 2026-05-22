@@ -1,0 +1,108 @@
+{
+  "hosting": [
+    {
+      "target": "production",
+      "source": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      },
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "squareup-backend",
+            "region": "asia-south1"
+          }
+        }
+      ],
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/dashboard",
+          "type": 301
+        }
+      ]
+    },
+    {
+      "target": "staging",
+      "source": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      },
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "squareup-backend-staging",
+            "region": "asia-south1"
+          }
+        }
+      ],
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/dashboard",
+          "type": 301
+        }
+      ]
+    },
+    {
+      "target": "development",
+      "source": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      },
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": {
+            "serviceId": "squareup-backend-dev",
+            "region": "asia-south1"
+          }
+        }
+      ],
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/dashboard",
+          "type": 301
+        }
+      ]
+    },
+    {
+      "target": "website-production",
+      "source": "website",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      }
+    }
+  ],
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    }
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  }
+}

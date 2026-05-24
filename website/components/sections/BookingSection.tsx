@@ -49,15 +49,17 @@ export default function BookingSection() {
         <div className="w-full lg:w-1/3 flex flex-col justify-center">
           <Reveal width="100%">
             <div className="mb-8 lg:mb-0">
+              {/* V4 copy (Phase 3 / Change 3.2, doc §7.4). */}
               <h2 className="font-display text-[clamp(28px,5vw,56px)] tracking-[-0.04em] text-[#0b132b] mb-4 text-left leading-[1.05]">
-                Watch it{" "}
+                See it in{" "}
                 <span className="text-[#FF5A36]">
-                  work.
+                  30 minutes.
                 </span>
               </h2>
               <p className="text-base sm:text-lg text-[#475569] font-medium text-left max-w-lg">
-                Book a 30-minute tailored setup call to see how SquareUp can unify
-                your customer data.
+                Book a tailored walkthrough. We&apos;ll show you how SquareUp runs
+                continuous customer research on autopilot and what the insights
+                look like for your specific use case.
               </p>
             </div>
           </Reveal>
@@ -89,7 +91,8 @@ export default function BookingSection() {
                 Schedule a Demo
               </h3>
               <p className="text-[#475569] mb-6 sm:mb-8 max-w-sm mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
-                Pick a time that works for you. We'll show you exactly how our platform can fit into your workflow.
+                Pick a time that works for you. We&apos;ll show you exactly how our
+                customer research platform fits into your workflow.
               </p>
               <a
                 href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
@@ -98,7 +101,7 @@ export default function BookingSection() {
                 onClick={() => haptic("medium")}
                 className="inline-flex items-center justify-center bg-[#FF5A36] text-white font-medium px-6 sm:px-8 py-3 sm:py-4 rounded-xl hover:bg-[#e04a2a] transition-all duration-300 hover:shadow-lg hover:shadow-[#FF5A36]/30 transform hover:-translate-y-0.5 whitespace-nowrap text-sm sm:text-base lg:text-lg"
               >
-                Book 30-min Setup Call
+                Book a Pilot
               </a>
             </motion.div>
           </Reveal>

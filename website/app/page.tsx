@@ -28,6 +28,7 @@ const ResearchNeeds = dynamic(() => import("@/components/sections/ResearchNeeds"
 // separate, net-new component (per migration doc §7.5).
 const TrustSecurity = dynamic(() => import("@/components/sections/TrustSecurity"), { ssr: false });
 const BookingSection = dynamic(() => import("@/components/sections/BookingSection"), { ssr: false });
+const KeywordMarquee = dynamic(() => import("@/components/sections/KeywordMarquee"), { ssr: false });
 const CTASection = dynamic(() => import("@/components/sections/CTASection"), { ssr: false });
 const Footer = dynamic(() => import("@/components/sections/Footer"), { ssr: false });
 
@@ -82,6 +83,8 @@ function HomeContent() {
           <Suspense fallback={<div className="min-h-[400px]" />}><ResearchNeeds /></Suspense>
           <Suspense fallback={<div className="min-h-[300px]" />}><TrustSecurity /></Suspense>
           <Suspense fallback={<div className="min-h-[400px]" />}><BookingSection /></Suspense>
+          {/* Marquee keyword strip (F13) — Phase 3 / Change 3.3. GEO play, sits between Demo and closing CTA. */}
+          <Suspense fallback={<div className="min-h-[80px]" />}><KeywordMarquee /></Suspense>
         </div>
         {/* Dark sections */}
         <ErrorBoundary><Suspense fallback={<div className="min-h-[400px] bg-black" />}><CTASection /></Suspense></ErrorBoundary>

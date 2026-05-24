@@ -309,6 +309,14 @@ export default function CTASection() {
               viewport={{ once: false, amount: 0.6 }}
               className="flex flex-col items-center text-center font-display font-semibold tracking-tight leading-[1.05] pointer-events-auto"
             >
+              {/* V4 italic sub-line above the headline (Phase 3 / Change 3.4, doc §7.6) */}
+              <motion.span
+                variants={lineAnim}
+                className="block text-[13px] sm:text-[15px] italic font-medium text-white/40 mb-4 tracking-normal"
+              >
+                Giving voice to the empty chair.
+              </motion.span>
+
               {/* Hero-matching White top line */}
               <motion.span
                 variants={lineAnim}
@@ -324,6 +332,16 @@ export default function CTASection() {
               >
                 Understanding Compounds.
               </motion.span>
+
+              {/* V4 Book a Pilot CTA below the headline (Phase 3 / Change 3.4, doc §7.6).
+                  Routes to the demo section. Particle heart canvas above stays untouched. */}
+              <motion.a
+                variants={lineAnim}
+                href="#book-call"
+                className="mt-8 sm:mt-10 inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#FF5A36] text-white text-[14px] font-bold uppercase tracking-[0.05em] hover:bg-[#e04a2a] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_10px_30px_rgba(255,90,54,0.35)]"
+              >
+                Book a Pilot <span aria-hidden>⚡</span>
+              </motion.a>
             </motion.h1>
           </motion.div>
         )}

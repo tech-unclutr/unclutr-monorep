@@ -143,16 +143,35 @@ export default function TrustSecurity() {
       </div>
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-10 pt-20 sm:pt-28 lg:pt-36 pb-24">
+        {/* V4 2-column header + SOC 2 callout (Phase 3 / Change 3.1, doc §7.3).
+            Cream bg preserved per live design language; original blue-gradient
+            accent kept (no swap to V4 lavender). The SOC 2 phrasing reflects
+            the doc's default — Param to confirm actual audit status before
+            production push (change "in progress" → "scheduled" / "on the
+            roadmap" if not yet started). */}
         <motion.div
           initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
           animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-12"
+          className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 md:gap-8 mb-12 text-left"
         >
-          <h2 className="font-display text-[clamp(40px,5vw,64px)] tracking-[-0.04em] text-neutral-900 dark:text-white leading-[1.1] mb-8">
-            Trust and security<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">at every level.</span>
-          </h2>
+          <div className="flex-1 max-w-[640px]">
+            <h2 className="font-display text-[clamp(32px,4.2vw,52px)] tracking-[-0.03em] text-neutral-900 dark:text-white leading-[1.1] mb-3">
+              Trust and security{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">at every level.</span>
+            </h2>
+            <p className="text-[13px] sm:text-[14px] text-[#475569] leading-[1.6] max-w-[560px]">
+              <strong className="text-[#0b132b] font-semibold">SOC 2 Type II audit in progress.</strong>{" "}
+              GDPR-compliant. Built on enterprise-grade cloud infrastructure with
+              end-to-end encryption.
+            </p>
+          </div>
+          <a
+            href="#"
+            className="inline-flex items-center gap-1 text-[13px] text-[#FF5A36] font-semibold whitespace-nowrap hover:underline shrink-0 md:mt-2"
+          >
+            View full security details <span aria-hidden>→</span>
+          </a>
         </motion.div>
 
         <motion.div

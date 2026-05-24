@@ -925,8 +925,8 @@ export default function StudiesSection() {
 
             <div className="relative z-10 shrink-0 max-w-full">
               <a
-                href="#booking"
-                onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Talk to us about custom studies", cta_href: "#booking", source_section: "custom_study" })}
+                href="#book-call"
+                onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Talk to us about custom studies", cta_href: "#book-call", source_section: "custom_study" })}
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full border-2 border-white/30 text-white text-[14px] font-bold uppercase tracking-[0.05em] whitespace-nowrap transition-all duration-200 hover:border-[#FF5A36] hover:bg-[#FF5A36]/10"
               >
                 Talk to us about custom studies <span aria-hidden>→</span>

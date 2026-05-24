@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Space_Grotesk, Playfair_Display } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
@@ -16,6 +16,16 @@ const spaceGrotesk = Space_Grotesk({
   weight: ["500", "600", "700"],
   display: "swap",
   variable: "--font-display",
+});
+
+// Playfair Display — used ONLY for the italic emphasis on "actually" in the
+// V4 hero block (HearCustomers section). Do not extend usage elsewhere.
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["600"],
+  style: ["italic"],
+  display: "swap",
+  variable: "--font-serif-italic",
 });
 
 const siteUrl = "https://joinsquareup.com";
@@ -109,7 +119,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${playfair.variable}`}>
       <head>
         <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" crossOrigin="anonymous" />
         <script

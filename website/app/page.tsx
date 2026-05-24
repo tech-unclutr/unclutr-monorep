@@ -7,6 +7,9 @@ import FloatingNav from "@/components/sections/FloatingNav";
 import LogoNotch from "@/components/ui/LogoNotch";
 import LenisProvider from "@/components/ui/LenisProvider";
 import HeroSection from "@/components/sections/HeroSection";
+import HearCustomers from "@/components/sections/HearCustomers";
+import AlwaysOn from "@/components/sections/AlwaysOn";
+import SystemSummary from "@/components/sections/SystemSummary";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useScrollDepth, useExitIntent, useEngagementScore, useRageClick } from "@/lib/analytics";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
@@ -19,7 +22,10 @@ const ProblemSectionSticky = dynamic(() => import("@/components/sections/Problem
 const SocialProof = dynamic(() => import("@/components/sections/SocialProof"), { ssr: false });
 const InterviewStudio = dynamic(() => import("@/components/sections/InterviewStudio"), { ssr: false });
 const ResearchNeeds = dynamic(() => import("@/components/sections/ResearchNeeds"), { ssr: false });
-const FeaturesMarquee = dynamic(() => import("@/components/sections/FeaturesMarquee"), { ssr: false });
+// FeaturesMarquee — formerly held the System Summary content + ambient SEO keyword
+// background rows. Unwired in Phase 1 / Change 1.4: System Summary now lives in
+// SystemSummary.tsx with V4-spec 3-step grid. The Phase 3 marquee strip is a
+// separate, net-new component (per migration doc §7.5).
 const TrustSecurity = dynamic(() => import("@/components/sections/TrustSecurity"), { ssr: false });
 const BookingSection = dynamic(() => import("@/components/sections/BookingSection"), { ssr: false });
 const CTASection = dynamic(() => import("@/components/sections/CTASection"), { ssr: false });
@@ -64,11 +70,16 @@ function HomeContent() {
       <div className="relative z-10">
         {/* Light sections */}
         <div className="relative">
+          {/* V4 Hero Block (F3) — typographic bridge between dark hero stack and cream cascade. Phase 1 / Change 1.1. */}
+          <HearCustomers />
+          {/* Always-On fold (F4) — positioning + dark card with checkmark pointers. Phase 1 / Change 1.2. */}
+          <AlwaysOn />
           <Suspense fallback={<div className="min-h-[400px]" />}><ProblemSectionSticky /></Suspense>
+          {/* System Summary (F6) — moved up from late position; built with V4-spec 3-step grid. Phase 1 / Change 1.4. */}
+          <SystemSummary />
           <Suspense fallback={<div className="min-h-[200px]" />}><SocialProof /></Suspense>
           <Suspense fallback={<div className="min-h-[400px]" />}><InterviewStudio /></Suspense>
           <Suspense fallback={<div className="min-h-[400px]" />}><ResearchNeeds /></Suspense>
-          <Suspense fallback={<div className="min-h-[200px]" />}><FeaturesMarquee /></Suspense>
           <Suspense fallback={<div className="min-h-[300px]" />}><TrustSecurity /></Suspense>
           <Suspense fallback={<div className="min-h-[400px]" />}><BookingSection /></Suspense>
         </div>

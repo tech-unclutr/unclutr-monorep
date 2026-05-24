@@ -8,28 +8,29 @@ import { useIsMobile } from "@/components/ui/useIsMobile";
 const FLAWS = [
     {
         title: "Zero Interview Visibility",
-        desc: "You're paying for answers, but you never see the raw interviews. You don't know if the interviewer asked leading questions or if the candidate was even qualified. You just get a sanitized PDF and are told to trust it.",
+        // V4 canonical copy — see squareup_homepage_migration.md §5.5. Phase 1 / Change 1.3.
+        desc: "You get a sanitized PDF. You never see the raw interview. You don't know if leading questions were asked or if the respondent was even qualified. You're just told to trust it.",
         accent: "from-[#1d1d1f] to-[#424245]", // Dark / Graphite
         shadowGlow: "shadow-[0_0_100px_rgba(29,29,31,0.06)]",
         iconColor: "#1d1d1f"
     },
     {
         title: "Starting From Scratch",
-        desc: "Every time a new PM or marketer wants to learn something, they start from zero. Hundreds of past conversations are ignored because the data is unsearchable. You're constantly paying to ask the exact same questions again.",
+        desc: "Every new PM or marketer starts from zero. Hundreds of past conversations are ignored because the data is unsearchable. You keep paying for the same answers.",
         accent: "from-[#FF5A36] to-[#FF8B36]", // Orange
         shadowGlow: "shadow-[0_0_100px_rgba(255,90,54,0.08)]",
         iconColor: "#FF5A36"
     },
     {
         title: "Trapped Insights",
-        desc: "Your growth team uncovers a massive UX flaw during a 50-person intercept study. But because they don't share workflows with the product team, the insight dies in a Figma file. Customer knowledge never compounds across your business.",
+        desc: "Your growth team uncovers a massive UX flaw. Product never sees it. The insight dies in a Figma file. Customer knowledge never compounds across your business.",
         accent: "from-[#6366F1] to-[#8B5CF6]", // Indigo / Purple
         shadowGlow: "shadow-[0_0_100px_rgba(99,102,241,0.08)]",
         iconColor: "#6366F1"
     },
     {
         title: "Filtered Findings",
-        desc: "You aren't hearing the customer—you're hearing a researcher's filtered interpretation. Human bias, fatigue, and varying interviewer skill levels mean every 'insight' is heavily distorted before it reaches your desk.",
+        desc: "You hear a researcher's interpretation, not the customer. Human bias, fatigue, and varying skill levels mean every insight is heavily distorted before it reaches your desk.",
         accent: "from-[#F43F5E] to-[#FB7185]", // Rose
         shadowGlow: "shadow-[0_0_100px_rgba(244,63,94,0.08)]",
         iconColor: "#F43F5E"
@@ -458,13 +459,14 @@ export default function ProblemSectionSticky() {
                         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
                     >
                         {/* Forced 4-line layout: text-balance was wrapping every word at desktop widths. */}
-                        <span className="block"><ParticleHighlight>Customer Insights</ParticleHighlight> should</span>
-                        <span className="block">unlock the decisions for you.</span>
+                        {/* V4 copy — see squareup_homepage_migration.md §5.5. Phase 1 / Change 1.3. */}
+                        <span className="block"><ParticleHighlight>Customer insights</ParticleHighlight> should</span>
+                        <span className="block">drive your decisions.</span>
                         <span className="text-[#86868b] font-medium tracking-tight block opacity-90 mt-2 sm:mt-3">
-                            Instead, it's built on
+                            Instead, the way you get them
                         </span>
                         <span className="text-[#86868b] font-medium tracking-tight block opacity-90">
-                            4 fundamental flaws.
+                            is built on 4 fundamental flaws.
                         </span>
                     </motion.h2>
                 </motion.div>

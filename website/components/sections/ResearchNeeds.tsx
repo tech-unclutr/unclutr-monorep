@@ -88,17 +88,22 @@ interface Study {
   color: string;
   bgGlow: string;
   roles: RoleId[];
+  // V4 card fields (Phase 2 / Change 2.3) — optional so non-V4 studies fall back gracefully.
+  emoji?: string;        // per-study emoji shown in card icon square
+  impactStrong?: string; // the portion of roiMetric to bold (e.g. "$100K", "2x")
 }
 
 // ─── Full Study Catalog ─────────────────────────────
 const studiesList: Study[] = [
-  // ── Founders & Strategy ───────────────────────────
+  // ─── V4 main 5 (Phase 2 / Change 2.3) — Discovery → Market Entry → Concept → ICP → Taste ───
   {
     id: "discovery",
     name: "Discovery & Problem Validation",
-    outcome: "Avoid building the wrong thing",
-    roiMetric: "Save $100K+ in wasted eng cycles",
-    timeToInsight: "3–5 days",
+    outcome: "Build what users want",
+    roiMetric: "Save $100K in wasted dev cycles.",
+    impactStrong: "$100K",
+    emoji: "📊",
+    timeToInsight: "3-5 days",
     agencyTimeline: "4 weeks",
     bestFor: "Founders, Strategy Heads",
     worksFor: "Early-stage startups, teams entering a new vertical, pre-Series A founders",
@@ -110,36 +115,17 @@ const studiesList: Study[] = [
     owner: "Founder / Head of Product",
     methodDetails: "Deep 1:1 video interviews with target users combined with WhatsApp diary studies to capture real pain points in context, synthesized into a Jobs-to-be-Done framework.",
     sampleInsight: "8 out of 12 participants described the same workaround — exporting data to Google Sheets because existing tools can't filter by region. Willingness to pay for a native solution: high.",
-    color: "#4A90D9",
-    bgGlow: "bg-blue-500/10",
-    roles: ["all", "founder", "product"]
-  },
-  {
-    id: "icp",
-    name: "ICP & Buyer Persona Definition",
-    outcome: "Laser-focus your GTM",
-    roiMetric: "2× improvement in lead quality",
-    timeToInsight: "1 week",
-    agencyTimeline: "5 weeks",
-    bestFor: "Founders, Growth, Sales Leads",
-    worksFor: "B2B SaaS teams, D2C brands launching new segments, marketplaces expanding categories",
-    businessQuestion: "Who is our highest-value buyer, and what language do they use to describe their problem?",
-    touchpoints: ["Structured Interviews", "Quant Surveys"],
-    deliverables: ["Persona cards", "Messaging hooks by segment", "Channel recommendations"],
-    urgencySignal: "Your CAC is rising because you're targeting too broad an audience",
-    whenToUse: "Before scaling paid acquisition or hiring a sales team",
-    owner: "Head of Growth / Founder",
-    methodDetails: "Structured buyer interviews cross-referenced with quantitative survey data to build statistically validated persona clusters with their exact language and decision triggers.",
-    sampleInsight: "Your highest-LTV buyer is a 'Pragmatic Operator' (38% of sample) — they Google 'best [category] for small teams' and decide within 72 hours. They trust G2 reviews, not blogs.",
-    color: "#8B5CF6",
+    color: "#6b4fcc",
     bgGlow: "bg-violet-500/10",
-    roles: ["all", "founder", "growth", "brand"]
+    roles: ["all", "founder", "product"]
   },
   {
     id: "market-entry",
     name: "Market Entry & Category Creation",
-    outcome: "Enter with conviction",
-    roiMetric: "De-risk $500K+ launch spend",
+    outcome: "Launch with conviction",
+    roiMetric: "De-risk $500K of launch spend.",
+    impactStrong: "$500K",
+    emoji: "🚀",
     timeToInsight: "1 week",
     agencyTimeline: "6 weeks",
     bestFor: "Founders, Strategy, Category Leads",
@@ -151,18 +137,18 @@ const studiesList: Study[] = [
     whenToUse: "Before committing to a new market, geography, or category expansion",
     owner: "Strategy Lead / Founder",
     methodDetails: "Expert stakeholder interviews combined with consumer surveys and competitive landscape shopping to map category gaps, unmet needs, and realistic share-of-wallet potential.",
-    sampleInsight: "The 'premium-but-accessible' tier is unoccupied. Competitors cluster at either <$15 mass-market or >$40 luxury. 64% of target consumers would pay $22–28 for a product delivering X.",
-    color: "#10B981",
+    sampleInsight: "The 'premium-but-accessible' tier is unoccupied. Competitors cluster at either <$15 mass-market or >$40 luxury. 64% of target consumers would pay $22-28 for a product delivering X.",
+    color: "#1a8a4a",
     bgGlow: "bg-emerald-500/10",
     roles: ["all", "founder", "category"]
   },
-
-  // ── New Product Development ────────────────────────
   {
     id: "concept-test",
     name: "Concept Testing",
-    outcome: "Kill duds before you build",
-    roiMetric: "Save 3–6 months of dev time",
+    outcome: "Kill duds before building",
+    roiMetric: "Save 3-6 months of dev time.",
+    impactStrong: "3-6 months",
+    emoji: "💡",
     timeToInsight: "72 hours",
     agencyTimeline: "4 weeks",
     bestFor: "NPD Leads, Product Managers",
@@ -175,16 +161,41 @@ const studiesList: Study[] = [
     owner: "NPD Lead / Product Manager",
     methodDetails: "Monadic and sequential exposure surveys with concept boards, measuring appeal, uniqueness, purchase intent, and perceived value across target segments.",
     sampleInsight: "Concept B ('Smart Refill') scored 4.3/5 on appeal and 4.1 on uniqueness — a rare combination. Concept A had higher appeal (4.5) but only 2.8 uniqueness, signaling 'me-too'.",
-    color: "#9C6ADE",
-    bgGlow: "bg-purple-500/10",
+    color: "#b35a00",
+    bgGlow: "bg-amber-500/10",
     roles: ["all", "npd", "product"]
+  },
+  {
+    id: "icp",
+    name: "ICP & Buyer Persona Definition",
+    outcome: "Sharpen your GTM",
+    roiMetric: "2x your lead quality.",
+    impactStrong: "2x",
+    emoji: "🎯",
+    timeToInsight: "1 week",
+    agencyTimeline: "5 weeks",
+    bestFor: "Founders, Growth, Sales Leads",
+    worksFor: "B2B SaaS teams, D2C brands launching new segments, marketplaces expanding categories",
+    businessQuestion: "Who is our highest-value buyer, and what language do they use to describe their problem?",
+    touchpoints: ["Structured Interviews", "Quant Surveys"],
+    deliverables: ["Persona cards", "Messaging hooks by segment", "Channel recommendations"],
+    urgencySignal: "Your CAC is rising because you're targeting too broad an audience",
+    whenToUse: "Before scaling paid acquisition or hiring a sales team",
+    owner: "Head of Growth / Founder",
+    methodDetails: "Structured buyer interviews cross-referenced with quantitative survey data to build statistically validated persona clusters with their exact language and decision triggers.",
+    sampleInsight: "Your highest-LTV buyer is a 'Pragmatic Operator' (38% of sample) — they Google 'best [category] for small teams' and decide within 72 hours. They trust G2 reviews, not blogs.",
+    color: "#e8501a",
+    bgGlow: "bg-orange-500/10",
+    roles: ["all", "founder", "growth", "brand"]
   },
   {
     id: "taste-test",
     name: "Taste & Sensory Testing",
-    outcome: "Win blind tests before launch",
-    roiMetric: "2× higher trial-to-repeat rate",
-    timeToInsight: "5–7 days",
+    outcome: "Win the blind test",
+    roiMetric: "2x trial-to-repeat rate.",
+    impactStrong: "2x",
+    emoji: "👅",
+    timeToInsight: "5-7 days",
     agencyTimeline: "4 weeks",
     bestFor: "NPD, R&D, QSR Menu Teams",
     worksFor: "CPG food & beverage teams, QSR brands, R&D labs iterating formulations",
@@ -196,8 +207,8 @@ const studiesList: Study[] = [
     owner: "R&D Lead / NPD Manager",
     methodDetails: "Central location tests (CLT) and home-use tests (HUT) with structured sensory profiling, blind preference testing, and attribute diagnostics against market benchmarks.",
     sampleInsight: "Variant B wins on overall liking (7.2 vs 6.4) and dominates on 'creaminess' (+31%). However, 'aftertaste' scores are below category average — a sweetness adjustment should fix it.",
-    color: "#F59E0B",
-    bgGlow: "bg-amber-500/10",
+    color: "#8a1a6a",
+    bgGlow: "bg-pink-500/10",
     roles: ["all", "npd"]
   },
   {
@@ -777,53 +788,79 @@ export default function StudiesSection() {
 
         {/* ── Study Grid ───────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-min">
-          {visibleStudies.map((study, idx) => (
-            <div
-              key={study.id}
-              onClick={() => {
-                trackEvent(EventName.STUDY_CARD_CLICK, { study_name: study.name, study_category: study.id, card_index: idx, filter_active: activeCategory });
-                trackEvent(EventName.STUDY_MODAL_OPEN, { study_name: study.name, study_category: study.id });
-                window.dispatchEvent(new CustomEvent("sq:study_modal"));
-                setSelectedStudy(study);
-              }}
-              className="study-card bg-white rounded-[28px] p-7 border border-neutral-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] cursor-pointer group hover:-translate-y-1 flex flex-col relative overflow-hidden"
-            >
-              {/* Color accent bar */}
-              <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: study.color }} />
+          {visibleStudies.map((study, idx) => {
+            // V4 card hierarchy (Phase 2 / Change 2.3, migration doc §6.5):
+            // top gradient bar → emoji square icon → 16px heading →
+            // color-matched 10px uppercase sub-heading → impact with bold
+            // number → tinted cream ROI footer strip.
+            const impactBold = study.impactStrong;
+            const impactRendered = impactBold && study.roiMetric.includes(impactBold)
+              ? (() => {
+                  const [pre, post] = study.roiMetric.split(impactBold);
+                  return (
+                    <>
+                      {pre}
+                      <strong className="text-[#0b132b] font-extrabold">{impactBold}</strong>
+                      {post}
+                    </>
+                  );
+                })()
+              : study.roiMetric;
+            return (
+              <div
+                key={study.id}
+                onClick={() => {
+                  trackEvent(EventName.STUDY_CARD_CLICK, { study_name: study.name, study_category: study.id, card_index: idx, filter_active: activeCategory });
+                  trackEvent(EventName.STUDY_MODAL_OPEN, { study_name: study.name, study_category: study.id });
+                  window.dispatchEvent(new CustomEvent("sq:study_modal"));
+                  setSelectedStudy(study);
+                }}
+                className="study-card bg-white rounded-[18px] border border-[#e8e0d8] cursor-pointer flex flex-col relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(0,0,0,0.07)]"
+              >
+                {/* Top gradient color bar (V4 spec) */}
+                <div
+                  className="h-[3px] w-full"
+                  style={{ background: `linear-gradient(90deg, ${study.color}, ${study.color}aa)` }}
+                />
 
-              <div className="relative z-10 flex flex-col flex-1">
-                {/* Icon */}
-                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full mb-4" style={{ backgroundColor: study.color + '12', color: study.color }}>
-                  <TrendingUp className="w-4 h-4" />
-                </span>
-
-                {/* Name */}
-                <h4 className="text-lg font-semibold text-maze-black leading-snug mb-1.5 font-display tracking-tight">
-                  {study.name}
-                </h4>
-
-                {/* ROI Title */}
-                <p className="text-[13px] font-semibold uppercase tracking-wide mb-4" style={{ color: study.color }}>
-                  {study.outcome}
-                </p>
-
-                {/* Primary metric */}
-                <p className="text-xl font-display text-maze-black tracking-tight border-l-2 pl-3 mb-5 mt-auto" style={{ borderColor: study.color }}>
-                  {study.roiMetric}
-                </p>
-
-                {/* Speed contrast */}
-                <div className="flex items-center justify-between border-t border-neutral-100 pt-3.5 text-[12px] font-medium">
-                  <span className="flex items-center gap-1.5 text-maze-black">
-                    <Zap className="w-3.5 h-3.5 text-amber-500" /> {study.timeToInsight}
+                {/* Body */}
+                <div className="p-[22px] pb-[18px] flex flex-col flex-1">
+                  {/* Icon — 32×32 rounded square with orange tint + emoji (or fallback) */}
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] mb-3.5 bg-[rgba(232,80,26,0.10)] text-[15px]">
+                    {study.emoji ?? "📊"}
                   </span>
-                  <span className="text-neutral-300 text-[11px]">
+
+                  {/* Heading — largest text in card per V4 spec */}
+                  <h4 className="text-[16px] font-extrabold text-[#0b132b] leading-[1.3] mb-1.5 tracking-[-0.005em]">
+                    {study.name}
+                  </h4>
+
+                  {/* Sub-heading — color-matched, uppercase */}
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-[0.1em] mb-4"
+                    style={{ color: study.color }}
+                  >
+                    {study.outcome}
+                  </p>
+
+                  {/* Impact statement — bold number for visual pop */}
+                  <p className="text-[14px] font-semibold leading-[1.5] text-[#4a4a4a] flex-1">
+                    {impactRendered}
+                  </p>
+                </div>
+
+                {/* ROI footer strip — tinted cream backdrop, border-top */}
+                <div className="bg-[#f3ece2] py-3 px-3.5 flex items-center justify-center gap-2.5 border-t border-[#e8e0d8]">
+                  <span className="flex items-center gap-1 text-[12px] font-bold text-[#FF5A36] tracking-[0.01em]">
+                    <Zap className="w-3.5 h-3.5 fill-[#FF5A36] text-[#FF5A36]" /> {study.timeToInsight}
+                  </span>
+                  <span className="text-[11px] font-medium text-[#9c8c78]">
                     vs {study.agencyTimeline} traditional
                   </span>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* +XX More Studies Tile */}
           <div
@@ -868,24 +905,32 @@ export default function StudiesSection() {
             <div className="absolute inset-0 bg-gradient-to-br from-[#FF5A36]/15 via-transparent to-transparent pointer-events-none" />
             <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-[#FF5A36] blur-[150px] opacity-15 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
 
+            {/* V4 copy (Phase 2 / Change 2.4, doc §6.6).
+                Replaces "Launch Custom Study COMING SOON" with a ghost CTA
+                "Talk to us about custom studies" that routes to demo booking.
+                Also removes the forbidden "lightning speed" phrasing — the
+                V4 spec ends on "Analyst-grade depth, in 72 hours." instead. */}
             <div className="relative z-10 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 text-white text-[11px] font-bold uppercase tracking-[0.15em] mb-6 backdrop-blur-md">
                 <Sparkles className="w-3.5 h-3.5 text-[#FF5A36]" /> Custom Study
               </div>
               <h3 className="text-2xl lg:text-4xl font-display text-white mb-4 leading-tight">
-                Don't see what you need?
+                Don&apos;t see what you need?
               </h3>
               <p className="text-white/50 text-base lg:text-lg leading-relaxed">
-                You give the brief. Our AI agents do the rest. They recruit, interview, and catch every insight a human would miss. Analyst-grade depth, at{" "}
-                <span className="text-[#FF5A36] font-semibold">lightning speed.</span>
+                You give the brief. Our AI agents do the rest. They recruit, interview, and catch every insight a human would miss.{" "}
+                <span className="text-[#FF8A66] font-semibold">Analyst-grade depth, in 72 hours.</span>
               </p>
             </div>
 
             <div className="relative z-10 shrink-0 max-w-full">
-              <button className="px-4 sm:px-8 py-2.5 sm:py-4 bg-white text-maze-black rounded-full font-semibold text-xs sm:text-base flex items-center gap-1.5 sm:gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg whitespace-nowrap">
-                Launch Custom Study
-                <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-orange-100 text-[#FF5A36] rounded-full whitespace-nowrap sm:ml-1">Coming Soon</span>
-              </button>
+              <a
+                href="#booking"
+                onClick={() => trackEvent(EventName.CTA_CLICK, { cta_text: "Talk to us about custom studies", cta_href: "#booking", source_section: "custom_study" })}
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full border-2 border-white/30 text-white text-[14px] font-bold uppercase tracking-[0.05em] whitespace-nowrap transition-all duration-200 hover:border-[#FF5A36] hover:bg-[#FF5A36]/10"
+              >
+                Talk to us about custom studies <span aria-hidden>→</span>
+              </a>
             </div>
           </div>
         </div>

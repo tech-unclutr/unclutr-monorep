@@ -37,6 +37,49 @@ SOURCE_BRANCH="website-dev"
 TARGET_BRANCH="website-live"
 OPTIMIZE_SCRIPT="website/scripts/optimize-for-prod.sh"
 
+# ── CLI args (all optional — interactive prompts kick in when missing) ────────
+SKIP_PROMPT=false
+PRESET_VERSION=""
+PRESET_NAME=""
+PRESET_DESC=""
+
+usage() {
+  cat <<USAGE
+Usage: $(basename "$0") [OPTIONS]
+
+Promote website-dev → website-live with optimization, commit, tag, push.
+
+Options:
+  -y, --yes               Auto-confirm push to origin (skip the y/N prompt).
+                          Required for non-interactive use (CI, piped stdin).
+  -v, --version VERSION   Preset version (e.g. 1.10.0). Skips version prompt.
+  -n, --name NAME         Preset release name. Skips name prompt.
+  -d, --description DESC  Preset description. Skips description prompt.
+  -h, --help              Show this help and exit.
+
+Examples:
+  # Fully interactive (existing behavior)
+  ./scripts/promote-to-live.sh
+
+  # Fully automated
+  ./scripts/promote-to-live.sh -y -n "Bug fix release" -d "Fixed scroll bug"
+
+  # Override version with default name (still prompts for name/desc)
+  ./scripts/promote-to-live.sh -v 2.0.0 -y
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -y|--yes)         SKIP_PROMPT=true; shift ;;
+    -v|--version)     PRESET_VERSION="${2:-}"; shift 2 ;;
+    -n|--name)        PRESET_NAME="${2:-}"; shift 2 ;;
+    -d|--description) PRESET_DESC="${2:-}"; shift 2 ;;
+    -h|--help)        usage; exit 0 ;;
+    *)                echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
 # ── Files/dirs that belong to the website deployment ──────────────────────────
 WEBSITE_PATHS=(
   "website/"
@@ -93,24 +136,36 @@ log "Latest version: ${LATEST_TAG:-none}"
 log "Suggested next: website-v${SUGGESTED_VERSION}"
 echo ""
 
-# ── Prompt: version ───────────────────────────────────────────────────────────
-echo -ne "  ${BOLD}Version${NC} [${SUGGESTED_VERSION}]: "
-read -r VERSION_INPUT
-VERSION=${VERSION_INPUT:-$SUGGESTED_VERSION}
+# ── Prompt: version (skipped if --version was passed) ────────────────────────
+if [ -n "$PRESET_VERSION" ]; then
+  VERSION="$PRESET_VERSION"
+else
+  echo -ne "  ${BOLD}Version${NC} [${SUGGESTED_VERSION}]: "
+  read -r VERSION_INPUT
+  VERSION=${VERSION_INPUT:-$SUGGESTED_VERSION}
+fi
 VERSION_TAG="website-v${VERSION}"
 ok "Version: $VERSION_TAG"
 
-# ── Prompt: release name ─────────────────────────────────────────────────────
-echo -ne "  ${BOLD}Release name${NC} (e.g. 'Hero redesign & CTA polish'): "
-read -r RELEASE_NAME
+# ── Prompt: release name (skipped if --name was passed) ──────────────────────
+if [ -n "$PRESET_NAME" ]; then
+  RELEASE_NAME="$PRESET_NAME"
+else
+  echo -ne "  ${BOLD}Release name${NC} (e.g. 'Hero redesign & CTA polish'): "
+  read -r RELEASE_NAME
+fi
 if [ -z "$RELEASE_NAME" ]; then
   fail "Release name is required. This describes what went live."
 fi
 ok "Release: $RELEASE_NAME"
 
-# ── Prompt: description ──────────────────────────────────────────────────────
-echo -ne "  ${BOLD}Description${NC} (optional summary — press Enter to skip): "
-read -r RELEASE_DESC
+# ── Prompt: description (skipped if --description was passed) ────────────────
+if [ -n "$PRESET_DESC" ]; then
+  RELEASE_DESC="$PRESET_DESC"
+else
+  echo -ne "  ${BOLD}Description${NC} (optional summary — press Enter to skip): "
+  read -r RELEASE_DESC
+fi
 
 # ── Generate changelog: only major/final changes ──────────────────────────────
 # Filters to meaningful commits (feat/fix/refactor/perf/style/deploy or merges)
@@ -232,9 +287,23 @@ fi
 
 header "Step 5: Pushing to origin"
 
-echo -e "  Push ${BOLD}$VERSION_TAG${NC} to origin? This will deploy to joinsquareup.com."
-echo -e "  (y/N)"
-read -r PUSH_REPLY
+if [ "$SKIP_PROMPT" = "true" ]; then
+  PUSH_REPLY="y"
+  log "Auto-pushing (--yes flag passed)"
+else
+  echo -e "  Push ${BOLD}$VERSION_TAG${NC} to origin? This will deploy to joinsquareup.com."
+  echo -e "  (y/N)"
+  # Read from /dev/tty when stdin isn't a terminal — prevents earlier stages
+  # of a pipeline from accidentally eating the confirmation (which is what
+  # killed two recent automated runs).
+  if [ -t 0 ]; then
+    read -r PUSH_REPLY
+  elif [ -r /dev/tty ]; then
+    read -r PUSH_REPLY < /dev/tty
+  else
+    fail "No TTY available and --yes not passed. Run with -y for non-interactive use."
+  fi
+fi
 
 if [[ "$PUSH_REPLY" =~ ^[Yy]$ ]]; then
   git push origin "$TARGET_BRANCH" --force-with-lease 2>/dev/null || \

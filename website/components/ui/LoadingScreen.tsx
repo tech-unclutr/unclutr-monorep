@@ -30,16 +30,15 @@ const COPY_LIBRARY = [
 const SPLASH_SHOWN_KEY = "squareup_splash_shown_v1";
 
 export default function LoadingScreen() {
-    // Initialize `done` from sessionStorage so repeat visits skip the splash entirely
-    // and never render the overlay (no flash of black). Guarded for SSR.
-    const [done, setDone] = useState(() => {
-        if (typeof window === "undefined") return false;
-        try {
-            return sessionStorage.getItem(SPLASH_SHOWN_KEY) === "1";
-        } catch {
-            return false;
-        }
-    });
+    // `done` MUST start as `false` on both server and client to avoid a
+    // hydration mismatch (React error #418). The sessionStorage check that
+    // used to live in the useState initializer caused server to render the
+    // splash and client to render nothing, producing a hydration error that
+    // surfaced as React #418 in prod. Now we initialize to `false` everywhere
+    // and check sessionStorage inside the useEffect below — on repeat visits
+    // the splash will flash for ~1 frame before unmounting, which is the
+    // correct tradeoff vs. crashing React.
+    const [done, setDone] = useState(false);
     const [currentWordIndex, setCurrentWordIndex] = useState(0);
     const [showLogo, setShowLogo] = useState(false);
     const [showSubtitle, setShowSubtitle] = useState(false);
@@ -64,6 +63,17 @@ export default function LoadingScreen() {
 
     useEffect(() => {
         if (done || ranRef.current) return;
+
+        // Repeat-visit fast-path: if we already showed the splash this session,
+        // dismiss immediately. Runs in useEffect (not useState init) to keep
+        // SSR and client-hydration output identical.
+        try {
+            if (sessionStorage.getItem(SPLASH_SHOWN_KEY) === "1") {
+                setDone(true);
+                return;
+            }
+        } catch {}
+
         ranRef.current = true;
 
         document.documentElement.style.overflow = "hidden";

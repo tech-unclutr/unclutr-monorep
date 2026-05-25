@@ -41,9 +41,11 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-[#FBF4EC] text-[#0b132b]">
       <div className="max-w-[760px] mx-auto px-6 sm:px-8 pt-16 sm:pt-24 pb-24">
-        {/* Back to home */}
+        {/* Back to home — prefetch={false} because output: "export" doesn't
+            generate .txt RSC payloads, so prefetch always 404s. */}
         <Link
           href="/"
+          prefetch={false}
           className="inline-flex items-center gap-1.5 text-[13px] text-[#FF5A36] font-semibold hover:underline mb-10"
         >
           <span aria-hidden>←</span> Back to home

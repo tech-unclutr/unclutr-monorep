@@ -82,6 +82,13 @@ export const metadata: Metadata = {
     apple: "/favicon.ico",
   },
   manifest: "/manifest.json",
+  alternates: {
+    canonical: "/",
+    languages: {
+      "en-US": "/",
+      "x-default": "/",
+    },
+  },
   other: {
     "theme-color": "#FF6B00",
     "msapplication-TileColor": "#FF6B00",

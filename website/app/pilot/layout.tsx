@@ -39,6 +39,13 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  alternates: {
+    canonical: "/pilot",
+    languages: {
+      "en-US": "/pilot",
+      "x-default": "/pilot",
+    },
+  },
 };
 
 export default function PilotLayout({

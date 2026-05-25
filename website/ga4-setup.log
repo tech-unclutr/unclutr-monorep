@@ -1,9 +1,0 @@
-[dotenv@17.3.1] injecting env (0) from .env.local -- tip: ⚙️  suppress all logs with { quiet: true }
-🚀 Starting GA4 API Setup for Property: properties/517371403
-
---- 1/5 Creating Event Scoped Dimensions ---
-⏭️  Skipped section_id (already exists)
-⏭️  Skipped section_index (already exists)
-⏭️  Skipped carousel_id (already exists)
-⏭️  Skipped method (already exists)
-⏭️  Skipped item_name (already exists)

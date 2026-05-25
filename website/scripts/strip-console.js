@@ -67,4 +67,3 @@ for (const filePath of files) {
     }
 }
 
-console.log(totalStripped);

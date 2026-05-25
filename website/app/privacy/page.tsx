@@ -115,7 +115,7 @@ export default function PrivacyPage() {
             >
               {CONTACT_EMAIL}
             </a>
-            . We respond within two business days.
+            .
           </p>
         </div>
       </div>

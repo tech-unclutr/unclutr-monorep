@@ -111,7 +111,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
-        <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" crossOrigin="anonymous" />
+        {/* No crossOrigin: the SVG is same-origin, and adding crossOrigin
+            here caused the consumer's request (no crossOrigin) to mismatch
+            the preload's credentials mode, wasting the preload. */}
+        <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" />
         {/* Apollo website tracker — MUST live inline in <head> for Apollo's
             static HTML connection test to detect it (they curl the page and
             grep the <head>). The IIFE loads tracker.iife.js with async+defer

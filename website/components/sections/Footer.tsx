@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useMemo } from "react";
 import { useScroll, useTransform, motion, useInView } from "framer-motion";
+import Link from "next/link";
 import { useSectionVisibility } from "@/lib/analytics";
 
 export default function Footer() {
@@ -191,6 +192,22 @@ export default function Footer() {
           ease: "easeInOut",
         }}
       />
+
+      {/* Small legal links row — sits over the very bottom edge of the footer,
+          beneath the ghost wordmark. Kept muted (white/35) so it doesn't fight
+          the wordmark visually. */}
+      <div className="absolute inset-x-0 bottom-3 sm:bottom-4 z-30 flex items-center justify-center gap-3 px-4 text-[11px] sm:text-[12px] text-white/35">
+        <span>
+          © {new Date().getFullYear()} SquareUp
+        </span>
+        <span aria-hidden className="text-white/20">·</span>
+        <Link
+          href="/privacy"
+          className="hover:text-white/70 transition-colors"
+        >
+          Privacy Policy
+        </Link>
+      </div>
     </footer>
   );
 }

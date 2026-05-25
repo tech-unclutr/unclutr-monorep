@@ -372,9 +372,16 @@ if [ "$SYNC_DEV" = "true" ] && [ "$PUSHED_TO_LIVE" = "true" ]; then
     # Mirror only the build-artifact directory from the live commit.
     # public/ is what optimize-for-prod compresses; everything else in
     # website/ should already match dev (since live was built FROM dev).
+    #
+    # Wipe-then-restore ensures true parity (handles additions, mods, AND
+    # deletions). Plain `git checkout PATH` only adds/modifies, so files
+    # removed by optimize would stay stale on dev otherwise.
+    git rm -rf website/public > /dev/null 2>&1
     git checkout "$LIVE_COMMIT_SHA" -- website/public 2>/dev/null
     if [ $? -ne 0 ]; then
       warn "Could not checkout website/public from $LIVE_COMMIT_SHA — skipping sync"
+      # Restore dev's public/ so we don't leave the tree in a broken state
+      git checkout HEAD -- website/public 2>/dev/null
       set -e
     else
       git add -A website/public 2>/dev/null

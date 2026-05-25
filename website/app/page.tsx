@@ -10,6 +10,7 @@ import HeroSection from "@/components/sections/HeroSection";
 import HearCustomers from "@/components/sections/HearCustomers";
 import AlwaysOn from "@/components/sections/AlwaysOn";
 import SystemSummary from "@/components/sections/SystemSummary";
+import Waitlist from "@/components/sections/Waitlist";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useScrollDepth, useExitIntent, useEngagementScore, useRageClick } from "@/lib/analytics";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
@@ -75,6 +76,8 @@ function HomeContent() {
           <HearCustomers />
           {/* Always-On fold (F4) — positioning + dark card with checkmark pointers. Phase 1 / Change 1.2. */}
           <AlwaysOn />
+          {/* Waitlist (F4.5) — dark cinematic founding-cohort capture. Scoped CSS in globals.css. Phase 4 / waitlist add-on. */}
+          <Waitlist />
           <Suspense fallback={<div className="min-h-[400px]" />}><ProblemSectionSticky /></Suspense>
           {/* System Summary (F6) — moved up from late position; built with V4-spec 3-step grid. Phase 1 / Change 1.4. */}
           <SystemSummary />

@@ -112,6 +112,17 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <head>
         <link rel="preload" href="/su_wordmark_transparent.svg" as="image" type="image/svg+xml" crossOrigin="anonymous" />
+        {/* Apollo website tracker — MUST live inline in <head> for Apollo's
+            static HTML connection test to detect it (they curl the page and
+            grep the <head>). The IIFE loads tracker.iife.js with async+defer
+            so it does not block rendering. Do NOT move this to a Next.js
+            <Script strategy="..."> — those render into <body> and Apollo's
+            test will report "Failed to connect: check your script". */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,o.onload=function(){window.trackingFunctions.onLoad({appId:"6a1405904e2b90000c97f447"})},document.head.appendChild(o)}initApollo();`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -334,11 +345,7 @@ export default function RootLayout({
           gtag('config', 'G-61SMHLG5RJ');
         `}
       </Script>
-      {/* Apollo.io website tracker — identifies visiting companies (global) and people (US).
-          Loads after hydration so it doesn't compete with critical resources. */}
-      <Script id="apollo-tracker" strategy="afterInteractive">
-        {`function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,o.onload=function(){window.trackingFunctions.onLoad({appId:"6a1405904e2b90000c97f447"})},document.head.appendChild(o)}initApollo();`}
-      </Script>
+      {/* Apollo tracker moved to <head> above — see comment there for why. */}
     </html>
   );
 }

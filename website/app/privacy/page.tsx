@@ -14,7 +14,7 @@ import Link from "next/link";
  * ──────────────────────────────────────────────────────────────────── */
 
 const LAST_UPDATED = "May 25, 2026";
-const CONTACT_EMAIL = "tech.unclutr@gmail.com";
+const CONTACT_EMAIL = "hello@joinsquareup.com";
 
 type LegalDoc = {
   slug: string; // file basename under /public/legal/
@@ -57,8 +57,7 @@ export default function PrivacyPage() {
           Privacy at SquareUp.
         </h1>
         <p className="text-[16px] leading-[1.65] text-[rgba(11,19,43,0.65)] max-w-[620px] mb-6">
-          How we handle your information on joinsquareup.com. Both documents
-          below open as PDFs in a new tab.
+          How we handle your information on joinsquareup.com.
         </p>
         <p className="text-[12px] uppercase tracking-[0.12em] font-bold text-[#757575] mb-12">
           Last updated: {LAST_UPDATED}

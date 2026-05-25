@@ -7,7 +7,6 @@ import FloatingNav from "@/components/sections/FloatingNav";
 import LogoNotch from "@/components/ui/LogoNotch";
 import LenisProvider from "@/components/ui/LenisProvider";
 import HeroSection from "@/components/sections/HeroSection";
-import LazyMount from "@/components/ui/LazyMount";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { useScrollDepth, useExitIntent, useEngagementScore, useRageClick } from "@/lib/analytics";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
@@ -63,38 +62,23 @@ function HomeContent() {
       <FloatingNav />
       <ErrorBoundary><HeroSection /></ErrorBoundary>
       <div className="relative z-10">
-        {/* Light sections — wrapped in LazyMount so their JS doesn't parse on first paint.
-            ProblemSectionSticky is closest to fold so gets a larger rootMargin. */}
+        {/* Sections mount immediately so document height is stable from first paint.
+            JS is still code-split via dynamic({ssr: false}) imports above —
+            chunks load in parallel without blocking initial render.
+            (Reverted from LazyMount because IntersectionObserver-driven mounting
+            caused layout shifts mid-scroll that broke the hero's sticky scroll math.) */}
         <div className="relative">
-          <LazyMount rootMargin="1200px 0px" minHeight={600}>
-            <Suspense fallback={<div className="min-h-[400px]" />}><ProblemSectionSticky /></Suspense>
-          </LazyMount>
-          <LazyMount minHeight={200}>
-            <Suspense fallback={<div className="min-h-[200px]" />}><SocialProof /></Suspense>
-          </LazyMount>
-          <LazyMount minHeight={400}>
-            <Suspense fallback={<div className="min-h-[400px]" />}><InterviewStudio /></Suspense>
-          </LazyMount>
-          <LazyMount minHeight={400}>
-            <Suspense fallback={<div className="min-h-[400px]" />}><ResearchNeeds /></Suspense>
-          </LazyMount>
-          <LazyMount minHeight={200}>
-            <Suspense fallback={<div className="min-h-[200px]" />}><FeaturesMarquee /></Suspense>
-          </LazyMount>
-          <LazyMount minHeight={300}>
-            <Suspense fallback={<div className="min-h-[300px]" />}><TrustSecurity /></Suspense>
-          </LazyMount>
-          <LazyMount minHeight={400}>
-            <Suspense fallback={<div className="min-h-[400px]" />}><BookingSection /></Suspense>
-          </LazyMount>
+          <Suspense fallback={<div className="min-h-[400px]" />}><ProblemSectionSticky /></Suspense>
+          <Suspense fallback={<div className="min-h-[200px]" />}><SocialProof /></Suspense>
+          <Suspense fallback={<div className="min-h-[400px]" />}><InterviewStudio /></Suspense>
+          <Suspense fallback={<div className="min-h-[400px]" />}><ResearchNeeds /></Suspense>
+          <Suspense fallback={<div className="min-h-[200px]" />}><FeaturesMarquee /></Suspense>
+          <Suspense fallback={<div className="min-h-[300px]" />}><TrustSecurity /></Suspense>
+          <Suspense fallback={<div className="min-h-[400px]" />}><BookingSection /></Suspense>
         </div>
         {/* Dark sections */}
-        <LazyMount minHeight={400} className="bg-black">
-          <ErrorBoundary><Suspense fallback={<div className="min-h-[400px] bg-black" />}><CTASection /></Suspense></ErrorBoundary>
-        </LazyMount>
-        <LazyMount minHeight={200} className="bg-black">
-          <Suspense fallback={<div className="min-h-[200px] bg-black" />}><Footer /></Suspense>
-        </LazyMount>
+        <ErrorBoundary><Suspense fallback={<div className="min-h-[400px] bg-black" />}><CTASection /></Suspense></ErrorBoundary>
+        <Suspense fallback={<div className="min-h-[200px] bg-black" />}><Footer /></Suspense>
       </div>
       {/* Particle canvas — skip on low tier */}
       {tier !== "low" && <ErrorBoundary><ParticleNarrativeController /></ErrorBoundary>}

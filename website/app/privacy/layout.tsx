@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Legal & Privacy | SquareUp",
+  title: "Privacy & Cookies | SquareUp",
   description:
-    "All SquareUp legal documents in one place — privacy policy, cookie policy, master services agreement, data processing agreement, acceptable use policy, and research participant notices.",
+    "How SquareUp handles your information on joinsquareup.com — the Website Privacy Policy and Cookie Policy in one place.",
   openGraph: {
-    title: "Legal & Privacy | SquareUp",
+    title: "Privacy & Cookies | SquareUp",
     description:
-      "All SquareUp legal documents in one place — privacy policy, cookie policy, master services agreement, data processing agreement, acceptable use policy, and research participant notices.",
+      "How SquareUp handles your information on joinsquareup.com — the Website Privacy Policy and Cookie Policy in one place.",
     url: "https://joinsquareup.com/privacy",
     siteName: "SquareUp",
     type: "website",
@@ -16,16 +16,16 @@ export const metadata: Metadata = {
         url: "/og-image.png?v=4",
         width: 1200,
         height: 630,
-        alt: "SquareUp Legal & Privacy",
+        alt: "SquareUp Privacy & Cookies",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Legal & Privacy | SquareUp",
+    title: "Privacy & Cookies | SquareUp",
     description:
-      "All SquareUp legal documents in one place — privacy policy, cookie policy, master services agreement, data processing agreement, acceptable use policy, and research participant notices.",
+      "How SquareUp handles your information on joinsquareup.com — the Website Privacy Policy and Cookie Policy in one place.",
     images: ["/og-image.png?v=4"],
   },
   robots: {

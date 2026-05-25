@@ -313,6 +313,13 @@ export default function HeroSection() {
               : tier === "medium" ? Math.min(rawDpr, 2.0)
               : rawDpr;
 
+    // FPS cap by tier — high runs uncapped (60fps), medium caps at 30fps,
+    // low caps at 24fps. Halves CPU/GPU work on mid- and low-end devices
+    // with no perceptible difference for this animation.
+    const targetFps = tier === "low" ? 24 : tier === "medium" ? 30 : 0; // 0 = uncapped
+    const frameInterval = targetFps > 0 ? 1000 / targetFps : 0;
+    let lastFrameTime = 0;
+
     // Visibility gating — skip rendering when offscreen
     const isVisibleRef = { current: true };
     const observer = new IntersectionObserver(([entry]) => {
@@ -320,10 +327,19 @@ export default function HeroSection() {
     }, { threshold: 0 });
     if (containerRef.current) observer.observe(containerRef.current);
 
-    const render = () => {
+    const render = (now?: number) => {
       if (!isVisibleRef.current) {
         animationFrameId = requestAnimationFrame(render);
         return;
+      }
+      // FPS throttle — skip frame if we're rendering faster than target.
+      if (frameInterval > 0 && now !== undefined) {
+        const elapsed = now - lastFrameTime;
+        if (elapsed < frameInterval) {
+          animationFrameId = requestAnimationFrame(render);
+          return;
+        }
+        lastFrameTime = now - (elapsed % frameInterval);
       }
       // Always reset base alpha before clearing the canvas to prevent smudging and trailing artifacts
       ctx.globalAlpha = 1;

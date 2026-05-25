@@ -60,10 +60,11 @@ export default function SystemSummary() {
           />
         </div>
 
-        {/* CTA — links to the Interview Studio per V4 (#studio). Matches the live page's
-            existing "see how the system works" hand-off intent. */}
+        {/* CTA — links to the Interview Studio section. V4's HTML uses #studio
+            but the live React component's section id is #interview-studio
+            (preserved across the carousel→grid rewrite). Fixed post-review. */}
         <a
-          href="#studio"
+          href="#interview-studio"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-[#e8e0d8] text-[#0b132b] text-[14px] font-semibold transition-colors duration-200 hover:border-[#FF5A36] hover:text-[#FF5A36]"
         >
           See how it works

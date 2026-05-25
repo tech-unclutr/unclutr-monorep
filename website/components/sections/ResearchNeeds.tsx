@@ -23,6 +23,19 @@ import {
   CheckCircle2
 } from "lucide-react";
 
+// Phosphor duotone icons — used on the 5 main Study cards.
+// Duotone variant gives a two-tone fill (outline + transparent inner shape),
+// so the icons read as solid graphic elements, not just outlines in a box.
+// Picked per-study to reflect each card's domain (Phase 2 / Change 2.3 V4 follow-up).
+import type { Icon } from "@phosphor-icons/react";
+import {
+  MagnifyingGlass,
+  Rocket,
+  Flask,
+  UserFocus,
+  ForkKnife,
+} from "@phosphor-icons/react";
+
 
 // ─── Hex to RGBA helper ─────────────────────────────
 function hexToRgba(hex: string, alpha: number): string {
@@ -89,7 +102,7 @@ interface Study {
   bgGlow: string;
   roles: RoleId[];
   // V4 card fields (Phase 2 / Change 2.3) — optional so non-V4 studies fall back gracefully.
-  emoji?: string;        // per-study emoji shown in card icon square
+  icon?: Icon;           // Phosphor icon component (rendered with weight="duotone")
   impactStrong?: string; // the portion of roiMetric to bold (e.g. "$100K", "2x")
 }
 
@@ -102,7 +115,7 @@ const studiesList: Study[] = [
     outcome: "Build what users want",
     roiMetric: "Save $100K in wasted dev cycles.",
     impactStrong: "$100K",
-    emoji: "📊",
+    icon: MagnifyingGlass,
     timeToInsight: "3-5 days",
     agencyTimeline: "4 weeks",
     bestFor: "Founders, Strategy Heads",
@@ -125,7 +138,7 @@ const studiesList: Study[] = [
     outcome: "Launch with conviction",
     roiMetric: "De-risk $500K of launch spend.",
     impactStrong: "$500K",
-    emoji: "🚀",
+    icon: Rocket,
     timeToInsight: "1 week",
     agencyTimeline: "6 weeks",
     bestFor: "Founders, Strategy, Category Leads",
@@ -148,7 +161,7 @@ const studiesList: Study[] = [
     outcome: "Kill duds before building",
     roiMetric: "Save 3-6 months of dev time.",
     impactStrong: "3-6 months",
-    emoji: "💡",
+    icon: Flask,
     timeToInsight: "72 hours",
     agencyTimeline: "4 weeks",
     bestFor: "NPD Leads, Product Managers",
@@ -171,7 +184,7 @@ const studiesList: Study[] = [
     outcome: "Sharpen your GTM",
     roiMetric: "2x your lead quality.",
     impactStrong: "2x",
-    emoji: "🎯",
+    icon: UserFocus,
     timeToInsight: "1 week",
     agencyTimeline: "5 weeks",
     bestFor: "Founders, Growth, Sales Leads",
@@ -194,7 +207,7 @@ const studiesList: Study[] = [
     outcome: "Win the blind test",
     roiMetric: "2x trial-to-repeat rate.",
     impactStrong: "2x",
-    emoji: "👅",
+    icon: ForkKnife,
     timeToInsight: "5-7 days",
     agencyTimeline: "4 weeks",
     bestFor: "NPD, R&D, QSR Menu Teams",
@@ -825,10 +838,29 @@ export default function StudiesSection() {
 
                 {/* Body */}
                 <div className="p-[22px] pb-[18px] flex flex-col flex-1">
-                  {/* Icon — 32×32 rounded square with orange tint + emoji (or fallback) */}
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] mb-3.5 bg-[rgba(232,80,26,0.10)] text-[15px]">
-                    {study.emoji ?? "📊"}
-                  </span>
+                  {/* Icon — Phosphor duotone in a per-study tinted square.
+                      Subtle colored border + matching tinted fill gives the
+                      icon box visual weight (not just an outline-in-a-box). */}
+                  {study.icon ? (
+                    <span
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-[10px] mb-4 border"
+                      style={{
+                        background: hexToRgba(study.color, 0.08),
+                        borderColor: hexToRgba(study.color, 0.22),
+                      }}
+                    >
+                      <study.icon weight="duotone" size={22} color={study.color} />
+                    </span>
+                  ) : (
+                    // Fallback for non-V4 studies in the catalog — preserves the
+                    // generic TrendingUp treatment so they don't look broken.
+                    <span
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-[10px] mb-4"
+                      style={{ background: hexToRgba(study.color, 0.10), color: study.color }}
+                    >
+                      <TrendingUp className="w-5 h-5" />
+                    </span>
+                  )}
 
                   {/* Heading — largest text in card per V4 spec */}
                   <h4 className="text-[16px] font-extrabold text-[#0b132b] leading-[1.3] mb-1.5 tracking-[-0.005em]">

@@ -161,7 +161,7 @@ export default function TrustSecurity() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">at every level.</span>
             </h2>
             <p className="text-[13px] sm:text-[14px] text-[#475569] leading-[1.6] max-w-[560px]">
-              <strong className="text-[#0b132b] font-semibold">SOC 2 Type II audit in progress.</strong>{" "}
+              <strong className="text-[#0b132b] font-semibold">SOC 2 Type II on the roadmap.</strong>{" "}
               GDPR-compliant. Built on enterprise-grade cloud infrastructure with
               end-to-end encryption.
             </p>

@@ -187,9 +187,9 @@ function TestimonialSlider() {
 }
 
 /* ── LogoStrip ─────────────────────────────────────────────────────────
- * BigBasket + Titan Skinn (real) + 2 partner placeholders. Replaces the
- * removed Mesa + Entrepreneurs First wordmarks (those are investor logos
- * and don't belong on the front page after a pain narrative — see doc §6.3).
+ * Customer-style chips: BigBasket + Titan Skinn (real) + 2 partner
+ * placeholders. Investor logos (Mesa + Entrepreneurs First) live in
+ * the BackedBy band below — see comment on BackedBy.
  * ──────────────────────────────────────────────────────────────────── */
 function LogoStrip() {
   return (
@@ -198,6 +198,45 @@ function LogoStrip() {
       <LogoChip label="Titan Skinn" dotOpacity={0.6} />
       <LogoChip label="Partner Logo" placeholder />
       <LogoChip label="Partner Logo" placeholder />
+    </div>
+  );
+}
+
+/* ── BackedBy ──────────────────────────────────────────────────────────
+ * Thin band sitting just below the customer LogoStrip. Houses the two
+ * investor wordmarks (Mesa School of Business + Entrepreneurs First)
+ * with a small "Backed by" label above. Visually subordinate to the
+ * customer logos — smaller height, muted backdrop, less prominence —
+ * so the hierarchy reads:
+ *   1. Real customers we work with  (LogoStrip)
+ *   2. Who funded us, much smaller  (BackedBy)
+ * ──────────────────────────────────────────────────────────────────── */
+function BackedBy() {
+  return (
+    <div className="mt-10 sm:mt-12 pt-8 sm:pt-10 border-t border-[#e8e0d8]/70">
+      <p className="text-center text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] text-[#757575] mb-6">
+        Backed by
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-x-10 sm:gap-x-14 lg:gap-x-16 gap-y-5">
+        {/* Mesa School of Business — vector logo from public/ */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mesa-school-logo.svg"
+          alt="Mesa School of Business"
+          className="h-8 sm:h-9 w-auto opacity-80"
+        />
+
+        {/* Entrepreneurs First — typographic wordmark, brand colors preserved */}
+        <div className="flex flex-col items-center leading-none">
+          <span className="font-display text-[18px] sm:text-[22px] font-black tracking-[-0.02em] leading-none whitespace-nowrap">
+            <span className="text-[#6A1FE5]">Entrepreneurs</span>{" "}
+            <span className="text-[#F26D1F]">First</span>
+          </span>
+          <span className="text-[9px] sm:text-[10px] italic font-medium text-[#6B6B6B] mt-1">
+            Spring 2026 Cohort
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -330,8 +369,11 @@ export default function SocialProof() {
         {/* ── Testimonial slider ── */}
         <TestimonialSlider />
 
-        {/* ── Logo strip ── */}
+        {/* ── Customer logo strip ── */}
         <LogoStrip />
+
+        {/* ── Backed-by investor band (Mesa + Entrepreneurs First) ── */}
+        <BackedBy />
       </div>
     </section>
   );

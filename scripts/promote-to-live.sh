@@ -42,12 +42,15 @@ SKIP_PROMPT=false
 PRESET_VERSION=""
 PRESET_NAME=""
 PRESET_DESC=""
+SYNC_DEV=true   # default: keep website-dev in lockstep with website-live
 
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
 
-Promote website-dev → website-live with optimization, commit, tag, push.
+Promote website-dev → website-live with optimization, commit, tag, push,
+then mirror the optimized build artifacts back to website-dev so the
+two branches stay in lockstep.
 
 Options:
   -y, --yes               Auto-confirm push to origin (skip the y/N prompt).
@@ -55,17 +58,21 @@ Options:
   -v, --version VERSION   Preset version (e.g. 1.10.0). Skips version prompt.
   -n, --name NAME         Preset release name. Skips name prompt.
   -d, --description DESC  Preset description. Skips description prompt.
+  --no-sync-dev           Skip the post-promote dev-sync step. By default,
+                          optimized artifacts (compressed media in public/)
+                          are committed back to website-dev so dev mirrors
+                          live exactly.
   -h, --help              Show this help and exit.
 
 Examples:
-  # Fully interactive (existing behavior)
+  # Fully interactive (existing behavior + auto dev sync)
   ./scripts/promote-to-live.sh
 
   # Fully automated
   ./scripts/promote-to-live.sh -y -n "Bug fix release" -d "Fixed scroll bug"
 
-  # Override version with default name (still prompts for name/desc)
-  ./scripts/promote-to-live.sh -v 2.0.0 -y
+  # Promote without touching website-dev (useful for hotfixes)
+  ./scripts/promote-to-live.sh -y --no-sync-dev
 USAGE
 }
 
@@ -75,6 +82,7 @@ while [[ $# -gt 0 ]]; do
     -v|--version)     PRESET_VERSION="${2:-}"; shift 2 ;;
     -n|--name)        PRESET_NAME="${2:-}"; shift 2 ;;
     -d|--description) PRESET_DESC="${2:-}"; shift 2 ;;
+    --no-sync-dev)    SYNC_DEV=false; shift ;;
     -h|--help)        usage; exit 0 ;;
     *)                echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -305,6 +313,7 @@ else
   fi
 fi
 
+PUSHED_TO_LIVE=false
 if [[ "$PUSH_REPLY" =~ ^[Yy]$ ]]; then
   git push origin "$TARGET_BRANCH" --force-with-lease 2>/dev/null || \
     git push origin "$TARGET_BRANCH" --force
@@ -312,20 +321,112 @@ if [[ "$PUSH_REPLY" =~ ^[Yy]$ ]]; then
   ok "Pushed to origin/$TARGET_BRANCH"
   echo -e "\n${GREEN}${BOLD}  🚀 ${VERSION_TAG} deployed! Check GitHub Actions for progress.${NC}"
   echo -e "  ${BOLD}Release:${NC} ${RELEASE_NAME}\n"
+  PUSHED_TO_LIVE=true
 else
   ok "Changes committed locally but NOT pushed."
   log "Run 'git push origin $TARGET_BRANCH --force-with-lease && git push origin $VERSION_TAG' when ready."
 fi
 
+# Capture the live commit SHA *now* — we use it in the next step to pull
+# optimized artifacts back to website-dev. (Doing this before any branch
+# switching avoids ambiguity if TARGET_BRANCH ref shifts.)
+LIVE_COMMIT_SHA=$(git rev-parse "$TARGET_BRANCH")
+
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 6: Return to original branch
+# STEP 6: Mirror optimized artifacts back to website-dev
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Why: optimize-for-prod.sh compresses media (videos, posters, og-image, etc.)
+# with non-deterministic encoders. Without this step, dev's source media
+# drifts from live's compressed output after every release, and we keep
+# having to manually re-sync. This step keeps the two branches in lockstep
+# automatically.
+#
+# What syncs: ONLY website/public/ — that's where compressed binary
+# artifacts live. Source code optimizations from optimize-for-prod (console
+# stripping, dev-file removal) deliberately stay live-only — dev needs its
+# console.log statements and setup scripts for actual development.
 # ══════════════════════════════════════════════════════════════════════════════
 
-git checkout "$ORIGINAL_BRANCH"
+if [ "$SYNC_DEV" = "true" ] && [ "$PUSHED_TO_LIVE" = "true" ]; then
+  header "Step 6: Syncing optimized artifacts to $SOURCE_BRANCH"
+
+  # Disable -e locally so individual failures don't abort — live is already
+  # pushed at this point; the worst case is the user re-runs sync manually.
+  set +e
+
+  git fetch origin "$SOURCE_BRANCH" > /dev/null 2>&1
+  git checkout "$SOURCE_BRANCH" > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    warn "Could not switch to $SOURCE_BRANCH — skipping sync"
+    set -e
+  else
+    ok "Switched to $SOURCE_BRANCH"
+
+    # Fast-forward to remote tip if possible (no merge commits, never force)
+    git pull --ff-only origin "$SOURCE_BRANCH" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      warn "Could not fast-forward $SOURCE_BRANCH from origin (may have diverged)"
+    fi
+
+    # Mirror only the build-artifact directory from the live commit.
+    # public/ is what optimize-for-prod compresses; everything else in
+    # website/ should already match dev (since live was built FROM dev).
+    git checkout "$LIVE_COMMIT_SHA" -- website/public 2>/dev/null
+    if [ $? -ne 0 ]; then
+      warn "Could not checkout website/public from $LIVE_COMMIT_SHA — skipping sync"
+      set -e
+    else
+      git add -A website/public 2>/dev/null
+
+      if git diff --cached --quiet 2>/dev/null; then
+        log "$SOURCE_BRANCH already in sync with $VERSION_TAG — no commit needed"
+      else
+        SYNC_MSG_BODY="Auto-generated by promote-to-live.sh after each release.
+Mirrors website/public/ from $VERSION_TAG so dev stays byte-identical
+to live's optimized output. Source code changes from optimize-for-prod
+(console stripping, dev-file removal) intentionally stay live-only —
+dev needs those files for actual development."
+
+        git commit -m "sync($SOURCE_BRANCH): mirror optimized public/ from $VERSION_TAG" \
+                   -m "$SYNC_MSG_BODY" > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+          ok "Committed sync to $SOURCE_BRANCH"
+
+          git push origin "$SOURCE_BRANCH" > /dev/null 2>&1
+          if [ $? -eq 0 ]; then
+            ok "Pushed sync to origin/$SOURCE_BRANCH"
+          else
+            warn "Sync committed locally but push failed — run 'git push origin $SOURCE_BRANCH' manually"
+          fi
+        else
+          warn "Sync commit failed — inspect manually"
+        fi
+      fi
+
+      set -e
+    fi
+  fi
+elif [ "$SYNC_DEV" = "false" ]; then
+  log "Skipping dev sync (--no-sync-dev passed)"
+else
+  log "Skipping dev sync (live was not pushed)"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 7: Return to original branch
+# ══════════════════════════════════════════════════════════════════════════════
+
+if [ "$(git branch --show-current)" != "$ORIGINAL_BRANCH" ]; then
+  git checkout "$ORIGINAL_BRANCH"
+fi
 ok "Back on '$ORIGINAL_BRANCH'"
 
 echo ""
 header "DONE"
 echo -e "  ${BOLD}${VERSION_TAG}${NC} — ${RELEASE_NAME}"
 echo -e "  ${BOLD}$TARGET_BRANCH${NC} contains ONLY website files, fully optimized."
+if [ "$SYNC_DEV" = "true" ] && [ "$PUSHED_TO_LIVE" = "true" ]; then
+  echo -e "  ${BOLD}$SOURCE_BRANCH${NC} mirrors live's optimized artifacts."
+fi
 echo ""

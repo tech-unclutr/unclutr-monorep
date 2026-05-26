@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, MouseEvent } from "react";
+import { useRef, MouseEvent } from "react";
 import {
   motion,
   useInView,
@@ -9,182 +9,6 @@ import {
 } from "framer-motion";
 import { useSectionVisibility } from "@/lib/analytics";
 
-/* ── Testimonial data ──────────────────────────────────────────────────
- * Placeholders per migration doc §8.5. Param will swap with real quotes.
- * Keep specific numbers — replace `[Name, Title]` brackets with real
- * attribution as they come in. Don't soften the specificity.
- * ──────────────────────────────────────────────────────────────────── */
-type Testimonial = {
-  quote: string;
-  name: string;
-  company: string;
-};
-
-const TESTIMONIALS: Testimonial[] = [
-  {
-    quote:
-      "Pulse called 80 of our churned customers in 6 days. The real reason they left was delivery delays in tier-2 cities, not pricing. We rebuilt the delivery promise. NPS went from 32 to 51 in 8 weeks.",
-    name: "[Name, Head of Growth]",
-    company: "BigBasket",
-  },
-  {
-    quote:
-      "We were three weeks from launching a new SKU at the wrong price. SquareUp ran 45 voice interviews with our category buyers in a week. Willingness-to-pay was 22% lower than our pricing brief. We held launch and re-priced.",
-    name: "[Name, Brand Manager]",
-    company: "Titan Skinn",
-  },
-  {
-    quote:
-      "Before SquareUp, the voice of customer was one person's job and everyone else's guess. Now product, growth, and leadership are working from the same source of truth.",
-    name: "[Name, Title]",
-    company: "[Company Placeholder]",
-  },
-  {
-    quote:
-      "We used to wait 4 weeks for a research readout. SquareUp got us there in 3 days, and the customer insights were sharper because they came directly from the customer, not a researcher's summary.",
-    name: "[Name, Title]",
-    company: "[Company Placeholder]",
-  },
-  {
-    quote:
-      "The thing that surprised us wasn't the speed. It was what the AI voice agents caught that our team had been missing in manual interviews for months. Things customers had been trying to tell us, in their own words.",
-    name: "[Name, Title]",
-    company: "[Company Placeholder]",
-  },
-];
-
-const AUTOPLAY_MS = 6000;
-
-/* ── TestimonialSlider ─────────────────────────────────────────────────
- * React port of the vanilla JS scaffold in migration doc §8.6–§8.8.
- * Mechanics: 5 cards, auto-advance every 6s, pause on hover, arrows on
- * desktop, dots always visible, touch/swipe (50px threshold) on mobile.
- * Loops infinitely. One card visible at a time, track translates by
- * -currentIndex * 100%.
- * ──────────────────────────────────────────────────────────────────── */
-function TestimonialSlider() {
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const goTo = (i: number) => {
-    setCurrentIndex(((i % TESTIMONIALS.length) + TESTIMONIALS.length) % TESTIMONIALS.length);
-  };
-  const next = () => goTo(currentIndex + 1);
-  const prev = () => goTo(currentIndex - 1);
-
-  // Autoplay — pauses while hovered
-  useEffect(() => {
-    if (isPaused) return;
-    const id = window.setInterval(() => {
-      setCurrentIndex((i) => (i + 1) % TESTIMONIALS.length);
-    }, AUTOPLAY_MS);
-    return () => window.clearInterval(id);
-  }, [isPaused]);
-
-  // Touch / swipe
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.changedTouches[0].screenX;
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const diff = touchStartX.current - e.changedTouches[0].screenX;
-    if (Math.abs(diff) > 50) (diff > 0 ? next : prev)();
-  };
-
-  return (
-    <div
-      ref={sliderRef}
-      className="relative max-w-[1100px] mx-auto mb-12 px-4 sm:px-12 lg:px-16"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      role="region"
-      aria-roledescription="carousel"
-      aria-label="Customer testimonials"
-    >
-      {/* Viewport — clips overflow, rounds corners */}
-      <div className="overflow-hidden rounded-[20px]">
-        {/* Track — flex row, translates left */}
-        <div
-          className="flex transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
-          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-        >
-          {TESTIMONIALS.map((t, i) => (
-            <article
-              key={i}
-              className="flex-shrink-0 w-full bg-white rounded-[20px] border border-[#e8e0d8] p-8 sm:p-9 flex flex-col gap-[18px]"
-              style={{ minHeight: 280 }}
-              role="group"
-              aria-roledescription="slide"
-              aria-label={`${i + 1} of ${TESTIMONIALS.length}`}
-              aria-hidden={i !== currentIndex}
-            >
-              <span
-                aria-hidden
-                className="text-[48px] leading-none text-[#FF5A36] font-serif select-none"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-              >
-                ❝
-              </span>
-              <p className="text-[14px] sm:text-[15px] leading-[1.7] text-[rgba(11,19,43,0.65)] italic flex-1">
-                {t.quote}
-              </p>
-              <div className="border-t border-[#e8e0d8] pt-4">
-                <div className="text-[14px] font-bold text-[#0b132b]">
-                  {t.name}
-                </div>
-                <div className="text-[12px] text-[#757575] mt-0.5">
-                  {t.company}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      {/* Prev / Next — hidden under 720px per doc spec */}
-      <button
-        type="button"
-        aria-label="Previous testimonial"
-        onClick={prev}
-        className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white border border-[#e8e0d8] text-[#0b132b] items-center justify-center text-[20px] transition-all duration-200 hover:border-[#FF5A36] hover:text-[#FF5A36] hover:shadow-[0_4px_12px_rgba(232,80,26,0.15)] z-10"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        aria-label="Next testimonial"
-        onClick={next}
-        className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white border border-[#e8e0d8] text-[#0b132b] items-center justify-center text-[20px] transition-all duration-200 hover:border-[#FF5A36] hover:text-[#FF5A36] hover:shadow-[0_4px_12px_rgba(232,80,26,0.15)] z-10"
-      >
-        ›
-      </button>
-
-      {/* Dot indicators */}
-      <div role="tablist" className="flex justify-center gap-2 mt-5">
-        {TESTIMONIALS.map((_, i) => {
-          const active = i === currentIndex;
-          return (
-            <button
-              key={i}
-              role="tab"
-              aria-selected={active}
-              aria-label={`Go to testimonial ${i + 1}`}
-              onClick={() => goTo(i)}
-              className={`h-2 rounded-full transition-all duration-200 ${
-                active
-                  ? "w-6 bg-[#FF5A36]"
-                  : "w-2 bg-[#e8e0d8] hover:bg-[#cfc4b4]"
-              }`}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 /* ── LogoStrip ─────────────────────────────────────────────────────────
  * Customer-style chips: BigBasket + Titan Skinn (real) + 2 partner
@@ -278,12 +102,15 @@ function LogoChip({
 }
 
 /* ── SocialProof (F7) ──────────────────────────────────────────────────
- * Phase 2 / Change 2.1 — REPLACES the previous SocialProof.
+ * Phase 2 / Change 2.1 + later refinements.
  * Was: "Validated by leaders from 120+ customer-centric teams" + headline
  *      + Mesa / Entrepreneurs First wordmarks.
- * Now: new pill + new H2 + 5-slide testimonial slider + 4-chip logo strip.
- * Mesa + Entrepreneurs First (investor logos) removed — to be relocated
- * to a Backed-by footer/About block per separate decision.
+ * Currently: pill + H2 + customer logo chips + "Backed by" investor band.
+ *
+ * The testimonial slider that briefly lived here has been removed —
+ * showed placeholder copy and read as a fake-quote slot rather than
+ * actual social proof. Will return once real testimonials are signed
+ * off; the slider component code was removed cleanly to avoid drift.
  *
  * The live mouse-spotlight + static center glow backdrop is preserved
  * (design language continuity — doc §1.2 / §1.4).
@@ -365,9 +192,6 @@ export default function SocialProof() {
             </span>
           </motion.h2>
         </div>
-
-        {/* ── Testimonial slider ── */}
-        <TestimonialSlider />
 
         {/* ── Customer logo strip ── */}
         <LogoStrip />

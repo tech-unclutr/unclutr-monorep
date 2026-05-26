@@ -130,7 +130,9 @@ export default function TrustSecurity() {
     <section
       ref={sectionRef}
       data-section-name="grid-card"
-      className="relative overflow-hidden bg-gradient-to-b from-[#FBF4EC] via-[#F6F2ED] to-[#FBF4EC] dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-900"
+      // Dark backdrop — matches the closing CTASection's dark band and
+      // creates a visual stop sign before the demo + marquee + closing flow.
+      className="relative overflow-hidden bg-[#0a0a0a]"
     >
       {/* Magical glowing background */}
       <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden">
@@ -156,19 +158,19 @@ export default function TrustSecurity() {
           className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 md:gap-8 mb-12 text-left"
         >
           <div className="flex-1 max-w-[640px]">
-            <h2 className="font-display text-[clamp(32px,4.2vw,52px)] tracking-[-0.03em] text-neutral-900 dark:text-white leading-[1.1] mb-3">
+            <h2 className="font-display text-[clamp(32px,4.2vw,52px)] tracking-[-0.03em] text-white leading-[1.1] mb-3">
               Trust and security{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">at every level.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">at every level.</span>
             </h2>
-            <p className="text-[13px] sm:text-[14px] text-[#475569] leading-[1.6] max-w-[560px]">
-              <strong className="text-[#0b132b] font-semibold">SOC 2 Type II on the roadmap.</strong>{" "}
+            <p className="text-[13px] sm:text-[14px] text-white/65 leading-[1.6] max-w-[560px]">
+              <strong className="text-white font-semibold">SOC 2 Type II on the roadmap.</strong>{" "}
               GDPR-compliant. Built on enterprise-grade cloud infrastructure with
               end-to-end encryption.
             </p>
           </div>
           <a
             href="#"
-            className="inline-flex items-center gap-1 text-[13px] text-[#FF5A36] font-semibold whitespace-nowrap hover:underline shrink-0 md:mt-2"
+            className="inline-flex items-center gap-1 text-[13px] text-[#FF8A66] font-semibold whitespace-nowrap hover:underline shrink-0 md:mt-2"
           >
             View full security details <span aria-hidden>→</span>
           </a>

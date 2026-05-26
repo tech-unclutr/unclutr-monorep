@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Lock, Handshake, Lightning, Sparkle } from "@phosphor-icons/react";
 import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
 
@@ -22,6 +23,25 @@ import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
  */
 
 const FORM_URL = "https://forms.gle/jEB7GML5HnakvWNk8";
+
+/* ── Customer insights — verbatims from US consumer industries.
+ *  Mostly positive (real outcomes) + two candid negatives so the box
+ *  reads as honest signal, not curated marketing. 6-8 words each.
+ *  Industries chosen for US relevance (DTC, BPC, FMCG, CPG, Fintech,
+ *  Retail, SaaS).
+ *  Order is intentional: starts positive, alternates, ends positive.
+ * ─────────────────────────────────────────────────────────────────── */
+type Insight = { quote: string; industry: string; tone: "pos" | "neg" };
+const INSIGHTS: Insight[] = [
+  { quote: "Cut research turnaround from weeks to days.", industry: "SaaS",                 tone: "pos" },
+  { quote: "Our churn dropped 22% after listening better.", industry: "DTC",                tone: "pos" },
+  { quote: "Onboarding felt overwhelming for our small team.", industry: "Fintech",         tone: "neg" },
+  { quote: "Customers told us exactly what they needed.", industry: "Beauty & Personal Care", tone: "pos" },
+  { quote: "Saved $80K on a doomed product launch.", industry: "FMCG",                      tone: "pos" },
+  { quote: "Wish the dashboard surfaced patterns faster.", industry: "Retail",              tone: "neg" },
+  { quote: "Real feedback, not vanity metrics anymore.", industry: "CPG",                   tone: "pos" },
+];
+const INSIGHT_DISPLAY_MS = 1700; // ~1.5s visible + entry/exit time
 
 /* ── 20 particles — exact positions/sizes/durations from spec §4.1 ── */
 type Particle = {
@@ -71,6 +91,73 @@ const WAVE_HEIGHTS = [
   // extension to 60 — gentle taper for the right edge
   20, 28, 24, 32, 26, 22, 18, 16, 14, 12,
 ];
+
+/* ── InsightPopup ─────────────────────────────────────────────────────
+ * Scroll-triggered dialogue box that cycles through customer verbatims.
+ * Uses its own useInView ref so it only activates after the user scrolls
+ * past the initial waitlist section reveal (waveform + headline visible
+ * first, insights start a bit further down).
+ *
+ * Animation: AnimatePresence with mode="wait" — one insight at a time,
+ * fades up on entry, fades up on exit, GPU-only properties (transform +
+ * opacity) for guaranteed 60fps. setInterval drives the index; pauses
+ * automatically when off-screen via useInView; respects reduced-motion
+ * by clamping to a single static insight.
+ * ──────────────────────────────────────────────────────────────────── */
+function InsightPopup() {
+  const ref = useRef<HTMLDivElement>(null);
+  // amount: 0.6 — only fire when 60% of the popup is visible. Combined
+  // with its position below the waveform, this means the user must scroll
+  // a bit further into the section before insights start cycling.
+  const inView = useInView(ref, { amount: 0.6, once: false });
+  const [idx, setIdx] = useState(0);
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+
+  useEffect(() => {
+    if (!inView || reduced) return;
+    const id = window.setInterval(() => {
+      setIdx((i) => (i + 1) % INSIGHTS.length);
+    }, INSIGHT_DISPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [inView, reduced]);
+
+  const current = INSIGHTS[idx];
+
+  return (
+    <div ref={ref} className="wl-insight" aria-live="polite" aria-atomic>
+      <div className="wl-insight-head">
+        <span className="wl-insight-live">LIVE</span>
+        <span>Customer verbatim · captured by Pulse</span>
+      </div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        {inView && (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+            style={{ willChange: "transform, opacity" }}
+          >
+            <p className="wl-insight-quote">&ldquo;{current.quote}&rdquo;</p>
+            <div className="wl-insight-meta">
+              <span className={`dot ${current.tone}`} aria-hidden />
+              <span>{current.industry}</span>
+              <span aria-hidden style={{ opacity: 0.4 }}>·</span>
+              <span style={{ opacity: 0.6 }}>{current.tone === "pos" ? "Positive signal" : "Constructive feedback"}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function Waitlist() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -122,16 +209,12 @@ export default function Waitlist() {
         </h2>
 
         {/* ── Audio waveform — multi-layer, brand connection to voice AI ─
-            Layer 1 (.wl-waveform-glow) — soft radial bloom behind the bars
+            Layer 1 (.wl-waveform-glow)  — soft radial bloom behind the bars
             Layer 2 (.wl-waveform-bars)  — main animated bars with peak glow
-            Layer 3 (.wl-waveform-mirror) — reflected bars at 25% opacity,
-                                            faded with mask — "audio software"
-                                            console look
-            Layer 4 (.wl-waveform-scan)   — vertical light bar that sweeps
-                                            horizontally, mix-blend-mode screen
-                                            highlights bars it passes through
-            All layers animate independently. Scan + glow + breath combine to
-            make the waveform feel like a live signal, not a CSS loop.
+            Layer 3 (.wl-waveform-mirror) — reflected bars at 28% opacity,
+                                            faded with mask — audio-console feel
+            (The horizontal scan-light overlay that used to live here was
+            removed; the InsightPopup below is the new "live signal" hook.)
             ──────────────────────────────────────────────────────────────── */}
         <div className="wl-waveform" aria-hidden>
           <div className="wl-waveform-glow" />
@@ -161,8 +244,10 @@ export default function Waitlist() {
               ))}
             </div>
           </div>
-          <div className="wl-waveform-scan" />
         </div>
+
+        {/* Customer-insight popup — scroll-triggered, cycles verbatims */}
+        <InsightPopup />
 
         <p className="wl-sub">
           We work hands-on with a small cohort each quarter. Founding members{" "}

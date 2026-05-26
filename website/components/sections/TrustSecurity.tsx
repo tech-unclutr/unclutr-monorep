@@ -151,29 +151,23 @@ export default function TrustSecurity() {
             the doc's default — Param to confirm actual audit status before
             production push (change "in progress" → "scheduled" / "on the
             roadmap" if not yet started). */}
+        {/* "View full security details" link was previously here — removed
+            per Param's review. Header is now single-column. */}
         <motion.div
           initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
           animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 md:gap-8 mb-12 text-left"
+          className="mb-12 text-left max-w-[700px]"
         >
-          <div className="flex-1 max-w-[640px]">
-            <h2 className="font-display text-[clamp(32px,4.2vw,52px)] tracking-[-0.03em] text-white leading-[1.1] mb-3">
-              Trust and security{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">at every level.</span>
-            </h2>
-            <p className="text-[13px] sm:text-[14px] text-white/65 leading-[1.6] max-w-[560px]">
-              <strong className="text-white font-semibold">SOC 2 Type II on the roadmap.</strong>{" "}
-              GDPR-compliant. Built on enterprise-grade cloud infrastructure with
-              end-to-end encryption.
-            </p>
-          </div>
-          <a
-            href="#"
-            className="inline-flex items-center gap-1 text-[13px] text-[#FF8A66] font-semibold whitespace-nowrap hover:underline shrink-0 md:mt-2"
-          >
-            View full security details <span aria-hidden>→</span>
-          </a>
+          <h2 className="font-display text-[clamp(32px,4.2vw,52px)] tracking-[-0.03em] text-white leading-[1.1] mb-3">
+            Trust and security{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">at every level.</span>
+          </h2>
+          <p className="text-[13px] sm:text-[14px] text-white/65 leading-[1.6] max-w-[560px]">
+            <strong className="text-white font-semibold">SOC 2 Type II on the roadmap.</strong>{" "}
+            GDPR-compliant. Built on enterprise-grade cloud infrastructure with
+            end-to-end encryption.
+          </p>
         </motion.div>
 
         <motion.div

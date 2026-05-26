@@ -73,7 +73,10 @@ export default function SocialProof() {
       onMouseMove={handleMouseMove}
       data-section-name="social-proof"
       className="relative z-10 w-full py-20 sm:py-24 lg:py-28 overflow-hidden"
-      style={{ background: "#FBF4EC" }}
+      // Warm-white (#FFFAF3) instead of the standard cream — creates a
+      // subtle "section breaker" in the long cream cascade so adjacent
+      // sections don't visually blend into one continuous slab.
+      style={{ background: "#FFFAF3" }}
     >
       {/* Interactive spotlight backdrop (preserved from live design) */}
       <motion.div

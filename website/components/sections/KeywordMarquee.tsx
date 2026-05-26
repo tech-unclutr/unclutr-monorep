@@ -45,7 +45,10 @@ export default function KeywordMarquee() {
     <section
       id="keyword-marquee"
       data-section-name="keyword-marquee"
-      className="relative bg-[#FBF4EC] border-t border-[#e8e0d8] py-7 overflow-hidden"
+      // Warm-white (#FFFAF3) instead of cream — paired with SocialProof's
+      // same shift, this creates two visual breakers in the cream cascade
+      // so adjacent sections don't blend together.
+      className="relative bg-[#FFFAF3] border-t border-[#e8e0d8] py-7 overflow-hidden"
       // Inline keyframe + media query so the marquee is fully self-contained.
       // Existing tailwind animate-scroll-left uses translateX(-50%) too but its
       // duration (30s) is faster than the V4 spec (35s). We define our own.

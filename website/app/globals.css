@@ -757,24 +757,32 @@ html[data-perf-tier="medium"] .blob-drift-4 {
 .wl-section .wl-waveform-zone {
   position: relative;
   margin: 0 auto;
-  /* Wider than .wl-content (760px) so floats can sit OUTSIDE the wave's
-     immediate flank. Falls back to 100% on narrow viewports. */
+  /* Pulled OUT of .wl-content in the JSX so the zone can claim the
+     full section width (capped at 1180px). The 540px waveform lives
+     centered inside; floats sit firmly in the ~290px gutter on each
+     side, with breathing room from the wave's flank. */
   max-width: 1180px;
   width: 100%;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .wl-section .wl-float {
   position: absolute;
   width: 240px;
   z-index: 6;
   pointer-events: none;
-  will-change: opacity, transform;
+  will-change: opacity, transform, filter;
+  /* Both slots vertically centered on the wave's horizontal midline.
+     Symmetric, calm, gutter-anchored. */
+  top: 50%;
+  transform: translateY(-50%);
 }
-/* Four corner slots around the waveform — values calibrated so the
-   nearest edge of the float never overlaps the 540px-wide waveform. */
-.wl-section .wl-float-tl { top: 0;       left: 0;    text-align: left; }
-.wl-section .wl-float-tr { top: 10px;    right: 0;   text-align: right; }
-.wl-section .wl-float-bl { bottom: 0;    left: 0;    text-align: left; }
-.wl-section .wl-float-br { bottom: 10px; right: 0;   text-align: right; }
+/* Two slots only — LEFT and RIGHT. Synced cycle (one AnimatePresence
+   in React drives BOTH); no more 4-corner stagger that produced overlap. */
+.wl-section .wl-float-left  { left: 0;  text-align: left;  padding-right: 12px; }
+.wl-section .wl-float-right { right: 0; text-align: right; padding-left: 12px; }
 .wl-section .wl-float-dot {
   width: 7px;
   height: 7px;
@@ -825,20 +833,20 @@ html[data-perf-tier="medium"] .blob-drift-4 {
   color: var(--wl-orange-light);
 }
 
-/* Mobile / narrow desktop: floats can collide with the wave at this
-   width. Stack them in flow below the waveform instead. */
+/* Mobile / narrow desktop: floats can collide with the wave below this
+   width. Stack them below the wave in normal flow.
+   (Param said handle responsive later — keeping a reasonable fallback.) */
 @media (max-width: 900px) {
   .wl-section .wl-float {
     position: static;
+    transform: none;
     width: 100%;
     max-width: 360px;
     margin: 14px auto 0;
     text-align: center !important;
   }
-  .wl-section .wl-float-tl,
-  .wl-section .wl-float-tr,
-  .wl-section .wl-float-bl,
-  .wl-section .wl-float-br { text-align: center; }
+  .wl-section .wl-float-left,
+  .wl-section .wl-float-right { text-align: center; padding: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

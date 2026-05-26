@@ -91,35 +91,24 @@ const WAVE_HEIGHTS = [
   20, 28, 24, 32, 26, 22, 18, 16, 14, 12,
 ];
 
-/* ── FloatingInsight ──────────────────────────────────────────────────
- * One "slot" of the orbital insight system — text-only, no box, sits
- * absolutely-positioned around the waveform. Each slot cycles through
- * the INSIGHTS array independently with its own starting offset and
- * cycle period so different insights are visible at different lifecycle
- * stages simultaneously (organic feel, not a synchronized ticker).
+/* ── InsightOrbit ─────────────────────────────────────────────────────
+ * Two text-only "live capture" slots — one in the LEFT gutter, one in
+ * the RIGHT gutter — perfectly synced. A single shared `idx` drives
+ * both slots; both render different insights from the array (idx and
+ * idx+1), and BOTH animate inside the SAME AnimatePresence so they
+ * fade out and fade in TOGETHER. No overlap, no chaos.
  *
- * Position is set via the `position` prop ("tl" | "tr" | "bl" | "br"),
- * which maps to the .wl-float-{position} CSS classes. The component
- * itself receives a master `mountedOpacity` motion value from the
- * parent so all four slots can fade together as the user scrolls
- * into/past the section.
+ * Cycle: 5.5s per pair. Each pair gets ~5s of read time + the 0.5s
+ * cross-fade. AnimatePresence mode="wait" guarantees the OLD pair
+ * fully exits before the NEW pair enters.
  *
- * Animation: AnimatePresence mode="wait" + transform/opacity only
- * (GPU-accelerated). setInterval pauses automatically off-screen via
- * useInView. Respects prefers-reduced-motion.
+ * Master scroll fade is applied by the parent on the wrapper div, so
+ * the orbit cleanly fades in on entry and collapses on exit.
  * ──────────────────────────────────────────────────────────────────── */
-function FloatingInsight({
-  position,
-  startIdx,
-  cycleMs,
-}: {
-  position: "tl" | "tr" | "bl" | "br";
-  startIdx: number;
-  cycleMs: number;
-}) {
+function InsightOrbit() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.3, once: false });
-  const [idx, setIdx] = useState(startIdx);
+  const [idx, setIdx] = useState(0);
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -129,36 +118,61 @@ function FloatingInsight({
 
   useEffect(() => {
     if (!inView || reduced) return;
+    // Step by 2 so each pair is unique. Wrap at the end of the array.
     const id = window.setInterval(() => {
-      setIdx((i) => (i + 1) % INSIGHTS.length);
-    }, cycleMs);
+      setIdx((i) => (i + 2) % INSIGHTS.length);
+    }, 5500);
     return () => window.clearInterval(id);
-  }, [inView, reduced, cycleMs]);
+  }, [inView, reduced]);
 
-  const current = INSIGHTS[idx];
-  const isRight = position === "tr" || position === "br";
+  const leftInsight  = INSIGHTS[idx % INSIGHTS.length];
+  const rightInsight = INSIGHTS[(idx + 1) % INSIGHTS.length];
 
   return (
-    <div ref={ref} className={`wl-float wl-float-${position}`} aria-hidden>
+    <div ref={ref} className="contents" aria-hidden>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={idx}
-          initial={{ opacity: 0, x: isRight ? 16 : -16, filter: "blur(6px)" }}
-          animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, x: isRight ? -8 : 8, filter: "blur(4px)" }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{ willChange: "transform, opacity, filter" }}
+          className="contents"
+          // Both slots share this transition — they fade together.
+          // mode="wait" on the parent ensures previous PAIR fully exits
+          // before the new PAIR begins entering.
+          initial={{ opacity: 0, filter: "blur(8px)" }}
+          animate={{ opacity: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, filter: "blur(6px)" }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="wl-float-label">
-            <span className={`wl-float-dot ${current.tone}`} />
-            <span>{current.tone === "pos" ? "Live capture" : "Live capture"}</span>
-          </div>
-          <p className="wl-float-quote">&ldquo;{current.quote}&rdquo;</p>
-          <p className="wl-float-industry">
-            <span className="wl-float-industry-accent">·</span> {current.industry}
-          </p>
+          <InsightSlot side="left"  insight={leftInsight} />
+          <InsightSlot side="right" insight={rightInsight} />
         </motion.div>
       </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── InsightSlot ──────────────────────────────────────────────────────
+ * One side of the orbit. Pure presentational — receives an insight
+ * object and renders it. No state, no animation logic (the parent
+ * AnimatePresence handles the cross-fade). The wl-float-{side} CSS
+ * positions it absolutely in the gutter, vertically centered.
+ * ──────────────────────────────────────────────────────────────────── */
+function InsightSlot({
+  side,
+  insight,
+}: {
+  side: "left" | "right";
+  insight: Insight;
+}) {
+  return (
+    <div className={`wl-float wl-float-${side}`}>
+      <div className="wl-float-label">
+        <span className={`wl-float-dot ${insight.tone}`} />
+        <span>Live capture</span>
+      </div>
+      <p className="wl-float-quote">&ldquo;{insight.quote}&rdquo;</p>
+      <p className="wl-float-industry">
+        <span className="wl-float-industry-accent">·</span> {insight.industry}
+      </p>
     </div>
   );
 }
@@ -239,63 +253,60 @@ export default function Waitlist() {
         <h2 id="wl-title" className="wl-title">
           Join the <span className="wl-title-em">Waitlist.</span>
         </h2>
+      </div>
 
-        {/* ── Audio waveform + orbital customer insights ──────────────
-            Waveform sits centered in a wider zone (.wl-waveform-zone)
-            so the 4 FloatingInsight slots can be absolutely positioned
-            around its perimeter on desktop without overlapping the bars.
-            On mobile (<900px), CSS reflows the floats below the wave.
+      {/* ── Audio waveform + orbital customer insights ────────────────
+          PULLED OUT of .wl-content (which is 760px max) so the zone can
+          claim the section's full width (capped at 1180px). Wave stays
+          centered at 540px; the LEFT + RIGHT insight slots now have
+          ~290px of gutter on each side — well clear of the wave's flank.
 
-            The whole insight system is scroll-driven via the
-            insightsOpacity + insightsY motion values: hidden at first,
-            fades in after slight scroll, holds while section is in view,
-            collapses as the user scrolls past.
-            ──────────────────────────────────────────────────────────── */}
-        <div className="wl-waveform-zone">
-          {/* Floating insights — top half (above the wave's center line) */}
-          <motion.div style={{ opacity: insightsOpacity, y: insightsY }}>
-            <FloatingInsight position="tl" startIdx={0} cycleMs={5800} />
-            <FloatingInsight position="tr" startIdx={2} cycleMs={5200} />
-          </motion.div>
+          Insight orbit is wrapped in a motion.div carrying the
+          scroll-driven master opacity + y values: hidden initially,
+          fades in after slight scroll, collapses when scrolled past.
+          ──────────────────────────────────────────────────────────── */}
+      <motion.div
+        className="wl-waveform-zone"
+        style={{ opacity: insightsOpacity, y: insightsY }}
+      >
+        {/* Synced insight orbit — left + right slots fade together */}
+        <InsightOrbit />
 
-          {/* The waveform itself — centered, unchanged from before */}
-          <div className="wl-waveform" aria-hidden>
-            <div className="wl-waveform-glow" />
-            <div className="wl-waveform-stack">
-              <div className="wl-waveform-bars">
-                {WAVE_HEIGHTS.map((h, i) => (
-                  <div
-                    key={`bar-${i}`}
-                    className="wl-wave-bar"
-                    style={{
-                      height: `${h}px`,
-                      animationDelay: `${(i * 0.05).toFixed(2)}s`,
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="wl-waveform-bars wl-waveform-mirror">
-                {WAVE_HEIGHTS.map((h, i) => (
-                  <div
-                    key={`mirror-${i}`}
-                    className="wl-wave-bar"
-                    style={{
-                      height: `${h}px`,
-                      animationDelay: `${(i * 0.05).toFixed(2)}s`,
-                    }}
-                  />
-                ))}
-              </div>
+        {/* The waveform itself — centered inside the zone */}
+        <div className="wl-waveform" aria-hidden>
+          <div className="wl-waveform-glow" />
+          <div className="wl-waveform-stack">
+            <div className="wl-waveform-bars">
+              {WAVE_HEIGHTS.map((h, i) => (
+                <div
+                  key={`bar-${i}`}
+                  className="wl-wave-bar"
+                  style={{
+                    height: `${h}px`,
+                    animationDelay: `${(i * 0.05).toFixed(2)}s`,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="wl-waveform-bars wl-waveform-mirror">
+              {WAVE_HEIGHTS.map((h, i) => (
+                <div
+                  key={`mirror-${i}`}
+                  className="wl-wave-bar"
+                  style={{
+                    height: `${h}px`,
+                    animationDelay: `${(i * 0.05).toFixed(2)}s`,
+                  }}
+                />
+              ))}
             </div>
           </div>
-
-          {/* Floating insights — bottom half (below the wave's center line) */}
-          <motion.div style={{ opacity: insightsOpacity, y: insightsY }}>
-            <FloatingInsight position="bl" startIdx={4} cycleMs={6400} />
-            <FloatingInsight position="br" startIdx={5} cycleMs={5600} />
-          </motion.div>
         </div>
+      </motion.div>
 
+      {/* Second wl-content block for everything below the waveform —
+          keeps text centered + bounded at 760px again. */}
+      <div className="wl-content">
         <p className="wl-sub">
           We work hands-on with a small cohort each quarter. Founding members{" "}
           <em>lock in launch pricing</em>, get a{" "}

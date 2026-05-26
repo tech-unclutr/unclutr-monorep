@@ -10,107 +10,42 @@ import {
 import { useSectionVisibility } from "@/lib/analytics";
 
 
-/* ── LogoStrip ─────────────────────────────────────────────────────────
- * Customer-style chips: BigBasket + Titan Skinn (real) + 2 partner
- * placeholders. Investor logos (Mesa + Entrepreneurs First) live in
- * the BackedBy band below — see comment on BackedBy.
- * ──────────────────────────────────────────────────────────────────── */
-function LogoStrip() {
-  return (
-    <div className="flex items-center justify-center gap-4 flex-wrap">
-      <LogoChip label="BigBasket" />
-      <LogoChip label="Titan Skinn" dotOpacity={0.6} />
-      <LogoChip label="Partner Logo" placeholder />
-      <LogoChip label="Partner Logo" placeholder />
-    </div>
-  );
-}
-
 /* ── BackedBy ──────────────────────────────────────────────────────────
- * Thin band sitting just below the customer LogoStrip. Houses the two
- * investor wordmarks (Mesa School of Business + Entrepreneurs First)
- * with a small "Backed by" label above. Visually subordinate to the
- * customer logos — smaller height, muted backdrop, less prominence —
- * so the hierarchy reads:
- *   1. Real customers we work with  (LogoStrip)
- *   2. Who funded us, much smaller  (BackedBy)
+ * Sole investor anchor: Entrepreneurs First (Spring 2026 Cohort).
+ * Per Param: Mesa removed, all customer/placeholder logo chips removed.
+ * EF is now the prominent backing signal — centered, large, with its
+ * brand colors preserved and a small "Backed by" label above.
  * ──────────────────────────────────────────────────────────────────── */
 function BackedBy() {
   return (
-    <div className="mt-10 sm:mt-12 pt-8 sm:pt-10 border-t border-[#e8e0d8]/70">
-      <p className="text-center text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] text-[#757575] mb-6">
+    <div className="mt-12 sm:mt-14 pt-10 sm:pt-12 border-t border-[#e8e0d8]/60 flex flex-col items-center">
+      <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.22em] text-[#757575] mb-6">
         Backed by
       </p>
-      <div className="flex flex-wrap items-center justify-center gap-x-10 sm:gap-x-14 lg:gap-x-16 gap-y-5">
-        {/* Mesa School of Business — vector logo from public/ */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/mesa-school-logo.svg"
-          alt="Mesa School of Business"
-          className="h-8 sm:h-9 w-auto opacity-80"
-        />
-
-        {/* Entrepreneurs First — typographic wordmark, brand colors preserved */}
-        <div className="flex flex-col items-center leading-none">
-          <span className="font-display text-[18px] sm:text-[22px] font-black tracking-[-0.02em] leading-none whitespace-nowrap">
-            <span className="text-[#6A1FE5]">Entrepreneurs</span>{" "}
-            <span className="text-[#F26D1F]">First</span>
-          </span>
-          <span className="text-[9px] sm:text-[10px] italic font-medium text-[#6B6B6B] mt-1">
-            Spring 2026 Cohort
-          </span>
-        </div>
+      <div className="flex flex-col items-center leading-none">
+        <span className="font-display text-[28px] sm:text-[36px] lg:text-[42px] font-black tracking-[-0.025em] leading-none whitespace-nowrap">
+          <span className="text-[#6A1FE5]">Entrepreneurs</span>{" "}
+          <span className="text-[#F26D1F]">First</span>
+        </span>
+        <span className="text-[11px] sm:text-[12px] italic font-medium text-[#6B6B6B] mt-2 tracking-wide">
+          Spring 2026 Cohort
+        </span>
       </div>
-    </div>
-  );
-}
-
-function LogoChip({
-  label,
-  dotOpacity = 0.8,
-  placeholder = false,
-}: {
-  label: string;
-  dotOpacity?: number;
-  placeholder?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-2 px-[18px] py-2.5 rounded-[12px] bg-white border ${
-        placeholder
-          ? "border-dashed border-[#e8e0d8] opacity-45"
-          : "border-[#e8e0d8]"
-      }`}
-    >
-      <span
-        aria-hidden
-        className="w-[22px] h-[22px] rounded-[5px] flex-shrink-0"
-        style={{
-          background: placeholder ? "#aaa" : "#FF5A36",
-          opacity: placeholder ? 0.5 : dotOpacity,
-        }}
-      />
-      <span
-        className={`text-[14px] font-bold ${
-          placeholder ? "text-[#aaa]" : "text-[#0b132b]"
-        }`}
-      >
-        {label}
-      </span>
     </div>
   );
 }
 
 /* ── SocialProof (F7) ──────────────────────────────────────────────────
  * Phase 2 / Change 2.1 + later refinements.
- * Was: "Validated by leaders from 120+ customer-centric teams" + headline
- *      + Mesa / Entrepreneurs First wordmarks.
- * Currently: pill + H2 + customer logo chips + "Backed by" investor band.
+ * Currently: pill + H2 + prominent "Backed by Entrepreneurs First" anchor.
  *
- * The testimonial slider that briefly lived here has been removed —
- * showed placeholder copy and read as a fake-quote slot rather than
- * actual social proof. Will return once real testimonials are signed
- * off; the slider component code was removed cleanly to avoid drift.
+ * Things that have lived here and been removed (kept in commit history):
+ *   • Testimonial slider — placeholder copy read as fake quotes; cut.
+ *   • Customer logo chips (BigBasket / Titan Skinn / placeholders) —
+ *     removed at Param's request; no fake customer signal until real
+ *     logo permissions land.
+ *   • Mesa School of Business logo — removed; EF is now the sole
+ *     prominent investor anchor.
  *
  * The live mouse-spotlight + static center glow backdrop is preserved
  * (design language continuity — doc §1.2 / §1.4).
@@ -193,10 +128,7 @@ export default function SocialProof() {
           </motion.h2>
         </div>
 
-        {/* ── Customer logo strip ── */}
-        <LogoStrip />
-
-        {/* ── Backed-by investor band (Mesa + Entrepreneurs First) ── */}
+        {/* ── Backed by (Entrepreneurs First only — prominent) ── */}
         <BackedBy />
       </div>
     </section>

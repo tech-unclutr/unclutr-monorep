@@ -45,9 +45,19 @@ export default function SectionNav() {
   // Intersection observer for active section + dark mode detection
   useEffect(() => {
     const sectionEls = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
-    const darkEls = ["hero", "cta-section"].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
-    const footer = document.querySelector('[data-section-name="footer"]') as HTMLElement | null;
-    if (footer) darkEls.push(footer);
+    // Keep this list in sync with the dark sections in LogoNotch.tsx —
+    // the scroll indicator needs to recolor over every dark backdrop.
+    const darkSelectors = [
+      "#hero",
+      '[data-section-name="hear-customers"]',
+      '[data-section-name="waitlist"]',
+      '[data-section-name="grid-card"]', // TrustSecurity
+      '[data-section-name="cta"]',
+      '[data-section-name="footer"]',
+    ];
+    const darkEls = darkSelectors
+      .flatMap((sel) => Array.from(document.querySelectorAll(sel)))
+      .filter(Boolean) as HTMLElement[];
 
     // Active section observer
     const sectionObserver = new IntersectionObserver(
@@ -166,19 +176,28 @@ export default function SectionNav() {
                   onClick={() => scrollToSection(section.id)}
                   aria-label={`Scroll to ${section.label}`}
                   aria-current={isActive ? "true" : undefined}
-                  className="relative flex items-center justify-center w-5 h-5 cursor-pointer group"
+                  className="relative flex items-center justify-center w-5 h-9 cursor-pointer group"
                   style={{ WebkitTapHighlightColor: "transparent" }}
                 >
                   <motion.div
                     layout
-                    className="rounded-full"
+                    className="rounded-full relative overflow-hidden"
                     animate={{
-                      width: isActive ? 6 : 6,
-                      height: isActive ? 20 : 6,
+                      // Active rail: slightly wider (8 vs 6) and noticeably
+                      // taller (36 vs 20) so the indicator is unmistakable
+                      // without crossing into "thick / aggressive" territory.
+                      width: isActive ? 8 : 6,
+                      height: isActive ? 36 : 6,
                       backgroundColor: isActive ? activeColor : `${dotColor}0.15)`,
                       scale: isPulsing ? 1.4 : 1,
+                      // Pulsing glow halo when active — three-step cycle for
+                      // visible breathing motion at the periphery of vision.
                       boxShadow: isActive
-                        ? `0 0 10px ${isDark ? "rgba(255,159,67,0.4)" : "rgba(255,107,0,0.3)"}`
+                        ? [
+                            `0 0 10px ${isDark ? "rgba(255,159,67,0.35)" : "rgba(255,107,0,0.3)"}`,
+                            `0 0 20px ${isDark ? "rgba(255,159,67,0.55)" : "rgba(255,107,0,0.5)"}`,
+                            `0 0 10px ${isDark ? "rgba(255,159,67,0.35)" : "rgba(255,107,0,0.3)"}`,
+                          ]
                         : "none",
                     }}
                     whileHover={{
@@ -189,9 +208,35 @@ export default function SectionNav() {
                       layout: { type: "spring", stiffness: 500, damping: 35 },
                       scale: { type: "spring", stiffness: 400, damping: 25 },
                       backgroundColor: { duration: 0.2 },
+                      boxShadow: isActive
+                        ? { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+                        : { duration: 0.2 },
                     }}
-                    style={{ borderRadius: isActive ? 100 : 100 }}
-                  />
+                    style={{ borderRadius: 100 }}
+                  >
+                    {/* Vertical shimmer scanning down the active rail — gives
+                        the indicator a continuous "alive" pulse without
+                        adding any extra elements when inactive. */}
+                    {isActive && (
+                      <motion.div
+                        className="absolute left-0 right-0 pointer-events-none"
+                        style={{
+                          height: "40%",
+                          background:
+                            "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+                          borderRadius: 100,
+                        }}
+                        initial={{ top: "-50%" }}
+                        animate={{ top: ["-50%", "110%"] }}
+                        transition={{
+                          duration: 2.6,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          repeatDelay: 0.3,
+                        }}
+                      />
+                    )}
+                  </motion.div>
                 </button>
               </div>
             );

@@ -57,13 +57,19 @@ const PARTICLES: Particle[] = [
   { left: "25%", top: "40%", size: 2,   color: "rgba(232,80,26,.4)",  duration: 26, delay: 13,   drift: "-18px" },
 ];
 
-/* ── 50 wave bars — heights exactly per spec §4.1 ── */
+/* ── Waveform bars — heights crafted to read as a coherent audio waveform
+ * rather than random noise. 60 bars (was 50) for a denser, more cinematic
+ * sweep. The stagger (0.05s per bar in CSS) makes adjacent bars wave
+ * together, producing a traveling sine-wave illusion across the row.
+ * ──────────────────────────────────────────────────────────────────── */
 const WAVE_HEIGHTS = [
-  18, 26, 14, 30, 22, 36, 18, 28, 42, 24,
-  32, 18, 38, 26, 20, 34, 42, 30, 18, 36,
-  24, 32, 40, 22, 30, 38, 26, 34, 20, 32,
-  18, 28, 36, 22, 42, 30, 24, 38, 32, 20,
+  16, 22, 14, 28, 20, 34, 18, 26, 40, 24,
+  30, 18, 36, 26, 20, 32, 42, 30, 18, 34,
+  24, 30, 40, 22, 28, 38, 26, 32, 20, 30,
+  18, 26, 36, 22, 42, 30, 24, 36, 32, 20,
   28, 36, 18, 26, 34, 22, 30, 14, 24, 18,
+  // extension to 60 — gentle taper for the right edge
+  20, 28, 24, 32, 26, 22, 18, 16, 14, 12,
 ];
 
 export default function Waitlist() {
@@ -115,18 +121,47 @@ export default function Waitlist() {
           Join the <span className="wl-title-em">Waitlist.</span>
         </h2>
 
-        {/* Audio waveform — brand connection to voice AI */}
+        {/* ── Audio waveform — multi-layer, brand connection to voice AI ─
+            Layer 1 (.wl-waveform-glow) — soft radial bloom behind the bars
+            Layer 2 (.wl-waveform-bars)  — main animated bars with peak glow
+            Layer 3 (.wl-waveform-mirror) — reflected bars at 25% opacity,
+                                            faded with mask — "audio software"
+                                            console look
+            Layer 4 (.wl-waveform-scan)   — vertical light bar that sweeps
+                                            horizontally, mix-blend-mode screen
+                                            highlights bars it passes through
+            All layers animate independently. Scan + glow + breath combine to
+            make the waveform feel like a live signal, not a CSS loop.
+            ──────────────────────────────────────────────────────────────── */}
         <div className="wl-waveform" aria-hidden>
-          {WAVE_HEIGHTS.map((h, i) => (
-            <div
-              key={i}
-              className="wl-wave-bar"
-              style={{
-                height: `${h}px`,
-                animationDelay: `${(i * 0.04).toFixed(2)}s`,
-              }}
-            />
-          ))}
+          <div className="wl-waveform-glow" />
+          <div className="wl-waveform-stack">
+            <div className="wl-waveform-bars">
+              {WAVE_HEIGHTS.map((h, i) => (
+                <div
+                  key={`bar-${i}`}
+                  className="wl-wave-bar"
+                  style={{
+                    height: `${h}px`,
+                    animationDelay: `${(i * 0.05).toFixed(2)}s`,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="wl-waveform-bars wl-waveform-mirror">
+              {WAVE_HEIGHTS.map((h, i) => (
+                <div
+                  key={`mirror-${i}`}
+                  className="wl-wave-bar"
+                  style={{
+                    height: `${h}px`,
+                    animationDelay: `${(i * 0.05).toFixed(2)}s`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="wl-waveform-scan" />
         </div>
 
         <p className="wl-sub">

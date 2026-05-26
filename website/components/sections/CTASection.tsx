@@ -333,15 +333,10 @@ export default function CTASection() {
                 Understanding Compounds.
               </motion.span>
 
-              {/* V4 Book a Pilot CTA below the headline (Phase 3 / Change 3.4, doc §7.6).
-                  Routes to the demo section. Particle heart canvas above stays untouched. */}
-              <motion.a
-                variants={lineAnim}
-                href="#book-call"
-                className="mt-8 sm:mt-10 inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#FF5A36] text-white text-[14px] font-bold uppercase tracking-[0.05em] hover:bg-[#e04a2a] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_10px_30px_rgba(255,90,54,0.35)]"
-              >
-                Book a Pilot <span aria-hidden>⚡</span>
-              </motion.a>
+              {/* "Book a Pilot ⚡" CTA was previously here (Phase 3 / Change 3.4)
+                  — removed per Param's review. The italic sub-line above plus
+                  the headline plus the particle heart canvas now carry the
+                  closing moment alone, without a competing conversion CTA. */}
             </motion.h1>
           </motion.div>
         )}

@@ -79,30 +79,69 @@ export default function BookingSection() {
                   "0 40px 100px -16px rgba(0,0,0,0.08), 0 24px 64px -12px rgba(255,90,54,0.06)",
               }}
             >
-              <div className="mb-5 sm:mb-6 p-4 sm:p-5 rounded-full bg-[#FF5A36]/10 text-[#FF5A36]">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-8 sm:h-8">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
+              {/* High-quality royalty-free photo backdrop (Unsplash, CC0).
+                  Sits behind the card content with a strong white overlay
+                  so the copy stays fully readable; image only carries
+                  texture + warmth. */}
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: "url('/demo-card-bg.jpg')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  filter: "saturate(0.85) brightness(1.05)",
+                }}
+              />
+              {/* Readability overlay: warm white wash on top, soft cream
+                  bloom at center, fading to slightly stronger wash at
+                  edges so the focal CTA area is the brightest spot. */}
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "radial-gradient(ellipse 80% 70% at 50% 50%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.88) 50%, rgba(255,255,255,0.95) 100%)",
+                }}
+              />
+              {/* Very subtle orange tint on top of the white wash — keeps
+                  the brand warmth from washing out completely. */}
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(255,90,54,0.02) 0%, transparent 40%, rgba(255,90,54,0.03) 100%)",
+                }}
+              />
+
+              {/* All card content stacked above the overlays */}
+              <div className="relative z-10 flex flex-col items-center w-full">
+                <div className="mb-5 sm:mb-6 p-4 sm:p-5 rounded-full bg-[#FF5A36]/10 text-[#FF5A36] backdrop-blur-sm">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-8 sm:h-8">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-display font-semibold text-[#0b132b] mb-3 sm:mb-4 whitespace-nowrap">
+                  Schedule a Demo
+                </h3>
+                <p className="text-[#475569] mb-6 sm:mb-8 max-w-sm mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
+                  Pick a time that works for you. We&apos;ll show you exactly how our
+                  customer research platform fits into your workflow.
+                </p>
+                <a
+                  href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => haptic("medium")}
+                  className="inline-flex items-center justify-center bg-[#FF5A36] text-white font-medium px-6 sm:px-8 py-3 sm:py-4 rounded-xl hover:bg-[#e04a2a] transition-all duration-300 hover:shadow-lg hover:shadow-[#FF5A36]/30 transform hover:-translate-y-0.5 whitespace-nowrap text-sm sm:text-base lg:text-lg"
+                >
+                  Book a Pilot
+                </a>
               </div>
-              <h3 className="text-xl sm:text-2xl lg:text-3xl font-display font-semibold text-[#0b132b] mb-3 sm:mb-4 whitespace-nowrap">
-                Schedule a Demo
-              </h3>
-              <p className="text-[#475569] mb-6 sm:mb-8 max-w-sm mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
-                Pick a time that works for you. We&apos;ll show you exactly how our
-                customer research platform fits into your workflow.
-              </p>
-              <a
-                href="https://calendar.app.google/WyiQUVRZxAdJJ5Yu7"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => haptic("medium")}
-                className="inline-flex items-center justify-center bg-[#FF5A36] text-white font-medium px-6 sm:px-8 py-3 sm:py-4 rounded-xl hover:bg-[#e04a2a] transition-all duration-300 hover:shadow-lg hover:shadow-[#FF5A36]/30 transform hover:-translate-y-0.5 whitespace-nowrap text-sm sm:text-base lg:text-lg"
-              >
-                Book a Pilot
-              </a>
             </motion.div>
           </Reveal>
         </div>

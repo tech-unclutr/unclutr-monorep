@@ -645,19 +645,127 @@ html[data-perf-tier="medium"] .blob-drift-4 {
   display: inline-block;
 }
 
+/* ── Waveform: multi-layer audio visualizer ──────────────────────────
+   • .wl-waveform        — outer stage, holds 4 layers
+   • .wl-waveform-glow   — soft radial bloom behind the bars (breathes)
+   • .wl-waveform-stack  — flex column holding main bars + mirror
+   • .wl-waveform-bars   — the row of animated bars
+   • .wl-waveform-mirror — same bars flipped + faded with mask gradient
+   • .wl-waveform-scan   — vertical light bar sweeping horizontally
+   Mix of CSS animations gives the "live signal" feel without JS.
+   ─────────────────────────────────────────────────────────────────── */
 .wl-section .wl-waveform {
-  display: flex; align-items: center; justify-content: center;
-  gap: 3px; height: 42px; margin: 0 auto 36px; max-width: 480px;
+  position: relative;
+  margin: 0 auto 40px;
+  max-width: 540px;
+  height: 100px; /* main bars 56px + mirror 32px + gap */
+}
+.wl-section .wl-waveform-glow {
+  position: absolute;
+  inset: -20px -10% 0 -10%;
+  background: radial-gradient(
+    ellipse 50% 60% at 50% 50%,
+    rgba(232, 80, 26, 0.22),
+    transparent 70%
+  );
+  filter: blur(20px);
+  pointer-events: none;
+  animation: wl-waveGlow 4s ease-in-out infinite;
+  z-index: 0;
+}
+@keyframes wl-waveGlow {
+  0%, 100% { opacity: 0.5; transform: scaleX(1); }
+  50%      { opacity: 1;   transform: scaleX(1.08); }
+}
+.wl-section .wl-waveform-stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100%;
+  gap: 6px;
+}
+.wl-section .wl-waveform-bars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 56px;
+  width: 100%;
 }
 .wl-section .wl-wave-bar {
   width: 3px;
-  background: linear-gradient(180deg, var(--wl-orange-light), var(--wl-orange));
-  border-radius: 2px; transform-origin: center; opacity: 0.8;
-  animation: wl-waveDance 1.4s ease-in-out infinite;
+  min-height: 4px;
+  background: linear-gradient(
+    180deg,
+    var(--wl-orange-light) 0%,
+    var(--wl-orange) 60%,
+    #d4451a 100%
+  );
+  border-radius: 2px;
+  transform-origin: center;
+  opacity: 0.85;
+  animation: wl-waveDance 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+/* Center bars sit slightly brighter; outer bars fade into the glow — gives
+   the row a focal "current peak" feel. */
+.wl-section .wl-waveform-bars .wl-wave-bar:nth-child(-n+4),
+.wl-section .wl-waveform-bars .wl-wave-bar:nth-last-child(-n+4) {
+  opacity: 0.5;
+}
+.wl-section .wl-waveform-bars .wl-wave-bar:nth-child(-n+8),
+.wl-section .wl-waveform-bars .wl-wave-bar:nth-last-child(-n+8) {
+  opacity: 0.7;
 }
 @keyframes wl-waveDance {
-  0%, 100% { transform: scaleY(0.25); opacity: 0.4; }
-  50% { transform: scaleY(1); opacity: 1; }
+  0%, 100% { transform: scaleY(0.22); opacity: 0.4; filter: drop-shadow(0 0 0 transparent); }
+  45%      { transform: scaleY(1);    opacity: 1;   filter: drop-shadow(0 0 6px rgba(232, 80, 26, 0.65)); }
+  55%      { transform: scaleY(1);    opacity: 1;   filter: drop-shadow(0 0 6px rgba(232, 80, 26, 0.65)); }
+}
+
+/* Mirror reflection: same bars, flipped, faded with a vertical mask so
+   they trail off into the dark — the audio-console look. */
+.wl-section .wl-waveform-mirror {
+  height: 32px;
+  opacity: 0.28;
+  transform: scaleY(-1);
+  -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 90%);
+          mask-image: linear-gradient(180deg, black 0%, transparent 90%);
+}
+.wl-section .wl-waveform-mirror .wl-wave-bar {
+  /* Mirror bars shouldn't get peak glow (it'd clip wrong with the mask). */
+  filter: none !important;
+}
+
+/* Horizontal scan-light: a tall narrow gradient that sweeps left→right,
+   mix-blend-mode screen so it brightens whatever bars it passes through
+   — looks like a record needle / oscilloscope tracker. */
+.wl-section .wl-waveform-scan {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 120px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 200, 150, 0.18) 35%,
+    rgba(255, 245, 230, 0.55) 50%,
+    rgba(255, 200, 150, 0.18) 65%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  z-index: 2;
+  animation: wl-waveScan 6s ease-in-out infinite;
+}
+@keyframes wl-waveScan {
+  0%   { left: -10%;  opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { left: 95%; opacity: 1; }
+  60%  { opacity: 0; }
+  100% { left: -10%; opacity: 0; }
 }
 
 .wl-section .wl-sub {
@@ -801,6 +909,8 @@ html[data-perf-tier="medium"] .blob-drift-4 {
 @media (prefers-reduced-motion: reduce) {
   .wl-section .wl-particle,
   .wl-section .wl-wave-bar,
+  .wl-section .wl-waveform-glow,
+  .wl-section .wl-waveform-scan,
   .wl-section .wl-submit,
   .wl-section .wl-bg::before,
   .wl-section .wl-bg::after,
@@ -808,4 +918,6 @@ html[data-perf-tier="medium"] .blob-drift-4 {
   .wl-section .wl-foot-status::before {
     animation: none !important;
   }
+  /* Hide the scan sweep entirely when motion is reduced — it's pure motion candy. */
+  .wl-section .wl-waveform-scan { display: none; }
 }

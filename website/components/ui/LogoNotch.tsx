@@ -40,21 +40,34 @@ export default function LogoNotch() {
 
   useEffect(() => {
     const updateDarkSections = () => {
-      const selectors = ['[data-section-name="cta"]', '[data-section-name="footer"]'];
+      // Every section with a dark backdrop must be listed here so the logo
+      // flips to its white variant when scrolled over it. Keep this in sync
+      // with section bg colors (#0a0a0a / #111 / black).
+      const selectors = [
+        '[data-section-name="hear-customers"]', // V4 hero block (dark)
+        '[data-section-name="waitlist"]',       // Founding cohort section (dark)
+        '[data-section-name="grid-card"]',      // TrustSecurity (dark)
+        '[data-section-name="cta"]',            // closing "Where Customer Understanding Compounds" (dark)
+        '[data-section-name="footer"]',         // ghost-wordmark footer (dark)
+      ];
       darkSectionsRef.current = selectors
-        .map((sel) => document.querySelector(sel))
-        .filter(Boolean)
+        .flatMap((sel) => Array.from(document.querySelectorAll(sel)))
         .map((el) => {
-          const rect = el!.getBoundingClientRect();
+          const rect = el.getBoundingClientRect();
           return { top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY };
         });
     };
 
-    // Measure after layout settles
+    // Re-measure on resize AND on layout shifts (sections lazy-load via dynamic
+    // imports, so initial measurement at 1s can miss later-hydrated sections).
     const timer = setTimeout(updateDarkSections, 1000);
+    const lateTimer = setTimeout(updateDarkSections, 3000);
+    const veryLateTimer = setTimeout(updateDarkSections, 6000);
     window.addEventListener("resize", updateDarkSections);
     return () => {
       clearTimeout(timer);
+      clearTimeout(lateTimer);
+      clearTimeout(veryLateTimer);
       window.removeEventListener("resize", updateDarkSections);
     };
   }, []);

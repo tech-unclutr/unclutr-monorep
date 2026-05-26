@@ -24,9 +24,11 @@ export default function HearCustomers() {
       // atmospheric texture without lightening the base color.
       className="relative bg-black px-6 sm:px-10 lg:px-14 py-24 sm:py-28 lg:py-32 overflow-hidden"
     >
-      {/* Atmospheric image backdrop — Unsplash royalty-free, dark with
-          subtle warm light. Heavy multiply mask keeps the base reading as
-          pure black; the image only carries texture and depth. */}
+      {/* Painterly backdrop — Unsplash royalty-free, abstract warm light
+          cutting through dark space. Read as a painting, not a photo,
+          per Param's direction. Layered with strong vignette + warm
+          glow so the typography reads as the focal element and the
+          image only carries atmosphere. */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
@@ -34,29 +36,40 @@ export default function HearCustomers() {
           backgroundImage: "url('/hear-customers-bg.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.22,
-          mixBlendMode: "screen",
+          opacity: 0.55,
+          filter: "saturate(0.85) contrast(1.05) brightness(0.7)",
         }}
       />
-      {/* Vignette + warm-tinted radial glow at center — anchors the headline
-          and prevents the image from competing with the type. */}
+      {/* Painterly overlay tint — adds a warm-orange wash so the image
+          feels color-graded into the brand palette. */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 60% 70% at 50% 50%, rgba(255,122,74,0.06) 0%, rgba(0,0,0,0.0) 40%, rgba(0,0,0,0.65) 100%)",
+            "linear-gradient(135deg, rgba(232,80,26,0.10) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 65%, rgba(255,122,74,0.06) 100%)",
+          mixBlendMode: "overlay",
         }}
       />
-      {/* Hairline orange shimmer line crossing the section, matches the
-          orange flourish on "actually" — visual continuity. */}
+      {/* Strong vignette — pulls focus to the centered headline by
+          darkening edges and brightening center subtly. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 80% at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0.85) 100%)",
+        }}
+      />
+      {/* Hairline orange shimmer line across the midline — visual
+          continuity with the italic "actually" flourish. */}
       <div
         aria-hidden
         className="absolute left-0 right-0 top-1/2 -translate-y-1/2 pointer-events-none h-px"
         style={{
           background:
             "linear-gradient(90deg, transparent 0%, rgba(255,138,102,0.25) 30%, rgba(255,138,102,0.45) 50%, rgba(255,138,102,0.25) 70%, transparent 100%)",
-          opacity: 0.5,
+          opacity: 0.45,
         }}
       />
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence, useInView, useScroll, useTransform, useSpring } from "framer-motion";
 import { Lock, Handshake, Lightning, Sparkle } from "@phosphor-icons/react";
 import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
 
@@ -41,7 +41,6 @@ const INSIGHTS: Insight[] = [
   { quote: "Wish the dashboard surfaced patterns faster.", industry: "Retail",              tone: "neg" },
   { quote: "Real feedback, not vanity metrics anymore.", industry: "CPG",                   tone: "pos" },
 ];
-const INSIGHT_DISPLAY_MS = 1700; // ~1.5s visible + entry/exit time
 
 /* ── 20 particles — exact positions/sizes/durations from spec §4.1 ── */
 type Particle = {
@@ -92,25 +91,35 @@ const WAVE_HEIGHTS = [
   20, 28, 24, 32, 26, 22, 18, 16, 14, 12,
 ];
 
-/* ── InsightPopup ─────────────────────────────────────────────────────
- * Scroll-triggered dialogue box that cycles through customer verbatims.
- * Uses its own useInView ref so it only activates after the user scrolls
- * past the initial waitlist section reveal (waveform + headline visible
- * first, insights start a bit further down).
+/* ── FloatingInsight ──────────────────────────────────────────────────
+ * One "slot" of the orbital insight system — text-only, no box, sits
+ * absolutely-positioned around the waveform. Each slot cycles through
+ * the INSIGHTS array independently with its own starting offset and
+ * cycle period so different insights are visible at different lifecycle
+ * stages simultaneously (organic feel, not a synchronized ticker).
  *
- * Animation: AnimatePresence with mode="wait" — one insight at a time,
- * fades up on entry, fades up on exit, GPU-only properties (transform +
- * opacity) for guaranteed 60fps. setInterval drives the index; pauses
- * automatically when off-screen via useInView; respects reduced-motion
- * by clamping to a single static insight.
+ * Position is set via the `position` prop ("tl" | "tr" | "bl" | "br"),
+ * which maps to the .wl-float-{position} CSS classes. The component
+ * itself receives a master `mountedOpacity` motion value from the
+ * parent so all four slots can fade together as the user scrolls
+ * into/past the section.
+ *
+ * Animation: AnimatePresence mode="wait" + transform/opacity only
+ * (GPU-accelerated). setInterval pauses automatically off-screen via
+ * useInView. Respects prefers-reduced-motion.
  * ──────────────────────────────────────────────────────────────────── */
-function InsightPopup() {
+function FloatingInsight({
+  position,
+  startIdx,
+  cycleMs,
+}: {
+  position: "tl" | "tr" | "bl" | "br";
+  startIdx: number;
+  cycleMs: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  // amount: 0.6 — only fire when 60% of the popup is visible. Combined
-  // with its position below the waveform, this means the user must scroll
-  // a bit further into the section before insights start cycling.
-  const inView = useInView(ref, { amount: 0.6, once: false });
-  const [idx, setIdx] = useState(0);
+  const inView = useInView(ref, { amount: 0.3, once: false });
+  const [idx, setIdx] = useState(startIdx);
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -122,38 +131,33 @@ function InsightPopup() {
     if (!inView || reduced) return;
     const id = window.setInterval(() => {
       setIdx((i) => (i + 1) % INSIGHTS.length);
-    }, INSIGHT_DISPLAY_MS);
+    }, cycleMs);
     return () => window.clearInterval(id);
-  }, [inView, reduced]);
+  }, [inView, reduced, cycleMs]);
 
   const current = INSIGHTS[idx];
+  const isRight = position === "tr" || position === "br";
 
   return (
-    <div ref={ref} className="wl-insight" aria-live="polite" aria-atomic>
-      <div className="wl-insight-head">
-        <span className="wl-insight-live">LIVE</span>
-        <span>Customer verbatim · captured by Pulse</span>
-      </div>
-
+    <div ref={ref} className={`wl-float wl-float-${position}`} aria-hidden>
       <AnimatePresence mode="wait" initial={false}>
-        {inView && (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-            style={{ willChange: "transform, opacity" }}
-          >
-            <p className="wl-insight-quote">&ldquo;{current.quote}&rdquo;</p>
-            <div className="wl-insight-meta">
-              <span className={`dot ${current.tone}`} aria-hidden />
-              <span>{current.industry}</span>
-              <span aria-hidden style={{ opacity: 0.4 }}>·</span>
-              <span style={{ opacity: 0.6 }}>{current.tone === "pos" ? "Positive signal" : "Constructive feedback"}</span>
-            </div>
-          </motion.div>
-        )}
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0, x: isRight ? 16 : -16, filter: "blur(6px)" }}
+          animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, x: isRight ? -8 : 8, filter: "blur(4px)" }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          style={{ willChange: "transform, opacity, filter" }}
+        >
+          <div className="wl-float-label">
+            <span className={`wl-float-dot ${current.tone}`} />
+            <span>{current.tone === "pos" ? "Live capture" : "Live capture"}</span>
+          </div>
+          <p className="wl-float-quote">&ldquo;{current.quote}&rdquo;</p>
+          <p className="wl-float-industry">
+            <span className="wl-float-industry-accent">·</span> {current.industry}
+          </p>
+        </motion.div>
       </AnimatePresence>
     </div>
   );
@@ -162,6 +166,34 @@ function InsightPopup() {
 export default function Waitlist() {
   const sectionRef = useRef<HTMLDivElement>(null);
   useSectionVisibility("waitlist", sectionRef);
+
+  // Master scroll-driven fade for the floating insight system.
+  // Tracks the section's scroll progress through the viewport.
+  // Mapping:
+  //   0.00–0.15  insights hidden (user just saw the section, give them
+  //              time to take in the waveform first)
+  //   0.15–0.30  insights fade IN smoothly
+  //   0.30–0.78  insights at full opacity, cycling
+  //   0.78–0.95  insights fade OUT as user scrolls toward exit
+  //   0.95–1.00  fully collapsed before next section
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+  const rawOpacity = useTransform(
+    scrollYProgress,
+    [0.0, 0.15, 0.30, 0.78, 0.95, 1.0],
+    [0,   0,    1,    1,    0,    0]
+  );
+  // Spring-smooth the opacity so scroll-driven changes feel buttery, not
+  // 1:1 jittery with raw scroll input.
+  const insightsOpacity = useSpring(rawOpacity, { stiffness: 90, damping: 26 });
+  const rawY = useTransform(
+    scrollYProgress,
+    [0.0, 0.15, 0.30, 0.78, 0.95, 1.0],
+    [16,  10,   0,    0,    -10,  -16]
+  );
+  const insightsY = useSpring(rawY, { stiffness: 90, damping: 26 });
 
   return (
     <section
@@ -208,46 +240,61 @@ export default function Waitlist() {
           Join the <span className="wl-title-em">Waitlist.</span>
         </h2>
 
-        {/* ── Audio waveform — multi-layer, brand connection to voice AI ─
-            Layer 1 (.wl-waveform-glow)  — soft radial bloom behind the bars
-            Layer 2 (.wl-waveform-bars)  — main animated bars with peak glow
-            Layer 3 (.wl-waveform-mirror) — reflected bars at 28% opacity,
-                                            faded with mask — audio-console feel
-            (The horizontal scan-light overlay that used to live here was
-            removed; the InsightPopup below is the new "live signal" hook.)
-            ──────────────────────────────────────────────────────────────── */}
-        <div className="wl-waveform" aria-hidden>
-          <div className="wl-waveform-glow" />
-          <div className="wl-waveform-stack">
-            <div className="wl-waveform-bars">
-              {WAVE_HEIGHTS.map((h, i) => (
-                <div
-                  key={`bar-${i}`}
-                  className="wl-wave-bar"
-                  style={{
-                    height: `${h}px`,
-                    animationDelay: `${(i * 0.05).toFixed(2)}s`,
-                  }}
-                />
-              ))}
-            </div>
-            <div className="wl-waveform-bars wl-waveform-mirror">
-              {WAVE_HEIGHTS.map((h, i) => (
-                <div
-                  key={`mirror-${i}`}
-                  className="wl-wave-bar"
-                  style={{
-                    height: `${h}px`,
-                    animationDelay: `${(i * 0.05).toFixed(2)}s`,
-                  }}
-                />
-              ))}
+        {/* ── Audio waveform + orbital customer insights ──────────────
+            Waveform sits centered in a wider zone (.wl-waveform-zone)
+            so the 4 FloatingInsight slots can be absolutely positioned
+            around its perimeter on desktop without overlapping the bars.
+            On mobile (<900px), CSS reflows the floats below the wave.
+
+            The whole insight system is scroll-driven via the
+            insightsOpacity + insightsY motion values: hidden at first,
+            fades in after slight scroll, holds while section is in view,
+            collapses as the user scrolls past.
+            ──────────────────────────────────────────────────────────── */}
+        <div className="wl-waveform-zone">
+          {/* Floating insights — top half (above the wave's center line) */}
+          <motion.div style={{ opacity: insightsOpacity, y: insightsY }}>
+            <FloatingInsight position="tl" startIdx={0} cycleMs={5800} />
+            <FloatingInsight position="tr" startIdx={2} cycleMs={5200} />
+          </motion.div>
+
+          {/* The waveform itself — centered, unchanged from before */}
+          <div className="wl-waveform" aria-hidden>
+            <div className="wl-waveform-glow" />
+            <div className="wl-waveform-stack">
+              <div className="wl-waveform-bars">
+                {WAVE_HEIGHTS.map((h, i) => (
+                  <div
+                    key={`bar-${i}`}
+                    className="wl-wave-bar"
+                    style={{
+                      height: `${h}px`,
+                      animationDelay: `${(i * 0.05).toFixed(2)}s`,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="wl-waveform-bars wl-waveform-mirror">
+                {WAVE_HEIGHTS.map((h, i) => (
+                  <div
+                    key={`mirror-${i}`}
+                    className="wl-wave-bar"
+                    style={{
+                      height: `${h}px`,
+                      animationDelay: `${(i * 0.05).toFixed(2)}s`,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Customer-insight popup — scroll-triggered, cycles verbatims */}
-        <InsightPopup />
+          {/* Floating insights — bottom half (below the wave's center line) */}
+          <motion.div style={{ opacity: insightsOpacity, y: insightsY }}>
+            <FloatingInsight position="bl" startIdx={4} cycleMs={6400} />
+            <FloatingInsight position="br" startIdx={5} cycleMs={5600} />
+          </motion.div>
+        </div>
 
         <p className="wl-sub">
           We work hands-on with a small cohort each quarter. Founding members{" "}

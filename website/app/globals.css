@@ -744,95 +744,106 @@ html[data-perf-tier="medium"] .blob-drift-4 {
    per design review — read as visual noise on top of the wave. Customer
    insights pop-up box below now carries the "live signal" feeling.) */
 
-/* ── Customer insight popup — appears below the waveform after scroll ─
-   Glass dialogue box that cycles through real-feeling customer verbatims.
-   Insights fade up + out in sequence (one at a time, ~1.6s display each),
-   driven by React state in Waitlist.tsx. CSS here only sets the chrome —
-   pulse on the LIVE dot, glass styling, subtle border. */
-.wl-section .wl-insight {
+/* ── Floating customer insights — around the waveform, no box ────────
+   Insights appear as text-only "captures" positioned around the wave
+   (top-left, top-right, bottom-left, bottom-right on desktop). Each
+   slot cycles through verbatims with staggered timing so different
+   insights are visible at different lifecycle stages — feels like
+   live captures emanating from the wave, not a sequential ticker.
+   No background, no border. Pure typography on dark with a small
+   colored dot anchor. Mobile stacks them vertically below the wave.
+   Scroll-driven master fade is applied via inline style from React.
+   ─────────────────────────────────────────────────────────────────── */
+.wl-section .wl-waveform-zone {
   position: relative;
-  margin: 8px auto 36px;
-  max-width: 520px;
-  min-height: 116px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 16px;
-  padding: 18px 22px 16px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  text-align: left;
+  margin: 0 auto;
+  /* Wider than .wl-content (760px) so floats can sit OUTSIDE the wave's
+     immediate flank. Falls back to 100% on narrow viewports. */
+  max-width: 1180px;
+  width: 100%;
 }
-/* Subtle gradient corner glow inside the box — matches the wl-card hint */
-.wl-section .wl-insight::before {
-  content: "";
+.wl-section .wl-float {
   position: absolute;
-  inset: -1px;
-  border-radius: 16px;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(232, 80, 26, 0.25), transparent 45%, transparent 75%, rgba(232, 80, 26, 0.15));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
+  width: 240px;
+  z-index: 6;
   pointer-events: none;
+  will-change: opacity, transform;
 }
-.wl-section .wl-insight-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* Four corner slots around the waveform — values calibrated so the
+   nearest edge of the float never overlaps the 540px-wide waveform. */
+.wl-section .wl-float-tl { top: 0;       left: 0;    text-align: left; }
+.wl-section .wl-float-tr { top: 10px;    right: 0;   text-align: right; }
+.wl-section .wl-float-bl { bottom: 0;    left: 0;    text-align: left; }
+.wl-section .wl-float-br { bottom: 10px; right: 0;   text-align: right; }
+.wl-section .wl-float-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.wl-section .wl-float-dot.pos {
+  background: #3ad17a;
+  box-shadow: 0 0 10px rgba(58, 209, 122, 0.55);
+  animation: wl-pulseDot 2s ease-in-out infinite;
+}
+.wl-section .wl-float-dot.neg {
+  background: var(--wl-orange-light);
+  box-shadow: 0 0 10px rgba(255, 122, 74, 0.55);
+  animation: wl-pulseDot 2s ease-in-out infinite;
+}
+.wl-section .wl-float-label {
   font-size: 9.5px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.55);
-  margin-bottom: 12px;
-}
-.wl-section .wl-insight-live {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--wl-orange-light);
-  font-weight: 800;
 }
-.wl-section .wl-insight-live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #3ad17a;
-  box-shadow: 0 0 8px rgba(58, 209, 122, 0.6);
-  animation: wl-pulseDot 1.8s ease-in-out infinite;
-}
-.wl-section .wl-insight-quote {
-  font-size: 16px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.92);
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  /* Reserve space so the box doesn't jump as insights cycle. */
-  min-height: 48px;
-}
-.wl-section .wl-insight-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  font-size: 11px;
+.wl-section .wl-float-quote {
+  font-family: var(--font-serif-italic), serif;
+  font-style: italic;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 16px;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  color: rgba(255, 255, 255, 0.95);
+  margin-top: 8px;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.65);
+}
+.wl-section .wl-float-industry {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
+  margin-top: 6px;
 }
-.wl-section .wl-insight-meta .dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+.wl-section .wl-float-industry-accent {
+  color: var(--wl-orange-light);
 }
-.wl-section .wl-insight-meta .dot.pos { background: #3ad17a; box-shadow: 0 0 6px rgba(58, 209, 122, 0.5); }
-.wl-section .wl-insight-meta .dot.neg { background: #ff7a4a; box-shadow: 0 0 6px rgba(255, 122, 74, 0.55); }
+
+/* Mobile / narrow desktop: floats can collide with the wave at this
+   width. Stack them in flow below the waveform instead. */
+@media (max-width: 900px) {
+  .wl-section .wl-float {
+    position: static;
+    width: 100%;
+    max-width: 360px;
+    margin: 14px auto 0;
+    text-align: center !important;
+  }
+  .wl-section .wl-float-tl,
+  .wl-section .wl-float-tr,
+  .wl-section .wl-float-bl,
+  .wl-section .wl-float-br { text-align: center; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .wl-section .wl-insight-live::before { animation: none !important; }
+  .wl-section .wl-float-dot.pos,
+  .wl-section .wl-float-dot.neg { animation: none !important; }
 }
 
 .wl-section .wl-sub {

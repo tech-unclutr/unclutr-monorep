@@ -24,22 +24,25 @@ import { useSectionVisibility, trackEvent, EventName } from "@/lib/analytics";
 
 const FORM_URL = "https://forms.gle/jEB7GML5HnakvWNk8";
 
-/* ── Customer insights — verbatims from US consumer industries.
- *  Mostly positive (real outcomes) + two candid negatives so the box
- *  reads as honest signal, not curated marketing. 6-8 words each.
- *  Industries chosen for US relevance (DTC, BPC, FMCG, CPG, Fintech,
- *  Retail, SaaS).
- *  Order is intentional: starts positive, alternates, ends positive.
+/* ── Customer insights — END-CONSUMER verbatims.
+ *  These are what SquareUp's AI agents capture when they call the
+ *  CUSTOMER of a brand (e.g. a BigBasket shopper, a Titan Skinn user)
+ *  — NOT marketing testimonials from SquareUp's own clients. Reads
+ *  like a real person talking about a product they bought.
+ *  8 entries total, 6 positive + 2 candid negatives, 6-8 words each.
+ *  Industries spread across US-relevant consumer categories: BPC,
+ *  CPG, FMCG, DTC, Fintech, Retail.
  * ─────────────────────────────────────────────────────────────────── */
 type Insight = { quote: string; industry: string; tone: "pos" | "neg" };
 const INSIGHTS: Insight[] = [
-  { quote: "Cut research turnaround from weeks to days.", industry: "SaaS",                 tone: "pos" },
-  { quote: "Our churn dropped 22% after listening better.", industry: "DTC",                tone: "pos" },
-  { quote: "Onboarding felt overwhelming for our small team.", industry: "Fintech",         tone: "neg" },
-  { quote: "Customers told us exactly what they needed.", industry: "Beauty & Personal Care", tone: "pos" },
-  { quote: "Saved $80K on a doomed product launch.", industry: "FMCG",                      tone: "pos" },
-  { quote: "Wish the dashboard surfaced patterns faster.", industry: "Retail",              tone: "neg" },
-  { quote: "Real feedback, not vanity metrics anymore.", industry: "CPG",                   tone: "pos" },
+  { quote: "This protein bar saved my mornings — repurchasing.",      industry: "CPG",     tone: "pos" },
+  { quote: "Switched to your serum, breakouts finally cleared.",      industry: "BPC",     tone: "pos" },
+  { quote: "App froze mid-transfer with my rent money.",              industry: "Fintech", tone: "neg" },
+  { quote: "Travel-size pack is perfect for my carry-on.",            industry: "FMCG",    tone: "pos" },
+  { quote: "Delivery was four days late, no updates given.",          industry: "DTC",     tone: "neg" },
+  { quote: "Your packaging looks premium without feeling wasteful.",  industry: "CPG",     tone: "pos" },
+  { quote: "Finally a foundation that doesn't oxidize by noon.",      industry: "BPC",     tone: "pos" },
+  { quote: "Tried three brands of cleanser, yours stuck.",            industry: "BPC",     tone: "pos" },
 ];
 
 /* ── 20 particles — exact positions/sizes/durations from spec §4.1 ── */
@@ -92,23 +95,35 @@ const WAVE_HEIGHTS = [
 ];
 
 /* ── InsightOrbit ─────────────────────────────────────────────────────
- * Two text-only "live capture" slots — one in the LEFT gutter, one in
- * the RIGHT gutter — perfectly synced. A single shared `idx` drives
- * both slots; both render different insights from the array (idx and
- * idx+1), and BOTH animate inside the SAME AnimatePresence so they
- * fade out and fade in TOGETHER. No overlap, no chaos.
+ * 4 text-only "live capture" slots — TWO on each side of the wave:
  *
- * Cycle: 5.5s per pair. Each pair gets ~5s of read time + the 0.5s
- * cross-fade. AnimatePresence mode="wait" guarantees the OLD pair
- * fully exits before the NEW pair enters.
+ *      [UL]                         [UR]
+ *               ────── WAVE ──────
+ *      [LL]                         [LR]
  *
- * Master scroll fade is applied by the parent on the wrapper div, so
- * the orbit cleanly fades in on entry and collapses on exit.
+ * Each cycle (every 6.5s) shows 4 new end-consumer verbatims drawn
+ * from the INSIGHTS pool. Within a cycle the 4 slots cascade in/out
+ * one after another (staggered by ~120ms) so insights APPEAR after
+ * each other — a wave of capture, not a sync flash. No overlap:
+ * each slot has its own AnimatePresence with mode="wait" so the OLD
+ * insight at that position fully exits before the NEW one enters.
+ *
+ * Cycling: step by 4 each tick so cycle 0 shows insights[0..3],
+ * cycle 1 shows insights[4..7], cycle 2 wraps and shows [0..3] again
+ * (with offset). 8 insights ÷ 4 slots = 2 cycles to surface all.
+ *
+ * Master scroll fade is applied by the parent on the wrapper div.
  * ──────────────────────────────────────────────────────────────────── */
+const SLOT_POSITIONS = ["ul", "ur", "ll", "lr"] as const;
+// Cascade order — top-left first, then top-right, then bottom-left,
+// then bottom-right (reading order). Same delays for exit so it
+// cascades out before cascading back in.
+const SLOT_DELAYS = [0, 0.12, 0.24, 0.36];
+
 function InsightOrbit() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.3, once: false });
-  const [idx, setIdx] = useState(0);
+  const [cycle, setCycle] = useState(0);
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -118,53 +133,56 @@ function InsightOrbit() {
 
   useEffect(() => {
     if (!inView || reduced) return;
-    // Step by 2 so each pair is unique. Wrap at the end of the array.
-    const id = window.setInterval(() => {
-      setIdx((i) => (i + 2) % INSIGHTS.length);
-    }, 5500);
+    // 6.5s gives: 0.36s max cascade-in + 0.55s transition + ~4.7s read +
+    // 0.36s cascade-out window. Feels paced, not rushed.
+    const id = window.setInterval(() => setCycle((c) => c + 1), 6500);
     return () => window.clearInterval(id);
   }, [inView, reduced]);
 
-  const leftInsight  = INSIGHTS[idx % INSIGHTS.length];
-  const rightInsight = INSIGHTS[(idx + 1) % INSIGHTS.length];
+  const n = INSIGHTS.length;
+  const startIdx = (cycle * 4) % n;
+  const insights: Insight[] = [
+    INSIGHTS[startIdx % n],
+    INSIGHTS[(startIdx + 1) % n],
+    INSIGHTS[(startIdx + 2) % n],
+    INSIGHTS[(startIdx + 3) % n],
+  ];
 
   return (
     <div ref={ref} className="contents" aria-hidden>
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={idx}
-          className="contents"
-          // Both slots share this transition — they fade together.
-          // mode="wait" on the parent ensures previous PAIR fully exits
-          // before the new PAIR begins entering.
-          initial={{ opacity: 0, filter: "blur(8px)" }}
-          animate={{ opacity: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, filter: "blur(6px)" }}
-          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <InsightSlot side="left"  insight={leftInsight} />
-          <InsightSlot side="right" insight={rightInsight} />
-        </motion.div>
-      </AnimatePresence>
+      {SLOT_POSITIONS.map((pos, i) => (
+        <div key={pos} className={`wl-float wl-float-${pos}`}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`${cycle}-${pos}`}
+              initial={{ opacity: 0, filter: "blur(10px)", y: 8 }}
+              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+              exit={{ opacity: 0, filter: "blur(8px)", y: -6 }}
+              transition={{
+                duration: 0.55,
+                ease: [0.16, 1, 0.3, 1],
+                // delay applies to BOTH enter and exit, producing the
+                // cascade: UL leaves first → UR → LL → LR; new content
+                // arrives in the same order.
+                delay: SLOT_DELAYS[i],
+              }}
+              style={{ willChange: "transform, opacity, filter" }}
+            >
+              <InsightContent insight={insights[i]} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      ))}
     </div>
   );
 }
 
-/* ── InsightSlot ──────────────────────────────────────────────────────
- * One side of the orbit. Pure presentational — receives an insight
- * object and renders it. No state, no animation logic (the parent
- * AnimatePresence handles the cross-fade). The wl-float-{side} CSS
- * positions it absolutely in the gutter, vertically centered.
+/* ── InsightContent ───────────────────────────────────────────────────
+ * The actual typography inside each slot. Pure presentational.
  * ──────────────────────────────────────────────────────────────────── */
-function InsightSlot({
-  side,
-  insight,
-}: {
-  side: "left" | "right";
-  insight: Insight;
-}) {
+function InsightContent({ insight }: { insight: Insight }) {
   return (
-    <div className={`wl-float wl-float-${side}`}>
+    <>
       <div className="wl-float-label">
         <span className={`wl-float-dot ${insight.tone}`} />
         <span>Live capture</span>
@@ -173,7 +191,7 @@ function InsightSlot({
       <p className="wl-float-industry">
         <span className="wl-float-industry-accent">·</span> {insight.industry}
       </p>
-    </div>
+    </>
   );
 }
 

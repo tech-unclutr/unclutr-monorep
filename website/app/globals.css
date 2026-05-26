@@ -759,11 +759,12 @@ html[data-perf-tier="medium"] .blob-drift-4 {
   margin: 0 auto;
   /* Pulled OUT of .wl-content in the JSX so the zone can claim the
      full section width (capped at 1180px). The 540px waveform lives
-     centered inside; floats sit firmly in the ~290px gutter on each
-     side, with breathing room from the wave's flank. */
+     centered inside; 4 float slots sit in the ~290px gutters on
+     each side, stacked top + bottom. min-height gives enough vertical
+     room for both stacked insights without crowding the wave. */
   max-width: 1180px;
   width: 100%;
-  min-height: 220px;
+  min-height: 360px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -774,15 +775,14 @@ html[data-perf-tier="medium"] .blob-drift-4 {
   z-index: 6;
   pointer-events: none;
   will-change: opacity, transform, filter;
-  /* Both slots vertically centered on the wave's horizontal midline.
-     Symmetric, calm, gutter-anchored. */
-  top: 50%;
-  transform: translateY(-50%);
 }
-/* Two slots only — LEFT and RIGHT. Synced cycle (one AnimatePresence
-   in React drives BOTH); no more 4-corner stagger that produced overlap. */
-.wl-section .wl-float-left  { left: 0;  text-align: left;  padding-right: 12px; }
-.wl-section .wl-float-right { right: 0; text-align: right; padding-left: 12px; }
+/* 4 slot positions — Upper-Left, Upper-Right, Lower-Left, Lower-Right.
+   Each is anchored to its corner of the zone with breathing margin
+   from the wave's central band (which lives in the middle ~120px). */
+.wl-section .wl-float-ul { left: 0;  top: 0;       text-align: left;  padding-right: 16px; }
+.wl-section .wl-float-ur { right: 0; top: 0;       text-align: right; padding-left:  16px; }
+.wl-section .wl-float-ll { left: 0;  bottom: 0;    text-align: left;  padding-right: 16px; }
+.wl-section .wl-float-lr { right: 0; bottom: 0;    text-align: right; padding-left:  16px; }
 .wl-section .wl-float-dot {
   width: 7px;
   height: 7px;
@@ -845,8 +845,10 @@ html[data-perf-tier="medium"] .blob-drift-4 {
     margin: 14px auto 0;
     text-align: center !important;
   }
-  .wl-section .wl-float-left,
-  .wl-section .wl-float-right { text-align: center; padding: 0; }
+  .wl-section .wl-float-ul,
+  .wl-section .wl-float-ur,
+  .wl-section .wl-float-ll,
+  .wl-section .wl-float-lr { text-align: center; padding: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

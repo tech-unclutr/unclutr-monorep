@@ -70,7 +70,11 @@ function HomeContent() {
       <FloatingNav />
       <ErrorBoundary><HeroSection /></ErrorBoundary>
       <div className="relative z-10">
-        {/* Light sections */}
+        {/* Sections mount immediately so document height is stable from first paint.
+            JS is still code-split via dynamic({ssr: false}) imports above —
+            chunks load in parallel without blocking initial render.
+            (Reverted from LazyMount because IntersectionObserver-driven mounting
+            caused layout shifts mid-scroll that broke the hero's sticky scroll math.) */}
         <div className="relative">
           {/* V4 Hero Block (F3) — typographic bridge between dark hero stack and cream cascade. Phase 1 / Change 1.1. */}
           <HearCustomers />

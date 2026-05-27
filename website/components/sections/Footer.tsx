@@ -201,8 +201,12 @@ export default function Footer() {
           © {new Date().getFullYear()} SquareUp
         </span>
         <span aria-hidden className="text-white/20">·</span>
+        {/* prefetch={false} because next/link tries to fetch /privacy.txt
+            (the RSC payload) on hover/viewport, but with output: "export"
+            those .txt files aren't generated → 404s in the console. */}
         <Link
           href="/privacy"
+          prefetch={false}
           className="hover:text-white/70 transition-colors"
         >
           Privacy Policy

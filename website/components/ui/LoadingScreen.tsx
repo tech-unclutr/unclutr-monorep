@@ -26,13 +26,25 @@ const COPY_LIBRARY = [
     ["What would they change first?", "Let's ask them."],
 ];
 
+// Session-storage key — skip the splash entirely on repeat visits within a tab session.
+const SPLASH_SHOWN_KEY = "squareup_splash_shown_v1";
+
 export default function LoadingScreen() {
+    // `done` MUST start as `false` on both server and client to avoid a
+    // hydration mismatch (React error #418). The sessionStorage check that
+    // used to live in the useState initializer caused server to render the
+    // splash and client to render nothing, producing a hydration error that
+    // surfaced as React #418 in prod. Now we initialize to `false` everywhere
+    // and check sessionStorage inside the useEffect below — on repeat visits
+    // the splash will flash for ~1 frame before unmounting, which is the
+    // correct tradeoff vs. crashing React.
     const [done, setDone] = useState(false);
     const [currentWordIndex, setCurrentWordIndex] = useState(0);
     const [showLogo, setShowLogo] = useState(false);
     const [showSubtitle, setShowSubtitle] = useState(false);
     const [words, setWords] = useState<string[]>([]);
     const ranRef = useRef(false);
+    const skipRef = useRef(false);
 
     // Pick a random copy sequence on mount to avoid hydration mismatch
     useEffect(() => {
@@ -50,40 +62,94 @@ export default function LoadingScreen() {
     const logoFilter = useTransform(logoBlur, (blur) => `blur(${blur}px)`);
 
     useEffect(() => {
-        if (ranRef.current) return;
+        if (done || ranRef.current) return;
+
+        // Repeat-visit fast-path: if we already showed the splash this session,
+        // dismiss immediately. Runs in useEffect (not useState init) to keep
+        // SSR and client-hydration output identical.
+        try {
+            if (sessionStorage.getItem(SPLASH_SHOWN_KEY) === "1") {
+                setDone(true);
+                return;
+            }
+        } catch {}
+
         ranRef.current = true;
 
         document.documentElement.style.overflow = "hidden";
 
+        // Honor prefers-reduced-motion — these users get an instant reveal.
+        const reduceMotion =
+            typeof window !== "undefined" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // Allow user to skip the splash with any scroll/click/key/touch input.
+        const finishEarly = () => {
+            skipRef.current = true;
+        };
+        window.addEventListener("wheel", finishEarly, { once: true, passive: true });
+        window.addEventListener("touchstart", finishEarly, { once: true, passive: true });
+        window.addEventListener("keydown", finishEarly, { once: true });
+        window.addEventListener("pointerdown", finishEarly, { once: true });
+
+        const wait = (ms: number) =>
+            new Promise<void>((res) => {
+                if (skipRef.current) return res();
+                let resolved = false;
+                const done = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    clearTimeout(t);
+                    clearInterval(interval);
+                    res();
+                };
+                const t = setTimeout(done, ms);
+                // Resolve early if user breaks out mid-wait.
+                const interval = setInterval(() => {
+                    if (skipRef.current) done();
+                }, 40);
+            });
+
         const runSequence = async () => {
-            // Show question
-            await new Promise((res) => setTimeout(res, 800));
+            // Reduce-motion users skip straight to reveal.
+            if (reduceMotion) {
+                document.documentElement.style.overflow = "";
+                try { sessionStorage.setItem(SPLASH_SHOWN_KEY, "1"); } catch {}
+                setDone(true);
+                return;
+            }
 
-            // Show answer ("Let's find out.")
+            // Phase 1: question (was 800ms → 350ms)
+            await wait(350);
+
+            // Phase 2: answer (was 1200ms → 600ms)
             setCurrentWordIndex(1);
-            await new Promise((res) => setTimeout(res, 1200));
+            await wait(600);
 
-            // Hide words and show logo
+            // Phase 3: hide words, show logo (was 400ms → 150ms)
             setCurrentWordIndex(-1);
-            await new Promise((res) => setTimeout(res, 400));
+            await wait(150);
             setShowLogo(true);
 
-            // Animate Logo Reveal (Classy Apple-style)
-            animate(logoOpacity, 1, { duration: 1.0, ease: "easeOut" });
-            animate(logoBlur, 0, { duration: 1.4, ease: "easeOut" });
-            await animate(logoScale, 1, { duration: 1.4, ease: [0.16, 1, 0.3, 1] });
+            // Logo reveal — concurrent animations, all shortened.
+            // Previously: opacity 1.0s + blur 1.4s + scale 1.4s = 1.4s blocking.
+            // Now: 0.45s blocking.
+            animate(logoOpacity, 1, { duration: 0.35, ease: "easeOut" });
+            animate(logoBlur, 0, { duration: 0.45, ease: "easeOut" });
+            await animate(logoScale, 1, { duration: 0.45, ease: [0.16, 1, 0.3, 1] });
 
-            // Show subtitle below logo
+            // Phase 4: subtitle (was 1200ms → 300ms)
             setShowSubtitle(true);
-            await new Promise((res) => setTimeout(res, 1200));
+            await wait(300);
 
-            // Slide up the background to reveal the site
+            // Phase 5: slide up (was 900ms → 500ms)
             await animate(overlayY, "-100%", {
-                duration: 0.9,
+                duration: 0.5,
                 ease: [0.76, 0, 0.24, 1],
             });
 
             document.documentElement.style.overflow = "";
+            try { sessionStorage.setItem(SPLASH_SHOWN_KEY, "1"); } catch {}
             setDone(true);
         };
 
@@ -92,8 +158,12 @@ export default function LoadingScreen() {
         return () => {
             document.documentElement.style.overflow = "";
             ranRef.current = false;
+            window.removeEventListener("wheel", finishEarly);
+            window.removeEventListener("touchstart", finishEarly);
+            window.removeEventListener("keydown", finishEarly);
+            window.removeEventListener("pointerdown", finishEarly);
         };
-    }, [logoOpacity, logoBlur, logoScale, overlayY]);
+    }, [done, logoOpacity, logoBlur, logoScale, overlayY]);
 
     if (done) return null;
 

@@ -20,6 +20,19 @@ export default function CTASection() {
   const [mounted, setMounted] = useState(false);
   useSectionVisibility("cta", containerRef);
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
+  // Viewport tracked separately for hover-tooltip clamping. Initial {0, 0}
+  // avoids React #418: server and client first-paint both render with 0,
+  // then a useEffect below sets the real values post-mount. The previous
+  // pattern (`typeof window !== 'undefined' ? window.innerWidth : 1200`)
+  // produced different values on server (1200) vs client (real width),
+  // triggering hydration mismatch.
+  const [viewport, setViewport] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const update = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   const particlesRef = useRef<Particle[]>([]);
 
   const { scrollYProgress } = useScroll({
@@ -353,8 +366,8 @@ export default function CTASection() {
           animate={{
             opacity: isHoveringHeart ? 1 : 0,
             scale: isHoveringHeart ? 1 : 0.95,
-            x: Math.min(mousePosPixel.x + 20, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 320),
-            y: Math.min(mousePosPixel.y + 20, (typeof window !== 'undefined' ? window.innerHeight : 800) - 100),
+            x: viewport.w ? Math.min(mousePosPixel.x + 20, viewport.w - 320) : 0,
+            y: viewport.h ? Math.min(mousePosPixel.y + 20, viewport.h - 100) : 0,
           }}
           transition={{ duration: 0.15, ease: "easeOut" }}
           className="fixed top-0 left-0 z-50 pointer-events-none flex flex-col gap-2 px-4 py-3 bg-black/60 border border-white/10 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] w-max"

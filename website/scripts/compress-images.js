@@ -20,11 +20,10 @@ try {
         { encoding: 'utf-8' }
     ).trim().split('\n').filter(Boolean);
 } catch (e) {
-    console.log('0|0');
     process.exit(0);
 }
 
-if (images.length === 0) { console.log('0|0'); process.exit(0); }
+if (images.length === 0) {  process.exit(0); }
 
 let totalSaved = 0;
 let count = 0;
@@ -63,4 +62,3 @@ for (const img of images) {
     }
 }
 
-console.log(count + '|' + Math.round(totalSaved / 1024));

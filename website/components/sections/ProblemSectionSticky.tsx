@@ -284,31 +284,44 @@ function ParticleHighlight({ children }: { children: React.ReactNode }) {
                 {children}
             </span>
             
-            {/* Floating Micro-Particles (matching hero aesthetics) */}
+            {/* Floating Micro-Particles (matching hero aesthetics).
+                Deterministic pseudo-random based on index — same values on
+                server and client → no React #418 hydration mismatch. Math.random()
+                during render is the classic SSR/CSR mismatch trap. */}
             <span className="absolute inset-0 pointer-events-none">
-                {[...Array(12)].map((_, i) => (
-                    <motion.span
-                        key={i}
-                        className="absolute w-1 h-1 rounded-full bg-[#FF5A36] blur-[0.4px]"
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ 
-                            opacity: [0, 0.7, 0],
-                            scale: [0, 1.5, 0],
-                            x: [0, (Math.random() - 0.5) * 80],
-                            y: [0, (Math.random() - 0.5) * 80],
-                        }}
-                        transition={{ 
-                            duration: 4 + Math.random() * 4,
-                            repeat: Infinity,
-                            delay: Math.random() * 8,
-                            ease: "easeInOut"
-                        }}
-                        style={{ 
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`
-                        }}
-                    />
-                ))}
+                {[...Array(12)].map((_, i) => {
+                    // Math.sin produces a stable [-1, 1] value across server + client
+                    const seed = (n: number) => (Math.sin(i * 137.5 + n * 73.1) + 1) / 2;
+                    const x = (seed(1) - 0.5) * 80;
+                    const y = (seed(2) - 0.5) * 80;
+                    const duration = 4 + seed(3) * 4;
+                    const delay = seed(4) * 8;
+                    const left = seed(5) * 100;
+                    const top = seed(6) * 100;
+                    return (
+                        <motion.span
+                            key={i}
+                            className="absolute w-1 h-1 rounded-full bg-[#FF5A36] blur-[0.4px]"
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{
+                                opacity: [0, 0.7, 0],
+                                scale: [0, 1.5, 0],
+                                x: [0, x],
+                                y: [0, y],
+                            }}
+                            transition={{
+                                duration,
+                                repeat: Infinity,
+                                delay,
+                                ease: "easeInOut"
+                            }}
+                            style={{
+                                left: `${left}%`,
+                                top: `${top}%`
+                            }}
+                        />
+                    );
+                })}
             </span>
         </span>
     );
